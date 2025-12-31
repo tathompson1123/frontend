@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
+import AIWebsiteEditor from './AIWebsiteEditor';
 
 const AIWebsiteBuilder = () => {
   const [currentView, setCurrentView] = useState('builder'); // 'builder', 'preview', 'pricing'
@@ -17,6 +18,7 @@ const AIWebsiteBuilder = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStep, setGenerationStep] = useState('');
+  const [showEditor, setShowEditor] = useState(false);
 
   const colorSchemes = {
     blue: { name: 'Ocean Blue', from: 'from-blue-600', to: 'to-cyan-600', accent: 'bg-blue-600' },
@@ -175,7 +177,7 @@ Generate complete HTML with inline CSS and JavaScript.`;
 
   if (currentView === 'preview') {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col">
         <div className="bg-white shadow-sm border-b sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <button
@@ -187,6 +189,16 @@ Generate complete HTML with inline CSS and JavaScript.`;
             </button>
             <div className="flex gap-3">
               <button
+                onClick={() => setShowEditor(!showEditor)}
+                className={`px-6 py-2 rounded-lg transition font-semibold ${
+                  showEditor 
+                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {showEditor ? 'Hide' : 'Edit with AI'}
+              </button>
+              <button
                 onClick={() => setCurrentView('pricing')}
                 className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg font-semibold"
               >
@@ -194,19 +206,40 @@ Generate complete HTML with inline CSS and JavaScript.`;
               </button>
               <button
                 onClick={startOver}
-                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
               >
-                Generate New Website
+                Start Over
               </button>
             </div>
           </div>
         </div>
         
-        <iframe
-          srcDoc={generatedHTML}
-          className="w-full h-screen"
-          title="Generated Website Preview"
-        />
+        <div className="flex-1 flex overflow-hidden">
+          {/* AI Editor Panel */}
+          {showEditor && (
+            <div className="w-96 border-r bg-white p-4 overflow-y-auto">
+              <AIWebsiteEditor 
+                currentHTML={generatedHTML}
+                onHTMLUpdate={setGeneratedHTML}
+                businessInfo={{
+                  businessName,
+                  businessType,
+                  phone,
+                  address
+                }}
+              />
+            </div>
+          )}
+          
+          {/* Website Preview */}
+          <div className="flex-1">
+            <iframe
+              srcDoc={generatedHTML}
+              className="w-full h-full"
+              title="Generated Website Preview"
+            />
+          </div>
+        </div>
       </div>
     );
   }
