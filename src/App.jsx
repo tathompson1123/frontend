@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Wand2, ArrowLeft, Upload, X, Palette } from 'lucide-react';
+import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
 
 const AIWebsiteBuilder = () => {
@@ -10,7 +10,7 @@ const AIWebsiteBuilder = () => {
   const [phone, setPhone] = useState('');
   const [services, setServices] = useState('');
   const [colorScheme, setColorScheme] = useState('blue');
-  const [designStyle, setDesignStyle] = useState('modern'); // NEW: Design style
+  const [designStyle, setDesignStyle] = useState('professional'); // Default to professional for service businesses
   const [description, setDescription] = useState('');
   const [uploadedImages, setUploadedImages] = useState([]);
   const [generatedHTML, setGeneratedHTML] = useState('');
@@ -25,40 +25,6 @@ const AIWebsiteBuilder = () => {
     orange: { name: 'Sunset Orange', from: 'from-orange-600', to: 'to-amber-600', accent: 'bg-orange-600' },
     red: { name: 'Bold Red', from: 'from-red-600', to: 'to-rose-600', accent: 'bg-red-600' },
     slate: { name: 'Professional Gray', from: 'from-slate-700', to: 'to-gray-800', accent: 'bg-slate-700' }
-  };
-
-  // NEW: Design styles with descriptions
-  const designStyles = {
-    modern: {
-      name: 'Modern',
-      description: 'Clean, contemporary design with smooth animations',
-      icon: '✨'
-    },
-    luxury: {
-      name: 'Luxury',
-      description: 'Premium, elegant design with gold accents',
-      icon: '👑'
-    },
-    minimal: {
-      name: 'Minimal',
-      description: 'Simple, focused design with maximum white space',
-      icon: '⚪'
-    },
-    playful: {
-      name: 'Playful',
-      description: 'Fun, vibrant design with bold colors',
-      icon: '🎨'
-    },
-    professional: {
-      name: 'Professional',
-      description: 'Corporate, business-focused design',
-      icon: '💼'
-    },
-    ecommerce: {
-      name: 'E-Commerce',
-      description: 'Conversion-optimized online store design',
-      icon: '🛍️'
-    }
   };
 
   const handleImageUpload = (e) => {
@@ -199,7 +165,7 @@ Generate complete HTML with inline CSS and JavaScript.`;
     setServices('');
     setDescription('');
     setUploadedImages([]);
-    setDesignStyle('modern');
+    setDesignStyle('professional');
   };
 
   // Pricing Page View
@@ -257,37 +223,23 @@ Generate complete HTML with inline CSS and JavaScript.`;
             <span className="text-sm font-medium text-gray-700">AI-Powered</span>
           </div>
           <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            Website Builder
+            High Converting Website Builder
           </h1>
           <p className="text-xl text-gray-600">
-            Create a professional website in seconds with AI
+            For Service-Based Businesses
           </p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-xl p-8 space-y-8">
-          {/* Design Style Selector - NEW */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3">
-              <Palette className="w-5 h-5 text-purple-600" />
-              Design Style
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.entries(designStyles).map(([key, style]) => (
-                <button
-                  key={key}
-                  onClick={() => setDesignStyle(key)}
-                  className={`p-4 rounded-xl border-2 transition-all text-left ${
-                    designStyle === key
-                      ? 'border-purple-500 bg-purple-50 shadow-md'
-                      : 'border-gray-200 hover:border-purple-300 hover:bg-gray-50'
-                  }`}
-                >
-                  <div className="text-2xl mb-1">{style.icon}</div>
-                  <div className="font-semibold text-gray-900">{style.name}</div>
-                  <div className="text-xs text-gray-600 mt-1">{style.description}</div>
-                </button>
-              ))}
-            </div>
+          {/* Instruction Note */}
+          <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg">
+            <p className="text-blue-900 font-semibold flex items-center gap-2">
+              <Wand2 className="w-5 h-5" />
+              Use as much detail as possible!
+            </p>
+            <p className="text-blue-700 text-sm mt-1">
+              The more information you provide, the better your AI-generated website will be.
+            </p>
           </div>
 
           {/* Business Name */}
