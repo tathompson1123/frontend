@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
+import AIWebsiteEditor from './AIWebsiteEditor';
 
 const AIWebsiteBuilder = () => {
   const [currentView, setCurrentView] = useState('builder'); // 'builder', 'preview', 'pricing'
@@ -17,6 +18,7 @@ const AIWebsiteBuilder = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStep, setGenerationStep] = useState('');
+  const [showEditor, setShowEditor] = useState(false);
 
   const colorSchemes = {
     blue: { name: 'Ocean Blue', from: 'from-blue-600', to: 'to-cyan-600', accent: 'bg-blue-600' },
@@ -340,8 +342,8 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
 
   if (currentView === 'preview') {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <div className="bg-white shadow-sm border-b sticky top-0 z-50">
+      <div className="min-h-screen bg-gray-50 flex flex-col h-screen">
+        <div className="bg-white shadow-sm border-b z-50">
           <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
             <button
               onClick={() => setCurrentView('builder')}
@@ -351,6 +353,16 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
               <span>Back to Editor</span>
             </button>
             <div className="flex gap-3">
+              <button
+                onClick={() => setShowEditor(!showEditor)}
+                className={`px-6 py-2 rounded-lg transition font-semibold ${
+                  showEditor 
+                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                {showEditor ? 'Hide' : 'Edit with AI'}
+              </button>
               <button
                 onClick={() => setCurrentView('pricing')}
                 className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg font-semibold"
@@ -367,12 +379,32 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
           </div>
         </div>
         
-        <div className="flex-1">
-          <iframe
-            srcDoc={generatedHTML}
-            className="w-full h-full"
-            title="Generated Website Preview"
-          />
+        <div className="flex-1 flex overflow-hidden h-full">
+          {/* AI Editor Panel */}
+          {showEditor && (
+            <div className="w-96 border-r bg-white p-4 overflow-y-auto flex-shrink-0">
+              <AIWebsiteEditor 
+                currentHTML={generatedHTML}
+                onHTMLUpdate={setGeneratedHTML}
+                businessInfo={{
+                  businessName,
+                  businessType,
+                  phone,
+                  address
+                }}
+              />
+            </div>
+          )}
+          
+          {/* Website Preview */}
+          <div className="flex-1 w-full h-full bg-white">
+            <iframe
+              srcDoc={generatedHTML}
+              className="w-full h-full border-0"
+              title="Generated Website Preview"
+              style={{ minHeight: '100%' }}
+            />
+          </div>
         </div>
       </div>
     );
@@ -578,12 +610,17 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
           </button>
 
           {isGenerating && (
-            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-              <div
-                className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-500"
-                style={{ width: `${generationProgress}%` }}
-              />
-            </div>
+            <>
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-500"
+                  style={{ width: `${generationProgress}%` }}
+                />
+              </div>
+              <p className="text-center text-gray-600 text-sm mt-2">
+                ☕ Sit back and relax, this will take 1-2 minutes
+              </p>
+            </>
           )}
         </div>
 
