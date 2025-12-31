@@ -204,8 +204,7 @@ Generate complete HTML with inline CSS and JavaScript.`;
         
         <iframe
           srcDoc={generatedHTML}
-          className="w-full"
-          style={{ height: 'calc(100vh - 73px)' }}
+          className="w-full h-screen"
           title="Generated Website Preview"
         />
       </div>
