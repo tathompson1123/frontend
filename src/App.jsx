@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
-import AIWebsiteEditor from './AIWebsiteEditor';
 
 const AIWebsiteBuilder = () => {
   const [currentView, setCurrentView] = useState('builder'); // 'builder', 'preview', 'pricing'
@@ -18,7 +17,6 @@ const AIWebsiteBuilder = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStep, setGenerationStep] = useState('');
-  const [showEditor, setShowEditor] = useState(false);
 
   const colorSchemes = {
     blue: { name: 'Ocean Blue', from: 'from-blue-600', to: 'to-cyan-600', accent: 'bg-blue-600' },
@@ -76,7 +74,172 @@ Requirements:
 - Ensure professional ${designStyle} design
 ${uploadedImages.length > 0 ? `- Incorporate ${uploadedImages.length} uploaded business image(s)` : ''}
 
-Generate complete HTML with inline CSS and JavaScript.`;
+CRITICAL - ADVANCED FEATURES TO INCLUDE:
+
+1. AI CHAT WIDGET (Bottom Right Corner):
+   - Create a floating chat button (60px circle, purple gradient background, white message icon)
+   - Button should pulse/animate to attract attention
+   - Clicking opens a chat panel (350px wide, 500px tall, bottom-right, rounded corners)
+   - Chat panel has header "💬 Chat with us!", messages area, and input field
+   - Include initial AI greeting: "👋 Hi! I'm here to help you learn more about ${businessName}. What can I help you with today?"
+   - Style the chat beautifully with gradients and smooth animations
+   - Make it fully functional with a send button
+   - Add typing indicator animation
+   - Mobile responsive (full width on mobile)
+
+2. ONLINE BOOKING SYSTEM:
+   - Create a dedicated "Book Appointment" section with id="booking-section"
+   - Include a professional booking form with these fields:
+     * Full Name (required)
+     * Email (required)
+     * Phone Number (required)
+     * Service dropdown (Consultation, Service Appointment, Follow-up, Other)
+     * Date picker (required, minimum date = today)
+     * Time slot selection grid (9 AM - 5 PM slots, clickable buttons)
+     * Additional notes textarea
+   - Style time slots as clickable cards that highlight when selected
+   - Include "Confirm Booking" button with gradient purple background
+   - Show success message after booking with checkmark icon
+   - Make form fully responsive and beautiful
+   - Add form validation
+
+3. INTEGRATION CODE:
+   At the very end of the HTML, before </body>, add these script tags:
+
+   <script>
+   // Chat functionality
+   (function() {
+     const chatButton = document.querySelector('#ai-chat-button');
+     const chatBox = document.querySelector('#ai-chat-box');
+     const chatClose = document.querySelector('#ai-chat-close');
+     const chatSend = document.querySelector('#ai-chat-send');
+     const chatInput = document.querySelector('#ai-chat-input');
+     const chatMessages = document.querySelector('#ai-chat-messages');
+
+     if (chatButton) {
+       chatButton.addEventListener('click', () => {
+         chatBox.style.display = 'flex';
+       });
+     }
+
+     if (chatClose) {
+       chatClose.addEventListener('click', () => {
+         chatBox.style.display = 'none';
+       });
+     }
+
+     function addMessage(text, isUser) {
+       const messageDiv = document.createElement('div');
+       messageDiv.className = 'chat-message ' + (isUser ? 'user' : 'bot');
+       messageDiv.innerHTML = '<div class="message-content">' + text + '</div>';
+       chatMessages.appendChild(messageDiv);
+       chatMessages.scrollTop = chatMessages.scrollHeight;
+     }
+
+     if (chatSend) {
+       chatSend.addEventListener('click', () => {
+         const message = chatInput.value.trim();
+         if (message) {
+           addMessage(message, true);
+           chatInput.value = '';
+           
+           // Simulate AI response
+           setTimeout(() => {
+             const responses = [
+               "Thanks for your message! I'd be happy to help you learn more about our services. What specifically interests you?",
+               "Great question! Let me help you with that. You can call us at ${phone || '(555) 123-4567'} or book an appointment using the form below.",
+               "I'm here to help! Feel free to ask about our services, pricing, or availability. Would you like to schedule a consultation?",
+               "Thank you for reaching out! Our team specializes in ${services || 'professional services'}. How can we assist you today?"
+             ];
+             addMessage(responses[Math.floor(Math.random() * responses.length)], false);
+           }, 1000);
+         }
+       });
+     }
+
+     if (chatInput) {
+       chatInput.addEventListener('keypress', (e) => {
+         if (e.key === 'Enter' && !e.shiftKey) {
+           e.preventDefault();
+           chatSend.click();
+         }
+       });
+     }
+   })();
+
+   // Booking functionality
+   (function() {
+     const bookingForm = document.querySelector('#booking-form');
+     const timeSlots = document.querySelectorAll('.time-slot');
+     let selectedTime = null;
+
+     if (timeSlots) {
+       timeSlots.forEach(slot => {
+         slot.addEventListener('click', () => {
+           timeSlots.forEach(s => s.classList.remove('selected'));
+           slot.classList.add('selected');
+           selectedTime = slot.dataset.time;
+         });
+       });
+     }
+
+     if (bookingForm) {
+       bookingForm.addEventListener('submit', (e) => {
+         e.preventDefault();
+         
+         if (!selectedTime) {
+           alert('Please select a time slot');
+           return;
+         }
+
+         const formData = {
+           name: document.querySelector('#booking-name').value,
+           email: document.querySelector('#booking-email').value,
+           phone: document.querySelector('#booking-phone').value,
+           service: document.querySelector('#booking-service').value,
+           date: document.querySelector('#booking-date').value,
+           time: selectedTime,
+           notes: document.querySelector('#booking-notes').value
+         };
+
+         // Show success message
+         document.querySelector('#booking-form-container').style.display = 'none';
+         document.querySelector('#booking-success').style.display = 'block';
+         
+         // Populate success details
+         document.querySelector('#success-name').textContent = formData.name;
+         document.querySelector('#success-email').textContent = formData.email;
+         document.querySelector('#success-date').textContent = new Date(formData.date).toLocaleDateString('en-US', { 
+           weekday: 'long', 
+           year: 'numeric', 
+           month: 'long', 
+           day: 'numeric' 
+         });
+         document.querySelector('#success-time').textContent = formatTime(formData.time);
+
+         console.log('Booking submitted:', formData);
+       });
+     }
+
+     function formatTime(time) {
+       const [hours, minutes] = time.split(':');
+       const hour = parseInt(hours);
+       const ampm = hour >= 12 ? 'PM' : 'AM';
+       const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+       return displayHour + ':' + minutes + ' ' + ampm;
+     }
+
+     // Set minimum date to today
+     const dateInput = document.querySelector('#booking-date');
+     if (dateInput) {
+       const today = new Date().toISOString().split('T')[0];
+       dateInput.min = today;
+       dateInput.value = today;
+     }
+   })();
+   </script>
+
+Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it production-ready and beautiful!`;
 
     try {
       setGenerationProgress(10);
@@ -189,16 +352,6 @@ Generate complete HTML with inline CSS and JavaScript.`;
             </button>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowEditor(!showEditor)}
-                className={`px-6 py-2 rounded-lg transition font-semibold ${
-                  showEditor 
-                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {showEditor ? 'Hide' : 'Edit with AI'}
-              </button>
-              <button
                 onClick={() => setCurrentView('pricing')}
                 className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg font-semibold"
               >
@@ -214,31 +367,12 @@ Generate complete HTML with inline CSS and JavaScript.`;
           </div>
         </div>
         
-        <div className="flex-1 flex overflow-hidden">
-          {/* AI Editor Panel */}
-          {showEditor && (
-            <div className="w-96 border-r bg-white p-4 overflow-y-auto">
-              <AIWebsiteEditor 
-                currentHTML={generatedHTML}
-                onHTMLUpdate={setGeneratedHTML}
-                businessInfo={{
-                  businessName,
-                  businessType,
-                  phone,
-                  address
-                }}
-              />
-            </div>
-          )}
-          
-          {/* Website Preview */}
-          <div className="flex-1">
-            <iframe
-              srcDoc={generatedHTML}
-              className="w-full h-full"
-              title="Generated Website Preview"
-            />
-          </div>
+        <div className="flex-1">
+          <iframe
+            srcDoc={generatedHTML}
+            className="w-full h-full"
+            title="Generated Website Preview"
+          />
         </div>
       </div>
     );
