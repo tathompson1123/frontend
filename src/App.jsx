@@ -198,8 +198,6 @@ Generate complete HTML with inline CSS and JavaScript.`;
               >
                 Generate New Website
               </button>
-                New Website
-              </button>
             </div>
           </div>
         </div>
