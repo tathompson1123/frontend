@@ -2,16 +2,16 @@ import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
 import AIWebsiteEditor from './AIWebsiteEditor';
+import HomePage from './HomePage';
 
 const AIWebsiteBuilder = () => {
-  const [currentView, setCurrentView] = useState('builder'); // 'builder', 'preview', 'pricing'
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'builder', 'preview', 'pricing'
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [services, setServices] = useState('');
-  const [colorScheme, setColorScheme] = useState('blue');
-  const [designStyle, setDesignStyle] = useState('professional'); // Default to professional for service businesses
+  const [designStyle, setDesignStyle] = useState('professional');
   const [description, setDescription] = useState('');
   const [uploadedImages, setUploadedImages] = useState([]);
   const [generatedHTML, setGeneratedHTML] = useState('');
@@ -19,15 +19,6 @@ const AIWebsiteBuilder = () => {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStep, setGenerationStep] = useState('');
   const [showEditor, setShowEditor] = useState(false);
-
-  const colorSchemes = {
-    blue: { name: 'Ocean Blue', from: 'from-blue-600', to: 'to-cyan-600', accent: 'bg-blue-600' },
-    purple: { name: 'Royal Purple', from: 'from-purple-600', to: 'to-pink-600', accent: 'bg-purple-600' },
-    green: { name: 'Forest Green', from: 'from-green-600', to: 'to-emerald-600', accent: 'bg-green-600' },
-    orange: { name: 'Sunset Orange', from: 'from-orange-600', to: 'to-amber-600', accent: 'bg-orange-600' },
-    red: { name: 'Bold Red', from: 'from-red-600', to: 'to-rose-600', accent: 'bg-red-600' },
-    slate: { name: 'Professional Gray', from: 'from-slate-700', to: 'to-gray-800', accent: 'bg-slate-700' }
-  };
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -61,12 +52,11 @@ Business Type: ${businessType}
 ${address ? `Address: ${address}` : ''}
 ${phone ? `Phone: ${phone}` : ''}
 ${services ? `Services Offered: ${services}` : ''}
-Color Scheme: ${colorSchemes[colorScheme].name}
 Additional Details: ${description || 'Modern, professional service business design'}
 
 Requirements:
 - Focus on SERVICE BUSINESS features (booking, consultations, appointments)
-- Use ${colorSchemes[colorScheme].name} color scheme (${colorSchemes[colorScheme].from} ${colorSchemes[colorScheme].to})
+- Use a professional color scheme with purple and blue gradients
 - Include: Hero section with service value proposition, About/Why Choose Us, Services section with clear descriptions, Testimonials, Contact/Booking form, Footer with business hours
 - Make it fully responsive and mobile-friendly
 - Add smooth animations and professional transitions
@@ -317,11 +307,6 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
     URL.revokeObjectURL(url);
   };
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(generatedHTML);
-    alert('HTML copied to clipboard!');
-  };
-
   const startOver = () => {
     setCurrentView('builder');
     setGeneratedHTML('');
@@ -335,11 +320,17 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
     setDesignStyle('professional');
   };
 
-  // Pricing Page View
-  if (currentView === 'pricing') {
-    return <PricingPage onBack={() => setCurrentView('preview')} />;
+  // Home Page View
+  if (currentView === 'home') {
+    return <HomePage onNavigate={setCurrentView} />;
   }
 
+  // Pricing Page View
+  if (currentView === 'pricing') {
+    return <PricingPage onBack={() => setCurrentView('home')} />;
+  }
+
+  // Preview View
   if (currentView === 'preview') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col h-screen">
@@ -410,9 +401,21 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
     );
   }
 
+  // Builder View
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
+        {/* Back to Home */}
+        <div className="mb-6">
+          <button
+            onClick={() => setCurrentView('home')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span>Back to Home</span>
+          </button>
+        </div>
+
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm mb-4">
             <Wand2 className="w-5 h-5 text-purple-600" />
@@ -462,7 +465,7 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
               value={businessType}
               onChange={(e) => setBusinessType(e.target.value)}
               className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              placeholder="e.g., Restaurant, E-commerce Store, Consulting Agency"
+              placeholder="e.g., Plumbing, HVAC, Law Firm, Consulting"
             />
           </div>
 
@@ -506,27 +509,6 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
               rows="3"
               placeholder="Describe your main services or products..."
             />
-          </div>
-
-          {/* Color Scheme */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-3">
-              Color Scheme
-            </label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-              {Object.entries(colorSchemes).map(([key, scheme]) => (
-                <button
-                  key={key}
-                  onClick={() => setColorScheme(key)}
-                  className={`p-3 rounded-lg border-2 transition ${
-                    colorScheme === key ? 'border-purple-500 shadow-md' : 'border-gray-200 hover:border-purple-300'
-                  }`}
-                >
-                  <div className={`h-8 rounded bg-gradient-to-r ${scheme.from} ${scheme.to} mb-2`} />
-                  <span className="text-sm font-medium text-gray-700">{scheme.name}</span>
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Additional Description */}
