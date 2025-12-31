@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X, Palette } from 'lucide-react';
+import PricingPage from './PricingPage';
 
 const AIWebsiteBuilder = () => {
-  const [currentView, setCurrentView] = useState('builder');
+  const [currentView, setCurrentView] = useState('builder'); // 'builder', 'preview', 'pricing'
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [address, setAddress] = useState('');
@@ -85,30 +86,37 @@ const AIWebsiteBuilder = () => {
     setGenerationProgress(0);
     setGenerationStep('Initializing AI...');
 
-    const prompt = `Create a professional website for:
+    const prompt = `Create a professional website for a SERVICE BUSINESS:
 
 Business Name: ${businessName}
 Business Type: ${businessType}
 ${address ? `Address: ${address}` : ''}
 ${phone ? `Phone: ${phone}` : ''}
-${services ? `Services/Products: ${services}` : ''}
+${services ? `Services Offered: ${services}` : ''}
 Color Scheme: ${colorSchemes[colorScheme].name}
-Additional Details: ${description || 'Modern, professional design'}
+Additional Details: ${description || 'Modern, professional service business design'}
 
 Requirements:
+- Focus on SERVICE BUSINESS features (booking, consultations, appointments)
 - Use ${colorSchemes[colorScheme].name} color scheme (${colorSchemes[colorScheme].from} ${colorSchemes[colorScheme].to})
-- Include: Hero section, About, Services/Products, Contact form, Footer
-- Make it fully responsive
-- Add smooth animations
-- Include placeholder images from Unsplash
+- Include: Hero section with service value proposition, About/Why Choose Us, Services section with clear descriptions, Testimonials, Contact/Booking form, Footer with business hours
+- Make it fully responsive and mobile-friendly
+- Add smooth animations and professional transitions
+- Include high-quality placeholder images from Unsplash related to the service industry
+- Add trust-building elements (credentials, certifications, years of experience)
+- Include clear call-to-actions (Book Now, Get Quote, Contact Us)
 - Ensure professional ${designStyle} design
-${uploadedImages.length > 0 ? `- Incorporate ${uploadedImages.length} uploaded image(s)` : ''}
+${uploadedImages.length > 0 ? `- Incorporate ${uploadedImages.length} uploaded business image(s)` : ''}
 
 Generate complete HTML with inline CSS and JavaScript.`;
 
     try {
-      setGenerationProgress(25);
-      setGenerationStep('Contacting AI...');
+      setGenerationProgress(10);
+      setGenerationStep('Building your website...');
+
+      await new Promise(resolve => setTimeout(resolve, 800));
+      setGenerationProgress(20);
+      setGenerationStep('Designing your layout...');
 
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
@@ -119,12 +127,12 @@ Generate complete HTML with inline CSS and JavaScript.`;
         },
         body: JSON.stringify({ 
           prompt,
-          style: designStyle // NEW: Send design style to backend
+          style: designStyle
         }),
       });
 
-      setGenerationProgress(50);
-      setGenerationStep('Processing design...');
+      setGenerationProgress(40);
+      setGenerationStep('Adding colors and transitions...');
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -133,8 +141,12 @@ Generate complete HTML with inline CSS and JavaScript.`;
 
       const data = await response.json();
       
-      setGenerationProgress(75);
-      setGenerationStep('Finalizing website...');
+      setGenerationProgress(70);
+      setGenerationStep('Perfecting the details...');
+
+      await new Promise(resolve => setTimeout(resolve, 600));
+      setGenerationProgress(85);
+      setGenerationStep('Almost ready...');
 
       let htmlContent = data.html;
       
@@ -190,6 +202,11 @@ Generate complete HTML with inline CSS and JavaScript.`;
     setDesignStyle('modern');
   };
 
+  // Pricing Page View
+  if (currentView === 'pricing') {
+    return <PricingPage onBack={() => setCurrentView('preview')} />;
+  }
+
   if (currentView === 'preview') {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -204,21 +221,17 @@ Generate complete HTML with inline CSS and JavaScript.`;
             </button>
             <div className="flex gap-3">
               <button
-                onClick={copyToClipboard}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                onClick={() => setCurrentView('pricing')}
+                className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg font-semibold"
               >
-                Copy HTML
-              </button>
-              <button
-                onClick={downloadHTML}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
-              >
-                Download
+                Launch My Website
               </button>
               <button
                 onClick={startOver}
                 className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
               >
+                Generate New Website
+              </button>
                 New Website
               </button>
             </div>
