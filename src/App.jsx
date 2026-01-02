@@ -48,41 +48,99 @@ const AIWebsiteBuilder = () => {
   };
 
   const handleSignup = async ({ name, email, password }) => {
-    // TODO: Integrate with your backend API
-    // For now, simulate signup
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const newUser = {
-      name,
-      email,
-      plan: selectedPlan || 'pro-plan',
-      createdAt: new Date().toISOString()
-    };
-    
-    setUser(newUser);
-    setIsAuthModalOpen(false);
-    setCurrentView('dashboard');
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_URL}/api/auth/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+          plan: selectedPlan || 'pro-plan'
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Signup failed');
+      }
+
+      // Store token in localStorage
+      localStorage.setItem('authToken', data.token);
+      
+      setUser(data.user);
+      setIsAuthModalOpen(false);
+      setCurrentView('dashboard');
+      
+    } catch (error) {
+      throw new Error(error.message);
+    }
   };
 
   const handleLogin = async ({ email, password }) => {
-    // TODO: Integrate with your backend API
-    // For now, simulate login
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const existingUser = {
-      name: 'John Doe',
-      email,
-      plan: 'pro-plan'
-    };
-    
-    setUser(existingUser);
-    setIsAuthModalOpen(false);
-    setCurrentView('dashboard');
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      const response = await fetch(`${API_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store token in localStorage
+      localStorage.setItem('authToken', data.token);
+      
+      setUser(data.user);
+      setIsAuthModalOpen(false);
+      setCurrentView('dashboard');
+      
+    } catch (error) {
+      throw new Error(error.message);
+    }
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setCurrentView('home');
+  const handleLogout = async () => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      const token = localStorage.getItem('authToken');
+      
+      if (token) {
+        await fetch(`${API_URL}/api/auth/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ token })
+        });
+      }
+
+      localStorage.removeItem('authToken');
+      setUser(null);
+      setCurrentView('home');
+      
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Still logout on frontend even if backend fails
+      localStorage.removeItem('authToken');
+      setUser(null);
+      setCurrentView('home');
+    }
   };
 
   const generateWebsite = async () => {
