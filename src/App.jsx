@@ -168,12 +168,9 @@ const AIWebsiteBuilder = () => {
     const messageInterval = setInterval(() => {
       messageIndex = (messageIndex + 1) % loadingMessages.length;
       setGenerationStep(loadingMessages[messageIndex]);
-    }, 3000); // Change message every 3 seconds
+    }, 3000);
 
-// SIMPLIFIED PREMIUM PROMPT - Use this in App.jsx
-// Replace the existing prompt variable with this
-
-const prompt = `Create a PREMIUM, professional website for ${businessName}, a ${businessType} business.
+    const prompt = `Create a PREMIUM, professional website for ${businessName}, a ${businessType} business.
 
 BUSINESS INFO:
 - Name: ${businessName}
@@ -200,7 +197,7 @@ STRUCTURE (sections in order):
 3. WHY CHOOSE US - Trust building  
    - Stats/numbers
    - 4 benefit cards with icons
-   - Customer testimonials with photos & ratings
+   - Customer testimonials with photos and ratings
 
 4. BOOKING FORM - Comprehensive
    TWO-COLUMN LAYOUT:
@@ -209,19 +206,19 @@ STRUCTURE (sections in order):
    - Multi-service selection (checkboxes with prices)
    - Running total calculator
    - Contact fields (name, email, phone)
-   - Date picker + time slots
+   - Date picker and time slots
    - Vehicle info (if applicable)
    - Notes textarea
    
    RIGHT: Info sidebar
    - Business hours
    - Contact info
-   - "Why Book" benefits
+   - Why Book benefits
    
    Auto-generate pricing:
    ${services ? services.split(',').map((s, i) => `- ${s.trim()}: $${(i + 1) * 75}`).join('\n') : '- Service 1: $75\n- Service 2: $150\n- Service 3: $225'}
    
-   Submit button shows total: "Book Now - $XXX"
+   Submit button shows total: Book Now
 
 5. FINAL CTA - Conversion
    - Eye-catching background
@@ -265,8 +262,6 @@ TECHNICAL:
 - Fast, optimized code
 
 Make this look like a $10,000 custom website - premium, polished, conversion-focused.`;
-
-Generate a complete, production-ready HTML file. Make this website look premium, professional, and conversion-focused. Every detail matters - this should be a $5,000+ quality website.`;
 
     try {
       setGenerationProgress(10);
@@ -313,7 +308,7 @@ Generate a complete, production-ready HTML file. Make this website look premium,
       setGenerationStep('Complete!');
       setGeneratedHTML(htmlContent);
       
-      clearInterval(messageInterval); // Stop cycling messages
+      clearInterval(messageInterval);
       
       setTimeout(() => {
         setCurrentView('preview');
@@ -322,7 +317,7 @@ Generate a complete, production-ready HTML file. Make this website look premium,
 
     } catch (error) {
       console.error('Generation error:', error);
-      clearInterval(messageInterval); // Stop cycling messages on error
+      clearInterval(messageInterval);
       alert(`Failed to generate website: ${error.message}`);
       setIsGenerating(false);
     }
