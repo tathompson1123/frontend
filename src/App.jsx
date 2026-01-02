@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
-import AIWebsiteEditor from './AIWebsiteEditor';
 import HomePage from './HomePage';
 
 const AIWebsiteBuilder = () => {
@@ -18,7 +17,6 @@ const AIWebsiteBuilder = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStep, setGenerationStep] = useState('');
-  const [showEditor, setShowEditor] = useState(false);
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -43,203 +41,76 @@ const AIWebsiteBuilder = () => {
     
     setIsGenerating(true);
     setGenerationProgress(0);
-    setGenerationStep('Initializing AI...');
+    setGenerationStep('Generating your website...');
 
-    const prompt = `Create a professional website for a SERVICE BUSINESS:
+    // Cycle through loading messages
+    const loadingMessages = [
+      'Generating your website...',
+      'Styling your sections...',
+      'Adding color scheme...',
+      'Creating your hero section...',
+      'Building service cards...',
+      'Perfecting the layout...',
+      'Almost ready...'
+    ];
 
-Business Name: ${businessName}
-Business Type: ${businessType}
-${address ? `Address: ${address}` : ''}
+    let messageIndex = 0;
+    const messageInterval = setInterval(() => {
+      messageIndex = (messageIndex + 1) % loadingMessages.length;
+      setGenerationStep(loadingMessages[messageIndex]);
+    }, 3000); // Change message every 3 seconds
+
+    const prompt = `You are an expert web designer. Create a professional single-page website for a ${businessType} business.
+
+Business: ${businessName}
 ${phone ? `Phone: ${phone}` : ''}
-${services ? `Services Offered: ${services}` : ''}
-Additional Details: ${description || 'Modern, professional service business design'}
+${address ? `Address: ${address}` : ''}
+${services ? `Services: ${services}` : ''}
 
-Requirements:
-- Focus on SERVICE BUSINESS features (booking, consultations, appointments)
-- Use a professional color scheme with purple and blue gradients
-- Include: Hero section with service value proposition, About/Why Choose Us, Services section with clear descriptions, Testimonials, Contact/Booking form, Footer with business hours
-- Make it fully responsive and mobile-friendly
-- Add smooth animations and professional transitions
-- Include high-quality placeholder images from Unsplash related to the service industry
-- Add trust-building elements (credentials, certifications, years of experience)
-- Include clear call-to-actions (Book Now, Get Quote, Contact Us)
-- Ensure professional ${designStyle} design
-${uploadedImages.length > 0 ? `- Incorporate ${uploadedImages.length} uploaded business image(s)` : ''}
+Create a modern, clean website with these sections in order:
 
-CRITICAL - ADVANCED FEATURES TO INCLUDE:
+1. HERO SECTION:
+- Full-width background image from: https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')}
+- Dark overlay for text readability
+- Center everything vertically and horizontally
+- Large white headline: "${businessName}"
+- Subheadline: "Professional ${businessType} Services"
+- Two large buttons: "GET FREE QUOTE" and "CALL ${phone || '(555) 123-4567'}"
 
-1. AI CHAT WIDGET (Bottom Right Corner):
-   - Create a floating chat button (60px circle, purple gradient background, white message icon)
-   - Button should pulse/animate to attract attention
-   - Clicking opens a chat panel (350px wide, 500px tall, bottom-right, rounded corners)
-   - Chat panel has header "💬 Chat with us!", messages area, and input field
-   - Include initial AI greeting: "👋 Hi! I'm here to help you learn more about ${businessName}. What can I help you with today?"
-   - Style the chat beautifully with gradients and smooth animations
-   - Make it fully functional with a send button
-   - Add typing indicator animation
-   - Mobile responsive (full width on mobile)
+2. SERVICES:
+- White background
+- Heading: "Our Services"
+- Show 3-4 service cards in a grid
+- Each card: icon, title, description, price/CTA
 
-2. ONLINE BOOKING SYSTEM:
-   - Create a dedicated "Book Appointment" section with id="booking-section"
-   - Include a professional booking form with these fields:
-     * Full Name (required)
-     * Email (required)
-     * Phone Number (required)
-     * Service dropdown (Consultation, Service Appointment, Follow-up, Other)
-     * Date picker (required, minimum date = today)
-     * Time slot selection grid (9 AM - 5 PM slots, clickable buttons)
-     * Additional notes textarea
-   - Style time slots as clickable cards that highlight when selected
-   - Include "Confirm Booking" button with gradient purple background
-   - Show success message after booking with checkmark icon
-   - Make form fully responsive and beautiful
-   - Add form validation
+3. WHY CHOOSE US:
+- Light gray background
+- 3 benefits: "Licensed & Insured", "Same Day Service", "Satisfaction Guaranteed"
 
-3. INTEGRATION CODE:
-   At the very end of the HTML, before </body>, add these script tags:
+4. CONTACT CTA:
+- Purple gradient background
+- Large heading: "Ready to Get Started?"
+- Big "CALL NOW" button with phone number
 
-   <script>
-   // Chat functionality
-   (function() {
-     const chatButton = document.querySelector('#ai-chat-button');
-     const chatBox = document.querySelector('#ai-chat-box');
-     const chatClose = document.querySelector('#ai-chat-close');
-     const chatSend = document.querySelector('#ai-chat-send');
-     const chatInput = document.querySelector('#ai-chat-input');
-     const chatMessages = document.querySelector('#ai-chat-messages');
+5. FOOTER:
+- Dark background
+- Business name, phone, address
 
-     if (chatButton) {
-       chatButton.addEventListener('click', () => {
-         chatBox.style.display = 'flex';
-       });
-     }
+Design Rules:
+- Use purple (#7C3AED) and blue (#3B82F6) colors
+- Modern fonts from Google Fonts
+- Mobile responsive
+- All sections perfectly centered
+- Smooth animations on scroll
+- Clean, professional look
 
-     if (chatClose) {
-       chatClose.addEventListener('click', () => {
-         chatBox.style.display = 'none';
-       });
-     }
-
-     function addMessage(text, isUser) {
-       const messageDiv = document.createElement('div');
-       messageDiv.className = 'chat-message ' + (isUser ? 'user' : 'bot');
-       messageDiv.innerHTML = '<div class="message-content">' + text + '</div>';
-       chatMessages.appendChild(messageDiv);
-       chatMessages.scrollTop = chatMessages.scrollHeight;
-     }
-
-     if (chatSend) {
-       chatSend.addEventListener('click', () => {
-         const message = chatInput.value.trim();
-         if (message) {
-           addMessage(message, true);
-           chatInput.value = '';
-           
-           // Simulate AI response
-           setTimeout(() => {
-             const responses = [
-               "Thanks for your message! I'd be happy to help you learn more about our services. What specifically interests you?",
-               "Great question! Let me help you with that. You can call us at ${phone || '(555) 123-4567'} or book an appointment using the form below.",
-               "I'm here to help! Feel free to ask about our services, pricing, or availability. Would you like to schedule a consultation?",
-               "Thank you for reaching out! Our team specializes in ${services || 'professional services'}. How can we assist you today?"
-             ];
-             addMessage(responses[Math.floor(Math.random() * responses.length)], false);
-           }, 1000);
-         }
-       });
-     }
-
-     if (chatInput) {
-       chatInput.addEventListener('keypress', (e) => {
-         if (e.key === 'Enter' && !e.shiftKey) {
-           e.preventDefault();
-           chatSend.click();
-         }
-       });
-     }
-   })();
-
-   // Booking functionality
-   (function() {
-     const bookingForm = document.querySelector('#booking-form');
-     const timeSlots = document.querySelectorAll('.time-slot');
-     let selectedTime = null;
-
-     if (timeSlots) {
-       timeSlots.forEach(slot => {
-         slot.addEventListener('click', () => {
-           timeSlots.forEach(s => s.classList.remove('selected'));
-           slot.classList.add('selected');
-           selectedTime = slot.dataset.time;
-         });
-       });
-     }
-
-     if (bookingForm) {
-       bookingForm.addEventListener('submit', (e) => {
-         e.preventDefault();
-         
-         if (!selectedTime) {
-           alert('Please select a time slot');
-           return;
-         }
-
-         const formData = {
-           name: document.querySelector('#booking-name').value,
-           email: document.querySelector('#booking-email').value,
-           phone: document.querySelector('#booking-phone').value,
-           service: document.querySelector('#booking-service').value,
-           date: document.querySelector('#booking-date').value,
-           time: selectedTime,
-           notes: document.querySelector('#booking-notes').value
-         };
-
-         // Show success message
-         document.querySelector('#booking-form-container').style.display = 'none';
-         document.querySelector('#booking-success').style.display = 'block';
-         
-         // Populate success details
-         document.querySelector('#success-name').textContent = formData.name;
-         document.querySelector('#success-email').textContent = formData.email;
-         document.querySelector('#success-date').textContent = new Date(formData.date).toLocaleDateString('en-US', { 
-           weekday: 'long', 
-           year: 'numeric', 
-           month: 'long', 
-           day: 'numeric' 
-         });
-         document.querySelector('#success-time').textContent = formatTime(formData.time);
-
-         console.log('Booking submitted:', formData);
-       });
-     }
-
-     function formatTime(time) {
-       const [hours, minutes] = time.split(':');
-       const hour = parseInt(hours);
-       const ampm = hour >= 12 ? 'PM' : 'AM';
-       const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-       return displayHour + ':' + minutes + ' ' + ampm;
-     }
-
-     // Set minimum date to today
-     const dateInput = document.querySelector('#booking-date');
-     if (dateInput) {
-       const today = new Date().toISOString().split('T')[0];
-       dateInput.min = today;
-       dateInput.value = today;
-     }
-   })();
-   </script>
-
-Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it production-ready and beautiful!`;
+Generate complete HTML with inline CSS and JavaScript. Make it look professional and modern.`;
 
     try {
       setGenerationProgress(10);
-      setGenerationStep('Building your website...');
 
       await new Promise(resolve => setTimeout(resolve, 800));
       setGenerationProgress(20);
-      setGenerationStep('Designing your layout...');
 
       const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       
@@ -255,7 +126,6 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
       });
 
       setGenerationProgress(40);
-      setGenerationStep('Adding colors and transitions...');
 
       if (!response.ok) {
         const errorData = await response.json();
@@ -265,11 +135,9 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
       const data = await response.json();
       
       setGenerationProgress(70);
-      setGenerationStep('Perfecting the details...');
 
       await new Promise(resolve => setTimeout(resolve, 600));
       setGenerationProgress(85);
-      setGenerationStep('Almost ready...');
 
       let htmlContent = data.html;
       
@@ -283,6 +151,8 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
       setGenerationStep('Complete!');
       setGeneratedHTML(htmlContent);
       
+      clearInterval(messageInterval); // Stop cycling messages
+      
       setTimeout(() => {
         setCurrentView('preview');
         setIsGenerating(false);
@@ -290,6 +160,7 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
 
     } catch (error) {
       console.error('Generation error:', error);
+      clearInterval(messageInterval); // Stop cycling messages on error
       alert(`Failed to generate website: ${error.message}`);
       setIsGenerating(false);
     }
@@ -322,9 +193,9 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
 
   // Home Page View
   if (currentView === 'home') {
-    return <HomePage onNavigate={setCurrentView} />;
-  }
-
+    return (
+  <div style={{background: 'red', padding: '50px'}}>TESTING 123</div>
+);
   // Pricing Page View
   if (currentView === 'pricing') {
     return <PricingPage onBack={() => setCurrentView('home')} />;
@@ -345,16 +216,6 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
             </button>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowEditor(!showEditor)}
-                className={`px-6 py-2 rounded-lg transition font-semibold ${
-                  showEditor 
-                    ? 'bg-purple-600 text-white hover:bg-purple-700' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                {showEditor ? 'Hide' : 'Edit with AI'}
-              </button>
-              <button
                 onClick={() => setCurrentView('pricing')}
                 className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition shadow-lg font-semibold"
               >
@@ -370,32 +231,13 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
           </div>
         </div>
         
-        <div className="flex-1 flex overflow-hidden h-full">
-          {/* AI Editor Panel */}
-          {showEditor && (
-            <div className="w-96 border-r bg-white p-4 overflow-y-auto flex-shrink-0">
-              <AIWebsiteEditor 
-                currentHTML={generatedHTML}
-                onHTMLUpdate={setGeneratedHTML}
-                businessInfo={{
-                  businessName,
-                  businessType,
-                  phone,
-                  address
-                }}
-              />
-            </div>
-          )}
-          
-          {/* Website Preview */}
-          <div className="flex-1 w-full h-full bg-white">
-            <iframe
-              srcDoc={generatedHTML}
-              className="w-full h-full border-0"
-              title="Generated Website Preview"
-              style={{ minHeight: '100%' }}
-            />
-          </div>
+        <div className="flex-1 w-full h-full bg-white">
+          <iframe
+            srcDoc={generatedHTML}
+            className="w-full h-full border-0"
+            title="Generated Website Preview"
+            style={{ minHeight: '100%' }}
+          />
         </div>
       </div>
     );
@@ -403,213 +245,146 @@ Generate ONLY the complete HTML code with all CSS and JavaScript inline. Make it
 
   // Builder View
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4">
-      <div className="max-w-4xl mx-auto">
-        {/* Back to Home */}
-        <div className="mb-6">
-          <button
-            onClick={() => setCurrentView('home')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span>Back to Home</span>
-          </button>
-        </div>
-
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm mb-4">
-            <Wand2 className="w-5 h-5 text-purple-600" />
-            <span className="text-sm font-medium text-gray-700">AI-Powered</span>
-          </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-4">
-            High Converting Website Builder
-          </h1>
-          <p className="text-xl text-gray-600">
-            For Service-Based Businesses
-          </p>
-        </div>
-
-        <div className="bg-white rounded-2xl shadow-xl p-8 space-y-8">
-          {/* Instruction Note */}
-          <div className="bg-blue-50 border-l-4 border-blue-600 p-4 rounded-r-lg">
-            <p className="text-blue-900 font-semibold flex items-center gap-2">
-              <Wand2 className="w-5 h-5" />
-              Use as much detail as possible!
-            </p>
-            <p className="text-blue-700 text-sm mt-1">
-              The more information you provide, the better your AI-generated website will be.
-            </p>
-          </div>
-
-          {/* Business Name */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Business Name *
-            </label>
-            <input
-              type="text"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              placeholder="e.g., Acme Corporation"
-            />
-          </div>
-
-          {/* Business Type */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Business Type *
-            </label>
-            <input
-              type="text"
-              value={businessType}
-              onChange={(e) => setBusinessType(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              placeholder="e.g., Plumbing, HVAC, Law Firm, Consulting"
-            />
-          </div>
-
-          {/* Address */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Address (Optional)
-            </label>
-            <input
-              type="text"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              placeholder="123 Main St, City, State 12345"
-            />
-          </div>
-
-          {/* Phone */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Phone Number (Optional)
-            </label>
-            <input
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              placeholder="(555) 123-4567"
-            />
-          </div>
-
-          {/* Services */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Services/Products (Optional)
-            </label>
-            <textarea
-              value={services}
-              onChange={(e) => setServices(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              rows="3"
-              placeholder="Describe your main services or products..."
-            />
-          </div>
-
-          {/* Additional Description */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Additional Details (Optional)
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
-              rows="4"
-              placeholder="Any specific requirements, features, or style preferences..."
-            />
-          </div>
-
-          {/* Image Upload */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">
-              Upload Images (Optional)
-            </label>
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-purple-400 transition">
-              <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-              <label className="cursor-pointer">
-                <span className="text-purple-600 hover:text-purple-700 font-medium">
-                  Choose files
-                </span>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-              <p className="text-sm text-gray-500 mt-1">PNG, JPG, GIF up to 10MB</p>
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+      {!isGenerating ? (
+        // Form View
+        <div className="py-12 px-4">
+          <div className="max-w-2xl mx-auto">
+            {/* Back to Home */}
+            <div className="mb-6">
+              <button
+                onClick={() => setCurrentView('home')}
+                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span>Back to Home</span>
+              </button>
             </div>
 
-            {uploadedImages.length > 0 && (
-              <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
-                {uploadedImages.map((img, index) => (
-                  <div key={index} className="relative group">
-                    <img
-                      src={img.url}
-                      alt={img.name}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    <button
-                      onClick={() => removeImage(index)}
-                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+            <div className="text-center mb-12">
+              <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm mb-4">
+                <Wand2 className="w-5 h-5 text-purple-600" />
+                <span className="text-sm font-medium text-gray-700">AI-Powered</span>
               </div>
-            )}
+              <h1 className="text-5xl font-bold text-gray-900 mb-4">
+                Create Your Website
+              </h1>
+              <p className="text-xl text-gray-600">
+                Just fill in the basics, AI handles the rest
+              </p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl p-8 space-y-6">
+              {/* Business Name */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Business Name *
+                </label>
+                <input
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg"
+                  placeholder="e.g., Elite Window Cleaning"
+                />
+              </div>
+
+              {/* Business Type */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Business Type *
+                </label>
+                <input
+                  type="text"
+                  value={businessType}
+                  onChange={(e) => setBusinessType(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg"
+                  placeholder="e.g., Window Cleaning"
+                />
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg"
+                  placeholder="(555) 123-4567"
+                />
+              </div>
+
+              {/* Services */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Services You Offer
+                </label>
+                <textarea
+                  value={services}
+                  onChange={(e) => setServices(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent transition text-lg"
+                  rows="3"
+                  placeholder="e.g., Residential window cleaning, Commercial cleaning, Pressure washing"
+                />
+              </div>
+
+              {/* Generate Button */}
+              <button
+                onClick={generateWebsite}
+                disabled={!businessName.trim() || !businessType.trim()}
+                className={`w-full py-5 px-6 rounded-xl font-bold text-xl transition-all ${
+                  businessName.trim() && businessType.trim()
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg hover:shadow-xl text-white transform hover:scale-105'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-3">
+                  <Wand2 className="w-6 h-6" />
+                  <span>Generate My Website</span>
+                </div>
+              </button>
+
+              <p className="text-center text-sm text-gray-500">
+                Takes 30-60 seconds • No credit card required
+              </p>
+            </div>
           </div>
-
-          {/* Generate Button */}
-          <button
-            onClick={generateWebsite}
-            disabled={isGenerating}
-            className={`w-full py-4 px-6 rounded-xl font-semibold text-lg transition-all ${
-              isGenerating
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 shadow-lg hover:shadow-xl text-white'
-            }`}
-          >
-            {isGenerating ? (
-              <div className="flex items-center justify-center gap-3">
-                <div className="w-6 h-6 border-4 border-white border-t-transparent rounded-full animate-spin" />
-                <span>{generationStep}</span>
+        </div>
+      ) : (
+        // Loading Screen (Full Page)
+        <div className="min-h-screen flex items-center justify-center p-4">
+          <div className="max-w-md w-full">
+            <div className="text-center mb-12">
+              {/* Animated Spinner */}
+              <div className="relative w-24 h-24 mx-auto mb-8">
+                <div className="absolute inset-0 border-8 border-purple-200 rounded-full"></div>
+                <div className="absolute inset-0 border-8 border-transparent border-t-purple-600 rounded-full animate-spin"></div>
+                <div className="absolute inset-3 border-8 border-transparent border-t-blue-600 rounded-full animate-spin" style={{ animationDirection: 'reverse', animationDuration: '1s' }}></div>
               </div>
-            ) : (
-              <div className="flex items-center justify-center gap-2">
-                <Wand2 className="w-6 h-6" />
-                <span>Generate Website with AI</span>
-              </div>
-            )}
-          </button>
 
-          {isGenerating && (
-            <>
-              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+              {/* Loading Text */}
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                {generationStep}
+              </h2>
+              <p className="text-gray-600 text-lg mb-8">
+                Creating your professional website...
+              </p>
+
+              {/* Progress Bar */}
+              <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-3">
                 <div
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-500"
+                  className="bg-gradient-to-r from-purple-600 to-blue-600 h-full transition-all duration-500 ease-out rounded-full"
                   style={{ width: `${generationProgress}%` }}
                 />
               </div>
-              <p className="text-center text-gray-600 text-sm mt-2">
-                ☕ Sit back and relax, this will take 1-2 minutes
-              </p>
-            </>
-          )}
+              <p className="text-sm text-gray-500">{generationProgress}% Complete</p>
+            </div>
+          </div>
         </div>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          Powered by Claude AI • Your data is not stored
-        </p>
-      </div>
+      )}
     </div>
   );
 };
