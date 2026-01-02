@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Globe, CreditCard, Puzzle, Settings, LogOut, Menu, X, Sparkles } from 'lucide-react';
+import { Globe, CreditCard, Puzzle, Settings, LogOut, Menu, X, Sparkles, Briefcase, Users, Clock } from 'lucide-react';
+import BusinessHoursPage from './BusinessHoursPage';
+import ServicesPage from './ServicesPage';
+import EmployeesPage from './EmployeesPage';
 
 const Dashboard = ({ user, onLogout, generatedWebsite }) => {
   const [currentPage, setCurrentPage] = useState('website');
@@ -7,6 +10,9 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
 
   const navigationItems = [
     { id: 'website', label: 'Website', icon: Globe },
+    { id: 'services', label: 'Services', icon: Briefcase },
+    { id: 'employees', label: 'Team', icon: Users },
+    { id: 'hours', label: 'Business Hours', icon: Clock },
     { id: 'billing', label: 'Billing', icon: CreditCard },
     { id: 'integrations', label: 'Integrations', icon: Puzzle },
     { id: 'settings', label: 'Settings', icon: Settings },
@@ -125,6 +131,9 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
         {/* Content area */}
         <div className="p-8">
           {currentPage === 'website' && <WebsitePage generatedWebsite={generatedWebsite} />}
+          {currentPage === 'services' && <ServicesPage userId={user?.id} />}
+          {currentPage === 'employees' && <EmployeesPage userId={user?.id} />}
+          {currentPage === 'hours' && <BusinessHoursPage userId={user?.id} />}
           {currentPage === 'billing' && <BillingPage user={user} />}
           {currentPage === 'integrations' && <IntegrationsPage />}
           {currentPage === 'settings' && <SettingsPage user={user} />}
