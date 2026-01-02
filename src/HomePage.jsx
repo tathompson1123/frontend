@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { Sparkles, CheckCircle, Zap } from 'lucide-react';
-import AuthModal from '../components/AuthModal';
 
 export default function HomePage() {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -47,11 +46,11 @@ export default function HomePage() {
     setIsGenerating(true);
     setError(null);
 
-    console.log('🔍 Sending form data:', formData); // Debug log
+    console.log('🔍 Sending form data:', formData);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      console.log('🌐 API URL:', apiUrl); // Debug log
+      console.log('🌐 API URL:', apiUrl);
 
       const response = await fetch(`${apiUrl}/api/generate`, {
         method: 'POST',
@@ -66,10 +65,10 @@ export default function HomePage() {
         })
       });
 
-      console.log('📡 Response status:', response.status); // Debug log
+      console.log('📡 Response status:', response.status);
 
       const data = await response.json();
-      console.log('📦 Response data:', data); // Debug log
+      console.log('📦 Response data:', data);
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to generate website');
@@ -392,13 +391,47 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Auth Modal */}
+      {/* Simple Auth Modal - Inline */}
       {showAuthModal && (
-        <AuthModal
-          mode={authMode}
-          onClose={() => setShowAuthModal(false)}
-          onSuccess={handleAuthSuccess}
-        />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              {authMode === 'signup' ? 'Create Account' : 'Welcome Back'}
+            </h2>
+            
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              // Simple redirect to dashboard for now
+              handleAuthSuccess({});
+            }} className="space-y-4">
+              <input
+                type="email"
+                placeholder="Email"
+                required
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+              />
+              <input
+                type="password"
+                placeholder="Password"
+                required
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+              >
+                {authMode === 'signup' ? 'Sign Up' : 'Log In'}
+              </button>
+            </form>
+
+            <button
+              onClick={() => setShowAuthModal(false)}
+              className="mt-4 text-gray-600 hover:text-gray-900 w-full text-center"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
