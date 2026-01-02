@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Check, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react';
 
-const PricingPage = ({ onBack }) => {
+const PricingPage = ({ onBack, onSelectPlan }) => {
   const [billingCycle, setBillingCycle] = useState('monthly');
 
   const plans = [
@@ -207,6 +207,7 @@ const PricingPage = ({ onBack }) => {
 
                 {/* CTA Button */}
                 <button
+                  onClick={() => onSelectPlan && onSelectPlan(plan.name.toLowerCase().replace(' ', '-'))}
                   className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all mb-8 bg-gradient-to-r ${plan.gradient} hover:shadow-lg hover:scale-105 flex items-center justify-center gap-2`}
                 >
                   {plan.cta}
