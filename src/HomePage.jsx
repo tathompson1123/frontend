@@ -1,7 +1,7 @@
 import React from 'react';
 import { Wand2, MessageCircle, Calendar, TrendingUp, Zap, ArrowRight, Check, Sparkles } from 'lucide-react';
 
-const HomePage = ({ onNavigate }) => {
+const HomePage = ({ onNavigate, onOpenAuth }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Navigation */}
@@ -16,12 +16,18 @@ const HomePage = ({ onNavigate }) => {
                 SORCE
               </span>
             </div>
-            <div className="flex gap-6">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => onNavigate('pricing')}
                 className="text-gray-700 hover:text-purple-600 font-medium transition"
               >
                 Pricing
+              </button>
+              <button
+                onClick={() => onOpenAuth && onOpenAuth('login')}
+                className="text-gray-700 hover:text-purple-600 font-medium transition"
+              >
+                Login
               </button>
               <button
                 onClick={() => onNavigate('builder')}
@@ -43,15 +49,15 @@ const HomePage = ({ onNavigate }) => {
           </div>
           
           <h1 className="text-6xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            The Only Website Builder<br />
+            Build Your Website in Minutes<br />
             <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-              That Grows Your Business
+              Start Growing Today
             </span>
           </h1>
           
           <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
-            SORCE doesn't just build websites. We create AI-powered business engines that engage visitors, 
-            book appointments, and drive revenue 24/7 — all while you sleep.
+            The only website builder with AI chat, automated Google reviews, and growth tools built in. 
+            Perfect for service businesses that want to convert more customers.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -340,6 +346,28 @@ const HomePage = ({ onNavigate }) => {
               </div>
               <span className="text-xl font-bold">SORCE</span>
             </div>
+            
+            <div className="flex items-center gap-6 mb-4 md:mb-0">
+              <button
+                onClick={() => onNavigate('pricing')}
+                className="text-gray-400 hover:text-white transition"
+              >
+                Pricing
+              </button>
+              <button
+                onClick={() => onOpenAuth && onOpenAuth('login')}
+                className="text-gray-400 hover:text-white transition"
+              >
+                Login
+              </button>
+              <button
+                onClick={() => onOpenAuth && onOpenAuth('signup')}
+                className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition font-semibold"
+              >
+                Sign Up
+              </button>
+            </div>
+            
             <div className="text-gray-400 text-sm">
               © 2025 SORCE. All rights reserved.
             </div>
