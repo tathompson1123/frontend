@@ -181,23 +181,39 @@ ${services ? `- Services: ${services}` : ''}
 STRUCTURE (sections in order):
 
 1. HERO - Full-screen impact
-   - Stunning background image (Unsplash: ${businessType})
+   CRITICAL: MUST have background image from Unsplash
+   - Full viewport height with background-image: url(https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},professional,outdoor,business)
+   - Dark overlay (background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)))
    - Small badge above headline
-   - Large headline with one word emphasized
+   - Large headline with one word emphasized in accent color
    - Description text
    - Two CTA buttons side-by-side
-   - Scroll indicator
+   - Scroll indicator at bottom
 
 2. SERVICES - Visual showcase
-   - 2-4 service cards with images
-   - Each card: image, icon, title, description, pricing, CTA
-   - Hover effects (lift, zoom)
-   - Allow multi-select with checkboxes
+   - 2-4 service cards with REAL images
+   - Each card MUST have:
+     * Actual img tag with src from https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service,work,professional
+     * Icon emoji or symbol
+     * Service title
+     * Description (2-3 sentences)
+     * Pricing prominently displayed
+     * "Book Now" CTA button
+     * Checkbox: "Select this service"
+   - Cards have hover effects (lift, shadow increase)
+   - Images have subtle zoom on hover
 
 3. WHY CHOOSE US - Trust building  
-   - Stats/numbers
+   - Stats/numbers (500+ customers, etc)
    - 4 benefit cards with icons
-   - Customer testimonials with photos and ratings
+   - TESTIMONIALS SECTION (3 testimonial cards):
+     * Each testimonial MUST include:
+       - 5-star rating (⭐⭐⭐⭐⭐)
+       - Quote text in quotes
+       - Customer photo: img src="https://source.unsplash.com/150x150/?portrait,professional,person,headshot"
+       - Customer name + context (e.g., "John D., 2024 Honda Accord")
+     * Cards in a row/grid
+     * Professional styling with shadows
 
 4. BOOKING FORM - Comprehensive
    TWO-COLUMN LAYOUT:
@@ -247,9 +263,12 @@ ANIMATIONS (flowing transitions):
 - Parallax hero background
 - Flowing section transitions
 
-IMAGES:
-- Hero: https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},professional
-- Services: https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service
+IMAGES (CRITICAL - DO NOT SKIP):
+- Hero Background: MUST use https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},professional,outdoor as full-width background image
+- Service Card Images: Each service MUST have image from https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service,professional,work
+- Testimonial Photos: MUST use https://source.unsplash.com/150x150/?portrait,professional,person,face for each customer photo
+- All images MUST be actual img tags or background-image CSS, not placeholders
+- Apply dark overlay on hero (rgba(0,0,0,0.5)) for text readability
 
 TECHNICAL:
 - Single HTML file
