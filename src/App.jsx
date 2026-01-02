@@ -6,7 +6,7 @@ import AuthModal from './AuthModal';
 import Dashboard from './Dashboard';
 
 const AIWebsiteBuilder = () => {
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'builder', 'preview', 'pricing', 'dashboard'
+  const [currentView, setCurrentView] = useState('home'); // ALWAYS START AT HOME
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [address, setAddress] = useState('');
@@ -20,29 +20,43 @@ const AIWebsiteBuilder = () => {
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStep, setGenerationStep] = useState('');
   
-  // Auth state
+  // Auth state - START WITH NO USER
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState('signup');
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [user, setUser] = useState(null); // { name, email, plan }
+  const [user, setUser] = useState(null); // NO USER ON LOAD
 
   // Force start at home and clear any bad auth state
   useEffect(() => {
+    console.log('🏠 App mounted - forcing home view');
+    console.log('Current view:', currentView);
+    console.log('Current user:', user);
+    
     // Clear hash
     if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname);
     }
     
-    // Force home view on mount
-    setCurrentView('home');
+    // FORCE home view
+    if (currentView !== 'home') {
+      console.log('⚠️ Not on home! Forcing...');
+      setCurrentView('home');
+    }
     
-    // Clear any invalid tokens (no backend to verify yet)
+    // Clear any tokens
     const token = localStorage.getItem('authToken');
     if (token) {
-      // For now, just clear it since we can't verify
+      console.log('⚠️ Found auth token, clearing...');
       localStorage.removeItem('authToken');
+    }
+    
+    // Clear user
+    if (user) {
+      console.log('⚠️ Found user, clearing...');
       setUser(null);
     }
+    
+    console.log('✅ Home forced!');
   }, []);
 
   const handleImageUpload = (e) => {
@@ -801,18 +815,7 @@ Make this look like a $10,000 custom website - premium, polished, conversion-foc
     setDesignStyle('professional');
   };
 
-  // Dashboard View
-  if (currentView === 'dashboard' && user) {
-    return (
-      <Dashboard 
-        user={user} 
-        onLogout={handleLogout}
-        generatedWebsite={generatedHTML}
-      />
-    );
-  }
-
-  // Home Page View
+  // Home Page View - CHECK THIS FIRST!
   if (currentView === 'home') {
     return (
       <>
@@ -831,6 +834,17 @@ Make this look like a $10,000 custom website - premium, polished, conversion-foc
           mode={authMode}
         />
       </>
+    );
+  }
+
+  // Dashboard View - only if user is logged in AND not on home
+  if (currentView === 'dashboard' && user) {
+    return (
+      <Dashboard 
+        user={user} 
+        onLogout={handleLogout}
+        generatedWebsite={generatedHTML}
+      />
     );
   }
 
