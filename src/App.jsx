@@ -1,8 +1,3 @@
-SORCE - A.I. Website Builder Optimized for Service Based Businesses
-
-
-App.jsx pre test dev mode 
-
 import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
