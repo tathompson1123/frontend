@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Globe, CreditCard, Puzzle, Settings, LogOut, Menu, X, Sparkles, Briefcase, Users, Clock } from 'lucide-react';
+import { Globe, CreditCard, Puzzle, Settings, LogOut, Menu, X, Sparkles, Briefcase, Users, Clock, Home } from 'lucide-react';
 import BusinessHoursPage from './BusinessHoursPage';
 import ServicesPage from './ServicesPage';
 import EmployeesPage from './EmployeesPage';
@@ -88,7 +88,7 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
 
         {/* User section */}
         <div className="p-4 border-t border-gray-200">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white font-semibold">
                 {user?.name?.charAt(0).toUpperCase()}
@@ -99,13 +99,26 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
               <p className="text-sm text-gray-500 truncate">{user?.email}</p>
             </div>
           </div>
-          <button
-            onClick={onLogout}
-            className="w-full mt-3 flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="font-medium">Logout</span>
-          </button>
+          <div className="space-y-2">
+            <button
+              onClick={() => {
+                // Simple logout - clear storage and reload
+                localStorage.removeItem('authToken');
+                window.location.href = '/';
+              }}
+              className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="font-medium">Logout</span>
+            </button>
+            <button
+              onClick={() => window.location.href = '/'}
+              className="w-full flex items-center gap-2 px-4 py-2 text-purple-600 hover:bg-purple-50 rounded-lg transition"
+            >
+              <Home className="w-4 h-4" />
+              <span className="font-medium">Back to Home</span>
+            </button>
+          </div>
         </div>
       </div>
 
