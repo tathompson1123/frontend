@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
 import HomePage from './HomePage';
@@ -25,6 +25,13 @@ const AIWebsiteBuilder = () => {
   const [authMode, setAuthMode] = useState('signup');
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [user, setUser] = useState(null); // { name, email, plan }
+
+  // Clear hash from URL to prevent stuck states
+  useEffect(() => {
+    if (window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  }, []);
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
