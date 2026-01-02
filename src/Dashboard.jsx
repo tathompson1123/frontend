@@ -1,12 +1,9 @@
 import React, { useState } from 'react';
 import { Globe, CreditCard, Puzzle, Settings, LogOut, Menu, X, Sparkles, Briefcase, Users, Clock, Home } from 'lucide-react';
-import BusinessHoursPage from './BusinessHoursPage';
-import ServicesPage from './ServicesPage';
-import EmployeesPage from './EmployeesPage';
 
 const Dashboard = ({ user, onLogout, generatedWebsite }) => {
   const [currentPage, setCurrentPage] = useState('website');
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navigationItems = [
     { id: 'website', label: 'Website', icon: Globe },
@@ -20,7 +17,6 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Mobile Overlay */}
       {sidebarOpen && (
         <div 
           className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
@@ -28,7 +24,6 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
         />
       )}
 
-      {/* Sidebar */}
       <div className={`
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
         lg:translate-x-0
@@ -39,7 +34,6 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
         h-screen
         z-50
       `}>
-        {/* Logo */}
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -49,7 +43,6 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
               SORCE
             </span>
           </div>
-          {/* Mobile close button */}
           <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-500 hover:text-gray-700"
@@ -58,7 +51,6 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
           </button>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             {navigationItems.map((item) => {
@@ -69,7 +61,7 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
                   <button
                     onClick={() => {
                       setCurrentPage(item.id);
-                      setSidebarOpen(false); // Close on mobile after selecting
+                      setSidebarOpen(false);
                     }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                       isActive
@@ -86,7 +78,6 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
           </ul>
         </nav>
 
-        {/* User section */}
         <div className="p-4 border-t border-gray-200">
           <div className="flex items-center gap-3 mb-3">
             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
@@ -102,8 +93,7 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
           <div className="space-y-2">
             <button
               onClick={() => {
-                // Simple logout - clear storage and reload
-                localStorage.removeItem('authToken');
+                localStorage.clear();
                 window.location.href = '/';
               }}
               className="w-full flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
@@ -122,12 +112,9 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
         </div>
       </div>
 
-      {/* Main content */}
       <div className="flex-1 overflow-auto">
-        {/* Header */}
         <div className="bg-white border-b border-gray-200 px-4 lg:px-8 py-6">
           <div className="flex items-center gap-4">
-            {/* Mobile menu button */}
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
@@ -141,12 +128,11 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
           </div>
         </div>
 
-        {/* Content area */}
         <div className="p-8">
           {currentPage === 'website' && <WebsitePage generatedWebsite={generatedWebsite} />}
-          {currentPage === 'services' && <ServicesPage userId={user?.id} />}
-          {currentPage === 'employees' && <EmployeesPage userId={user?.id} />}
-          {currentPage === 'hours' && <BusinessHoursPage userId={user?.id} />}
+          {currentPage === 'services' && <div className="text-center py-12"><p className="text-gray-600">Services page coming soon. Login to see your data.</p></div>}
+          {currentPage === 'employees' && <div className="text-center py-12"><p className="text-gray-600">Team page coming soon. Login to see your data.</p></div>}
+          {currentPage === 'hours' && <div className="text-center py-12"><p className="text-gray-600">Business Hours page coming soon. Login to see your data.</p></div>}
           {currentPage === 'billing' && <BillingPage user={user} />}
           {currentPage === 'integrations' && <IntegrationsPage />}
           {currentPage === 'settings' && <SettingsPage user={user} />}
@@ -156,7 +142,6 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
   );
 };
 
-// Website Page Component
 const WebsitePage = ({ generatedWebsite }) => {
   return (
     <div className="max-w-6xl">
@@ -204,7 +189,6 @@ const WebsitePage = ({ generatedWebsite }) => {
         )}
       </div>
 
-      {/* Website Stats */}
       <div className="grid grid-cols-3 gap-6">
         <div className="bg-white rounded-xl shadow-sm p-6">
           <p className="text-gray-600 text-sm mb-1">Total Visitors</p>
@@ -226,7 +210,6 @@ const WebsitePage = ({ generatedWebsite }) => {
   );
 };
 
-// Billing Page Component
 const BillingPage = ({ user }) => {
   return (
     <div className="max-w-4xl">
@@ -271,7 +254,6 @@ const BillingPage = ({ user }) => {
   );
 };
 
-// Integrations Page Component
 const IntegrationsPage = () => {
   const integrations = [
     { name: 'Google Analytics', description: 'Track website visitors', connected: true },
@@ -306,7 +288,6 @@ const IntegrationsPage = () => {
   );
 };
 
-// Settings Page Component
 const SettingsPage = ({ user }) => {
   return (
     <div className="max-w-4xl">
