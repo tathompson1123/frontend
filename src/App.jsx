@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import HomePage from './pages/HomePage';
-import Dashboard from './pages/Dashboard';
+import HomePage from './HomePage';
+import Dashboard from './Dashboard';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
