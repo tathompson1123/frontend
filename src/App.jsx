@@ -266,8 +266,6 @@ TECHNICAL:
 
 Make this look like a $10,000 custom website - premium, polished, conversion-focused.`;
 
-═══════════════════════════════════════════════════════════
-
 Generate a complete, production-ready HTML file. Make this website look premium, professional, and conversion-focused. Every detail matters - this should be a $5,000+ quality website.`;
 
     try {
