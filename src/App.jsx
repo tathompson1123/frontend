@@ -348,7 +348,7 @@ Generate complete HTML with inline CSS and JavaScript. Make it look professional
               </button>
 
               <p className="text-center text-sm text-gray-500">
-                Takes 30-60 seconds • No credit card required
+                Takes 90-120 seconds • Premium AI quality
               </p>
             </div>
           </div>
