@@ -3,7 +3,7 @@ import { Globe, CreditCard, Puzzle, Settings, LogOut, Menu, X, Sparkles } from '
 
 const Dashboard = ({ user, onLogout, generatedWebsite }) => {
   const [currentPage, setCurrentPage] = useState('website');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Start closed on mobile
 
   const navigationItems = [
     { id: 'website', label: 'Website', icon: Globe },
@@ -14,24 +14,46 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-white border-r border-gray-200 transition-all duration-300 flex flex-col`}>
+      <div className={`
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} 
+        lg:translate-x-0
+        fixed lg:static
+        w-64 bg-white border-r border-gray-200 
+        transition-transform duration-300 
+        flex flex-col 
+        h-screen
+        z-50
+      `}>
         {/* Logo */}
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
               <Sparkles className="w-6 h-6 text-white" />
             </div>
-            {sidebarOpen && (
-              <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                SORCE
-              </span>
-            )}
+            <span className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              SORCE
+            </span>
           </div>
+          {/* Mobile close button */}
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="lg:hidden text-gray-500 hover:text-gray-700"
+          >
+            <X className="w-6 h-6" />
+          </button>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-2">
             {navigationItems.map((item) => {
               const Icon = item.icon;
@@ -39,7 +61,10 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
               return (
                 <li key={item.id}>
                   <button
-                    onClick={() => setCurrentPage(item.id)}
+                    onClick={() => {
+                      setCurrentPage(item.id);
+                      setSidebarOpen(false); // Close on mobile after selecting
+                    }}
                     className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
                       isActive
                         ? 'bg-purple-50 text-purple-600'
@@ -47,9 +72,7 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
                     }`}
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" />
-                    {sidebarOpen && (
-                      <span className="font-medium">{item.label}</span>
-                    )}
+                    <span className="font-medium">{item.label}</span>
                   </button>
                 </li>
               );
@@ -59,46 +82,44 @@ const Dashboard = ({ user, onLogout, generatedWebsite }) => {
 
         {/* User section */}
         <div className="p-4 border-t border-gray-200">
-          <div className={`flex items-center gap-3 ${!sidebarOpen && 'justify-center'}`}>
+          <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-white font-semibold">
                 {user?.name?.charAt(0).toUpperCase()}
               </span>
             </div>
-            {sidebarOpen && (
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900 truncate">{user?.name}</p>
-                <p className="text-sm text-gray-500 truncate">{user?.email}</p>
-              </div>
-            )}
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 truncate">{user?.name}</p>
+              <p className="text-sm text-gray-500 truncate">{user?.email}</p>
+            </div>
           </div>
-          {sidebarOpen && (
-            <button
-              onClick={onLogout}
-              className="w-full mt-3 flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
-            >
-              <LogOut className="w-4 h-4" />
-              <span className="font-medium">Logout</span>
-            </button>
-          )}
+          <button
+            onClick={onLogout}
+            className="w-full mt-3 flex items-center gap-2 px-4 py-2 text-red-600 hover:bg-red-50 rounded-lg transition"
+          >
+            <LogOut className="w-4 h-4" />
+            <span className="font-medium">Logout</span>
+          </button>
         </div>
-
-        {/* Toggle sidebar */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="absolute top-6 -right-3 w-6 h-6 bg-white border border-gray-200 rounded-full flex items-center justify-center shadow-sm hover:bg-gray-50"
-        >
-          {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
-        </button>
       </div>
 
       {/* Main content */}
       <div className="flex-1 overflow-auto">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 px-8 py-6">
-          <h1 className="text-3xl font-bold text-gray-900">
-            {navigationItems.find(item => item.id === currentPage)?.label}
-          </h1>
+        <div className="bg-white border-b border-gray-200 px-4 lg:px-8 py-6">
+          <div className="flex items-center gap-4">
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            
+            <h1 className="text-2xl lg:text-3xl font-bold text-gray-900">
+              {navigationItems.find(item => item.id === currentPage)?.label}
+            </h1>
+          </div>
         </div>
 
         {/* Content area */}
