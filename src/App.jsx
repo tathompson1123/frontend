@@ -172,6 +172,11 @@ const AIWebsiteBuilder = () => {
 
     const prompt = `Create a PREMIUM, professional website for ${businessName}, a ${businessType} business.
 
+⚠️ CRITICAL IMAGE REQUIREMENT - READ FIRST ⚠️
+YOU MUST INCLUDE REAL IMAGES FROM UNSPLASH IN THE HTML.
+DO NOT use placeholder text or alt tags without actual src attributes.
+EVERY image below MUST have a working src="https://source.unsplash.com/..." URL.
+
 BUSINESS INFO:
 - Name: ${businessName}
 - Type: ${businessType}
@@ -181,39 +186,43 @@ ${services ? `- Services: ${services}` : ''}
 STRUCTURE (sections in order):
 
 1. HERO - Full-screen impact
-   CRITICAL: MUST have background image from Unsplash
-   - Full viewport height with background-image: url(https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},professional,outdoor,business)
-   - Dark overlay (background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)))
+   🖼️ MANDATORY BACKGROUND IMAGE:
+   <section style="background-image: url('https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},professional,outdoor,business'); background-size: cover; background-position: center; min-height: 100vh;">
+   
+   - Dark overlay: background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5))
    - Small badge above headline
-   - Large headline with one word emphasized in accent color
+   - Large headline with one word in accent color
    - Description text
    - Two CTA buttons side-by-side
    - Scroll indicator at bottom
 
 2. SERVICES - Visual showcase
-   - 2-4 service cards with REAL images
-   - Each card MUST have:
-     * Actual img tag with src from https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service,work,professional
-     * Icon emoji or symbol
-     * Service title
-     * Description (2-3 sentences)
-     * Pricing prominently displayed
-     * "Book Now" CTA button
-     * Checkbox: "Select this service"
-   - Cards have hover effects (lift, shadow increase)
-   - Images have subtle zoom on hover
+   🖼️ MANDATORY SERVICE IMAGES - Each service card MUST have:
+   <img src="https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service,work,professional" alt="Service" style="width: 100%; height: 300px; object-fit: cover;" />
+   
+   Card structure for EACH service:
+   - Image at top (actual <img> tag with Unsplash URL above)
+   - Icon emoji
+   - Service title
+   - Description
+   - Price displayed prominently
+   - "Book Now" button
+   - Checkbox: "Select this service"
+   - Hover: lift effect, image zoom
 
 3. WHY CHOOSE US - Trust building  
-   - Stats/numbers (500+ customers, etc)
-   - 4 benefit cards with icons
-   - TESTIMONIALS SECTION (3 testimonial cards):
-     * Each testimonial MUST include:
-       - 5-star rating (⭐⭐⭐⭐⭐)
-       - Quote text in quotes
-       - Customer photo: img src="https://source.unsplash.com/150x150/?portrait,professional,person,headshot"
-       - Customer name + context (e.g., "John D., 2024 Honda Accord")
-     * Cards in a row/grid
-     * Professional styling with shadows
+   - Stats section (500+ customers, etc)
+   - 4 benefit icons with text
+   
+   🖼️ MANDATORY TESTIMONIAL PHOTOS - Create 3 testimonial cards with:
+   <img src="https://source.unsplash.com/150x150/?portrait,professional,person,headshot" alt="Customer" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;" />
+   
+   Each testimonial MUST include:
+   - 5 stars: ⭐⭐⭐⭐⭐
+   - Quote text in quotation marks
+   - Customer photo (actual <img> with Unsplash URL above)
+   - Customer name + detail
+   - Styled card with shadow
 
 4. BOOKING FORM - Comprehensive
    TWO-COLUMN LAYOUT:
@@ -279,6 +288,42 @@ TECHNICAL:
 - Form validation
 - Mobile responsive
 - Fast, optimized code
+
+🖼️ IMAGE IMPLEMENTATION EXAMPLES (COPY THESE):
+
+Hero section background:
+<section style="background-image: url('https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},outdoor,professional'); background-size: cover; background-position: center; min-height: 100vh; position: relative;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5));"></div>
+  <div style="position: relative; z-index: 1;">
+    <!-- Hero content here -->
+  </div>
+</section>
+
+Service card with image:
+<div class="service-card">
+  <img src="https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service,work" style="width: 100%; height: 250px; object-fit: cover; border-radius: 12px 12px 0 0;" />
+  <div class="card-content">
+    <h3>Service Name</h3>
+    <p>Description</p>
+    <p class="price">$75</p>
+    <button>Book Now</button>
+  </div>
+</div>
+
+Testimonial with photo:
+<div class="testimonial">
+  <div class="stars">⭐⭐⭐⭐⭐</div>
+  <p>"Amazing service!"</p>
+  <div class="author">
+    <img src="https://source.unsplash.com/150x150/?portrait,professional" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;" />
+    <div>
+      <strong>John Smith</strong>
+      <span>Verified Customer</span>
+    </div>
+  </div>
+</div>
+
+REMEMBER: Use the EXACT Unsplash URLs shown above. DO NOT use placeholders or alt text without src attributes.
 
 Make this look like a $10,000 custom website - premium, polished, conversion-focused.`;
 
