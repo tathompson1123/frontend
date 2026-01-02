@@ -797,7 +797,13 @@ Make this look like a $10,000 custom website - premium, polished, conversion-foc
   if (currentView === 'home') {
     return (
       <>
-        <HomePage onNavigate={setCurrentView} />
+        <HomePage 
+          onNavigate={setCurrentView}
+          onOpenAuth={(mode) => {
+            setAuthMode(mode);
+            setIsAuthModalOpen(true);
+          }}
+        />
         <AuthModal
           isOpen={isAuthModalOpen}
           onClose={() => setIsAuthModalOpen(false)}
