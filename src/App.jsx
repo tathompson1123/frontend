@@ -170,380 +170,294 @@ const AIWebsiteBuilder = () => {
       
       // Mock HTML with real Unsplash images to test
       const mockHTML = `<!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${businessName} - Professional ${businessType} Services</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <title>${businessName}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@700;800&family=Inter:wght@400;600&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Inter', sans-serif; 
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #333;
       line-height: 1.6;
-      color: #1f2937;
     }
-    h1, h2, h3 { font-family: 'Poppins', sans-serif; }
     
-    /* Smooth Scroll */
-    html { scroll-behavior: smooth; }
-    
-    /* Hero Section */
+    /* Hero */
     .hero {
-      background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.4)), url('https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},professional,outdoor,business');
+      height: 100vh;
+      background: linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)),
+                  url('https://source.unsplash.com/1920x1080/?${businessType.replace(/\s+/g, ',')},professional,business');
       background-size: cover;
       background-position: center;
-      background-attachment: fixed;
-      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
-      text-align: center;
       color: white;
-      position: relative;
+      text-align: center;
     }
-    .hero-content {
-      max-width: 900px;
-      padding: 2rem;
-      animation: fadeInUp 1s ease-out;
-    }
-    .badge {
-      display: inline-block;
-      background: rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
-      padding: 0.5rem 1.5rem;
-      border-radius: 50px;
-      font-size: 0.9rem;
-      margin-bottom: 1.5rem;
-      border: 1px solid rgba(255,255,255,0.3);
-    }
+    
+    .hero-content { max-width: 800px; padding: 20px; }
+    
     .hero h1 {
-      font-size: clamp(2.5rem, 6vw, 4.5rem);
+      font-family: 'Poppins', sans-serif;
+      font-size: 4rem;
       font-weight: 800;
-      margin-bottom: 1rem;
-      line-height: 1.1;
+      margin-bottom: 20px;
     }
-    .hero h1 span {
-      background: linear-gradient(135deg, #10b981, #34d399);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
+    
+    .hero h1 span { color: #10b981; }
+    
     .hero p {
-      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
-      margin-bottom: 2.5rem;
+      font-size: 1.5rem;
+      margin-bottom: 40px;
       opacity: 0.95;
     }
-    .cta-buttons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
+    
     .btn {
-      padding: 1rem 2.5rem;
+      display: inline-block;
+      padding: 18px 40px;
+      margin: 10px;
       font-size: 1.1rem;
       font-weight: 600;
-      border: none;
-      border-radius: 12px;
-      cursor: pointer;
-      transition: all 0.3s ease;
+      border-radius: 10px;
       text-decoration: none;
-      display: inline-block;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.3s;
     }
-    .btn-primary { 
+    
+    .btn:hover { transform: translateY(-3px); }
+    
+    .btn-primary {
       background: linear-gradient(135deg, #10b981, #059669);
       color: white;
       box-shadow: 0 10px 30px rgba(16,185,129,0.3);
     }
-    .btn-primary:hover { 
-      transform: translateY(-2px);
-      box-shadow: 0 15px 40px rgba(16,185,129,0.4);
-    }
-    .btn-secondary { 
-      background: rgba(255,255,255,0.15);
-      backdrop-filter: blur(10px);
-      color: white;
-      border: 2px solid white;
-    }
-    .btn-secondary:hover { 
+    
+    .btn-secondary {
       background: white;
       color: #059669;
+      border: 2px solid white;
     }
     
-    /* Services Section */
+    /* Services */
     .services {
-      padding: 6rem 2rem;
-      background: #f9fafb;
+      padding: 100px 20px;
+      background: #f8f9fa;
     }
-    .section-header {
-      text-align: center;
-      max-width: 700px;
-      margin: 0 auto 4rem;
-    }
-    .eyebrow {
-      color: #10b981;
-      font-weight: 600;
-      text-transform: uppercase;
-      font-size: 0.9rem;
-      letter-spacing: 1px;
-      margin-bottom: 0.5rem;
-    }
+    
     .services h2 {
-      font-size: clamp(2rem, 5vw, 3rem);
-      font-weight: 700;
-      margin-bottom: 1rem;
-      color: #111827;
+      font-family: 'Poppins', sans-serif;
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 60px;
     }
-    .section-header p {
-      font-size: 1.1rem;
-      color: #6b7280;
-    }
+    
     .service-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 2.5rem;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 40px;
       max-width: 1200px;
       margin: 0 auto;
     }
+    
     .service-card {
       background: white;
-      border-radius: 20px;
+      border-radius: 15px;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-      transition: all 0.4s ease;
-      cursor: pointer;
-    }
-    .service-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-    }
-    .service-card img {
-      width: 100%;
-      height: 260px;
-      object-fit: cover;
-      transition: transform 0.4s ease;
-    }
-    .service-card:hover img {
-      transform: scale(1.05);
-    }
-    .service-content {
-      padding: 2rem;
-    }
-    .service-icon {
-      font-size: 2.5rem;
-      margin-bottom: 1rem;
-    }
-    .service-card h3 {
-      font-size: 1.5rem;
-      font-weight: 700;
-      margin-bottom: 0.75rem;
-      color: #111827;
-    }
-    .service-card p {
-      color: #6b7280;
-      margin-bottom: 1.5rem;
-      line-height: 1.7;
-    }
-    .price {
-      color: #10b981;
-      font-size: 2rem;
-      font-weight: 700;
-      margin-bottom: 1.5rem;
-      display: block;
-    }
-    .service-card .btn {
-      width: 100%;
-      font-size: 1rem;
-      padding: 0.9rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+      transition: transform 0.3s;
     }
     
-    /* Testimonials Section */
+    .service-card:hover { transform: translateY(-10px); }
+    
+    .service-card img {
+      width: 100%;
+      height: 300px;
+      object-fit: cover;
+    }
+    
+    .service-content { padding: 30px; }
+    
+    .service-content h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.8rem;
+      margin-bottom: 15px;
+    }
+    
+    .service-content p {
+      color: #666;
+      margin-bottom: 20px;
+    }
+    
+    .price {
+      font-size: 2.5rem;
+      color: #10b981;
+      font-weight: 700;
+      margin: 20px 0;
+    }
+    
+    .service-card .btn {
+      width: 100%;
+      margin: 0;
+    }
+    
+    /* Testimonials */
     .testimonials {
-      padding: 6rem 2rem;
+      padding: 100px 20px;
       background: white;
     }
+    
+    .testimonials h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 3rem;
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    
     .testimonial-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
+      gap: 30px;
       max-width: 1200px;
       margin: 0 auto;
     }
+    
     .testimonial {
-      background: #f9fafb;
-      padding: 2.5rem;
-      border-radius: 20px;
-      border: 1px solid #e5e7eb;
-      transition: all 0.3s ease;
+      background: #f8f9fa;
+      padding: 40px;
+      border-radius: 15px;
     }
-    .testimonial:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 30px rgba(0,0,0,0.1);
-    }
+    
     .stars {
       color: #fbbf24;
-      font-size: 1.3rem;
-      margin-bottom: 1.5rem;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
     }
-    .testimonial-text {
+    
+    .testimonial p {
       font-style: italic;
-      color: #374151;
-      margin-bottom: 1.5rem;
-      line-height: 1.8;
-      font-size: 1.05rem;
+      margin-bottom: 25px;
+      font-size: 1.1rem;
     }
+    
     .author {
       display: flex;
       align-items: center;
-      gap: 1rem;
-    }
-    .author img {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 3px solid white;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .author-info strong {
-      display: block;
-      color: #111827;
-      font-weight: 600;
-      font-size: 1.05rem;
-    }
-    .author-info small {
-      color: #6b7280;
-      font-size: 0.9rem;
+      gap: 15px;
     }
     
-    /* CTA Section */
-    .cta-section {
+    .author img {
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+    
+    .author strong {
+      display: block;
+      font-size: 1.1rem;
+    }
+    
+    .author small {
+      color: #666;
+    }
+    
+    /* CTA */
+    .cta {
+      padding: 100px 20px;
       background: linear-gradient(135deg, #10b981, #059669);
-      padding: 5rem 2rem;
       text-align: center;
       color: white;
     }
-    .cta-section h2 {
-      font-size: clamp(2rem, 5vw, 3.5rem);
-      font-weight: 800;
-      margin-bottom: 1rem;
+    
+    .cta h2 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 3.5rem;
+      margin-bottom: 20px;
     }
-    .cta-section p {
-      font-size: 1.2rem;
-      margin-bottom: 2.5rem;
-      opacity: 0.95;
+    
+    .cta p {
+      font-size: 1.3rem;
+      margin-bottom: 40px;
     }
     
     /* Footer */
     .footer {
       background: #1f2937;
       color: #9ca3af;
-      padding: 3rem 2rem 1.5rem;
+      padding: 60px 20px 30px;
       text-align: center;
     }
-    .footer-content {
-      max-width: 1200px;
-      margin: 0 auto;
-    }
+    
     .footer h3 {
       color: white;
-      margin-bottom: 1rem;
-      font-size: 1.5rem;
+      font-size: 2rem;
+      margin-bottom: 20px;
     }
+    
     .footer p {
-      margin-bottom: 2rem;
+      max-width: 600px;
+      margin: 0 auto 40px;
       line-height: 1.8;
     }
-    .footer-bottom {
-      margin-top: 3rem;
-      padding-top: 2rem;
-      border-top: 1px solid #374151;
-      font-size: 0.9rem;
-    }
     
-    /* Animations */
-    @keyframes fadeInUp {
-      from {
-        opacity: 0;
-        transform: translateY(30px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    /* Responsive */
     @media (max-width: 768px) {
       .hero h1 { font-size: 2.5rem; }
-      .services, .testimonials { padding: 4rem 1.5rem; }
-      .service-grid, .testimonial-grid { gap: 1.5rem; }
+      .services h2, .testimonials h2 { font-size: 2rem; }
+      .cta h2 { font-size: 2.5rem; }
     }
   </style>
 </head>
 <body>
-  <!-- Hero Section -->
-  <section class="hero">
+  <div class="hero">
     <div class="hero-content">
-      <div class="badge">✨ Premium ${businessType} Services</div>
-      <h1>Transform Your <span>Lawn</span> Today</h1>
-      <p>Professional lawn care services that make your outdoor space the envy of the neighborhood</p>
-      <div class="cta-buttons">
-        <button class="btn btn-primary">Get Free Quote</button>
-        <button class="btn btn-secondary">Call ${phone || '(555) 123-4567'}</button>
-      </div>
+      <h1>${businessName.split(' ')[0]} <span>${businessName.split(' ').slice(1).join(' ')}</span></h1>
+      <p>Professional ${businessType} Services That Transform Your Space</p>
+      <button class="btn btn-primary">Get Free Quote</button>
+      <button class="btn btn-secondary">Call ${phone || '(555) 123-4567'}</button>
     </div>
-  </section>
+  </div>
 
-  <!-- Services Section -->
-  <section class="services">
-    <div class="section-header">
-      <div class="eyebrow">Our Services</div>
-      <h2>Premium ${businessType} Solutions</h2>
-      <p>We offer the industry's most advanced services, delivered by certified professionals</p>
-    </div>
+  <div class="services">
+    <h2>Our Services</h2>
     <div class="service-grid">
       ${services ? services.split(',').map((service, i) => `
         <div class="service-card">
-          <img src="https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},${service.trim().replace(/\s+/g, ',')},professional" alt="${service.trim()}">
+          <img src="https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},${service.trim().replace(/\s+/g, ',')}" alt="${service.trim()}">
           <div class="service-content">
-            <div class="service-icon">${['🌱', '🌿', '🪴', '🌳'][i] || '✨'}</div>
             <h3>${service.trim()}</h3>
-            <p>Professional ${service.trim().toLowerCase()} services tailored to your needs</p>
-            <span class="price">$${(i + 1) * 75}</span>
+            <p>Premium ${service.trim().toLowerCase()} services delivered by certified professionals</p>
+            <div class="price">$${(i + 1) * 75}</div>
             <button class="btn btn-primary">Book Now</button>
           </div>
         </div>
       `).join('') : `
         <div class="service-card">
-          <img src="https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service,professional" alt="Service">
+          <img src="https://source.unsplash.com/800x600/?${businessType.replace(/\s+/g, ',')},service" alt="Service">
           <div class="service-content">
-            <div class="service-icon">🌱</div>
             <h3>Premium Service</h3>
-            <p>Professional service description here</p>
-            <span class="price">$75</span>
+            <p>Professional service delivered by experts</p>
+            <div class="price">$75</div>
             <button class="btn btn-primary">Book Now</button>
           </div>
         </div>
       `}
     </div>
-  </section>
+  </div>
 
-  <!-- Testimonials Section -->
-  <section class="testimonials">
-    <div class="section-header">
-      <div class="eyebrow">Testimonials</div>
-      <h2>What Our Clients Say</h2>
-      <p>Hear from our satisfied customers who trust us with their outdoor spaces</p>
-    </div>
+  <div class="testimonials">
+    <h2>What Our Clients Say</h2>
     <div class="testimonial-grid">
       <div class="testimonial">
         <div class="stars">⭐⭐⭐⭐⭐</div>
-        <p class="testimonial-text">"Outstanding service! My lawn has never looked better. The team was professional, punctual, and exceeded all expectations."</p>
+        <p>"Outstanding service! My property has never looked better. Highly recommend!"</p>
         <div class="author">
-          <img src="https://source.unsplash.com/150x150/?portrait,professional,male,headshot" alt="John Smith">
-          <div class="author-info">
+          <img src="https://source.unsplash.com/150x150/?portrait,professional,male" alt="Customer">
+          <div>
             <strong>John Smith</strong>
             <small>Verified Customer</small>
           </div>
@@ -551,10 +465,10 @@ const AIWebsiteBuilder = () => {
       </div>
       <div class="testimonial">
         <div class="stars">⭐⭐⭐⭐⭐</div>
-        <p class="testimonial-text">"I'm thoroughly impressed! They transformed our yard into something truly special. Highly recommend to anyone."</p>
+        <p>"Professional, punctual, and exceeded all expectations. Will use again!"</p>
         <div class="author">
-          <img src="https://source.unsplash.com/150x150/?portrait,professional,female,headshot" alt="Sarah Johnson">
-          <div class="author-info">
+          <img src="https://source.unsplash.com/150x150/?portrait,professional,female" alt="Customer">
+          <div>
             <strong>Sarah Johnson</strong>
             <small>Verified Customer</small>
           </div>
@@ -562,41 +476,35 @@ const AIWebsiteBuilder = () => {
       </div>
       <div class="testimonial">
         <div class="stars">⭐⭐⭐⭐⭐</div>
-        <p class="testimonial-text">"Best decision we made! The quality of work and attention to detail is unmatched. Worth every penny."</p>
+        <p>"Best decision we made! The quality speaks for itself."</p>
         <div class="author">
-          <img src="https://source.unsplash.com/150x150/?portrait,professional,person,headshot" alt="Mike Davis">
-          <div class="author-info">
+          <img src="https://source.unsplash.com/150x150/?portrait,professional,person" alt="Customer">
+          <div>
             <strong>Mike Davis</strong>
             <small>Verified Customer</small>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
 
-  <!-- CTA Section -->
-  <section class="cta-section">
-    <h2>Ready to Transform Your Lawn?</h2>
-    <p>Join 500+ satisfied customers and get started today</p>
-    <div class="cta-buttons">
-      <button class="btn btn-primary" style="background: white; color: #059669;">Book Free Consultation</button>
-      <button class="btn btn-secondary">Call ${phone || '(555) 123-4567'}</button>
-    </div>
-  </section>
+  <div class="cta">
+    <h2>Ready to Get Started?</h2>
+    <p>Join 500+ satisfied customers today</p>
+    <button class="btn btn-primary" style="background: white; color: #059669;">Book Free Consultation</button>
+    <button class="btn btn-secondary">Call ${phone || '(555) 123-4567'}</button>
+  </div>
 
-  <!-- Footer -->
-  <footer class="footer">
-    <div class="footer-content">
-      <h3>${businessName}</h3>
-      <p>Premium ${businessType} services. Ceramic coatings and paint protection film installations by certified professionals.</p>
-      <div class="footer-bottom">
-        <p>&copy; 2025 ${businessName}. All rights reserved. | Powered by SORCE</p>
-      </div>
-    </div>
-  </footer>
+  <div class="footer">
+    <h3>${businessName}</h3>
+    <p>Premium ${businessType} services delivered by certified professionals</p>
+    <p>&copy; 2025 ${businessName}. All rights reserved.</p>
+  </div>
 </body>
 </html>`;
       
+      setGeneratedHTML(mockHTML);
+    
       setGeneratedHTML(mockHTML);
       setGenerationStep('Complete!');
       
@@ -1109,4 +1017,3 @@ Make this look like a $10,000 custom website - premium, polished, conversion-foc
 };
 
 export default AIWebsiteBuilder;
-
