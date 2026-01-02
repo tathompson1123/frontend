@@ -26,10 +26,22 @@ const AIWebsiteBuilder = () => {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [user, setUser] = useState(null); // { name, email, plan }
 
-  // Clear hash from URL to prevent stuck states
+  // Force start at home and clear any bad auth state
   useEffect(() => {
+    // Clear hash
     if (window.location.hash) {
       window.history.replaceState(null, '', window.location.pathname);
+    }
+    
+    // Force home view on mount
+    setCurrentView('home');
+    
+    // Clear any invalid tokens (no backend to verify yet)
+    const token = localStorage.getItem('authToken');
+    if (token) {
+      // For now, just clear it since we can't verify
+      localStorage.removeItem('authToken');
+      setUser(null);
     }
   }, []);
 
