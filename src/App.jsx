@@ -1,22 +1,36 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import HomePage from './pages/HomePage';
 import Dashboard from './pages/Dashboard';
 
 function App() {
+  const [currentPage, setCurrentPage] = useState('home');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is authenticated on mount
+  // Check authentication on mount
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (token) {
-      // Verify token with backend
       verifyToken(token);
     } else {
       setIsLoading(false);
     }
+
+    // Check URL for page
+    const path = window.location.pathname;
+    if (path === '/dashboard') {
+      setCurrentPage('dashboard');
+    }
   }, []);
+
+  // Update URL when page changes
+  useEffect(() => {
+    if (currentPage === 'dashboard' && isAuthenticated) {
+      window.history.pushState({}, '', '/dashboard');
+    } else if (currentPage === 'home') {
+      window.history.pushState({}, '', '/');
+    }
+  }, [currentPage, isAuthenticated]);
 
   const verifyToken = async (token) => {
     try {
@@ -33,35 +47,36 @@ function App() {
         const data = await response.json();
         setIsAuthenticated(true);
         localStorage.setItem('user', JSON.stringify(data.user));
+        if (window.location.pathname === '/dashboard') {
+          setCurrentPage('dashboard');
+        }
       } else {
-        // Invalid token
         localStorage.removeItem('authToken');
         localStorage.removeItem('user');
         setIsAuthenticated(false);
+        setCurrentPage('home');
       }
     } catch (error) {
       console.error('Token verification error:', error);
       setIsAuthenticated(false);
+      setCurrentPage('home');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Protected Route Component
-  const ProtectedRoute = ({ children }) => {
-    if (isLoading) {
-      return (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-        </div>
-      );
-    }
+  const handleAuthSuccess = (user, token) => {
+    localStorage.setItem('authToken', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setIsAuthenticated(true);
+    setCurrentPage('dashboard');
+  };
 
-    if (!isAuthenticated) {
-      return <Navigate to="/" replace />;
-    }
-
-    return children;
+  const handleLogout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    setIsAuthenticated(false);
+    setCurrentPage('home');
   };
 
   if (isLoading) {
@@ -75,23 +90,18 @@ function App() {
     );
   }
 
-  return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route 
-          path="/dashboard" 
-          element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } 
-        />
-        {/* Catch all - redirect to home */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </Router>
-  );
+  // Show dashboard if authenticated and on dashboard page
+  if (currentPage === 'dashboard') {
+    if (!isAuthenticated) {
+      // Redirect to home if not authenticated
+      setTimeout(() => setCurrentPage('home'), 0);
+      return null;
+    }
+    return <Dashboard onLogout={handleLogout} />;
+  }
+
+  // Show homepage
+  return <HomePage onAuthSuccess={handleAuthSuccess} />;
 }
 
 export default App;
