@@ -815,9 +815,9 @@ Make this look like a $10,000 custom website - premium, polished, conversion-foc
     setDesignStyle('professional');
   };
 
-  // Home Page View - ALWAYS SHOW THIS FIRST
-  if (currentView === 'home' || !currentView || currentView === 'dashboard') {
-    console.log('🏠 FORCING HOME PAGE');
+  // Home Page View - CHECK THIS FIRST!
+  if (currentView === 'home') {
+    console.log('🏠 Rendering HOME PAGE');
     return (
       <>
         <HomePage 
@@ -838,9 +838,9 @@ Make this look like a $10,000 custom website - premium, polished, conversion-foc
     );
   }
 
-  // Dashboard View - DISABLED FOR NOW
-  /*
+  // Dashboard View - RE-ENABLED
   if (currentView === 'dashboard' && user) {
+    console.log('📊 Rendering DASHBOARD');
     return (
       <Dashboard 
         user={user} 
@@ -849,7 +849,6 @@ Make this look like a $10,000 custom website - premium, polished, conversion-foc
       />
     );
   }
-  */
 
   // Pricing Page View
   if (currentView === 'pricing') {
