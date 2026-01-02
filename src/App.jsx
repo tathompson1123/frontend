@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { Wand2, ArrowLeft, Upload, X } from 'lucide-react';
 import PricingPage from './PricingPage';
 import HomePage from './HomePage';
+import AuthModal from './AuthModal';
+import Dashboard from './Dashboard';
 
 const AIWebsiteBuilder = () => {
-  const [currentView, setCurrentView] = useState('home'); // 'home', 'builder', 'preview', 'pricing'
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'builder', 'preview', 'pricing', 'dashboard'
   const [businessName, setBusinessName] = useState('');
   const [businessType, setBusinessType] = useState('');
   const [address, setAddress] = useState('');
@@ -17,6 +19,12 @@ const AIWebsiteBuilder = () => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStep, setGenerationStep] = useState('');
+  
+  // Auth state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState('signup');
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [user, setUser] = useState(null); // { name, email, plan }
 
   const handleImageUpload = (e) => {
     const files = Array.from(e.target.files);
@@ -31,6 +39,50 @@ const AIWebsiteBuilder = () => {
 
   const removeImage = (index) => {
     setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSelectPlan = (planName) => {
+    setSelectedPlan(planName);
+    setAuthMode('signup');
+    setIsAuthModalOpen(true);
+  };
+
+  const handleSignup = async ({ name, email, password }) => {
+    // TODO: Integrate with your backend API
+    // For now, simulate signup
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const newUser = {
+      name,
+      email,
+      plan: selectedPlan || 'pro-plan',
+      createdAt: new Date().toISOString()
+    };
+    
+    setUser(newUser);
+    setIsAuthModalOpen(false);
+    setCurrentView('dashboard');
+  };
+
+  const handleLogin = async ({ email, password }) => {
+    // TODO: Integrate with your backend API
+    // For now, simulate login
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    const existingUser = {
+      name: 'John Doe',
+      email,
+      plan: 'pro-plan'
+    };
+    
+    setUser(existingUser);
+    setIsAuthModalOpen(false);
+    setCurrentView('dashboard');
+  };
+
+  const handleLogout = () => {
+    setUser(null);
+    setCurrentView('home');
   };
 
   const generateWebsite = async () => {
@@ -423,14 +475,50 @@ Generate a complete, production-ready HTML file. Make this website look premium,
     setDesignStyle('professional');
   };
 
+  // Dashboard View
+  if (currentView === 'dashboard' && user) {
+    return (
+      <Dashboard 
+        user={user} 
+        onLogout={handleLogout}
+        generatedWebsite={generatedHTML}
+      />
+    );
+  }
+
   // Home Page View
   if (currentView === 'home') {
-    return <HomePage onNavigate={setCurrentView} />;
+    return (
+      <>
+        <HomePage onNavigate={setCurrentView} />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSignup={handleSignup}
+          onLogin={handleLogin}
+          mode={authMode}
+        />
+      </>
+    );
   }
 
   // Pricing Page View
   if (currentView === 'pricing') {
-    return <PricingPage onBack={() => setCurrentView('home')} />;
+    return (
+      <>
+        <PricingPage 
+          onBack={() => setCurrentView('home')}
+          onSelectPlan={handleSelectPlan}
+        />
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSignup={handleSignup}
+          onLogin={handleLogin}
+          mode={authMode}
+        />
+      </>
+    );
   }
 
   // Preview View
