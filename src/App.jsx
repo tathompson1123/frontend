@@ -193,9 +193,9 @@ Generate complete HTML with inline CSS and JavaScript. Make it look professional
 
   // Home Page View
   if (currentView === 'home') {
-    return (
-  <div style={{background: 'red', padding: '50px'}}>TESTING 123</div>
-);
+    return <HomePage onNavigate={setCurrentView} />;
+  }
+
   // Pricing Page View
   if (currentView === 'pricing') {
     return <PricingPage onBack={() => setCurrentView('home')} />;
