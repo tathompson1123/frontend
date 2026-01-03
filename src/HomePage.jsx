@@ -333,9 +333,6 @@ const [isSigningUp, setIsSigningUp] = useState(false);
       </div>  {/* ← ADD THIS CLOSING BRACE */}
     );  {/* ← ADD THIS CLOSING PARENTHESIS AND SEMICOLON */}
   }  {/* ← This closes the if statement that wraps the generated website section */}
-
-
-
   // Generator form
   if (showGenerator) {
     return (
