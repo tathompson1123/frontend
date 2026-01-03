@@ -388,80 +388,80 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
   }
 
   if (generatedWebsite) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        <nav className="bg-white shadow-sm sticky top-0 z-50">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex justify-between items-center h-16">
-              <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
-                  <Sparkles className="w-6 h-6 text-white" />
-                </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                  SORCE
-                </span>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <nav className="bg-white shadow-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-6 h-6 text-white" />
               </div>
+              <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                SORCE
+              </span>
             </div>
+            {/* Get My Website button in header */}
+            <button
+              onClick={() => {
+                const token = localStorage.getItem('token');
+                if (token) {
+                  window.location.href = '/dashboard';
+                } else {
+                  setShowSignupModal(true);
+                }
+              }}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+            >
+              Get My Website
+            </button>
           </div>
-        </nav>
+        </div>
+      </nav>
 
-        <div className="max-w-7xl mx-auto px-4 py-12">
-          <div className="bg-white rounded-2xl shadow-2xl p-8">
-            <div className="flex justify-between items-center mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                  🎉 Your Website is Ready!
-                </h2>
-                <p className="text-gray-600">
-                  Preview below • Ready to download and use
-                </p>
-              </div>
-              <div className="flex gap-4">
-                <button
-                  onClick={handleTryAgain}
-                  className="bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
-                >
-                  Generate Another
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-                >
-                  Download HTML
-                </button>
-              </div>
-            </div>
+      <div className="max-w-7xl mx-auto px-4 py-12">
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              🎉 Your Website is Ready!
+            </h2>
+            <p className="text-gray-600">
+              Preview your website below
+            </p>
+          </div>
 
-            <div className="border-4 border-gray-200 rounded-lg overflow-hidden" style={{ height: '600px' }}>
-              <iframe
-                srcDoc={generatedWebsite}
-                title="Generated Website Preview"
-                className="w-full h-full"
-                sandbox="allow-scripts"
-              />
-            </div>
+          <div className="border-4 border-gray-200 rounded-lg overflow-hidden" style={{ height: '600px' }}>
+            <iframe
+              srcDoc={generatedWebsite}
+              title="Generated Website Preview"
+              className="w-full h-full"
+              sandbox="allow-scripts"
+            />
+          </div>
 
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => {
-                  const token = localStorage.getItem('token');
-                  if (token) {
-                    window.location.href = '/dashboard';
-                  } else {
-                    setShowSignupModal(true);
-                  }
-                }}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-12 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all"
-              >
-                Get My Website
-              </button>
-            </div>
+          <div className="mt-8 text-center">
+            <p className="text-gray-600 mb-4">
+              Love what you see? Save it to your account and start growing your business.
+            </p>
+            <button
+              onClick={() => {
+                const token = localStorage.getItem('token');
+                if (token) {
+                  window.location.href = '/dashboard';
+                } else {
+                  setShowSignupModal(true);
+                }
+              }}
+              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-12 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all"
+            >
+              Get My Website
+            </button>
           </div>
         </div>
       </div>
-    );
-  }
-
+    </div>
+  );
+}
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       <nav className="bg-white shadow-sm sticky top-0 z-50">
