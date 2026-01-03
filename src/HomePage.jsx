@@ -12,6 +12,10 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
   const [progress, setProgress] = useState(0);
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [showSignupModal, setShowSignupModal] = useState(false);
+const [signupForm, setSignupForm] = useState({ email: '', password: '', businessName: '' });
+const [signupError, setSignupError] = useState('');
+const [isSigningUp, setIsSigningUp] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -307,21 +311,25 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
             </div>
 
             <div className="mt-8 text-center">
-              <p className="text-gray-600 mb-4">
-                Want to supercharge this website with AI chat, booking system, and review automation?
-              </p>
-              <button
-                onClick={onNavigateToPricing}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-              >
-                See Plans & Pricing →
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+    <button
+      onClick={() => {
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (token) {
+          // Already logged in - go to dashboard
+          window.location.href = '/dashboard';
+        } else {
+          // Not logged in - show signup modal
+          setShowSignupModal(true);
+        }
+      }}
+      className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-12 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all"
+    >
+      Get My Website
+    </button>
+  </div>
+)}
+
 
   // Generator form
   if (showGenerator) {
@@ -998,7 +1006,114 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
             </button>
           </div>
         </div>
+      {showSignupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Get Your Website</h2>
+            <p className="text-gray-600 mb-6">Create a free account to save and manage your website</p>
+            
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSigningUp(true);
+              setSignupError('');
+
+              try {
+                const response = await fetch(`${apiUrl}/api/auth/signup`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: signupForm.email,
+                    password: signupForm.password,
+                    businessName: signupForm.businessName
+                  })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                  localStorage.setItem('token', data.token);
+                  localStorage.setItem('user', JSON.stringify(data.user));
+
+                  await fetch(`${apiUrl}/api/website`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: data.user.id,
+                      htmlContent: generatedWebsite  // Changed from generatedHTML
+                    })
+                  });
+
+                  window.location.href = '/dashboard';
+                } else {
+                  setSignupError(data.error || 'Signup failed');
+                }
+              } catch (error) {
+                setSignupError('Network error. Please try again.');
+              } finally {
+                setIsSigningUp(false);
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Business Name</label>
+                <input
+                  type="text"
+                  value={signupForm.businessName}
+                  onChange={(e) => setSignupForm({ ...signupForm, businessName: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
+                <input
+                  type="email"
+                  value={signupForm.email}
+                  onChange={(e) => setSignupForm({ ...signupForm, email: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+                <input
+                  type="password"
+                  value={signupForm.password}
+                  onChange={(e) => setSignupForm({ ...signupForm, password: e.target.value })}
+                  required
+                  minLength={6}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              {signupError && (
+                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 text-red-700 text-sm">
+                  {signupError}
+                </div>
+              )}
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowSignupModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSigningUp}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
+                >
+                  {isSigningUp ? 'Creating Account...' : 'Sign Up Free'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
-    </div>
+
+    </div>  {/* Main container closing */}
   );
 }
