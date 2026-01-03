@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
 import { 
+  Globe,
+Download,
+Monitor,
+Smartphone,
+Eye,
+EyeOff,
+RefreshCw
   Home, 
   Settings, 
   Users, 
@@ -303,9 +310,93 @@ export default function Dashboard({ onLogout }) {
       if (onLogout) onLogout();
     }
   };
+const fetchWebsite = async () => {
+  try {
+    const response = await fetch(`${apiUrl}/api/website?userId=${user.id}`);
+    const data = await response.json();
+    if (data.website) {
+      setCurrentWebsite(data.website.html_content);
+      setIsPublished(data.website.is_published || false);
+      setCustomDomain(data.website.custom_domain || '');
+    }
+  } catch (error) {
+    console.error('Error fetching website:', error);
+  }
+};
 
+const handleRegenerateWebsite = async (e) => {
+  e.preventDefault();
+  setIsRegenerating(true);
+
+  try {
+    const response = await fetch(`${apiUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        businessName: websiteForm.businessName,
+        businessType: websiteForm.businessType,
+        services: websiteForm.services,
+        description: websiteForm.description
+      })
+    });
+
+    const data = await response.json();
+    if (data.success && data.html) {
+      setCurrentWebsite(data.html);
+      setShowEditWebsite(false);
+      
+      // Save to database
+      await fetch(`${apiUrl}/api/website`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          htmlContent: data.html
+        })
+      });
+    }
+  } catch (error) {
+    console.error('Error regenerating website:', error);
+  } finally {
+    setIsRegenerating(false);
+  }
+};
+
+const handleDownloadWebsite = () => {
+  if (!currentWebsite) return;
+  const blob = new Blob([currentWebsite], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${user.businessName || 'my'}-website.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+const handleTogglePublish = async () => {
+  try {
+    await fetch(`${apiUrl}/api/website/publish`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        isPublished: !isPublished
+      })
+    });
+    setIsPublished(!isPublished);
+  } catch (error) {
+    console.error('Error toggling publish:', error);
+  }
+};
+
+useEffect(() => {
+  if (currentView === 'website') fetchWebsite();
+}, [currentView]);
   const menuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
+    { id: 'website', icon: Globe, label: 'My Website' },
     { id: 'services', icon: Briefcase, label: 'Services' },
     { id: 'team', icon: Users, label: 'Team' },
     { id: 'hours', icon: Clock, label: 'Business Hours' },
@@ -478,7 +569,273 @@ export default function Dashboard({ onLogout }) {
               </div>
             </div>
           )}
+/* ============================================
+   WEBSITE VIEW SECTION
+   Insert this AFTER the Overview section closing tag
+   and BEFORE {/* Services */}
+   ============================================ */
 
+{/* Website */}
+{currentView === 'website' && (
+  <div className="space-y-6">
+    <div className="flex justify-between items-center">
+      <div>
+        <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
+        <p className="text-gray-600 mt-1">View and manage your AI-generated website</p>
+      </div>
+      <div className="flex gap-3">
+        <button
+          onClick={() => setShowEditWebsite(true)}
+          className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-purple-500 transition-all flex items-center gap-2"
+        >
+          <RefreshCw className="w-5 h-5" />
+          Regenerate
+        </button>
+        {currentWebsite && (
+          <>
+            <button
+              onClick={handleDownloadWebsite}
+              className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-blue-500 transition-all flex items-center gap-2"
+            >
+              <Download className="w-5 h-5" />
+              Download
+            </button>
+            <button
+              onClick={handleTogglePublish}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+                isPublished
+                  ? 'bg-green-600 text-white hover:bg-green-700'
+                  : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+              }`}
+            >
+              {isPublished ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              {isPublished ? 'Unpublish' : 'Publish'}
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+
+    {currentWebsite ? (
+      <>
+        {/* Device Preview Toggle */}
+        <div className="flex justify-between items-center bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+          <div className="flex gap-2">
+            <button
+              onClick={() => setDevicePreview('desktop')}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition ${
+                devicePreview === 'desktop'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Monitor className="w-5 h-5" />
+              Desktop
+            </button>
+            <button
+              onClick={() => setDevicePreview('mobile')}
+              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition ${
+                devicePreview === 'mobile'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <Smartphone className="w-5 h-5" />
+              Mobile
+            </button>
+          </div>
+
+          {isPublished && (
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-gray-600">Published at:</span>
+              <a
+                href={customDomain || `https://sorce.app/${user.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-600 hover:text-purple-700 font-semibold"
+              >
+                {customDomain || `sorce.app/${user.businessName?.toLowerCase().replace(/\s+/g, '-')}`}
+              </a>
+            </div>
+          )}
+        </div>
+
+        {/* Website Preview */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div 
+            className={`mx-auto transition-all ${
+              devicePreview === 'mobile' ? 'max-w-md' : 'w-full'
+            }`}
+            style={{ height: '700px' }}
+          >
+            <iframe
+              srcDoc={currentWebsite}
+              title="Website Preview"
+              className="w-full h-full border-0"
+              sandbox="allow-scripts allow-same-origin"
+            />
+          </div>
+        </div>
+
+        {/* Custom Domain */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+          <h3 className="text-lg font-bold text-gray-900 mb-4">Custom Domain</h3>
+          <div className="flex gap-4">
+            <input
+              type="text"
+              value={customDomain}
+              onChange={(e) => setCustomDomain(e.target.value)}
+              placeholder="yourdomain.com"
+              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+            />
+            <button
+              onClick={async () => {
+                try {
+                  await fetch(`${apiUrl}/api/website/domain`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      userId: user.id,
+                      customDomain
+                    })
+                  });
+                } catch (error) {
+                  console.error('Error saving domain:', error);
+                }
+              }}
+              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+            >
+              Save Domain
+            </button>
+          </div>
+          <p className="text-sm text-gray-500 mt-2">
+            Point your domain's DNS to our servers to use a custom domain
+          </p>
+        </div>
+      </>
+    ) : (
+      /* No Website Yet */
+      <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
+        <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No website yet</h3>
+        <p className="text-gray-600 mb-6">Generate your first website to get started</p>
+        <button
+          onClick={() => setShowEditWebsite(true)}
+          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center gap-2"
+        >
+          <RefreshCw className="w-5 h-5" />
+          Generate Website
+        </button>
+      </div>
+    )}
+
+    {/* Regenerate Modal */}
+    {showEditWebsite && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            {currentWebsite ? 'Regenerate Website' : 'Generate Website'}
+          </h2>
+          
+          <form onSubmit={handleRegenerateWebsite} className="space-y-6">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Business Name *
+              </label>
+              <input
+                type="text"
+                value={websiteForm.businessName}
+                onChange={(e) => setWebsiteForm({ ...websiteForm, businessName: e.target.value })}
+                required
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Business Type *
+              </label>
+              <select
+                value={websiteForm.businessType}
+                onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })}
+                required
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+              >
+                <option value="">Select type...</option>
+                <option value="plumbing">Plumbing</option>
+                <option value="hvac">HVAC</option>
+                <option value="landscaping">Landscaping</option>
+                <option value="cleaning">Cleaning</option>
+                <option value="electrical">Electrical</option>
+                <option value="carpentry">Carpentry</option>
+                <option value="painting">Painting</option>
+                <option value="roofing">Roofing</option>
+                <option value="auto-repair">Auto Repair</option>
+                <option value="salon">Hair Salon</option>
+                <option value="spa">Spa/Massage</option>
+                <option value="fitness">Fitness</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Services Offered
+              </label>
+              <input
+                type="text"
+                value={websiteForm.services}
+                onChange={(e) => setWebsiteForm({ ...websiteForm, services: e.target.value })}
+                placeholder="e.g., Emergency repairs, installations, maintenance"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Business Description
+              </label>
+              <textarea
+                value={websiteForm.description}
+                onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })}
+                placeholder="Tell us about your business..."
+                rows={4}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+              />
+            </div>
+
+            <div className="flex gap-4">
+              <button
+                type="button"
+                onClick={() => setShowEditWebsite(false)}
+                className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isRegenerating}
+                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isRegenerating ? (
+                  <>
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-5 h-5" />
+                    {currentWebsite ? 'Regenerate' : 'Generate'}
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+  </div>
+)}
           {/* Services */}
           {currentView === 'services' && (
             <div className="space-y-6">
@@ -1282,7 +1639,18 @@ export default function Dashboard({ onLogout }) {
               )}
             </div>
           )}
-
+const [currentWebsite, setCurrentWebsite] = useState(null);
+const [isPublished, setIsPublished] = useState(false);
+const [customDomain, setCustomDomain] = useState('');
+const [isRegenerating, setIsRegenerating] = useState(false);
+const [showEditWebsite, setShowEditWebsite] = useState(false);
+const [websiteForm, setWebsiteForm] = useState({
+  businessName: user.businessName || '',
+  businessType: '',
+  services: '',
+  description: ''
+});
+const [devicePreview, setDevicePreview] = useState('desktop');
           {/* Settings */}
           {currentView === 'settings' && (
             <div className="space-y-6">
