@@ -11,33 +11,37 @@ function App() {
 
   // Check authentication on mount
   useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      verifyToken(token);
-    } else {
-      setIsLoading(false);
-    }
-
-    // Check URL for page
-    const path = window.location.pathname;
-    if (path === '/dashboard') {
-      setCurrentPage('dashboard');
-    } else if (path === '/pricing') {
-      setCurrentPage('pricing');
-    }
-  }, []);
+  const token = localStorage.getItem('authToken');
+  if (token) {
+    verifyToken(token);
+  } else {
+    setIsLoading(false);
+  }
+  
+  // Check URL for page
+  const path = window.location.pathname;
+  if (path === '/dashboard') {
+    setCurrentPage('dashboard');
+  } else if (path === '/pricing') {
+    setCurrentPage('pricing');
+  } else if (path === '/editor') {  // ← ADD THIS
+    setCurrentPage('editor');
+  }
+}, []);
 
   // Update URL when page changes
   useEffect(() => {
-    if (currentPage === 'dashboard' && isAuthenticated) {
-      window.history.pushState({}, '', '/dashboard');
-    } else if (currentPage === 'pricing') {
-      window.history.pushState({}, '', '/pricing');
-    } else if (currentPage === 'home') {
-      window.history.pushState({}, '', '/');
-    }
-  }, [currentPage, isAuthenticated]);
-
+  if (currentPage === 'dashboard' && isAuthenticated) {
+    window.history.pushState({}, '', '/dashboard');
+  } else if (currentPage === 'pricing') {
+    window.history.pushState({}, '', '/pricing');
+  } else if (currentPage === 'editor' && isAuthenticated) {  // ← ADD THIS
+    window.history.pushState({}, '', '/editor');
+  } else if (currentPage === 'home') {
+    window.history.pushState({}, '', '/');
+  }
+}, [currentPage, isAuthenticated]);
+  
   const verifyToken = async (token) => {
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -130,7 +134,33 @@ function App() {
       />
     );
   }
+// Show pricing page
+  if (currentPage === 'pricing') {
+    return (
+      <PricingPage 
+        onBack={handleBackToHome}
+        onSelectPlan={handleSelectPlan}
+      />
+    );
+  }
 
+  // Show editor page  ← ADD THIS ENTIRE SECTION
+  if (currentPage === 'editor') {
+    if (!isAuthenticated) {
+      // Redirect to home if not authenticated
+      setTimeout(() => setCurrentPage('home'), 0);
+      return null;
+    }
+    return <WebsiteEditor />;
+  }
+
+  // Show homepage
+  return (
+    <HomePage 
+      onAuthSuccess={handleAuthSuccess}
+      onNavigateToPricing={handleNavigateToPricing}
+    />
+  );
   // Show homepage
   return (
     <HomePage 
