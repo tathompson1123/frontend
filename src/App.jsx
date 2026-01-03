@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import HomePage from './HomePage';
 import Dashboard from './Dashboard';
+import PricingPage from './PricingPage';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
@@ -20,6 +21,8 @@ function App() {
     const path = window.location.pathname;
     if (path === '/dashboard') {
       setCurrentPage('dashboard');
+    } else if (path === '/pricing') {
+      setCurrentPage('pricing');
     }
   }, []);
 
@@ -27,6 +30,8 @@ function App() {
   useEffect(() => {
     if (currentPage === 'dashboard' && isAuthenticated) {
       window.history.pushState({}, '', '/dashboard');
+    } else if (currentPage === 'pricing') {
+      window.history.pushState({}, '', '/pricing');
     } else if (currentPage === 'home') {
       window.history.pushState({}, '', '/');
     }
@@ -79,6 +84,21 @@ function App() {
     setCurrentPage('home');
   };
 
+  const handleNavigateToPricing = () => {
+    setCurrentPage('pricing');
+  };
+
+  const handleBackToHome = () => {
+    setCurrentPage('home');
+  };
+
+  const handleSelectPlan = (planName) => {
+    console.log('Selected plan:', planName);
+    // You can handle plan selection here
+    // For now, just navigate back to home or open signup
+    setCurrentPage('home');
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
@@ -100,8 +120,23 @@ function App() {
     return <Dashboard onLogout={handleLogout} />;
   }
 
+  // Show pricing page
+  if (currentPage === 'pricing') {
+    return (
+      <PricingPage 
+        onBack={handleBackToHome}
+        onSelectPlan={handleSelectPlan}
+      />
+    );
+  }
+
   // Show homepage
-  return <HomePage onAuthSuccess={handleAuthSuccess} />;
+  return (
+    <HomePage 
+      onAuthSuccess={handleAuthSuccess}
+      onNavigateToPricing={handleNavigateToPricing}
+    />
+  );
 }
 
 export default App;
