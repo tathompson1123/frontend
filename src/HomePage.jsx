@@ -483,6 +483,16 @@ export default function HomePage({ onAuthSuccess }) {
                 onClick={handleGetStarted}
                 className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition font-semibold"
               >
+                <div className="flex items-center gap-4">
+  <button onClick={handleLogin}>Login</button>
+  <button onClick={onNavigateToPricing}>Pricing</button>
+  <button onClick={handleGetStarted}>Get Started</button>
+</div>
+```
+
+**Navigation will be:**
+```
+[SORCE Logo]          [Login] [Pricing] [Get Started]
                 Get Started
               </button>
             </div>
