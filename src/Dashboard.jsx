@@ -1645,7 +1645,7 @@ const [customDomain, setCustomDomain] = useState('');
 const [isRegenerating, setIsRegenerating] = useState(false);
 const [showEditWebsite, setShowEditWebsite] = useState(false);
 const [websiteForm, setWebsiteForm] = useState({
-  businessName: user.businessName || '',
+  businessName} user.businessName || '',
   businessType: '',
   services: '',
   description: ''
