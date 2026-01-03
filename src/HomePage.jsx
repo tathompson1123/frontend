@@ -533,40 +533,58 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
         </div>
       </section>
 
-      {/* The Problem Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-white/50 rounded-3xl">
+      {/* The Problem Section - PROFESSIONAL VERSION */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Traditional Websites Are Costing You Money
+            Why Traditional Websites Fail Service Businesses
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Every visitor that leaves without booking is lost revenue
+            Most websites are passive brochures. They don't engage visitors, capture leads, or drive growth.
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-red-200">
-            <div className="text-red-600 text-4xl mb-4">😴</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Silent Websites</h3>
-            <p className="text-gray-600">
-              Visitors browse silently and leave. No engagement, no conversation, no conversion.
+        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          <div className="bg-white rounded-2xl p-8 shadow-lg border-l-4 border-red-500">
+            <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
+              <Target className="w-7 h-7 text-red-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Low Engagement Rates</h3>
+            <p className="text-gray-600 mb-4">
+              The average website converts only 2-3% of visitors. Without proactive engagement, 
+              97% of your traffic leaves without taking action.
             </p>
+            <div className="bg-red-50 rounded-lg p-3 text-sm text-red-900 font-medium">
+              Lost Opportunity: $1,000s in potential revenue monthly
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-red-200">
-            <div className="text-red-600 text-4xl mb-4">📞</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Phone Tag Forever</h3>
-            <p className="text-gray-600">
-              Customers want to book at 10pm. You're closed. They call your competitor instead.
+          <div className="bg-white rounded-2xl p-8 shadow-lg border-l-4 border-orange-500">
+            <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center mb-6">
+              <Users className="w-7 h-7 text-orange-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Limited Availability</h3>
+            <p className="text-gray-600 mb-4">
+              Service businesses lose 60% of potential bookings to competitors simply because 
+              customers can't reach them after hours or on weekends.
             </p>
+            <div className="bg-orange-50 rounded-lg p-3 text-sm text-orange-900 font-medium">
+              Impact: Competitors capture your overflow traffic
+            </div>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-lg border-2 border-red-200">
-            <div className="text-red-600 text-4xl mb-4">⭐</div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No Social Proof</h3>
-            <p className="text-gray-600">
-              Getting reviews is hard. Without them, you're invisible on Google Maps.
+          <div className="bg-white rounded-2xl p-8 shadow-lg border-l-4 border-yellow-500">
+            <div className="w-14 h-14 bg-yellow-100 rounded-xl flex items-center justify-center mb-6">
+              <BarChart className="w-7 h-7 text-yellow-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Invisible on Google</h3>
+            <p className="text-gray-600 mb-4">
+              Without consistent reviews and fresh content, service businesses struggle to rank 
+              on Google Maps and organic search—where 80% of customers find providers.
             </p>
+            <div className="bg-yellow-50 rounded-lg p-3 text-sm text-yellow-900 font-medium">
+              Result: Customers never see you in search results
+            </div>
           </div>
         </div>
       </section>
