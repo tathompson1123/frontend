@@ -328,10 +328,10 @@ const [isSigningUp, setIsSigningUp] = useState(false);
       Get My Website
     </button>
  </div>
-        </div>  {/* ← ADD THIS CLOSING BRACE */}
-      </div>  {/* ← ADD THIS CLOSING BRACE */}
-    );  {/* ← ADD THIS CLOSING PARENTHESIS AND SEMICOLON */}
-  }  {/* ← This closes the if statement that wraps the generated website section */}
+        </div> 
+      </div> 
+    );  
+  }  
   // Generator form
   if (showGenerator) {
     return (
