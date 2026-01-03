@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import HomePage from './HomePage';
 import Dashboard from './Dashboard';
 import PricingPage from './PricingPage';
+import WebsiteEditor from './WebsiteEditor';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
