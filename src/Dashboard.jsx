@@ -14,7 +14,11 @@ import {
   Plus,
   Edit,
   Trash2,
-  BarChart3
+  BarChart3,
+  CreditCard,
+  Upload,
+  Image as ImageIcon,
+  Video
 } from 'lucide-react';
 
 export default function Dashboard({ onLogout }) {
@@ -25,14 +29,39 @@ export default function Dashboard({ onLogout }) {
   const [services, setServices] = useState([]);
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [serviceForm, setServiceForm] = useState({ name: '', description: '', durationHours: '', price: '' });
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
+  const [serviceForm, setServiceForm] = useState({ 
+    name: '', 
+    description: '', 
+    durationHours: '', 
+    price: '',
+    mediaUrl: '',
+    mediaType: '' // 'image' or 'video'
+  });
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   // Team state
   const [employees, setEmployees] = useState([]);
   const [showAddEmployee, setShowAddEmployee] = useState(false);
-  const [employeeForm, setEmployeeForm] = useState({ name: '', email: '', phone: '', color: '#3b82f6' });
+  const [editingEmployee, setEditingEmployee] = useState(null);
+  const [employeeForm, setEmployeeForm] = useState({ 
+    name: '', 
+    email: '', 
+    phone: '', 
+    color: '#3b82f6',
+    workDays: {
+      monday: true,
+      tuesday: true,
+      wednesday: true,
+      thursday: true,
+      friday: true,
+      saturday: false,
+      sunday: false
+    },
+    workHours: {
+      startTime: '09:00',
+      endTime: '17:00'
+    }
+  });
 
   // Business Hours state
   const [businessHours, setBusinessHours] = useState([]);
@@ -41,35 +70,32 @@ export default function Dashboard({ onLogout }) {
   // Bookings state
   const [bookings, setBookings] = useState([]);
 
+  // Billing state
+  const [cardOnFile, setCardOnFile] = useState(null);
+  const [showAddCard, setShowAddCard] = useState(false);
+  const [billingCycle, setBillingCycle] = useState('monthly'); // or 'annual'
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   // Fetch services
   useEffect(() => {
-    if (currentView === 'services') {
-      fetchServices();
-    }
+    if (currentView === 'services') fetchServices();
   }, [currentView]);
 
-  // Fetch employees
   useEffect(() => {
-    if (currentView === 'team') {
-      fetchEmployees();
-    }
+    if (currentView === 'team') fetchEmployees();
   }, [currentView]);
 
-  // Fetch business hours
   useEffect(() => {
-    if (currentView === 'hours') {
-      fetchBusinessHours();
-    }
+    if (currentView === 'hours') fetchBusinessHours();
   }, [currentView]);
 
-  // Fetch bookings
   useEffect(() => {
-    if (currentView === 'bookings') {
-      fetchBookings();
-    }
+    if (currentView === 'bookings') fetchBookings();
   }, [currentView]);
 
   const fetchServices = async () => {
@@ -112,6 +138,23 @@ export default function Dashboard({ onLogout }) {
     }
   };
 
+  const handleMediaUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // For now, create a data URL (in production, upload to cloud storage)
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const mediaType = file.type.startsWith('image/') ? 'image' : 'video';
+      setServiceForm({
+        ...serviceForm,
+        mediaUrl: reader.result,
+        mediaType
+      });
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSaveService = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -130,7 +173,9 @@ export default function Dashboard({ onLogout }) {
           name: serviceForm.name,
           description: serviceForm.description,
           durationHours: parseFloat(serviceForm.durationHours),
-          price: parseFloat(serviceForm.price)
+          price: parseFloat(serviceForm.price),
+          mediaUrl: serviceForm.mediaUrl,
+          mediaType: serviceForm.mediaType
         })
       });
 
@@ -138,7 +183,7 @@ export default function Dashboard({ onLogout }) {
 
       setShowAddService(false);
       setEditingService(null);
-      setServiceForm({ name: '', description: '', durationHours: '', price: '' });
+      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '' });
       fetchServices();
     } catch (error) {
       setSaveError(error.message);
@@ -153,7 +198,9 @@ export default function Dashboard({ onLogout }) {
       name: service.name,
       description: service.description || '',
       durationHours: service.duration_hours,
-      price: service.price
+      price: service.price,
+      mediaUrl: service.media_url || '',
+      mediaType: service.media_type || ''
     });
     setShowAddService(true);
   };
@@ -176,8 +223,12 @@ export default function Dashboard({ onLogout }) {
     setIsSaving(true);
 
     try {
-      const response = await fetch(`${apiUrl}/api/employees`, {
-        method: 'POST',
+      const url = editingEmployee
+        ? `${apiUrl}/api/employees/${editingEmployee.id}`
+        : `${apiUrl}/api/employees`;
+
+      const response = await fetch(url, {
+        method: editingEmployee ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
@@ -188,13 +239,40 @@ export default function Dashboard({ onLogout }) {
       if (!response.ok) throw new Error('Failed to save employee');
 
       setShowAddEmployee(false);
-      setEmployeeForm({ name: '', email: '', phone: '', color: '#3b82f6' });
+      setEditingEmployee(null);
+      setEmployeeForm({ 
+        name: '', 
+        email: '', 
+        phone: '', 
+        color: '#3b82f6',
+        workDays: {
+          monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
+          saturday: false, sunday: false
+        },
+        workHours: { startTime: '09:00', endTime: '17:00' }
+      });
       fetchEmployees();
     } catch (error) {
       console.error('Error saving employee:', error);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleEditEmployee = (employee) => {
+    setEditingEmployee(employee);
+    setEmployeeForm({
+      name: employee.name,
+      email: employee.email || '',
+      phone: employee.phone || '',
+      color: employee.color || '#3b82f6',
+      workDays: employee.work_days || {
+        monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
+        saturday: false, sunday: false
+      },
+      workHours: employee.work_hours || { startTime: '09:00', endTime: '17:00' }
+    });
+    setShowAddEmployee(true);
   };
 
   const handleSaveBusinessHours = async () => {
@@ -233,7 +311,30 @@ export default function Dashboard({ onLogout }) {
     { id: 'hours', icon: Clock, label: 'Business Hours' },
     { id: 'bookings', icon: Calendar, label: 'Bookings' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
+    { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
+  ];
+
+  const plans = [
+    {
+      name: 'Original',
+      price: 29.95,
+      annualPrice: 23.96,
+      features: ['Website Builder', 'Mobile Responsive', 'Custom Domain', '24/7 Hosting', '3 Monthly Updates']
+    },
+    {
+      name: 'Pro',
+      price: 59.95,
+      annualPrice: 47.96,
+      popular: true,
+      features: ['Everything in Original', 'AI Chat Widget', 'Automated Reviews', 'Daily SEO Writing', 'Unlimited Updates']
+    },
+    {
+      name: 'Expert',
+      price: 95.99,
+      annualPrice: 76.79,
+      features: ['Everything in Pro', 'AI Market Research', 'Priority Support', 'Strategy Calls', 'Advanced Analytics']
+    }
   ];
 
   return (
@@ -241,7 +342,6 @@ export default function Dashboard({ onLogout }) {
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         <div className="flex flex-col h-full">
-          {/* Header */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               {sidebarOpen && (
@@ -263,7 +363,6 @@ export default function Dashboard({ onLogout }) {
             </div>
           </div>
 
-          {/* Menu Items */}
           <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
             {menuItems.map((item) => {
               const Icon = item.icon;
@@ -285,7 +384,6 @@ export default function Dashboard({ onLogout }) {
             })}
           </nav>
 
-          {/* Logout */}
           <div className="p-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
@@ -309,7 +407,6 @@ export default function Dashboard({ onLogout }) {
                 <p className="text-gray-600 mt-1">Here's what's happening with your business today.</p>
               </div>
 
-              {/* Stats Grid */}
               <div className="grid md:grid-cols-4 gap-6">
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                   <div className="flex items-center justify-between mb-4">
@@ -348,7 +445,6 @@ export default function Dashboard({ onLogout }) {
                 </div>
               </div>
 
-              {/* Quick Actions */}
               <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
                 <div className="grid md:grid-cols-3 gap-4">
@@ -416,7 +512,27 @@ export default function Dashboard({ onLogout }) {
                 <div className="grid gap-4">
                   {services.map((service) => (
                     <div key={service.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-start">
+                      <div className="flex gap-6">
+                        {/* Service Media */}
+                        {service.media_url && (
+                          <div className="flex-shrink-0">
+                            {service.media_type === 'image' ? (
+                              <img 
+                                src={service.media_url} 
+                                alt={service.name}
+                                className="w-32 h-32 object-cover rounded-lg"
+                              />
+                            ) : (
+                              <video 
+                                src={service.media_url}
+                                className="w-32 h-32 object-cover rounded-lg"
+                                controls
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {/* Service Info */}
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
@@ -439,6 +555,8 @@ export default function Dashboard({ onLogout }) {
                             </div>
                           </div>
                         </div>
+
+                        {/* Actions */}
                         <div className="flex gap-2">
                           <button
                             onClick={() => handleEditService(service)}
@@ -529,6 +647,45 @@ export default function Dashboard({ onLogout }) {
                         </div>
                       </div>
 
+                      {/* Media Upload */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Service Image/Video (Optional)
+                        </label>
+                        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                          {serviceForm.mediaUrl ? (
+                            <div className="space-y-4">
+                              {serviceForm.mediaType === 'image' ? (
+                                <img src={serviceForm.mediaUrl} alt="Preview" className="max-h-48 mx-auto rounded-lg" />
+                              ) : (
+                                <video src={serviceForm.mediaUrl} controls className="max-h-48 mx-auto rounded-lg" />
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => setServiceForm({ ...serviceForm, mediaUrl: '', mediaType: '' })}
+                                className="text-red-600 hover:text-red-700 text-sm font-medium"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          ) : (
+                            <div>
+                              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                              <label className="cursor-pointer">
+                                <span className="text-purple-600 hover:text-purple-700 font-medium">Upload a file</span>
+                                <input
+                                  type="file"
+                                  accept="image/*,video/*"
+                                  onChange={handleMediaUpload}
+                                  className="hidden"
+                                />
+                              </label>
+                              <p className="text-xs text-gray-500 mt-2">PNG, JPG, MP4 up to 10MB</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       {saveError && (
                         <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700">
                           {saveError}
@@ -541,7 +698,7 @@ export default function Dashboard({ onLogout }) {
                           onClick={() => {
                             setShowAddService(false);
                             setEditingService(null);
-                            setServiceForm({ name: '', description: '', durationHours: '', price: '' });
+                            setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '' });
                             setSaveError('');
                           }}
                           className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
@@ -569,7 +726,7 @@ export default function Dashboard({ onLogout }) {
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Team Members</h2>
-                  <p className="text-gray-600 mt-1">Manage your employees and their services</p>
+                  <p className="text-gray-600 mt-1">Manage your employees and their schedules</p>
                 </div>
                 <button
                   onClick={() => setShowAddEmployee(true)}
@@ -596,31 +753,69 @@ export default function Dashboard({ onLogout }) {
                 <div className="grid md:grid-cols-2 gap-4">
                   {employees.map((employee) => (
                     <div key={employee.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                      <div className="flex items-center gap-4">
+                      <div className="flex items-start gap-4">
                         <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: employee.color }}>
                           {employee.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-gray-900">{employee.name}</h3>
+                          <div className="flex items-center gap-2 mb-1">
+                            <h3 className="font-bold text-gray-900">{employee.name}</h3>
+                            <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                              employee.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                            }`}>
+                              {employee.active ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
                           {employee.email && <p className="text-sm text-gray-600">{employee.email}</p>}
                           {employee.phone && <p className="text-sm text-gray-600">{employee.phone}</p>}
+                          
+                          {/* Work Schedule Display */}
+                          {employee.work_hours && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <p className="text-xs font-semibold text-gray-700 mb-2">Work Schedule:</p>
+                              <p className="text-sm text-gray-600">
+                                {employee.work_hours.startTime} - {employee.work_hours.endTime}
+                              </p>
+                              {employee.work_days && (
+                                <div className="flex gap-1 mt-2">
+                                  {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
+                                    const dayKey = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][i];
+                                    const isWorking = employee.work_days[dayKey];
+                                    return (
+                                      <span
+                                        key={day}
+                                        className={`text-xs px-2 py-1 rounded ${
+                                          isWorking ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-400'
+                                        }`}
+                                      >
+                                        {day}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          employee.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {employee.active ? 'Active' : 'Inactive'}
-                        </span>
+                        <button
+                          onClick={() => handleEditEmployee(employee)}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Edit className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
-              {/* Add Employee Modal */}
+              {/* Add/Edit Employee Modal */}
               {showAddEmployee && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                  <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Add New Employee</h2>
+                  <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                      {editingEmployee ? 'Edit Employee' : 'Add New Employee'}
+                    </h2>
                     
                     <form onSubmit={handleSaveEmployee} className="space-y-6">
                       <div>
@@ -654,12 +849,72 @@ export default function Dashboard({ onLogout }) {
                         />
                       </div>
 
+                      {/* Work Days */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-3">Work Days *</label>
+                        <div className="grid grid-cols-7 gap-2">
+                          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
+                            const dayKey = day.toLowerCase();
+                            return (
+                              <label key={day} className="flex flex-col items-center cursor-pointer">
+                                <input
+                                  type="checkbox"
+                                  checked={employeeForm.workDays[dayKey]}
+                                  onChange={(e) => setEmployeeForm({
+                                    ...employeeForm,
+                                    workDays: { ...employeeForm.workDays, [dayKey]: e.target.checked }
+                                  })}
+                                  className="mb-1"
+                                />
+                                <span className="text-xs text-gray-600">{day.slice(0, 3)}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Work Hours */}
+                      <div className="grid md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time *</label>
+                          <input
+                            type="time"
+                            value={employeeForm.workHours.startTime}
+                            onChange={(e) => setEmployeeForm({
+                              ...employeeForm,
+                              workHours: { ...employeeForm.workHours, startTime: e.target.value }
+                            })}
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">End Time *</label>
+                          <input
+                            type="time"
+                            value={employeeForm.workHours.endTime}
+                            onChange={(e) => setEmployeeForm({
+                              ...employeeForm,
+                              workHours: { ...employeeForm.workHours, endTime: e.target.value }
+                            })}
+                            required
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+
                       <div className="flex gap-4">
                         <button
                           type="button"
                           onClick={() => {
                             setShowAddEmployee(false);
-                            setEmployeeForm({ name: '', email: '', phone: '', color: '#3b82f6' });
+                            setEditingEmployee(null);
+                            setEmployeeForm({ 
+                              name: '', email: '', phone: '', color: '#3b82f6',
+                              workDays: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
+                              workHours: { startTime: '09:00', endTime: '17:00' }
+                            });
                           }}
                           className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
                         >
@@ -670,7 +925,7 @@ export default function Dashboard({ onLogout }) {
                           disabled={isSaving}
                           className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
                         >
-                          {isSaving ? 'Saving...' : 'Add Employee'}
+                          {isSaving ? 'Saving...' : (editingEmployee ? 'Update Employee' : 'Add Employee')}
                         </button>
                       </div>
                     </form>
@@ -821,6 +1076,210 @@ export default function Dashboard({ onLogout }) {
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Analytics Coming Soon</h3>
                 <p className="text-gray-600">Detailed analytics and insights will be available here</p>
               </div>
+            </div>
+          )}
+
+          {/* Billing */}
+          {currentView === 'billing' && (
+            <div className="space-y-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Billing & Subscription</h2>
+                <p className="text-gray-600 mt-1">Manage your plan and payment methods</p>
+              </div>
+
+              {/* Current Plan */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Current Plan</h3>
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-2xl font-bold text-purple-600 capitalize">{user.plan || 'Free'} Plan</p>
+                    <p className="text-gray-600 mt-1">
+                      Billing Cycle: <span className="font-semibold capitalize">{billingCycle}</span>
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-3xl font-bold text-gray-900">
+                      ${plans.find(p => p.name.toLowerCase().includes(user.plan || 'original'))?.price || '0.00'}
+                      <span className="text-lg text-gray-600">/mo</span>
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">Next billing date: {new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString()}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">Payment Method</h3>
+                  <button
+                    onClick={() => setShowAddCard(true)}
+                    className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
+                  >
+                    {cardOnFile ? 'Update Card' : 'Add Card'}
+                  </button>
+                </div>
+                {cardOnFile ? (
+                  <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
+                    <CreditCard className="w-8 h-8 text-gray-600" />
+                    <div>
+                      <p className="font-semibold text-gray-900">•••• •••• •••• {cardOnFile.last4}</p>
+                      <p className="text-sm text-gray-600">Expires {cardOnFile.expiry}</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
+                    <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                    <p className="text-gray-600 mb-4">No payment method on file</p>
+                    <button
+                      onClick={() => setShowAddCard(true)}
+                      className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
+                    >
+                      Add Payment Method
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Available Plans */}
+              <div>
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Available Plans</h3>
+                <div className="grid md:grid-cols-3 gap-6">
+                  {plans.map((plan) => {
+                    const isCurrentPlan = plan.name.toLowerCase().includes(user.plan || 'original');
+                    return (
+                      <div key={plan.name} className={`bg-white rounded-xl p-6 shadow-sm border-2 ${
+                        plan.popular ? 'border-purple-500' : 'border-gray-200'
+                      } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`}>
+                        {plan.popular && (
+                          <span className="inline-block bg-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                            MOST POPULAR
+                          </span>
+                        )}
+                        {isCurrentPlan && (
+                          <span className="inline-block bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                            CURRENT PLAN
+                          </span>
+                        )}
+                        <h4 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h4>
+                        <p className="text-3xl font-bold text-gray-900 mb-1">
+                          ${billingCycle === 'annual' ? plan.annualPrice : plan.price}
+                          <span className="text-lg text-gray-600">/mo</span>
+                        </p>
+                        {billingCycle === 'annual' && (
+                          <p className="text-sm text-green-600 mb-4">Save ${((plan.price - plan.annualPrice) * 12).toFixed(2)}/year</p>
+                        )}
+                        <ul className="space-y-2 mb-6">
+                          {plan.features.map((feature, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                              <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                              </svg>
+                              {feature}
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          disabled={isCurrentPlan}
+                          className={`w-full py-3 rounded-lg font-semibold transition ${
+                            isCurrentPlan
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                              : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                          }`}
+                        >
+                          {isCurrentPlan ? 'Current Plan' : 'Upgrade'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Billing Cycle Toggle */}
+              <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Billing Cycle</h3>
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => setBillingCycle('monthly')}
+                    className={`px-6 py-3 rounded-lg font-semibold transition ${
+                      billingCycle === 'monthly'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Monthly
+                  </button>
+                  <button
+                    onClick={() => setBillingCycle('annual')}
+                    className={`px-6 py-3 rounded-lg font-semibold transition relative ${
+                      billingCycle === 'annual'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    Annual
+                    <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+                      Save 20%
+                    </span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Add Card Modal */}
+              {showAddCard && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                  <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-6">Add Payment Method</h2>
+                    <form className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Card Number</label>
+                        <input
+                          type="text"
+                          placeholder="1234 5678 9012 3456"
+                          className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Expiry</label>
+                          <input
+                            type="text"
+                            placeholder="MM/YY"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">CVV</label>
+                          <input
+                            type="text"
+                            placeholder="123"
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-4 mt-6">
+                        <button
+                          type="button"
+                          onClick={() => setShowAddCard(false)}
+                          className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="submit"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setCardOnFile({ last4: '4242', expiry: '12/25' });
+                            setShowAddCard(false);
+                          }}
+                          className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+                        >
+                          Save Card
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
