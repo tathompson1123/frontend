@@ -50,25 +50,25 @@ export default function Dashboard({ onLogout }) {
   const [employees, setEmployees] = useState([]);
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [employeeForm, setEmployeeForm] = useState({ 
-    name: '', 
-    email: '', 
-    phone: '', 
-    color: '#3b82f6',
-    workDays: {
-      monday: true,
-      tuesday: true,
-      wednesday: true,
-      thursday: true,
-      friday: true,
-      saturday: false,
-      sunday: false
-    },
-    workHours: {
-      startTime: '09:00',
-      endTime: '17:00'
-    }
-  });
+const [employeeForm, setEmployeeForm] = useState({ 
+  name: '', 
+  email: '', 
+  phone: '', 
+  color: '#3b82f6',
+  workDays: {
+    monday: true,
+    tuesday: true,
+    wednesday: true,
+    thursday: true,
+    friday: true,
+    saturday: false,
+    sunday: false
+  },
+  workHours: {
+    startTime: '09:00',
+    endTime: '17:00'
+  }
+});
 
   // Business Hours state
   const [businessHours, setBusinessHours] = useState([]);
