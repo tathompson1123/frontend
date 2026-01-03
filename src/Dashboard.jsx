@@ -87,7 +87,20 @@ const [employeeForm, setEmployeeForm] = useState({
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
+  
+const [currentWebsite, setCurrentWebsite] = useState(null);
+const [isPublished, setIsPublished] = useState(false);
+const [customDomain, setCustomDomain] = useState('');
+const [isRegenerating, setIsRegenerating] = useState(false);
+const [showEditWebsite, setShowEditWebsite] = useState(false);
+const [websiteForm, setWebsiteForm] = useState({
+  businessName: user.businessName || '',  // ← RIGHT (with "user.")
+  businessType: '',
+  services: '',
+  description: ''
+});
+  
+const [devicePreview, setDevicePreview] = useState('desktop');
   // Fetch services
   useEffect(() => {
     if (currentView === 'services') fetchServices();
@@ -1639,18 +1652,6 @@ useEffect(() => {
               )}
             </div>
           )}
-const [currentWebsite, setCurrentWebsite] = useState(null);
-const [isPublished, setIsPublished] = useState(false);
-const [customDomain, setCustomDomain] = useState('');
-const [isRegenerating, setIsRegenerating] = useState(false);
-const [showEditWebsite, setShowEditWebsite] = useState(false);
-const [websiteForm, setWebsiteForm] = useState({
-  businessName: user.businessName || '',  // ← RIGHT (with "user.")
-  businessType: '',
-  services: '',
-  description: ''
-});
-const [devicePreview, setDevicePreview] = useState('desktop');
           {/* Settings */}
           {currentView === 'settings' && (
             <div className="space-y-6">
