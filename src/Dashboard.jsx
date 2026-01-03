@@ -582,11 +582,7 @@ useEffect(() => {
               </div>
             </div>
           )}
-/* ============================================
-   WEBSITE VIEW SECTION
-   Insert this AFTER the Overview section closing tag
-   and BEFORE {/* Services */}
-   ============================================ */
+
 
 {/* Website */}
 {currentView === 'website' && (
