@@ -1114,7 +1114,6 @@ const [isSigningUp, setIsSigningUp] = useState(false);
           </div>
         </div>
       )}
-
-    </div>  {/* Main container closing */}
+    </div> 
   );
 }
