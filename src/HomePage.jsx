@@ -37,13 +37,13 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
 
   const handleLogin = () => {
     setAuthMode('login');
-    setShowAuthModal(true);
+    setModal(true);
     setAuthError('');
   };
 
   const handleSignup = () => {
     setAuthMode('signup');
-    setShowAuthModal(true);
+    setModal(true);
     setAuthError('');
   };
 
@@ -1051,3 +1051,6 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
           </div>
         </div>
       )}
+      </div>  {/* ← This closes <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50"> */}
+  );
+}
