@@ -178,6 +178,7 @@ export default function HomePage({ onAuthSuccess, onNavigateToPricing }) {
         
         setTimeout(() => {
           setGeneratedWebsite(data.html);
+          setIsGenerating(false);
           setError(null);
         }, 500);
       } else {
