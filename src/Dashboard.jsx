@@ -593,89 +593,63 @@ useEffect(() => {
         <p className="text-gray-600 mt-1">View and manage your AI-generated website</p>
       </div>
       <div className="flex gap-3">
+        {currentWebsite && (
+          <button
+            onClick={() => window.location.href = '/editor'}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <Edit className="w-5 h-5" />
+            View/Edit Website
+          </button>
+        )}
         <button
           onClick={() => setShowEditWebsite(true)}
           className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-purple-500 transition-all flex items-center gap-2"
         >
           <RefreshCw className="w-5 h-5" />
-          Regenerate
+          Generate New
         </button>
-        {currentWebsite && (
-          <>
-            <button
-              onClick={handleDownloadWebsite}
-              className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-blue-500 transition-all flex items-center gap-2"
-            >
-              <Download className="w-5 h-5" />
-              Download
-            </button>
-            <button
-              onClick={handleTogglePublish}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-                isPublished
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
-              }`}
-            >
-              {isPublished ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              {isPublished ? 'Unpublish' : 'Publish'}
-            </button>
-          </>
-        )}
       </div>
     </div>
 
     {currentWebsite ? (
       <>
-        {/* Device Preview Toggle */}
-        <div className="flex justify-between items-center bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setDevicePreview('desktop')}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition ${
-                devicePreview === 'desktop'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Monitor className="w-5 h-5" />
-              Desktop
-            </button>
-            <button
-              onClick={() => setDevicePreview('mobile')}
-              className={`px-4 py-2 rounded-lg flex items-center gap-2 transition ${
-                devicePreview === 'mobile'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
-            >
-              <Smartphone className="w-5 h-5" />
-              Mobile
-            </button>
-          </div>
-
-          {isPublished && (
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-gray-600">Published at:</span>
-              <a
-                href={customDomain || `https://sorce.app/${user.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-purple-600 hover:text-purple-700 font-semibold"
-              >
-                {customDomain || `sorce.app/${user.businessName?.toLowerCase().replace(/\s+/g, '-')}`}
-              </a>
-            </div>
-          )}
-        </div>
-
         {/* Website Preview */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-gray-600">
+              <Globe className="w-4 h-4" />
+              <span>Website Preview</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDevicePreview('desktop')}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  devicePreview === 'desktop'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white text-gray-600 border border-gray-300'
+                }`}
+              >
+                <Monitor className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setDevicePreview('mobile')}
+                className={`px-3 py-1.5 rounded text-sm ${
+                  devicePreview === 'mobile'
+                    ? 'bg-purple-600 text-white'
+                    : 'bg-white text-gray-600 border border-gray-300'
+                }`}
+              >
+                <Smartphone className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+          
           <div 
             className={`mx-auto transition-all ${
               devicePreview === 'mobile' ? 'max-w-md' : 'w-full'
             }`}
-            style={{ height: '700px' }}
+            style={{ height: '600px' }}
           >
             <iframe
               srcDoc={currentWebsite}
@@ -686,16 +660,55 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Custom Domain */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Custom Domain</h3>
-          <div className="flex gap-4">
+        {/* Quick Actions */}
+        <div className="grid md:grid-cols-3 gap-4">
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-2">Status</h3>
+            <div className="flex items-center gap-2">
+              {isPublished ? (
+                <>
+                  <Eye className="w-5 h-5 text-green-600" />
+                  <span className="text-green-600 font-semibold">Published</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-600">Draft</span>
+                </>
+              )}
+            </div>
+            <button
+              onClick={handleTogglePublish}
+              className="mt-4 w-full px-4 py-2 rounded-lg text-sm font-medium transition
+                {isPublished 
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+                }"
+            >
+              {isPublished ? 'Unpublish' : 'Publish Now'}
+            </button>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-2">Download</h3>
+            <p className="text-sm text-gray-600 mb-4">Save website as HTML file</p>
+            <button
+              onClick={handleDownloadWebsite}
+              className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Download HTML
+            </button>
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+            <h3 className="font-semibold text-gray-900 mb-2">Custom Domain</h3>
             <input
               type="text"
               value={customDomain}
               onChange={(e) => setCustomDomain(e.target.value)}
               placeholder="yourdomain.com"
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+              className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none mb-2"
             />
             <button
               onClick={async () => {
@@ -703,23 +716,18 @@ useEffect(() => {
                   await fetch(`${apiUrl}/api/website/domain`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      userId: user.id,
-                      customDomain
-                    })
+                    body: JSON.stringify({ userId: user.id, customDomain })
                   });
+                  alert('Domain saved!');
                 } catch (error) {
                   console.error('Error saving domain:', error);
                 }
               }}
-              className="bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+              className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition"
             >
               Save Domain
             </button>
           </div>
-          <p className="text-sm text-gray-500 mt-2">
-            Point your domain's DNS to our servers to use a custom domain
-          </p>
         </div>
       </>
     ) : (
