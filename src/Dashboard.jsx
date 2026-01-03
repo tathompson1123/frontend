@@ -6,7 +6,7 @@ Monitor,
 Smartphone,
 Eye,
 EyeOff,
-RefreshCw
+RefreshCw,
   Home, 
   Settings, 
   Users, 
