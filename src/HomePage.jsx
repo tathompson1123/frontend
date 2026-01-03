@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Code, BarChart3, Calendar } from 'lucide-react';
 
-export default function HomePage({ onAuthSuccess }) {
+export default function HomePage({ onAuthSuccess, onNavigateToPricing  }) {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('signup');
   const [showGenerator, setShowGenerator] = useState(false);
