@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [employees, setEmployees] = useState([]);
   const [bookings, setBookings] = useState([]);
   const [businessHours, setBusinessHours] = useState([]);
+  const [websiteData, setWebsiteData] = useState(null);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -77,22 +78,36 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [bookingsRes, servicesRes, employeesRes, hoursRes] = await Promise.all([
+        const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes] = await Promise.all([
           fetch(`${apiUrl}/api/bookings?userId=${user.id}`),
           fetch(`${apiUrl}/api/services?userId=${user.id}`),
           fetch(`${apiUrl}/api/employees?userId=${user.id}`),
-          fetch(`${apiUrl}/api/business-hours?userId=${user.id}`)
+          fetch(`${apiUrl}/api/business-hours?userId=${user.id}`),
+          fetch(`${apiUrl}/api/website?userId=${user.id}`)
         ]);
 
         const bookingsData = await bookingsRes.json();
         const servicesData = await servicesRes.json();
         const employeesData = await employeesRes.json();
         const hoursData = await hoursRes.json();
+        const websiteDataRes = await websiteRes.json();
 
         setBookings(bookingsData.bookings || []);
         setServices(servicesData.services || []);
         setEmployees(employeesData.employees || []);
         setBusinessHours(hoursData.hours || []);
+        setWebsiteData(websiteDataRes.website || null);
+
+        // Update user in localStorage with website data if it exists
+        if (websiteDataRes.website) {
+          const updatedUser = { 
+            ...user, 
+            websiteUrl: websiteDataRes.website.url || null,
+            websiteId: websiteDataRes.website.id || null,
+            websitePublished: websiteDataRes.website.is_published || false
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }
       } catch (error) {
         console.error('Error fetching initial data:', error);
       }
@@ -195,7 +210,7 @@ export default function Dashboard() {
           )}
 
           {currentView === 'website' && (
-            <MyWebsite apiUrl={apiUrl} user={user} navigate={navigate} />
+            <MyWebsite apiUrl={apiUrl} user={user} navigate={navigate} websiteData={websiteData} />
           )}
 
           {currentView === 'google-business' && (
