@@ -125,6 +125,24 @@ export default function Dashboard() {
   const [reviewRequests, setReviewRequests] = useState([]);
   const [activeGBPTab, setActiveGBPTab] = useState('images');
 
+  // Check for OAuth callback on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const gbpStatus = urlParams.get('gbp');
+    
+    if (gbpStatus === 'connected') {
+      setIsGBPConnected(true);
+      setCurrentView('google-business');
+      // Clean up URL
+      window.history.replaceState({}, '', '/dashboard');
+      // Show success message
+      alert('✅ Google Business Profile connected successfully!');
+    } else if (gbpStatus === 'error') {
+      alert('❌ Failed to connect Google Business Profile. Please try again.');
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
+
   // Fetch functions
   useEffect(() => {
     if (currentView === 'services') fetchServices();
@@ -553,10 +571,11 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (currentView === 'google-business' && isGBPConnected) {
+    if (currentView === 'google-business') {
+      // Always check connection status when viewing this page
       fetchGBPData();
     }
-  }, [currentView, isGBPConnected]);
+  }, [currentView]);
 
   const menuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
