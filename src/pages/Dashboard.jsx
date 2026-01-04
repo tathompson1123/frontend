@@ -3433,7 +3433,7 @@ const handleSearchBookings = (query) => {
             </div>
           )}
         </div>
-      </main>
+     </div>
     </div>
   );
 }
