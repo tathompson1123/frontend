@@ -27,7 +27,8 @@ import {
   Upload,
   Image as ImageIcon,
   Video,
-  ArrowRight
+  ArrowRight,
+  Copy
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -455,7 +456,7 @@ export default function Dashboard() {
                   </span>
                 </div>
               )}
-              <button
+              <button type="button"
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
@@ -469,7 +470,7 @@ export default function Dashboard() {
               const Icon = item.icon;
               const isActive = currentView === item.id;
               return (
-                <button
+                <button type="button"
                   key={item.id}
                   onClick={() => setCurrentView(item.id)}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
@@ -486,7 +487,7 @@ export default function Dashboard() {
           </nav>
 
           <div className="p-4 border-t border-gray-200">
-            <button
+            <button type="button"
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-red-600 hover:bg-red-50 transition"
             >
@@ -550,6 +551,7 @@ export default function Dashboard() {
                 <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
                 <div className="grid md:grid-cols-3 gap-4">
                   <button
+                    type="button"
                     onClick={() => setCurrentView('services')}
                     className="p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
                   >
@@ -559,6 +561,7 @@ export default function Dashboard() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setCurrentView('team')}
                     className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
                   >
@@ -568,6 +571,7 @@ export default function Dashboard() {
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setCurrentView('hours')}
                     className="p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
                   >
@@ -690,6 +694,42 @@ export default function Dashboard() {
                         title="Website Preview"
                         className="w-full h-full border-0"
                         sandbox="allow-scripts allow-same-origin"
+                        ref={(iframe) => {
+                          if (iframe && iframe.contentWindow) {
+                            iframe.onload = () => {
+                              try {
+                                const iframeDoc = iframe.contentWindow.document;
+                                
+                                // Allow same-page navigation, prevent external navigation
+                                iframeDoc.addEventListener('click', (e) => {
+                                  const link = e.target.closest('a');
+                                  if (link) {
+                                    const href = link.getAttribute('href');
+                                    
+                                    // Allow anchor links (same-page navigation)
+                                    if (href && href.startsWith('#')) {
+                                      e.stopPropagation(); // Let the default anchor behavior work
+                                      return;
+                                    }
+                                    
+                                    // Prevent external navigation
+                                    e.preventDefault();
+                                    console.log('External navigation prevented:', href);
+                                  }
+                                  
+                                  // Prevent form submissions
+                                  const form = e.target.closest('form');
+                                  if (form) {
+                                    e.preventDefault();
+                                    console.log('Form submission prevented in preview');
+                                  }
+                                }, true);
+                              } catch (err) {
+                                console.log('Could not access iframe:', err);
+                              }
+                            };
+                          }
+                        }}
                       />
                     </div>
                   </div>
@@ -861,17 +901,17 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-      )}
+          )}
 
           {/* Services */}
-          {currentView === 'services' && (
-            <div className="space-y-6">
+          {currentView === 'services' && (            <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Services</h2>
                   <p className="text-gray-600 mt-1">Manage your service offerings</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowAddService(true)}
                   className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
                 >
@@ -886,6 +926,7 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
                   <p className="text-gray-600 mb-6">Add your first service to get started</p>
                   <button
+                    type="button"
                     onClick={() => setShowAddService(true)}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
@@ -897,7 +938,6 @@ export default function Dashboard() {
                   {services.map((service) => (
                     <div key={service.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
                       <div className="flex gap-6">
-                        {/* Service Media */}
                         {service.media_url && (
                           <div className="flex-shrink-0">
                             {service.media_type === 'image' ? (
@@ -915,8 +955,6 @@ export default function Dashboard() {
                             )}
                           </div>
                         )}
-
-                        {/* Service Info */}
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
@@ -939,16 +977,14 @@ export default function Dashboard() {
                             </div>
                           </div>
                         </div>
-
-                        {/* Actions */}
                         <div className="flex gap-2">
-                          <button
+                          <button type="button"
                             onClick={() => handleEditService(service)}
                             className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                           >
                             <Edit className="w-5 h-5" />
                           </button>
-                          <button
+                          <button type="button"
                             onClick={() => handleToggleService(service.id, !service.active)}
                             className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium"
                           >
@@ -961,7 +997,6 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Add/Edit Service Modal */}
               {showAddService && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
@@ -1031,7 +1066,6 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* Media Upload */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Service Image/Video (Optional)
@@ -1113,6 +1147,7 @@ export default function Dashboard() {
                   <p className="text-gray-600 mt-1">Manage your employees and their schedules</p>
                 </div>
                 <button
+                  type="button"
                   onClick={() => setShowAddEmployee(true)}
                   className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
                 >
@@ -1127,6 +1162,7 @@ export default function Dashboard() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">No team members yet</h3>
                   <p className="text-gray-600 mb-6">Add your first employee to get started</p>
                   <button
+                    type="button"
                     onClick={() => setShowAddEmployee(true)}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
@@ -1153,7 +1189,6 @@ export default function Dashboard() {
                           {employee.email && <p className="text-sm text-gray-600">{employee.email}</p>}
                           {employee.phone && <p className="text-sm text-gray-600">{employee.phone}</p>}
                           
-                          {/* Work Schedule Display */}
                           {employee.work_hours && (
                             <div className="mt-3 pt-3 border-t border-gray-100">
                               <p className="text-xs font-semibold text-gray-700 mb-2">Work Schedule:</p>
@@ -1182,6 +1217,7 @@ export default function Dashboard() {
                           )}
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleEditEmployee(employee)}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         >
@@ -1193,7 +1229,6 @@ export default function Dashboard() {
                 </div>
               )}
 
-              {/* Add/Edit Employee Modal */}
               {showAddEmployee && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
@@ -1233,7 +1268,6 @@ export default function Dashboard() {
                         />
                       </div>
 
-                      {/* Work Days */}
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-3">Work Days *</label>
                         <div className="grid grid-cols-7 gap-2">
@@ -1257,7 +1291,6 @@ export default function Dashboard() {
                         </div>
                       </div>
 
-                      {/* Work Hours */}
                       <div className="grid md:grid-cols-2 gap-4">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time *</label>
@@ -1329,6 +1362,7 @@ export default function Dashboard() {
                 </div>
                 {!isEditingHours ? (
                   <button
+                    type="button"
                     onClick={() => setIsEditingHours(true)}
                     className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
@@ -1336,6 +1370,7 @@ export default function Dashboard() {
                   </button>
                 ) : (
                   <button
+                    type="button"
                     onClick={handleSaveBusinessHours}
                     className="bg-green-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
                   >
@@ -1471,7 +1506,6 @@ export default function Dashboard() {
                 <p className="text-gray-600 mt-1">Manage your plan and payment methods</p>
               </div>
 
-              {/* Current Plan */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Current Plan</h3>
                 <div className="flex justify-between items-center">
@@ -1491,11 +1525,11 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Payment Method */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                 <div className="flex justify-between items-center mb-4">
                   <h3 className="text-xl font-bold text-gray-900">Payment Method</h3>
                   <button
+                    type="button"
                     onClick={() => setShowAddCard(true)}
                     className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
                   >
@@ -1515,6 +1549,7 @@ export default function Dashboard() {
                     <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                     <p className="text-gray-600 mb-4">No payment method on file</p>
                     <button
+                      type="button"
                       onClick={() => setShowAddCard(true)}
                       className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
                     >
@@ -1524,7 +1559,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Available Plans */}
               <div>
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Available Plans</h3>
                 <div className="grid md:grid-cols-3 gap-6">
@@ -1563,6 +1597,7 @@ export default function Dashboard() {
                           ))}
                         </ul>
                         <button
+                          type="button"
                           disabled={isCurrentPlan}
                           className={`w-full py-3 rounded-lg font-semibold transition ${
                             isCurrentPlan
@@ -1578,11 +1613,11 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Billing Cycle Toggle */}
               <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Billing Cycle</h3>
                 <div className="flex items-center gap-4">
                   <button
+                    type="button"
                     onClick={() => setBillingCycle('monthly')}
                     className={`px-6 py-3 rounded-lg font-semibold transition ${
                       billingCycle === 'monthly'
@@ -1593,6 +1628,7 @@ export default function Dashboard() {
                     Monthly
                   </button>
                   <button
+                    type="button"
                     onClick={() => setBillingCycle('annual')}
                     className={`px-6 py-3 rounded-lg font-semibold transition relative ${
                       billingCycle === 'annual'
@@ -1608,7 +1644,6 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* Add Card Modal */}
               {showAddCard && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                   <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
@@ -1666,6 +1701,7 @@ export default function Dashboard() {
               )}
             </div>
           )}
+
           {/* Settings */}
           {currentView === 'settings' && (
             <div className="space-y-6">
