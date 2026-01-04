@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Globe,
 Download,
@@ -28,7 +29,7 @@ RefreshCw,
   Video
 } from 'lucide-react';
 
-export default function Dashboard({ onLogout }) {
+export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('overview');
   
