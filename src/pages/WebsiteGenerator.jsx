@@ -12,6 +12,7 @@ export default function WebsiteGenerator() {
   const [buildStatus, setBuildStatus] = useState('');
   const [progress, setProgress] = useState(0);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   const [formData, setFormData] = useState({
     businessName: '',
@@ -116,6 +117,15 @@ export default function WebsiteGenerator() {
   const handleSignupSuccess = () => {
     navigate('/dashboard');
   };
+useEffect(() => {
+  if (generatedWebsite) {
+    const blob = new Blob([generatedWebsite], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    setPreviewUrl(url);
+    
+    return () => URL.revokeObjectURL(url);
+  }
+}, [generatedWebsite]);
 
   // Loading screen
   if (isGenerating && !generatedWebsite) {
@@ -171,19 +181,20 @@ export default function WebsiteGenerator() {
                   >
                     Open in New Tab
                   </button>
-                </div>
-              </div>
-              
-              <div className="flex-1 overflow-hidden">
-                <iframe
-                  src={`data:text/html;charset=utf-8,${encodeURIComponent(generatedWebsite)}`}
-                  title="Generated Website Preview"
-                  className="w-full h-full"
-                  style={{ border: 'none' }}
-                />
               </div>
             </div>
+            
+            <div className="flex-1 overflow-hidden">
+              <iframe
+                src={previewUrl}
+                title="Generated Website Preview"
+                className="w-full h-full"
+                style={{ border: 'none' }}
+              />
+            </div>
           </div>
+        </div>
+
 
           {/* Right Half - Get Website CTA */}
           <div className="w-full lg:w-1/2 p-4 lg:p-6 overflow-y-auto">
