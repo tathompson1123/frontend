@@ -117,16 +117,26 @@ export default function WebsiteGenerator() {
   const handleSignupSuccess = () => {
     navigate('/dashboard');
   };
-useEffect(() => {
-  if (generatedWebsite) {
-    const blob = new Blob([generatedWebsite], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    setPreviewUrl(url);
-    
-    return () => URL.revokeObjectURL(url);
-  }
-}, [generatedWebsite]);
 
+  useEffect(() => {
+    if (generatedWebsite) {
+      const blob = new Blob([generatedWebsite], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      setPreviewUrl(url);
+      
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [generatedWebsite]);
+
+  // Loading screen
+  if (isGenerating && !generatedWebsite) {
+    return (
+      <GenerationProgress
+        businessName={formData.businessName}
+        progress={progress}
+        buildStatus={buildStatus}
+      />
+    );
   // Loading screen
   if (isGenerating && !generatedWebsite) {
     return (
