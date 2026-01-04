@@ -33,6 +33,17 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('overview');
   
+  // Handle URL tab parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setCurrentView(tab);
+      // Clear the URL parameter
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
+  
   // Shared state
   const [services, setServices] = useState([]);
   const [employees, setEmployees] = useState([]);
