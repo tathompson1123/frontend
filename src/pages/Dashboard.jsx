@@ -599,15 +599,15 @@ useEffect(() => {
 >
   <Edit className="w-5 h-5" />
   View/Edit Website
+<button
+  type="button"
+  onClick={() => navigate('/editor')}
+  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 border-2 border-white/20"
+>
+  <Edit className="w-6 h-6" />
+  View/Edit Website
+  <ArrowRight className="w-5 h-5" />
 </button>
-        )}
-        <button
-          onClick={() => setShowEditWebsite(true)}
-          className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-purple-500 transition-all flex items-center gap-2"
-        >
-          <RefreshCw className="w-5 h-5" />
-          Generate New
-        </button>
       </div>
     </div>
 
