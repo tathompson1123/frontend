@@ -317,18 +317,7 @@ const [devicePreview, setDevicePreview] = useState('desktop');
     localStorage.removeItem('user');
     navigate('/');  // Navigate to homepage
   };
-  const handleLogout = async () => {
-    try {
-      await fetch(`${apiUrl}/api/auth/logout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      if (onLogout) onLogout();
-    }
-  };
+ 
 const fetchWebsite = async () => {
   try {
     const response = await fetch(`${apiUrl}/api/website?userId=${user.id}`);
