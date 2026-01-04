@@ -13,6 +13,29 @@ function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        /* Make SURE modal is always rendered */}
+{console.log('🔍 Modal State Check:', { 
+  isSignupModalOpen, 
+  selectedPlan,
+  modalWillRender: isSignupModalOpen 
+})}
+
+<SignupModal 
+  isOpen={isSignupModalOpen}
+  onClose={() => {
+    console.log('❌ Closing modal');
+    setIsSignupModalOpen(false);
+    setSelectedPlan(null);
+  }}
+  selectedPlan={selectedPlan}
+  onSuccess={() => {
+    console.log('✅ Success callback triggered');
+    setIsSignupModalOpen(false);
+    setSelectedPlan(null);
+    navigate('/dashboard');
+  }}
+  generatedWebsite={null}
+/>
       </Routes>
     </Router>
   );
