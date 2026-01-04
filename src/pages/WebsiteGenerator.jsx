@@ -161,11 +161,9 @@ export default function WebsiteGenerator() {
               </div>
               <div className="flex-1 overflow-hidden">
                 <iframe
-                  src={`data:text/html;charset=utf-8,${encodeURIComponent(generatedWebsite)}`}
-                  title="Generated Website Preview"
-                  className="w-full h-full"
-                  style={{ border: 'none' }}
-                />
+  src={`data:text/html;charset=utf-8,${encodeURIComponent(generatedWebsite)}`}
+  style={{ border: 'none' }}
+/>
               </div>
             </div>
           </div>
