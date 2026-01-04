@@ -30,6 +30,7 @@ RefreshCw,
 } from 'lucide-react';
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('overview');
   
