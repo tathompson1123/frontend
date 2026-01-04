@@ -179,7 +179,6 @@ export default function WebsiteGenerator() {
   srcDoc={generatedWebsite}
   title="Generated Website Preview"
   className="w-full h-full"
-  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
   style={{ border: 'none' }}
 />
               </div>
