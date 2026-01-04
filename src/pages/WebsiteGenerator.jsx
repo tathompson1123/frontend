@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wand2, Sparkles } from 'lucide-react';
 import GenerationProgress from '../components/GenerationProgress';
@@ -118,6 +118,7 @@ export default function WebsiteGenerator() {
     navigate('/dashboard');
   };
 
+  // Create blob URL for preview
   useEffect(() => {
     if (generatedWebsite) {
       const blob = new Blob([generatedWebsite], { type: 'text/html' });
@@ -137,16 +138,7 @@ export default function WebsiteGenerator() {
         buildStatus={buildStatus}
       />
     );
-  // Loading screen
-  if (isGenerating && !generatedWebsite) {
-    return (
-      <GenerationProgress
-        businessName={formData.businessName}
-        progress={progress}
-        buildStatus={buildStatus}
-      />
-    );
-  };
+  }
 
   // Preview screen
   if (generatedWebsite) {
@@ -191,20 +183,19 @@ export default function WebsiteGenerator() {
                   >
                     Open in New Tab
                   </button>
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-hidden">
+                <iframe
+                  src={previewUrl}
+                  title="Generated Website Preview"
+                  className="w-full h-full"
+                  style={{ border: 'none' }}
+                />
               </div>
             </div>
-            
-            <div className="flex-1 overflow-hidden">
-              <iframe
-                src={previewUrl}
-                title="Generated Website Preview"
-                className="w-full h-full"
-                style={{ border: 'none' }}
-              />
-            </div>
           </div>
-        </div>
-
 
           {/* Right Half - Get Website CTA */}
           <div className="w-full lg:w-1/2 p-4 lg:p-6 overflow-y-auto">
