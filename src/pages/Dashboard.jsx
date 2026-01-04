@@ -582,7 +582,7 @@ useEffect(() => {
           )}
 
 
-{currentView === 'websit
+{currentView === 'website' && (
 
     {/* Regenerate Modal */}
     {showEditWebsite && (
