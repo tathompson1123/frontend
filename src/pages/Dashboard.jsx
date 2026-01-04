@@ -593,12 +593,13 @@ useEffect(() => {
       <div className="flex gap-3">
         {currentWebsite && (
           <button
-            onClick={() => window.location.href = '/editor'}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
-          >
-            <Edit className="w-5 h-5" />
-            View/Edit Website
-          </button>
+  type="button"
+  onClick={() => navigate('/editor')}
+  className="..."
+>
+  <Edit className="w-5 h-5" />
+  View/Edit Website
+</button>
         )}
         <button
           onClick={() => setShowEditWebsite(true)}
