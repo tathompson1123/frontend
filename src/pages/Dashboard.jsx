@@ -1,6 +1,21 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { /* all your icons */ } from 'lucide-react';
+import {
+  Home,           // ← ADD THIS!
+  Calendar,
+  Globe,
+  MapPin,
+  Briefcase,
+  Users,
+  Clock,
+  TrendingUp,
+  CreditCard,
+  Settings,
+  LogOut,
+  Menu,
+  X
+} from 'lucide-react';
 
 // Import components from components/dashboard
 import Overview from '../components/dashboard/Overview';
