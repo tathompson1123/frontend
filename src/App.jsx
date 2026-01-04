@@ -3,6 +3,7 @@ import HomePage from './pages/HomePage';
 import WebsiteGenerator from './pages/WebsiteGenerator';
 import Dashboard from './pages/Dashboard';
 import PricingPage from './pages/PricingPage';
+import WebsiteEditor from './pages/WebsiteEditor';
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/generate" element={<WebsiteGenerator />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/editor" element={<WebsiteEditor />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
