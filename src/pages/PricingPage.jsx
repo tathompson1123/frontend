@@ -3,35 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { Check, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react';
 import SignupModal from '../components/SignupModal';
 
-const PricingPage = () => {
+export default function PricingPage() {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState('monthly');
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   const handleSelectPlan = (plan) => {
-    try {
-      console.log('🔵 Button clicked! Plan:', plan.name);
-      
-      const planSlug = plan.name.toLowerCase().replace(' plan', '').replace(' ', '-');
-      const finalPrice = billingCycle === 'annual' ? (plan.price * 0.8).toFixed(2) : plan.price.toFixed(2);
-      
-      console.log('🔵 Plan details:', { planSlug, finalPrice, billingCycle });
-      
-      setSelectedPlan({
-        plan: planSlug,
-        price: finalPrice,
-        billing: billingCycle
-      });
-      
-      console.log('🔵 Opening modal...');
-      setShowSignupModal(true);
-      console.log('🔵 Modal state set to true');
-      
-    } catch (error) {
-      console.error('❌ Error in handleSelectPlan:', error);
-      alert('Error: ' + error.message);
-    }
+    const planSlug = plan.name.toLowerCase().replace(' plan', '').replace(' ', '-');
+    const finalPrice = billingCycle === 'annual' ? (plan.price * 0.8).toFixed(2) : plan.price.toFixed(2);
+    
+    setSelectedPlan({
+      plan: planSlug,
+      price: finalPrice,
+      billing: billingCycle
+    });
+    
+    setShowSignupModal(true);
   };
 
   const handleSignupSuccess = () => {
@@ -159,22 +147,6 @@ const PricingPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-16 px-4">
       <div className="max-w-7xl mx-auto">
-        {/* DEBUG INFO - Remove after testing */}
-        <div className="mb-4 p-4 bg-yellow-100 rounded-lg text-sm">
-          <p><strong>Debug Info:</strong></p>
-          <p>Modal Open: {showSignupModal ? '✅ YES' : '❌ NO'}</p>
-          <p>Selected Plan: {selectedPlan ? JSON.stringify(selectedPlan) : 'None'}</p>
-          <button 
-            onClick={() => {
-              console.log('Direct test button clicked');
-              setShowSignupModal(true);
-            }}
-            className="mt-2 px-4 py-2 bg-blue-600 text-white rounded text-xs"
-          >
-            Direct Test - Open Modal
-          </button>
-        </div>
-
         {/* Header */}
         <div className="text-center mb-16">
           <button
@@ -226,7 +198,7 @@ const PricingPage = () => {
               key={index}
               className={`flex-1 bg-white rounded-2xl shadow-xl overflow-hidden transition-all hover:scale-105 ${
                 plan.popular ? 'ring-4 ring-purple-500 lg:scale-105' : ''
-              } relative`}
+              }`}
             >
               {plan.popular && (
                 <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 text-sm font-semibold text-center">
@@ -385,6 +357,4 @@ const PricingPage = () => {
       />
     </div>
   );
-};
-
-export default PricingPage;
+}
