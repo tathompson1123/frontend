@@ -12,7 +12,6 @@ export default function WebsiteGenerator() {
   const [buildStatus, setBuildStatus] = useState('');
   const [progress, setProgress] = useState(0);
   const [showSignupModal, setShowSignupModal] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState('');
 
   const [formData, setFormData] = useState({
     businessName: '',
