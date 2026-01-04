@@ -218,24 +218,21 @@ export default function WebsiteEditor() {
           </div>
         </div>
 
-        {/* Right Panel - Preview/Code */}
+        {/* Right Panel - Preview */}
         <div className="flex-1 flex flex-col bg-gray-100">
           <div className="flex-1 overflow-auto p-4">
-            <div className={`h-full mx-auto transition-all ${
-              devicePreview === 'mobile' ? 'max-w-md' : 'w-full max-w-7xl'
-            }`}>
-              {viewMode === 'preview' ? (
-                <div className="bg-white rounded-xl shadow-2xl overflow-hidden h-full">
-                  <iframe
-                    srcDoc={currentWebsite}
-                    title="Website Preview"
-                    className="w-full h-full border-none"
-                    sandbox="allow-scripts allow-same-origin"
-                    ref={(iframe) => {
-                      if (iframe && iframe.contentWindow) {
-                        iframe.onload = () => {
-                          try {
-                            const iframeDoc = iframe.contentWindow.document;
+            <div className="h-full w-full max-w-7xl mx-auto">
+              <div className="bg-white rounded-xl shadow-2xl overflow-hidden h-full">
+                <iframe
+                  srcDoc={currentWebsite}
+                  title="Website Preview"
+                  className="w-full h-full border-none"
+                  sandbox="allow-scripts allow-same-origin"
+                  ref={(iframe) => {
+                    if (iframe && iframe.contentWindow) {
+                      iframe.onload = () => {
+                        try {
+                          const iframeDoc = iframe.contentWindow.document;
                             
                             // Allow same-page navigation, prevent external navigation
                             iframeDoc.addEventListener('click', (e) => {
@@ -291,7 +288,6 @@ export default function WebsiteEditor() {
                     spellCheck="false"
                   />
                 </div>
-              )}
             </div>
           </div>
         </div>
