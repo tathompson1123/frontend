@@ -860,15 +860,6 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Rest of views would go here - keeping the file size manageable, 
-              I'll note that you need to add: Services, Team, Hours, Bookings, 
-              Analytics, Billing, and Settings sections from your original file */}
-          
-        </div>
-      </main>
-    </div>
-  );
-}
           {/* Services */}
           {currentView === 'services' && (
             <div className="space-y-6">
