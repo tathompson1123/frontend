@@ -120,7 +120,7 @@ export default function Dashboard() {
           onClick={() => setCurrentView(item.id)}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
             currentView === item.id
-              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-l
+              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
 
       {/* Main Content */}
       <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
