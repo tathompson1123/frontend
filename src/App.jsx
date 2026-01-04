@@ -4,23 +4,23 @@ import HomePage from './pages/HomePage';
 import WebsiteGenerator from './pages/WebsiteGenerator';
 import Dashboard from './pages/Dashboard';
 import PricingPage from './pages/PricingPage';
-import SignupModal from './components/SignupModal'; // Your enhanced modal
+import SignupModal from './components/SignupModal';
 
 function App() {
   return (
     <Router>
-      <AppRoutes />
+      <AppContent />
     </Router>
   );
 }
 
-function AppRoutes() {
+function AppContent() {
   const navigate = useNavigate();
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
 
   const handleOpenSignup = (planSlug, planPrice, billingCycle) => {
-    console.log('Opening signup with plan:', { planSlug, planPrice, billingCycle });
+    console.log('✅ Opening signup modal with:', { planSlug, planPrice, billingCycle });
     
     setSelectedPlan({
       plan: planSlug,
@@ -32,11 +32,13 @@ function AppRoutes() {
   };
 
   const handleCloseSignup = () => {
+    console.log('Closing signup modal');
     setIsSignupModalOpen(false);
     setSelectedPlan(null);
   };
 
   const handleSignupSuccess = () => {
+    console.log('✅ Signup/Login successful! Navigating to dashboard...');
     setIsSignupModalOpen(false);
     setSelectedPlan(null);
     navigate('/dashboard');
@@ -59,15 +61,13 @@ function AppRoutes() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Global Signup Modal for Pricing Page */}
-      {isSignupModalOpen && (
-        <SignupModal 
-          isOpen={isSignupModalOpen}
-          onClose={handleCloseSignup}
-          selectedPlan={selectedPlan}
-          onSuccess={handleSignupSuccess}
-        />
-      )}
+      {/* Global Signup Modal */}
+      <SignupModal 
+        isOpen={isSignupModalOpen}
+        onClose={handleCloseSignup}
+        selectedPlan={selectedPlan}
+        onSuccess={handleSignupSuccess}
+      />
     </>
   );
 }
