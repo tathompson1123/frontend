@@ -6,7 +6,7 @@ import AuthModal from '../components/AuthModal';
 export default function HomePage() {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authMode, setAuthMode] = useState('signup'); // 'signup' or 'login'
+  const [authMode, setAuthMode] = useState('signup');
 
   const handleGetStarted = () => {
     navigate('/generate');
@@ -29,8 +29,8 @@ export default function HomePage() {
   };
 
   const handleNavigateToPricing = () => {
-  navigate('/pricing');
-};
+    navigate('/pricing');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
