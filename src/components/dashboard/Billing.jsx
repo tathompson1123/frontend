@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreditCard, Check, Calendar } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
 export default function Billing({ user, apiUrl }) {
   const [cardOnFile, setCardOnFile] = useState(false);
@@ -8,10 +8,9 @@ export default function Billing({ user, apiUrl }) {
 
   const plans = [
     {
-      id: 'free',
-      name: 'Free',
-      price: 0,
-      interval: 'forever',
+      name: 'Original',
+      price: 0.00,
+      annualPrice: 0.00,
       features: [
         'Up to 10 bookings per month',
         'Basic website',
@@ -20,10 +19,9 @@ export default function Billing({ user, apiUrl }) {
       ]
     },
     {
-      id: 'starter',
       name: 'Starter',
-      price: billingCycle === 'monthly' ? 29 : 290,
-      interval: billingCycle === 'monthly' ? '/month' : '/year',
+      price: 29.00,
+      annualPrice: 24.00,
       popular: false,
       features: [
         'Up to 100 bookings per month',
@@ -35,10 +33,9 @@ export default function Billing({ user, apiUrl }) {
       ]
     },
     {
-      id: 'professional',
       name: 'Professional',
-      price: billingCycle === 'monthly' ? 79 : 790,
-      interval: billingCycle === 'monthly' ? '/month' : '/year',
+      price: 79.00,
+      annualPrice: 65.00,
       popular: true,
       features: [
         'Unlimited bookings',
@@ -49,21 +46,6 @@ export default function Billing({ user, apiUrl }) {
         'Custom domain',
         'API access',
         'White-label option'
-      ]
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: 'Custom',
-      interval: '',
-      features: [
-        'Everything in Professional',
-        'Dedicated account manager',
-        '24/7 phone support',
-        'Custom integrations',
-        'SLA guarantee',
-        'Training & onboarding',
-        'Custom features'
       ]
     }
   ];
@@ -76,139 +58,53 @@ export default function Billing({ user, apiUrl }) {
       </div>
 
       {/* Current Plan */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl p-6 text-white">
-        <div className="flex items-center justify-between">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Current Plan</h3>
+        <div className="flex justify-between items-center">
           <div>
-            <p className="text-purple-100 text-sm">Current Plan</p>
-            <h3 className="text-3xl font-bold mt-1 capitalize">{user.plan || 'Free'}</h3>
-          </div>
-          <div className="text-right">
-            <p className="text-purple-100 text-sm">Renews</p>
-            <p className="text-xl font-semibold mt-1">
-              {user.plan === 'free' ? 'Never' : 'Jan 30, 2026'}
+            <p className="text-2xl font-bold text-purple-600 capitalize">{user.plan || 'Original'} Plan</p>
+            <p className="text-gray-600 mt-1">
+              Billing Cycle: <span className="font-semibold capitalize">{billingCycle}</span>
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Billing Cycle Toggle */}
-      <div className="flex justify-center">
-        <div className="bg-white rounded-lg p-1 inline-flex shadow-sm border border-gray-200">
-          <button
-            type="button"
-            onClick={() => setBillingCycle('monthly')}
-            className={`px-6 py-2 rounded-lg font-medium transition-all ${
-              billingCycle === 'monthly'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            type="button"
-            onClick={() => setBillingCycle('yearly')}
-            className={`px-6 py-2 rounded-lg font-medium transition-all ${
-              billingCycle === 'yearly'
-                ? 'bg-purple-600 text-white shadow-md'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Yearly
-            <span className="ml-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full">
-              Save 17%
-            </span>
-          </button>
-        </div>
-      </div>
-
-      {/* Plans Grid */}
-      <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {plans.map((plan) => (
-          <div
-            key={plan.id}
-            className={`bg-white rounded-xl shadow-sm border-2 p-6 relative ${
-              plan.popular ? 'border-purple-600' : 'border-gray-200'
-            }`}
-          >
-            {plan.popular && (
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                <span className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
-                  Most Popular
-                </span>
-              </div>
-            )}
-
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{plan.name}</h3>
-            <div className="mb-6">
-              {typeof plan.price === 'number' ? (
-                <>
-                  <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
-                  <span className="text-gray-600">{plan.interval}</span>
-                </>
-              ) : (
-                <span className="text-4xl font-bold text-gray-900">{plan.price}</span>
-              )}
-            </div>
-
-            <ul className="space-y-3 mb-6">
-              {plan.features.map((feature, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm">
-                  <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <span className="text-gray-700">{feature}</span>
-                </li>
-              ))}
-            </ul>
-
-            <button
-              type="button"
-              className={`w-full py-3 rounded-lg font-semibold transition-all ${
-                user.plan === plan.id
-                  ? 'bg-gray-100 text-gray-600 cursor-default'
-                  : plan.popular
-                  ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
-                  : 'bg-white border-2 border-gray-300 text-gray-700 hover:border-purple-600 hover:text-purple-600'
-              }`}
-              disabled={user.plan === plan.id}
-            >
-              {user.plan === plan.id ? 'Current Plan' : plan.id === 'enterprise' ? 'Contact Sales' : 'Upgrade'}
-            </button>
+          <div className="text-right">
+            <p className="text-3xl font-bold text-gray-900">
+              ${plans.find(p => p.name.toLowerCase().includes(user.plan || 'original'))?.price || '0.00'}
+              <span className="text-lg text-gray-600">/mo</span>
+            </p>
+            <p className="text-sm text-gray-500 mt-1">Next billing date: {new Date(Date.now() + 30*24*60*60*1000).toLocaleDateString()}</p>
           </div>
-        ))}
+        </div>
       </div>
 
       {/* Payment Method */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <div className="flex justify-between items-center mb-4">
           <h3 className="text-xl font-bold text-gray-900">Payment Method</h3>
           <button
             type="button"
             onClick={() => setShowAddCard(true)}
-            className="text-purple-600 hover:text-purple-700 font-medium text-sm"
+            className="text-purple-600 hover:text-purple-700 font-semibold text-sm"
           >
             {cardOnFile ? 'Update Card' : 'Add Card'}
           </button>
         </div>
-
         {cardOnFile ? (
           <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-            <CreditCard className="w-10 h-10 text-gray-600" />
-            <div className="flex-1">
-              <p className="font-semibold text-gray-900">•••• •••• •••• 4242</p>
-              <p className="text-sm text-gray-600">Expires 12/25</p>
+            <CreditCard className="w-8 h-8 text-gray-600" />
+            <div>
+              <p className="font-semibold text-gray-900">•••• •••• •••• {cardOnFile.last4}</p>
+              <p className="text-sm text-gray-600">Expires {cardOnFile.expiry}</p>
             </div>
-            <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-              Default
-            </span>
           </div>
         ) : (
-          <div className="text-center py-8">
+          <div className="text-center py-8 border-2 border-dashed border-gray-300 rounded-lg">
             <CreditCard className="w-12 h-12 text-gray-400 mx-auto mb-3" />
             <p className="text-gray-600 mb-4">No payment method on file</p>
             <button
               type="button"
               onClick={() => setShowAddCard(true)}
-              className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition-all"
+              className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition"
             >
               Add Payment Method
             </button>
@@ -216,45 +112,90 @@ export default function Billing({ user, apiUrl }) {
         )}
       </div>
 
-      {/* Billing History */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-6">Billing History</h3>
-        
-        <div className="space-y-3">
-          {user.plan !== 'free' ? (
-            <>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Calendar className="w-8 h-8 text-gray-600" />
-                  <div>
-                    <p className="font-semibold text-gray-900">December 2025</p>
-                    <p className="text-sm text-gray-600">Professional Plan - Monthly</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">$79.00</p>
-                  <p className="text-sm text-green-600">Paid</p>
-                </div>
+      {/* Available Plans */}
+      <div>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Available Plans</h3>
+        <div className="grid md:grid-cols-3 gap-6">
+          {plans.map((plan) => {
+            const isCurrentPlan = plan.name.toLowerCase().includes(user.plan || 'original');
+            return (
+              <div key={plan.name} className={`bg-white rounded-xl p-6 shadow-sm border-2 ${
+                plan.popular ? 'border-purple-500' : 'border-gray-200'
+              } ${isCurrentPlan ? 'ring-2 ring-green-500' : ''}`}>
+                {plan.popular && (
+                  <span className="inline-block bg-purple-600 text-white text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                    MOST POPULAR
+                  </span>
+                )}
+                {isCurrentPlan && (
+                  <span className="inline-block bg-green-600 text-white text-xs font-semibold px-3 py-1 rounded-full mb-3">
+                    CURRENT PLAN
+                  </span>
+                )}
+                <h4 className="text-2xl font-bold text-gray-900 mb-2">{plan.name}</h4>
+                <p className="text-3xl font-bold text-gray-900 mb-1">
+                  ${billingCycle === 'annual' ? plan.annualPrice : plan.price}
+                  <span className="text-lg text-gray-600">/mo</span>
+                </p>
+                {billingCycle === 'annual' && (
+                  <p className="text-sm text-green-600 mb-4">Save ${((plan.price - plan.annualPrice) * 12).toFixed(2)}/year</p>
+                )}
+                <ul className="space-y-2 mb-6">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-gray-600">
+                      <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  type="button"
+                  disabled={isCurrentPlan}
+                  className={`w-full py-3 rounded-lg font-semibold transition ${
+                    isCurrentPlan
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                  }`}
+                >
+                  {isCurrentPlan ? 'Current Plan' : 'Upgrade'}
+                </button>
               </div>
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div className="flex items-center gap-4">
-                  <Calendar className="w-8 h-8 text-gray-600" />
-                  <div>
-                    <p className="font-semibold text-gray-900">November 2025</p>
-                    <p className="text-sm text-gray-600">Professional Plan - Monthly</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-900">$79.00</p>
-                  <p className="text-sm text-green-600">Paid</p>
-                </div>
-              </div>
-            </>
-          ) : (
-            <div className="text-center py-8 text-gray-600">
-              No billing history yet
-            </div>
-          )}
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Billing Cycle */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <h3 className="text-xl font-bold text-gray-900 mb-4">Billing Cycle</h3>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setBillingCycle('monthly')}
+            className={`px-6 py-3 rounded-lg font-semibold transition ${
+              billingCycle === 'monthly'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Monthly
+          </button>
+          <button
+            type="button"
+            onClick={() => setBillingCycle('annual')}
+            className={`px-6 py-3 rounded-lg font-semibold transition relative ${
+              billingCycle === 'annual'
+                ? 'bg-purple-600 text-white'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Annual
+            <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
+              Save 20%
+            </span>
+          </button>
         </div>
       </div>
 
@@ -263,8 +204,7 @@ export default function Billing({ user, apiUrl }) {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Add Payment Method</h2>
-            
-            <div className="space-y-4">
+            <form className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Card Number</label>
                 <input
@@ -273,10 +213,9 @@ export default function Billing({ user, apiUrl }) {
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
                 />
               </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Expiry Date</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Expiry</label>
                   <input
                     type="text"
                     placeholder="MM/YY"
@@ -284,7 +223,7 @@ export default function Billing({ user, apiUrl }) {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">CVC</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">CVV</label>
                   <input
                     type="text"
                     placeholder="123"
@@ -292,36 +231,27 @@ export default function Billing({ user, apiUrl }) {
                   />
                 </div>
               </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Cardholder Name</label>
-                <input
-                  type="text"
-                  placeholder="John Smith"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                />
+              <div className="flex gap-4 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCard(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setCardOnFile({ last4: '4242', expiry: '12/25' });
+                    setShowAddCard(false);
+                  }}
+                  className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition"
+                >
+                  Save Card
+                </button>
               </div>
-            </div>
-
-            <div className="flex gap-4 mt-6">
-              <button
-                type="button"
-                onClick={() => setShowAddCard(false)}
-                className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setCardOnFile(true);
-                  setShowAddCard(false);
-                }}
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-              >
-                Add Card
-              </button>
-            </div>
+            </form>
           </div>
         </div>
       )}
