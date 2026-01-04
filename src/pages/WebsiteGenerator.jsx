@@ -175,12 +175,12 @@ export default function WebsiteGenerator() {
               </div>
               
               <div className="flex-1 overflow-hidden">
-               <div className="flex-1 overflow-auto bg-white">
-  <div 
-    dangerouslySetInnerHTML={{ __html: generatedWebsite }}
-    style={{ minHeight: '100%' }}
-  />
-</div>
+                <iframe
+                  srcDoc={generatedWebsite}
+                  title="Generated Website Preview"
+                  className="w-full h-full"
+                  style={{ border: 'none' }}
+                />
               </div>
             </div>
           </div>
