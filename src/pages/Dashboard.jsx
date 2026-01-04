@@ -2692,7 +2692,8 @@ const handleSearchBookings = (query) => {
       </div>
     )}
   </div>
-)}     
+)}
+          
       {/* Bookings List */}
       <div className="flex-1 overflow-y-auto">
         {filteredBookings.length === 0 ? (
@@ -3168,8 +3169,7 @@ const handleSearchBookings = (query) => {
         </div>
       </div>
     )}
-  </div>
-)}
+  
           {/* Analytics */}
           {currentView === 'analytics' && (
             <div className="space-y-6">
