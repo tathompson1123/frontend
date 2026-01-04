@@ -1,31 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react';
+import SignupModal from '../components/SignupModal';
 
-const PricingPage = ({ onOpenSignup }) => {
+const PricingPage = () => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState('monthly');
+  const [showSignupModal, setShowSignupModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null);
 
-  // Debug: Check if callback is received
-  useEffect(() => {
-    console.log('PricingPage mounted. onOpenSignup:', onOpenSignup ? '✅ Received' : '❌ Missing');
-  }, [onOpenSignup]);
-
-  const handlePlanClick = (plan) => {
+  const handleSelectPlan = (plan) => {
     const planSlug = plan.name.toLowerCase().replace(' plan', '').replace(' ', '-');
     const finalPrice = billingCycle === 'annual' ? (plan.price * 0.8).toFixed(2) : plan.price.toFixed(2);
     
-    console.log('Plan button clicked:', { planSlug, finalPrice, billingCycle });
-    console.log('onOpenSignup function:', onOpenSignup);
+    setSelectedPlan({
+      plan: planSlug,
+      price: finalPrice,
+      billing: billingCycle
+    });
     
-    // Call the parent's onOpenSignup to trigger the global modal
-    if (onOpenSignup) {
-      console.log('✅ Calling onOpenSignup...');
-      onOpenSignup(planSlug, finalPrice, billingCycle);
-    } else {
-      console.error('❌ onOpenSignup is not defined!');
-      alert('Error: onOpenSignup callback not found. Check App.jsx');
-    }
+    setShowSignupModal(true);
+  };
+
+  const handleSignupSuccess = () => {
+    setShowSignupModal(false);
+    navigate('/dashboard');
   };
 
   const plans = [
@@ -231,7 +230,7 @@ const PricingPage = ({ onOpenSignup }) => {
 
                 {/* CTA Button */}
                 <button
-                  onClick={() => handlePlanClick(plan)}
+                  onClick={() => handleSelectPlan(plan)}
                   className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all mb-8 bg-gradient-to-r ${plan.gradient} hover:shadow-lg hover:scale-105 flex items-center justify-center gap-2`}
                 >
                   {plan.cta}
@@ -348,6 +347,14 @@ const PricingPage = ({ onOpenSignup }) => {
           </p>
         </div>
       </div>
+
+      {/* Signup Modal */}
+      <SignupModal
+        isOpen={showSignupModal}
+        onClose={() => setShowSignupModal(false)}
+        selectedPlan={selectedPlan}
+        onSuccess={handleSignupSuccess}
+      />
     </div>
   );
 };
