@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Check, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react';
 
-const PricingPage = ({ onBack, onSelectPlan }) => {
+const PricingPage = ({ onSelectPlan }) => {
+  const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState('monthly');
 
   const plans = [
@@ -127,10 +129,10 @@ const PricingPage = ({ onBack, onSelectPlan }) => {
         {/* Header */}
         <div className="text-center mb-16">
           <button
-            onClick={onBack}
+            onClick={() => navigate('/')}
             className="mb-8 text-gray-600 hover:text-gray-900 transition inline-flex items-center gap-2"
           >
-            ← Back to Builder
+            ← Back to Homepage
           </button>
           
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
