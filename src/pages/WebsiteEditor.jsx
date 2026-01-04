@@ -2,13 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
-  Eye, 
-  Code, 
   Sparkles, 
-  Download, 
   Save,
-  Monitor,
-  Smartphone,
   Send,
   Loader2
 } from 'lucide-react';
@@ -16,8 +11,6 @@ import {
 export default function WebsiteEditor() {
   const navigate = useNavigate();
   const [currentWebsite, setCurrentWebsite] = useState('');
-  const [devicePreview, setDevicePreview] = useState('desktop');
-  const [viewMode, setViewMode] = useState('preview'); // 'preview' or 'code'
   const [isSaving, setIsSaving] = useState(false);
   
   // AI Chat state
@@ -121,18 +114,6 @@ export default function WebsiteEditor() {
     }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([currentWebsite], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${user.businessName || 'website'}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Header */}
@@ -140,82 +121,17 @@ export default function WebsiteEditor() {
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/dashboard?tab=website')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Dashboard</span>
+            <span className="font-medium">Back</span>
           </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-bold text-gray-900">Website Editor</h1>
         </div>
 
         <div className="flex items-center gap-3">
-          {/* View Mode Toggle */}
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <button
-              type="button"
-              onClick={() => setViewMode('preview')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 ${
-                viewMode === 'preview'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Eye className="w-4 h-4" />
-              Preview
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('code')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 ${
-                viewMode === 'code'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <Code className="w-4 h-4" />
-              Code
-            </button>
-          </div>
-
-          {/* Device Preview Toggle */}
-          {viewMode === 'preview' && (
-            <div className="flex items-center bg-gray-100 rounded-lg p-1">
-              <button
-                type="button"
-                onClick={() => setDevicePreview('desktop')}
-                className={`p-2 rounded-md transition ${
-                  devicePreview === 'desktop'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Monitor className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={() => setDevicePreview('mobile')}
-                className={`p-2 rounded-md transition ${
-                  devicePreview === 'mobile'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Smartphone className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          <button
-            type="button"
-            onClick={handleDownload}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center gap-2"
-          >
-            <Download className="w-4 h-4" />
-            Download
-          </button>
-
           <button
             type="button"
             onClick={handleSave}
@@ -315,6 +231,42 @@ export default function WebsiteEditor() {
                     title="Website Preview"
                     className="w-full h-full border-none"
                     sandbox="allow-scripts allow-same-origin"
+                    ref={(iframe) => {
+                      if (iframe && iframe.contentWindow) {
+                        iframe.onload = () => {
+                          try {
+                            const iframeDoc = iframe.contentWindow.document;
+                            
+                            // Allow same-page navigation, prevent external navigation
+                            iframeDoc.addEventListener('click', (e) => {
+                              const link = e.target.closest('a');
+                              if (link) {
+                                const href = link.getAttribute('href');
+                                
+                                // Allow anchor links (same-page navigation like #services, #about)
+                                if (href && href.startsWith('#')) {
+                                  e.stopPropagation(); // Let the default anchor behavior work
+                                  return;
+                                }
+                                
+                                // Prevent external navigation
+                                e.preventDefault();
+                                console.log('External navigation prevented:', href);
+                              }
+                              
+                              // Prevent form submissions
+                              const form = e.target.closest('form');
+                              if (form) {
+                                e.preventDefault();
+                                console.log('Form submission prevented in preview');
+                              }
+                            }, true);
+                          } catch (err) {
+                            console.log('Could not access iframe:', err);
+                          }
+                        };
+                      }
+                    }}
                   />
                 </div>
               ) : (
