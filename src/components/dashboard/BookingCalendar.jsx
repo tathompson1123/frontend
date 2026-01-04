@@ -197,16 +197,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           ) : (
             <div className="p-2 space-y-2">
               {filteredBookings.map((booking) => (
-                <button
+                <div
                   key={booking.id}
-                  type="button"
-                  onClick={() => {
-                    setSelectedBooking(booking);
-                    setBookingNotes(booking.job_notes || '');
-                    setShowBookingModal(true);
-                    setEditingNotes(false);
-                  }}
-                  className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md ${
+                  className={`w-full p-3 rounded-lg border transition-all ${
                     selectedBooking?.id === booking.id
                       ? 'bg-blue-50 border-blue-300'
                       : 'bg-white border-gray-200 hover:border-gray-300'
@@ -231,7 +224,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     </span>
                   </div>
                   
-                  <div className="space-y-1">
+                  <div className="space-y-1 mb-2">
                     <div className="flex items-center gap-2 text-xs text-gray-600">
                       <Calendar className="w-3 h-3" />
                       {new Date(booking.booking_date).toLocaleDateString()}
@@ -247,7 +240,44 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       </div>
                     )}
                   </div>
-                </button>
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedBooking(booking);
+                        setBookingNotes(booking.job_notes || '');
+                        setShowBookingModal(true);
+                        setEditingNotes(false);
+                      }}
+                      className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition"
+                    >
+                      View Details
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // Populate the form with booking data
+                        setNewBooking({
+                          customerId: booking.customer_id,
+                          customerName: booking.customer_name,
+                          customerEmail: booking.customer_email || '',
+                          customerPhone: booking.customer_phone || '',
+                          customerAddress: '',
+                          serviceId: booking.items?.[0]?.service_id || '',
+                          employeeId: booking.employee_id || '',
+                          bookingDate: booking.booking_date,
+                          startTime: booking.start_time,
+                          notes: booking.customer_notes || ''
+                        });
+                        setShowCreateBookingModal(true);
+                      }}
+                      className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition"
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
               ))}
             </div>
           )}
