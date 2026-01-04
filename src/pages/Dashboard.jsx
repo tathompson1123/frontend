@@ -312,11 +312,13 @@ const [devicePreview, setDevicePreview] = useState('desktop');
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    navigate('/');  // Navigate to homepage
-  };
+ const handleLogout = () => {
+  console.log('Logout clicked!'); // Debug
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  console.log('Navigating to /'); // Debug
+  navigate('/');
+};
  
 const fetchWebsite = async () => {
   try {
