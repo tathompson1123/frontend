@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import HomePage from './pages/HomePage';
 import WebsiteGenerator from './pages/WebsiteGenerator';
 import Dashboard from './pages/Dashboard';
+import PricingPage from './pages/PricingPage';  // ← ADD THIS
 
 function App() {
   return (
@@ -9,6 +10,7 @@ function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/generate" element={<WebsiteGenerator />} />
+        <Route path="/pricing" element={<PricingPage />} />  {/* ← ADD THIS */}
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
