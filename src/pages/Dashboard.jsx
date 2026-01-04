@@ -10,7 +10,7 @@ import {
   Clock,
   TrendingUp,
   CreditCard,
-  Settings,      // ← Icon from lucide-react
+  Settings,
   LogOut,
   Menu,
   X
@@ -26,14 +26,14 @@ import Team from '../components/dashboard/Team';
 import BusinessHours from '../components/dashboard/BusinessHours';
 import Analytics from '../components/dashboard/Analytics';
 import Billing from '../components/dashboard/Billing';
-import SettingsPage from '../components/dashboard/Settings';  // ← Renamed to avoid conflict
+import SettingsPage from '../components/dashboard/Settings';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('overview');
   
-  // Shared state (kept in Dashboard)
+  // Shared state
   const [services, setServices] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -42,28 +42,57 @@ export default function Dashboard() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Fetch functions (kept in Dashboard for reuse)
-  const fetchServices = async () => { /* ... */ };
-  const fetchEmployees = async () => { /* ... */ };
-  const fetchBusinessHours = async () => { /* ... */ };
+  // Fetch functions
+  const fetchServices = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/services?userId=${user.id}`);
+      const data = await response.json();
+      setServices(data.services || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/employees?userId=${user.id}`);
+      const data = await response.json();
+      setEmployees(data.employees || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchBusinessHours = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/business-hours?userId=${user.id}`);
+      const data = await response.json();
+      setBusinessHours(data.hours || []);
+    } catch (error) {
+      console.error('Error fetching business hours:', error);
+    }
+  };
 
   // Fetch initial data on mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [bookingsRes, servicesRes, employeesRes] = await Promise.all([
+        const [bookingsRes, servicesRes, employeesRes, hoursRes] = await Promise.all([
           fetch(`${apiUrl}/api/bookings?userId=${user.id}`),
           fetch(`${apiUrl}/api/services?userId=${user.id}`),
-          fetch(`${apiUrl}/api/employees?userId=${user.id}`)
+          fetch(`${apiUrl}/api/employees?userId=${user.id}`),
+          fetch(`${apiUrl}/api/business-hours?userId=${user.id}`)
         ]);
 
         const bookingsData = await bookingsRes.json();
         const servicesData = await servicesRes.json();
         const employeesData = await employeesRes.json();
+        const hoursData = await hoursRes.json();
 
         setBookings(bookingsData.bookings || []);
         setServices(servicesData.services || []);
         setEmployees(employeesData.employees || []);
+        setBusinessHours(hoursData.hours || []);
       } catch (error) {
         console.error('Error fetching initial data:', error);
       }
@@ -95,53 +124,54 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
-  {/* Logo & Toggle */}
-  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-    {sidebarOpen && (
-      <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-        Dashboard
-      </h1>
-    )}
-    <button
-      onClick={() => setSidebarOpen(!sidebarOpen)}
-      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-    >
-      {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-    </button>
-  </div>
-
-  {/* Navigation Menu */}
-  <nav className="p-4 space-y-2">
-    {menuItems.map((item) => {
-      const Icon = item.icon;
-      return (
-        <button
-          key={item.id}
-          onClick={() => setCurrentView(item.id)}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-            currentView === item.id
-              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                : 'text-gray-700 hover:bg-gray-100'
-            }`}
+        {/* Logo & Toggle */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          {sidebarOpen && (
+            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
           >
-            <Icon className="w-5 h-5 flex-shrink-0" />
-            {sidebarOpen && <span className="font-medium">{item.label}</span>}
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
-        );
-      })}
-    </nav>
+        </div>
 
-    {/* Logout Button */}
-    <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-      <button
-        onClick={handleLogout}
-        className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all"
-      >
-        <LogOut className="w-5 h-5 flex-shrink-0" />
-        {sidebarOpen && <span className="font-medium">Logout</span>}
-      </button>
-    </div>
-  </aside>
+        {/* Navigation Menu */}
+        <nav className="p-4 space-y-2">
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  currentView === item.id
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Logout Button */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {sidebarOpen && <span className="font-medium">Logout</span>}
+          </button>
+        </div>
+      </aside>
+
       {/* Main Content */}
       <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <div className="p-8">
@@ -207,7 +237,7 @@ export default function Dashboard() {
             <Billing user={user} apiUrl={apiUrl} />
           )}
 
-          {currentView === 'settings' && <Settings user={user} />}
+          {currentView === 'settings' && <SettingsPage user={user} />}
         </div>
       </main>
     </div>
