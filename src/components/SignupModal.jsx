@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { AlertCircle, ArrowRight } from 'lucide-react';
 
-export default function SignupModal({ isOpen, onClose, generatedWebsite, onSuccess }) {
+export default function SignupModal({ isOpen, onClose, generatedWebsite, onSuccess, selectedPlan }) {
   const [mode, setMode] = useState('signup'); // 'signup' or 'login'
   const [formData, setFormData] = useState({
     email: '',
