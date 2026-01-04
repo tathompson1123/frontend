@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wand2, Sparkles } from 'lucide-react';
 import GenerationProgress from '../components/GenerationProgress';
@@ -118,17 +118,6 @@ export default function WebsiteGenerator() {
     navigate('/dashboard');
   };
 
-  // Create blob URL for preview
-  useEffect(() => {
-    if (generatedWebsite) {
-      const blob = new Blob([generatedWebsite], { type: 'text/html' });
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-      
-      return () => URL.revokeObjectURL(url);
-    }
-  }, [generatedWebsite]);
-
   // Loading screen
   if (isGenerating && !generatedWebsite) {
     return (
@@ -187,12 +176,13 @@ export default function WebsiteGenerator() {
               </div>
               
               <div className="flex-1 overflow-hidden">
-                <iframe
-                  src={previewUrl}
-                  title="Generated Website Preview"
-                  className="w-full h-full"
-                  style={{ border: 'none' }}
-                />
+               <iframe
+  srcDoc={generatedWebsite}
+  title="Generated Website Preview"
+  className="w-full h-full"
+  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+  style={{ border: 'none' }}
+/>
               </div>
             </div>
           </div>
