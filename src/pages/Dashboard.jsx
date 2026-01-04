@@ -576,7 +576,7 @@ const handleSearchBookings = (query) => {
     { id: 'services', icon: Briefcase, label: 'Services' },
     { id: 'team', icon: Users, label: 'Team' },
     { id: 'hours', icon: Clock, label: 'Business Hours' },
-    { id: 'bookings', icon: Calendar, label: 'Bookings' },
+    { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
