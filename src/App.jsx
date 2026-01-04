@@ -1,12 +1,21 @@
 import { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import WebsiteGenerator from './pages/WebsiteGenerator';
 import Dashboard from './pages/Dashboard';
 import PricingPage from './pages/PricingPage';
-import SignupModal from './components/SignupModal'; // ← Adjust path to your modal
+import SignupModal from './components/SignupModal'; // Your enhanced modal
 
 function App() {
+  return (
+    <Router>
+      <AppRoutes />
+    </Router>
+  );
+}
+
+function AppRoutes() {
+  const navigate = useNavigate();
   const [isSignupModalOpen, setIsSignupModalOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
 
@@ -27,8 +36,14 @@ function App() {
     setSelectedPlan(null);
   };
 
+  const handleSignupSuccess = () => {
+    setIsSignupModalOpen(false);
+    setSelectedPlan(null);
+    navigate('/dashboard');
+  };
+
   return (
-    <Router>
+    <>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/generate" element={<WebsiteGenerator />} />
@@ -37,7 +52,6 @@ function App() {
           element={
             <PricingPage 
               onOpenSignup={handleOpenSignup}
-              onSelectPlan={handleOpenSignup} // Keep both for compatibility
             />
           } 
         />
@@ -45,15 +59,16 @@ function App() {
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
 
-      {/* Global Signup Modal */}
+      {/* Global Signup Modal for Pricing Page */}
       {isSignupModalOpen && (
         <SignupModal 
           isOpen={isSignupModalOpen}
           onClose={handleCloseSignup}
           selectedPlan={selectedPlan}
+          onSuccess={handleSignupSuccess}
         />
       )}
-    </Router>
+    </>
   );
 }
 
