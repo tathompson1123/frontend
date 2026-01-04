@@ -2,9 +2,25 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react';
 
-const PricingPage = ({ onSelectPlan }) => {
+const PricingPage = ({ onSelectPlan, onOpenSignup }) => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState('monthly');
+
+  // This function triggers when user clicks a plan button
+  const handleSelectPlan = (planName, planPrice) => {
+    const planSlug = planName.toLowerCase().replace(' plan', '').replace(' ', '-');
+    const finalPrice = billingCycle === 'annual' ? (planPrice * 0.8).toFixed(2) : planPrice.toFixed(2);
+    
+    // Call the callback from App.jsx to open signup modal
+    if (onOpenSignup) {
+      onOpenSignup(planSlug, finalPrice, billingCycle);
+    }
+    
+    // Also call onSelectPlan for backward compatibility
+    if (onSelectPlan && onSelectPlan !== onOpenSignup) {
+      onSelectPlan(planSlug, finalPrice, billingCycle);
+    }
+  };
 
   const plans = [
     {
@@ -177,10 +193,10 @@ const PricingPage = ({ onSelectPlan }) => {
               key={index}
               className={`flex-1 bg-white rounded-2xl shadow-xl overflow-hidden transition-all hover:scale-105 ${
                 plan.popular ? 'ring-4 ring-purple-500 lg:scale-105' : ''
-              }`}
+              } relative`}
             >
               {plan.popular && (
-                <div className="absolute top-0 right-0 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 text-sm font-semibold">
+                <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 text-sm font-semibold text-center">
                   MOST POPULAR
                 </div>
               )}
@@ -207,9 +223,9 @@ const PricingPage = ({ onSelectPlan }) => {
                   )}
                 </div>
 
-                {/* CTA Button */}
+                {/* CTA Button - FIXED TO TRIGGER SIGNUP */}
                 <button
-                  onClick={() => onSelectPlan && onSelectPlan(plan.name.toLowerCase().replace(' ', '-'))}
+                  onClick={() => handleSelectPlan(plan.name, plan.price)}
                   className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all mb-8 bg-gradient-to-r ${plan.gradient} hover:shadow-lg hover:scale-105 flex items-center justify-center gap-2`}
                 >
                   {plan.cta}
