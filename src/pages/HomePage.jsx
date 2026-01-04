@@ -29,12 +29,9 @@ export default function HomePage() {
   };
 
   const handleNavigateToPricing = () => {
-    // Navigate to pricing section or page
-    const pricingSection = document.getElementById('pricing');
-    if (pricingSection) {
-      pricingSection.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
+  const handleNavigateToPricing = () => {
+  navigate('/pricing');
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
