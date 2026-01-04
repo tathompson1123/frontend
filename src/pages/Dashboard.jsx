@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { /* all your icons */ } from 'lucide-react';
 import {
-  Home,           // ← ADD THIS!
+  Home,
   Calendar,
   Globe,
   MapPin,
@@ -11,13 +10,13 @@ import {
   Clock,
   TrendingUp,
   CreditCard,
-  Settings,
+  Settings,      // ← Icon from lucide-react
   LogOut,
   Menu,
   X
 } from 'lucide-react';
 
-// Import components from components/dashboard
+// Component imports
 import Overview from '../components/dashboard/Overview';
 import BookingCalendar from '../components/dashboard/BookingCalendar';
 import MyWebsite from '../components/dashboard/MyWebsite';
@@ -27,7 +26,7 @@ import Team from '../components/dashboard/Team';
 import BusinessHours from '../components/dashboard/BusinessHours';
 import Analytics from '../components/dashboard/Analytics';
 import Billing from '../components/dashboard/Billing';
-import Settings from '../components/dashboard/Settings';
+import SettingsPage from '../components/dashboard/Settings';  // ← Renamed to avoid conflict
 
 export default function Dashboard() {
   const navigate = useNavigate();
