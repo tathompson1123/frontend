@@ -95,8 +95,32 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
-        {/* ... sidebar code stays here ... */}
-      </aside>
+  {/* Logo & Toggle */}
+  <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+    {sidebarOpen && (
+      <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+        Dashboard
+      </h1>
+    )}
+    <button
+      onClick={() => setSidebarOpen(!sidebarOpen)}
+      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+    >
+      {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+    </button>
+  </div>
+
+  {/* Navigation Menu */}
+  <nav className="p-4 space-y-2">
+    {menuItems.map((item) => {
+      const Icon = item.icon;
+      return (
+        <button
+          key={item.id}
+          onClick={() => setCurrentView(item.id)}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+            currentView === item.id
+              ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-l
 
       {/* Main Content */}
       <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
