@@ -121,7 +121,27 @@ export default function Dashboard() {
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
             currentView === item.id
               ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                : 'text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            <Icon className="w-5 h-5 flex-shrink-0" />
+            {sidebarOpen && <span className="font-medium">{item.label}</span>}
+          </button>
+        );
+      })}
+    </nav>
 
+    {/* Logout Button */}
+    <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+      <button
+        onClick={handleLogout}
+        className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+      >
+        <LogOut className="w-5 h-5 flex-shrink-0" />
+        {sidebarOpen && <span className="font-medium">Logout</span>}
+      </button>
+    </div>
+  </aside>
       {/* Main Content */}
       <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <div className="p-8">
