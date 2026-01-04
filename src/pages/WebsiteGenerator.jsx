@@ -173,11 +173,11 @@ export default function WebsiteGenerator() {
 
             <div className="border-4 border-gray-200 rounded-lg overflow-hidden" style={{ height: '600px' }}>
               <iframe
-                srcDoc={generatedWebsite}
-                title="Generated Website Preview"
-                className="w-full h-full"
-                sandbox="allow-scripts allow-same-origin"
-              />
+  src={`data:text/html;charset=utf-8,${encodeURIComponent(generatedWebsite)}`}
+  title="Generated Website Preview"
+  className="w-full h-full"
+  style={{ border: 'none' }}
+/>
             </div>
 
             <div className="mt-8 text-center">
