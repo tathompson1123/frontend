@@ -592,24 +592,53 @@ useEffect(() => {
       </div>
       <div className="flex gap-3">
         {currentWebsite && (
-          <button
-  type="button"
-  onClick={() => navigate('/editor')}
-  className="..."
->
-  <Edit className="w-5 h-5" />
-  View/Edit Website
-<button
-  type="button"
-  onClick={() => navigate('/editor')}
-  className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 border-2 border-white/20"
->
-  <Edit className="w-6 h-6" />
-  View/Edit Website
-  <ArrowRight className="w-5 h-5" />
-</button>
+  <div className="bg-white rounded-2xl shadow-lg p-8">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
+      
+      {/* Status Badge */}
+      <span className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium">
+        Draft
+      </span>
+    </div>
+
+    {/* Website Preview */}
+    <div className="mb-6">
+      <div className="border-2 border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm">
+        <iframe
+          srcDoc={currentWebsite}
+          title="Website Preview"
+          className="w-full h-96"
+          sandbox="allow-scripts allow-same-origin"
+        />
       </div>
     </div>
+
+    {/* Action Buttons - CORRECTED STRUCTURE */}
+    <div className="flex gap-4">
+      {/* View/Edit Button */}
+      <button
+        type="button"
+        onClick={() => navigate('/editor')}
+        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 border-2 border-white/20"
+      >
+        <Edit className="w-6 h-6" />
+        View/Edit Website
+        <ArrowRight className="w-5 h-5" />
+      </button>
+
+      {/* Generate New Button */}
+      <button
+        type="button"
+        onClick={() => setShowEditWebsite(true)}
+        className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-purple-500 hover:text-purple-600 transition-all flex items-center gap-2"
+      >
+        <RefreshCw className="w-5 h-5" />
+        Generate New
+      </button>
+    </div>
+  </div>
+)}
 
     {currentWebsite ? (
       <>
