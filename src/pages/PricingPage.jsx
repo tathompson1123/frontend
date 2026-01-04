@@ -2,25 +2,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react';
 
-const PricingPage = ({ onSelectPlan, onOpenSignup }) => {
+const PricingPage = ({ onOpenSignup }) => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState('monthly');
-
-  // This function triggers when user clicks a plan button
-  const handleSelectPlan = (planName, planPrice) => {
-    const planSlug = planName.toLowerCase().replace(' plan', '').replace(' ', '-');
-    const finalPrice = billingCycle === 'annual' ? (planPrice * 0.8).toFixed(2) : planPrice.toFixed(2);
-    
-    // Call the callback from App.jsx to open signup modal
-    if (onOpenSignup) {
-      onOpenSignup(planSlug, finalPrice, billingCycle);
-    }
-    
-    // Also call onSelectPlan for backward compatibility
-    if (onSelectPlan && onSelectPlan !== onOpenSignup) {
-      onSelectPlan(planSlug, finalPrice, billingCycle);
-    }
-  };
 
   const plans = [
     {
@@ -223,9 +207,17 @@ const PricingPage = ({ onSelectPlan, onOpenSignup }) => {
                   )}
                 </div>
 
-                {/* CTA Button - FIXED TO TRIGGER SIGNUP */}
+                {/* CTA Button */}
                 <button
-                  onClick={() => handleSelectPlan(plan.name, plan.price)}
+                  onClick={() => {
+                    const planSlug = plan.name.toLowerCase().replace(' plan', '').replace(' ', '-');
+                    const finalPrice = billingCycle === 'annual' ? (plan.price * 0.8).toFixed(2) : plan.price.toFixed(2);
+                    
+                    // Call the parent's onOpenSignup to trigger the global modal
+                    if (onOpenSignup) {
+                      onOpenSignup(planSlug, finalPrice, billingCycle);
+                    }
+                  }}
                   className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all mb-8 bg-gradient-to-r ${plan.gradient} hover:shadow-lg hover:scale-105 flex items-center justify-center gap-2`}
                 >
                   {plan.cta}
