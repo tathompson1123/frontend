@@ -2957,7 +2957,7 @@ const handleSearchBookings = (query) => {
             </div>
           )}
         </div>
-     </div>
+     </main>
     </div>
   );
 }
