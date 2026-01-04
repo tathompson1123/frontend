@@ -175,12 +175,23 @@ export default function WebsiteGenerator() {
               </div>
               
               <div className="flex-1 overflow-hidden">
-                <iframe
-                  srcDoc={generatedWebsite}
-                  title="Generated Website Preview"
-                  className="w-full h-full"
-                  style={{ border: 'none' }}
-                />
+                iframe
+  srcDoc={generatedWebsite}
+  title="Generated Website Preview"
+  className="w-full h-full"
+  style={{ border: 'none' }}
+  onLoad={(e) => {
+    // Prevent navigation inside iframe from affecting parent
+    try {
+      const iframeDoc = e.target.contentDocument;
+      iframeDoc.addEventListener('click', (event) => {
+        event.stopPropagation();
+      });
+    } catch (err) {
+      console.log('Cannot access iframe:', err);
+    }
+  }}
+/>
               </div>
             </div>
           </div>
