@@ -154,20 +154,23 @@ export default function WebsiteGenerator() {
               <div className="p-4 border-b border-gray-200">
                 <h2 className="text-xl font-bold text-gray-900">
                   🎉 Your Website Preview
-                </h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  See how your site looks live
-                </p>
-              </div>
-              <div className="flex-1 overflow-hidden">
-                <iframe
-  src={`data:text/html;charset=utf-8,${encodeURIComponent(generatedWebsite)}`}
-  style={{ border: 'none' }}
-/>
-              </div>
-            </div>
-          </div>
-
+      </h2>
+      <p className="text-sm text-gray-600 mt-1">
+        See how your site looks live
+      </p>
+    </div>
+    <button
+      onClick={() => {
+        const win = window.open('', '_blank');
+        win.document.write(generatedWebsite);
+        win.document.close();
+      }}
+      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+    >
+      Open in New Tab
+    </button>
+  </div>
+</div>
           {/* Right Half - Get Website CTA */}
           <div className="w-full lg:w-1/2 p-4 lg:p-6 overflow-y-auto">
             <div className="bg-white rounded-xl shadow-xl p-8 sticky top-6">
