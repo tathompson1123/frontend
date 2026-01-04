@@ -1,6 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
+  Calendar, 
+  Clock, 
+  User, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  FileText, 
+  Edit2, 
+  Save, 
+  X, 
+  ChevronLeft, 
+  ChevronRight,
+  Filter,
+  Search,
+  Users,
+  Briefcase
+} from 'lucide-react';
+import { 
   Globe,
   Download,
   Monitor,
@@ -87,6 +105,17 @@ export default function Dashboard() {
 
   // Bookings state
   const [bookings, setBookings] = useState([]);
+  
+  // Booking Calendar state
+const [selectedBooking, setSelectedBooking] = useState(null);
+const [showBookingModal, setShowBookingModal] = useState(false);
+const [bookingNotes, setBookingNotes] = useState('');
+const [editingNotes, setEditingNotes] = useState(false);
+const [calendarView, setCalendarView] = useState('week'); // 'week' or 'month'
+const [currentDate, setCurrentDate] = useState(new Date());
+const [allBookings, setAllBookings] = useState([]);
+const [filteredBookings, setFilteredBookings] = useState([]);
+const [searchQuery, setSearchQuery] = useState('');
 
   // Billing state
   const [cardOnFile, setCardOnFile] = useState(null);
@@ -138,8 +167,10 @@ const [repliesGeneratedWeek, setRepliesGeneratedWeek] = useState(0);
   }, [currentView]);
 
   useEffect(() => {
-    if (currentView === 'bookings') fetchBookings();
-  }, [currentView]);
+  if (currentView === 'booking-calendar') {
+    fetchAllBookings();
+  }
+}, [currentView]);
 
   useEffect(() => {
     if (currentView === 'website') fetchWebsite();
@@ -175,15 +206,71 @@ const [repliesGeneratedWeek, setRepliesGeneratedWeek] = useState(0);
     }
   };
 
-  const fetchBookings = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/bookings?userId=${user.id}`);
-      const data = await response.json();
-      setBookings(data.bookings || []);
-    } catch (error) {
-      console.error('Error fetching bookings:', error);
+  const fetchAllBookings = async () => {
+  try {
+    const response = await fetch(`${apiUrl}/api/bookings?userId=${user.id}`);
+    const data = await response.json();
+    
+    if (data.bookings) {
+      // Sort by date, newest first
+      const sorted = data.bookings.sort((a, b) => 
+        new Date(b.booking_date) - new Date(a.booking_date)
+      );
+      setAllBookings(sorted);
+      setFilteredBookings(sorted);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching bookings:', error);
+  }
+};
+
+const handleSaveNotes = async () => {
+  if (!selectedBooking) return;
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/bookings/${selectedBooking.id}/notes`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        notes: bookingNotes
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      // Update local state
+      setSelectedBooking({ ...selectedBooking, job_notes: bookingNotes });
+      setAllBookings(allBookings.map(b => 
+        b.id === selectedBooking.id ? { ...b, job_notes: bookingNotes } : b
+      ));
+      setEditingNotes(false);
+      alert('Notes saved successfully!');
+    }
+  } catch (error) {
+    console.error('Error saving notes:', error);
+    alert('Failed to save notes');
+  }
+};
+
+const handleSearchBookings = (query) => {
+  setSearchQuery(query);
+  
+  if (!query.trim()) {
+    setFilteredBookings(allBookings);
+    return;
+  }
+  
+  const filtered = allBookings.filter(booking => 
+    booking.customer_name?.toLowerCase().includes(query.toLowerCase()) ||
+    booking.customer_email?.toLowerCase().includes(query.toLowerCase()) ||
+    booking.customer_phone?.includes(query) ||
+    booking.service_name?.toLowerCase().includes(query.toLowerCase())
+  );
+  
+  setFilteredBookings(filtered);
+};
 
   const fetchWebsite = async () => {
     try {
@@ -1813,50 +1900,494 @@ const [repliesGeneratedWeek, setRepliesGeneratedWeek] = useState(0);
             </div>
           )}
 
-          {/* Bookings */}
-          {currentView === 'bookings' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Bookings</h2>
-                <p className="text-gray-600 mt-1">View and manage customer bookings</p>
-              </div>
-
-              {bookings.length === 0 ? (
-                <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
-                  <Calendar className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings yet</h3>
-                  <p className="text-gray-600">Bookings will appear here when customers book services</p>
+         {/* Booking Calendar */}
+{currentView === 'booking-calendar' && (
+  <div className="h-full flex gap-6">
+    {/* Left Sidebar - Previous Bookings */}
+    <div className="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-200px)]">
+      <div className="p-4 border-b border-gray-200">
+        <h3 className="font-bold text-gray-900 mb-3">All Bookings</h3>
+        
+        {/* Search */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => handleSearchBookings(e.target.value)}
+            placeholder="Search bookings..."
+            className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:border-blue-500"
+          />
+        </div>
+      </div>
+      
+      {/* Bookings List */}
+      <div className="flex-1 overflow-y-auto">
+        {filteredBookings.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">
+            <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p className="text-sm">No bookings found</p>
+          </div>
+        ) : (
+          <div className="p-2 space-y-2">
+            {filteredBookings.map((booking) => (
+              <button
+                key={booking.id}
+                type="button"
+                onClick={() => {
+                  setSelectedBooking(booking);
+                  setBookingNotes(booking.job_notes || '');
+                  setShowBookingModal(true);
+                  setEditingNotes(false);
+                }}
+                className={`w-full text-left p-3 rounded-lg border transition-all hover:shadow-md ${
+                  selectedBooking?.id === booking.id
+                    ? 'bg-blue-50 border-blue-300'
+                    : 'bg-white border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-start justify-between mb-2">
+                  <div className="flex-1">
+                    <p className="font-semibold text-gray-900 text-sm truncate">
+                      {booking.customer_name}
+                    </p>
+                    <p className="text-xs text-gray-600 truncate">
+                      {booking.items?.[0]?.service_name || 'Service'}
+                    </p>
+                  </div>
+                  <span className={`px-2 py-1 text-xs rounded-full ${
+                    booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                    booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}>
+                    {booking.status}
+                  </span>
                 </div>
-              ) : (
-                <div className="grid gap-4">
-                  {bookings.map((booking) => (
-                    <div key={booking.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-bold text-gray-900 text-lg">{booking.customer_name}</h3>
-                          <p className="text-gray-600">{booking.customer_email}</p>
-                          <p className="text-gray-600">{booking.customer_phone}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-semibold text-gray-900">{new Date(booking.booking_date).toLocaleDateString()}</p>
-                          <p className="text-gray-600">{booking.start_time} - {booking.end_time}</p>
-                          <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
-                            booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                            booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                            'bg-blue-100 text-blue-700'
-                          }`}>
-                            {booking.status}
-                          </span>
-                        </div>
+                
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Calendar className="w-3 h-3" />
+                    {new Date(booking.booking_date).toLocaleDateString()}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600">
+                    <Clock className="w-3 h-3" />
+                    {booking.start_time} - {booking.end_time}
+                  </div>
+                  {booking.employee_name && (
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <User className="w-3 h-3" />
+                      {booking.employee_name}
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Main Calendar View */}
+    <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      {/* Calendar Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-4">
+          <h2 className="text-2xl font-bold text-gray-900">
+            {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </h2>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                const newDate = new Date(currentDate);
+                newDate.setDate(currentDate.getDate() - 7);
+                setCurrentDate(newDate);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrentDate(new Date())}
+              className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition"
+            >
+              Today
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                const newDate = new Date(currentDate);
+                newDate.setDate(currentDate.getDate() + 7);
+                setCurrentDate(newDate);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setCalendarView('week')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                calendarView === 'week'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Week
+            </button>
+            <button
+              type="button"
+              onClick={() => setCalendarView('month')}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                calendarView === 'month'
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              Month
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Week View Calendar */}
+      {calendarView === 'week' && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          {/* Day Headers */}
+          <div className="grid grid-cols-8 border-b border-gray-200">
+            <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500">
+              Time
+            </div>
+            {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
+              const date = new Date(currentDate);
+              date.setDate(currentDate.getDate() - currentDate.getDay() + offset);
+              const isToday = date.toDateString() === new Date().toDateString();
+              
+              return (
+                <div
+                  key={offset}
+                  className={`bg-gray-50 p-3 text-center border-l border-gray-200 ${
+                    isToday ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <div className="text-xs text-gray-500 mb-1">
+                    {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                  </div>
+                  <div className={`text-lg font-bold ${
+                    isToday ? 'text-blue-600' : 'text-gray-900'
+                  }`}>
+                    {date.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Time Slots */}
+          <div className="max-h-[600px] overflow-y-auto">
+            {[9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => (
+              <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
+                <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
+                  {hour > 12 ? `${hour - 12}:00 PM` : `${hour}:00 AM`}
+                </div>
+                {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
+                  const date = new Date(currentDate);
+                  date.setDate(currentDate.getDate() - currentDate.getDay() + offset);
+                  const dateStr = date.toISOString().split('T')[0];
+                  
+                  // Find bookings for this day and hour
+                  const dayBookings = allBookings.filter(booking => {
+                    if (booking.booking_date !== dateStr) return false;
+                    const startHour = parseInt(booking.start_time.split(':')[0]);
+                    return startHour === hour;
+                  });
+
+                  return (
+                    <div
+                      key={offset}
+                      className="p-2 min-h-[80px] border-l border-gray-100 hover:bg-gray-50 transition relative"
+                    >
+                      {dayBookings.map((booking, idx) => (
+                        <button
+                          key={booking.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setBookingNotes(booking.job_notes || '');
+                            setShowBookingModal(true);
+                            setEditingNotes(false);
+                          }}
+                          className="w-full text-left p-2 rounded bg-blue-500 text-white text-xs hover:bg-blue-600 transition mb-1"
+                          style={{ marginTop: idx > 0 ? '4px' : '0' }}
+                        >
+                          <div className="font-semibold truncate">
+                            {booking.customer_name}
+                          </div>
+                          <div className="truncate opacity-90">
+                            {booking.items?.[0]?.service_name}
+                          </div>
+                          <div className="text-xs opacity-75">
+                            {booking.start_time} - {booking.end_time}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Month View Calendar */}
+      {calendarView === 'month' && (
+        <div className="border border-gray-200 rounded-lg overflow-hidden">
+          {/* Month view coming soon message */}
+          <div className="p-12 text-center">
+            <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Month View</h3>
+            <p className="text-gray-600">
+              Month view is coming soon! Use week view to see your bookings.
+            </p>
+          </div>
+        </div>
+      )}
+    </div>
+
+    {/* Booking Details Modal */}
+    {showBookingModal && selectedBooking && (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          {/* Modal Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Booking Details</h2>
+              <p className="text-sm text-gray-600 mt-1">
+                Booking #{selectedBooking.booking_number}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowBookingModal(false);
+                setSelectedBooking(null);
+                setEditingNotes(false);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <X className="w-6 h-6 text-gray-600" />
+            </button>
+          </div>
+
+          {/* Modal Content */}
+          <div className="p-6 space-y-6">
+            {/* Status Badge */}
+            <div className="flex items-center gap-3">
+              <span className={`px-4 py-2 rounded-full font-medium ${
+                selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                selectedBooking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                'bg-gray-100 text-gray-700'
+              }`}>
+                {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}
+              </span>
+            </div>
+
+            {/* Customer Information */}
+            <div className="bg-gray-50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-5 h-5 text-gray-600" />
+                <h3 className="font-bold text-gray-900">Customer Information</h3>
+              </div>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Full Name</label>
+                  <p className="text-gray-900 font-medium">{selectedBooking.customer_name}</p>
+                </div>
+                
+                {selectedBooking.customer_email && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <Mail className="w-4 h-4" />
+                      Email
+                    </label>
+                    <p className="text-gray-900">{selectedBooking.customer_email}</p>
+                  </div>
+                )}
+                
+                {selectedBooking.customer_phone && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <Phone className="w-4 h-4" />
+                      Phone
+                    </label>
+                    <p className="text-gray-900">{selectedBooking.customer_phone}</p>
+                  </div>
+                )}
+                
+                {selectedBooking.customer_address && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      Address
+                    </label>
+                    <p className="text-gray-900">{selectedBooking.customer_address}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Booking Details */}
+            <div className="bg-blue-50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Calendar className="w-5 h-5 text-blue-600" />
+                <h3 className="font-bold text-gray-900">Booking Details</h3>
+              </div>
+              
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-600">Date</label>
+                  <p className="text-gray-900 font-medium">
+                    {new Date(selectedBooking.booking_date).toLocaleDateString('en-US', {
+                      weekday: 'long',
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Time
+                  </label>
+                  <p className="text-gray-900 font-medium">
+                    {selectedBooking.start_time} - {selectedBooking.end_time}
+                  </p>
+                </div>
+
+                {selectedBooking.employee_name && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                      <Users className="w-4 h-4" />
+                      Team Member
+                    </label>
+                    <p className="text-gray-900 font-medium">{selectedBooking.employee_name}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Service Details */}
+            <div className="bg-purple-50 rounded-xl p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Briefcase className="w-5 h-5 text-purple-600" />
+                <h3 className="font-bold text-gray-900">Service Details</h3>
+              </div>
+              
+              {selectedBooking.items && selectedBooking.items.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedBooking.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-start">
+                      <div>
+                        <p className="font-medium text-gray-900">{item.service_name}</p>
+                        <p className="text-sm text-gray-600">
+                          Duration: {item.duration} hour{item.duration !== 1 ? 's' : ''}
+                        </p>
                       </div>
+                      <p className="font-bold text-gray-900">${parseFloat(item.price).toFixed(2)}</p>
                     </div>
                   ))}
+                  
+                  <div className="pt-3 border-t border-purple-200 flex justify-between items-center">
+                    <span className="font-bold text-gray-900">Total</span>
+                    <span className="text-xl font-bold text-gray-900">
+                      ${parseFloat(selectedBooking.total_amount).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-600">No service details available</p>
+              )}
+            </div>
+
+            {/* Job Notes */}
+            <div className="bg-green-50 rounded-xl p-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="w-5 h-5 text-green-600" />
+                  <h3 className="font-bold text-gray-900">Job Notes</h3>
+                </div>
+                
+                {!editingNotes ? (
+                  <button
+                    type="button"
+                    onClick={() => setEditingNotes(true)}
+                    className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 rounded-lg transition text-sm font-medium"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                    Edit Notes
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSaveNotes}
+                      className="flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition text-sm font-medium"
+                    >
+                      <Save className="w-4 h-4" />
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBookingNotes(selectedBooking.job_notes || '');
+                        setEditingNotes(false);
+                      }}
+                      className="px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 rounded-lg transition text-sm font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+              
+              {editingNotes ? (
+                <textarea
+                  value={bookingNotes}
+                  onChange={(e) => setBookingNotes(e.target.value)}
+                  placeholder="Add notes about this job..."
+                  rows={6}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 resize-none"
+                />
+              ) : (
+                <div className="bg-white rounded-lg p-4 min-h-[100px]">
+                  {selectedBooking.job_notes || bookingNotes ? (
+                    <p className="text-gray-900 whitespace-pre-wrap">
+                      {selectedBooking.job_notes || bookingNotes}
+                    </p>
+                  ) : (
+                    <p className="text-gray-400 italic">No notes added yet</p>
+                  )}
                 </div>
               )}
             </div>
-          )}
-
+          </div>
+        </div>
+      </div>
+    )}
+  </div>
+)}
           {/* Analytics */}
           {currentView === 'analytics' && (
             <div className="space-y-6">
