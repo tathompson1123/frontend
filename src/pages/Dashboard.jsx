@@ -1,22 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Calendar, 
-  Clock, 
+import {   
   User, 
-  Mail, 
   Phone, 
-  MapPin, 
   FileText, 
   Edit2, 
   Save, 
-  X, 
   ChevronLeft, 
   ChevronRight,
   Filter,
   Search,
-  Users,
-  Briefcase
 } from 'lucide-react';
 import { 
   Globe,
