@@ -152,15 +152,13 @@ export default function WebsiteGenerator() {
           <div className="w-full lg:w-1/2 p-4 lg:p-6 overflow-hidden">
             <div className="bg-white rounded-xl shadow-xl h-full flex flex-col">
               <div className="p-4 border-b border-gray-200">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      🎉 Your Website Preview
-                    </h2>
-                    <p className="text-sm text-gray-600 mt-1">
-                      See how your site looks live
-                    </p>
-                  </div>
+  <h2 className="text-xl font-bold text-gray-900">
+    🎉 Your Website Preview
+  </h2>
+  <p className="text-sm text-gray-600 mt-1">
+    See how your site looks live
+  </p>
+</div>
                   <button
                     onClick={() => {
                       const win = window.open('', '_blank');
