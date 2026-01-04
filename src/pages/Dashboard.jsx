@@ -583,11 +583,65 @@ export default function Dashboard() {
           {/* Website */}
           {currentView === 'website' && (
             <div className="space-y-6">
+              {/* Header with Title, Buttons, and Status */}
               <div className="flex justify-between items-center">
+                {/* Left: Title */}
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
                   <p className="text-gray-600 mt-1">View and manage your AI-generated website</p>
                 </div>
+
+                {/* Center: Action Buttons */}
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/editor')}
+                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 border-2 border-white/20"
+                  >
+                    <Edit className="w-6 h-6" />
+                    View/Edit Website
+                    <ArrowRight className="w-5 h-5" />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowEditWebsite(true)}
+                    className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-purple-500 hover:text-purple-600 transition-all flex items-center gap-2"
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                    Generate New
+                  </button>
+                </div>
+
+                {/* Right: Status and Publish */}
+                {currentWebsite && (
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="flex items-center gap-2">
+                      {isPublished ? (
+                        <>
+                          <Eye className="w-5 h-5 text-green-600" />
+                          <span className="text-green-600 font-semibold">Published</span>
+                        </>
+                      ) : (
+                        <>
+                          <EyeOff className="w-5 h-5 text-gray-400" />
+                          <span className="text-gray-600">Draft</span>
+                        </>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleTogglePublish}
+                      className={`px-6 py-2 rounded-lg text-sm font-medium transition ${
+                        isPublished 
+                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}
+                    >
+                      {isPublished ? 'Unpublish' : 'Publish Now'}
+                    </button>
+                  </div>
+                )}
               </div>
 
               {currentWebsite ? (
@@ -640,68 +694,17 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex gap-4">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/editor')}
-                      className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-xl font-bold text-lg shadow-xl hover:shadow-2xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3 border-2 border-white/20"
-                    >
-                      <Edit className="w-6 h-6" />
-                      View/Edit Website
-                      <ArrowRight className="w-5 h-5" />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setShowEditWebsite(true)}
-                      className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:border-purple-500 hover:text-purple-600 transition-all flex items-center gap-2"
-                    >
-                      <RefreshCw className="w-5 h-5" />
-                      Generate New
-                    </button>
-                  </div>
-
                   {/* Quick Actions */}
-                  <div className="grid md:grid-cols-3 gap-4">
+                  <div className="grid md:grid-cols-2 gap-4">
                     <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                      <h3 className="font-semibold text-gray-900 mb-2">Status</h3>
-                      <div className="flex items-center gap-2">
-                        {isPublished ? (
-                          <>
-                            <Eye className="w-5 h-5 text-green-600" />
-                            <span className="text-green-600 font-semibold">Published</span>
-                          </>
-                        ) : (
-                          <>
-                            <EyeOff className="w-5 h-5 text-gray-400" />
-                            <span className="text-gray-600">Draft</span>
-                          </>
-                        )}
-                      </div>
+                      <h3 className="font-semibold text-gray-900 mb-2">Analytics</h3>
+                      <p className="text-sm text-gray-600 mb-4">Track website performance</p>
                       <button
                         type="button"
-                        onClick={handleTogglePublish}
-                        className={`mt-4 w-full px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          isPublished 
-                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                            : 'bg-green-600 text-white hover:bg-green-700'
-                        }`}
+                        onClick={() => setCurrentView('analytics')}
+                        className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition"
                       >
-                        {isPublished ? 'Unpublish' : 'Publish Now'}
-                      </button>
-                    </div>
-
-                    <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                      <h3 className="font-semibold text-gray-900 mb-2">Download</h3>
-                      <p className="text-sm text-gray-600 mb-4">Save website as HTML file</p>
-                      <button
-                        type="button"
-                        onClick={handleDownloadWebsite}
-                        className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
-                      >
-                        <Download className="w-4 h-4" />
-                        Download HTML
+                        View Analytics
                       </button>
                     </div>
 
