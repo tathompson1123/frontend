@@ -9,7 +9,7 @@ export default function MyWebsite({ apiUrl, user, navigate }) {
   const handleGenerateWebsite = async () => {
     setIsGenerating(true);
     try {
-      const response = await fetch(`${apiUrl}/api/website/generate`, {
+      const response = await fetch(`${apiUrl}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId: user.id })
