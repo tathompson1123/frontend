@@ -1,38 +1,78 @@
 import { useState, useEffect } from 'react';
-import { Globe, Sparkles, RefreshCw, ExternalLink, Eye } from 'lucide-react';
+import { 
+  Globe, 
+  RefreshCw, 
+  Edit, 
+  ArrowRight, 
+  Eye, 
+  EyeOff, 
+  Monitor, 
+  Smartphone 
+} from 'lucide-react';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [websiteUrl, setWebsiteUrl] = useState(websiteData?.url || user.websiteUrl || '');
-  const [showPreview, setShowPreview] = useState(!!(websiteData?.url || user.websiteUrl));
+  const [currentWebsite, setCurrentWebsite] = useState(null);
+  const [isPublished, setIsPublished] = useState(false);
+  const [devicePreview, setDevicePreview] = useState('desktop');
+  const [customDomain, setCustomDomain] = useState('');
+  const [showEditWebsite, setShowEditWebsite] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
+  const [websiteForm, setWebsiteForm] = useState({
+    businessName: user.businessName || '',
+    businessType: '',
+    services: '',
+    description: ''
+  });
 
-  // Update when websiteData prop changes
+  // Load website data when component mounts or websiteData changes
   useEffect(() => {
-    if (websiteData?.url) {
-      setWebsiteUrl(websiteData.url);
-      setShowPreview(true);
+    if (websiteData) {
+      setCurrentWebsite(websiteData.html_content);
+      setIsPublished(websiteData.is_published || false);
+      setCustomDomain(websiteData.custom_domain || '');
     }
   }, [websiteData]);
 
-  const handleGenerateWebsite = async () => {
-    setIsGenerating(true);
+  const handleTogglePublish = async () => {
     try {
-      // Get user data for website generation
-      const response = await fetch(`${apiUrl}/api/generate`, {
+      const response = await fetch(`${apiUrl}/api/website/publish`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          businessName: user.businessName || 'My Business',
-          businessType: 'service business',
-          services: 'Professional services',
-          description: 'Quality service you can trust'
+          userId: user.id, 
+          isPublished: !isPublished 
+        })
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        setIsPublished(!isPublished);
+      }
+    } catch (error) {
+      console.error('Error toggling publish:', error);
+    }
+  };
+
+  const handleRegenerateWebsite = async (e) => {
+    e.preventDefault();
+    setIsRegenerating(true);
+
+    try {
+      const response = await fetch(`${apiUrl}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          businessName: websiteForm.businessName,
+          businessType: websiteForm.businessType,
+          services: websiteForm.services,
+          description: websiteForm.description
         })
       });
 
       const data = await response.json();
-      
+
       if (data.success && data.html) {
-        // Save the generated HTML to the database
+        // Save to database
         const saveResponse = await fetch(`${apiUrl}/api/website`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -43,168 +83,336 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
         });
 
         const saveData = await saveResponse.json();
-        
+
         if (saveData.success) {
-          // Create a preview URL (you can customize this)
-          const previewUrl = `${apiUrl}/preview/${saveData.website.id}`;
-          setWebsiteUrl(previewUrl);
-          setShowPreview(true);
-          
-          // Update user in localStorage
-          const updatedUser = { ...user, websiteUrl: previewUrl };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-        } else {
-          alert('Failed to save website');
+          setCurrentWebsite(data.html);
+          setShowEditWebsite(false);
+          alert('Website generated successfully!');
         }
-      } else {
-        alert('Failed to generate website');
       }
     } catch (error) {
       console.error('Error generating website:', error);
       alert('Failed to generate website');
     } finally {
-      setIsGenerating(false);
-    }
-  };
-
-  const handlePublish = () => {
-    if (websiteUrl) {
-      window.open(websiteUrl, '_blank');
+      setIsRegenerating(false);
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Header with Title, Buttons, and Status */}
       <div className="flex justify-between items-center">
+        {/* Left: Title */}
         <div>
           <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
-          <p className="text-gray-600 mt-1">AI-generated website for your business</p>
+          <p className="text-gray-600 mt-1">View and manage your AI-generated website</p>
         </div>
-        <div className="flex gap-3">
-          {websiteUrl && (
-            <>
-              <button
-                type="button"
-                onClick={() => setShowPreview(!showPreview)}
-                className="px-6 py-3 border-2 border-purple-600 text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition-all flex items-center gap-2"
-              >
-                <Eye className="w-5 h-5" />
-                {showPreview ? 'Hide Preview' : 'Show Preview'}
-              </button>
-              <button
-                type="button"
-                onClick={handlePublish}
-                className="px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all flex items-center gap-2"
-              >
-                <ExternalLink className="w-5 h-5" />
-                View Live Site
-              </button>
-            </>
-          )}
+
+        {/* Center: Action Buttons */}
+        <div className="flex gap-4">
           <button
             type="button"
-            onClick={handleGenerateWebsite}
-            disabled={isGenerating}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+            onClick={() => navigate('/editor')}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center justify-center gap-2"
           >
-            {isGenerating ? (
-              <>
-                <RefreshCw className="w-5 h-5 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-5 h-5" />
-                {websiteUrl ? 'Regenerate Website' : 'Generate Website'}
-              </>
-            )}
+            <Edit className="w-4 h-4" />
+            View/Edit Website
+            <ArrowRight className="w-4 h-4" />
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowEditWebsite(true)}
+            className="bg-white border-2 border-gray-300 text-gray-700 px-6 py-2 rounded-lg font-semibold hover:border-purple-500 hover:text-purple-600 transition-all flex items-center gap-2"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Generate New
           </button>
         </div>
+
+        {/* Right: Status and Publish */}
+        {currentWebsite && (
+          <div className="flex flex-col items-end gap-2">
+            <div className="flex items-center gap-2">
+              {isPublished ? (
+                <>
+                  <Eye className="w-5 h-5 text-green-600" />
+                  <span className="text-green-600 font-semibold">Published</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="w-5 h-5 text-gray-400" />
+                  <span className="text-gray-600">Draft</span>
+                </>
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={handleTogglePublish}
+              className={`px-6 py-2 rounded-lg text-sm font-medium transition ${
+                isPublished 
+                  ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                  : 'bg-green-600 text-white hover:bg-green-700'
+              }`}
+            >
+              {isPublished ? 'Unpublish' : 'Publish Now'}
+            </button>
+          </div>
+        )}
       </div>
 
-      {!websiteUrl && !isGenerating && (
+      {currentWebsite ? (
+        <>
+          {/* Website Preview with Device Toggle */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="bg-gray-50 border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-gray-600">
+                <Globe className="w-4 h-4" />
+                <span>Website Preview</span>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDevicePreview('desktop')}
+                  className={`px-3 py-1.5 rounded text-sm ${
+                    devicePreview === 'desktop'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300'
+                  }`}
+                >
+                  <Monitor className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDevicePreview('mobile')}
+                  className={`px-3 py-1.5 rounded text-sm ${
+                    devicePreview === 'mobile'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-white text-gray-600 border border-gray-300'
+                  }`}
+                >
+                  <Smartphone className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            
+            <div 
+              className={`mx-auto transition-all ${
+                devicePreview === 'mobile' ? 'max-w-md' : 'w-full'
+              }`}
+              style={{ height: '600px' }}
+            >
+              <iframe
+                srcDoc={currentWebsite}
+                title="Website Preview"
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin"
+                ref={(iframe) => {
+                  if (iframe && iframe.contentWindow) {
+                    iframe.onload = () => {
+                      try {
+                        const iframeDoc = iframe.contentWindow.document;
+                        
+                        // Allow same-page navigation, prevent external navigation
+                        iframeDoc.addEventListener('click', (e) => {
+                          const link = e.target.closest('a');
+                          if (link) {
+                            const href = link.getAttribute('href');
+                            
+                            // Allow anchor links (same-page navigation)
+                            if (href && href.startsWith('#')) {
+                              e.stopPropagation(); // Let the default anchor behavior work
+                              return;
+                            }
+                            
+                            // Prevent external navigation
+                            e.preventDefault();
+                            console.log('External navigation prevented:', href);
+                          }
+                          
+                          // Prevent form submissions
+                          const form = e.target.closest('form');
+                          if (form) {
+                            e.preventDefault();
+                            console.log('Form submission prevented in preview');
+                          }
+                        }, true);
+                      } catch (err) {
+                        console.log('Could not access iframe:', err);
+                      }
+                    };
+                  }
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-2">Analytics</h3>
+              <p className="text-sm text-gray-600 mb-4">Track website performance</p>
+              <button
+                type="button"
+                onClick={() => navigate('/dashboard')}
+                className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition"
+              >
+                View Analytics
+              </button>
+            </div>
+
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <h3 className="font-semibold text-gray-900 mb-2">Custom Domain</h3>
+              <input
+                type="text"
+                value={customDomain}
+                onChange={(e) => setCustomDomain(e.target.value)}
+                placeholder="yourdomain.com"
+                className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none mb-2"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await fetch(`${apiUrl}/api/website/domain`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: user.id, customDomain })
+                    });
+                    alert('Domain saved!');
+                  } catch (error) {
+                    console.error('Error saving domain:', error);
+                  }
+                }}
+                className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition"
+              >
+                Save Domain
+              </button>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* No Website Yet */
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Website Yet</h3>
-          <p className="text-gray-600 mb-6">Generate an AI-powered website for your business in seconds</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No website yet</h3>
+          <p className="text-gray-600 mb-6">Generate your first website to get started</p>
           <button
             type="button"
-            onClick={handleGenerateWebsite}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-4 rounded-lg font-semibold hover:shadow-lg transition-all text-lg"
+            onClick={() => setShowEditWebsite(true)}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center gap-2"
           >
-            <Sparkles className="w-6 h-6 inline-block mr-2" />
-            Generate My Website
+            <RefreshCw className="w-5 h-5" />
+            Generate Website
           </button>
         </div>
       )}
 
-      {isGenerating && (
-        <div className="bg-white rounded-xl p-12 text-center">
-          <RefreshCw className="w-16 h-16 text-purple-600 mx-auto mb-4 animate-spin" />
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Generating Your Website...</h3>
-          <p className="text-gray-600">This will take about 30 seconds</p>
+      {/* Regenerate Modal */}
+      {showEditWebsite && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              {currentWebsite ? 'Regenerate Website' : 'Generate Website'}
+            </h2>
+            
+            <form onSubmit={handleRegenerateWebsite} className="space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Business Name *
+                </label>
+                <input
+                  type="text"
+                  value={websiteForm.businessName}
+                  onChange={(e) => setWebsiteForm({ ...websiteForm, businessName: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Business Type *
+                </label>
+                <select
+                  value={websiteForm.businessType}
+                  onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })}
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                >
+                  <option value="">Select type...</option>
+                  <option value="plumbing">Plumbing</option>
+                  <option value="hvac">HVAC</option>
+                  <option value="landscaping">Landscaping</option>
+                  <option value="cleaning">Cleaning</option>
+                  <option value="electrical">Electrical</option>
+                  <option value="carpentry">Carpentry</option>
+                  <option value="painting">Painting</option>
+                  <option value="roofing">Roofing</option>
+                  <option value="auto-repair">Auto Repair</option>
+                  <option value="salon">Hair Salon</option>
+                  <option value="spa">Spa/Massage</option>
+                  <option value="fitness">Fitness</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Services Offered
+                </label>
+                <input
+                  type="text"
+                  value={websiteForm.services}
+                  onChange={(e) => setWebsiteForm({ ...websiteForm, services: e.target.value })}
+                  placeholder="e.g., Emergency repairs, installations, maintenance"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Business Description
+                </label>
+                <textarea
+                  value={websiteForm.description}
+                  onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })}
+                  placeholder="Tell us about your business..."
+                  rows={4}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditWebsite(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isRegenerating}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isRegenerating ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-5 h-5" />
+                      {currentWebsite ? 'Regenerate' : 'Generate'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
-
-      {showPreview && websiteUrl && !isGenerating && (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3 text-white">
-              <Globe className="w-5 h-5" />
-              <span className="font-semibold">Website Preview</span>
-            </div>
-            <a
-              href={websiteUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-4 py-2 bg-white text-purple-600 rounded-lg font-semibold hover:bg-gray-100 transition-all flex items-center gap-2"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Open in New Tab
-            </a>
-          </div>
-          <div className="relative" style={{ paddingBottom: '75%' }}>
-            <iframe
-              src={websiteUrl}
-              title="Website Preview"
-              className="absolute inset-0 w-full h-full"
-              style={{ minHeight: '600px' }}
-            />
-          </div>
-        </div>
-      )}
-
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
-          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center mb-4">
-            <Sparkles className="w-6 h-6 text-white" />
-          </div>
-          <h3 className="font-bold text-gray-900 mb-2">AI-Powered Design</h3>
-          <p className="text-sm text-gray-700">
-            Your website is automatically generated using AI based on your business information
-          </p>
-        </div>
-
-        <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border-2 border-purple-200">
-          <div className="w-12 h-12 bg-purple-600 rounded-full flex items-center justify-center mb-4">
-            <Globe className="w-6 h-6 text-white" />
-          </div>
-          <h3 className="font-bold text-gray-900 mb-2">Fully Responsive</h3>
-          <p className="text-sm text-gray-700">
-            Works perfectly on desktop, tablet, and mobile devices
-          </p>
-        </div>
-
-        <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
-          <div className="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center mb-4">
-            <RefreshCw className="w-6 h-6 text-white" />
-          </div>
-          <h3 className="font-bold text-gray-900 mb-2">Easy Updates</h3>
-          <p className="text-sm text-gray-700">
-            Regenerate anytime to update with your latest services and information
-          </p>
-        </div>
-      </div>
     </div>
   );
 }
