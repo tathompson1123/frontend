@@ -29,7 +29,6 @@ export default function HomePage() {
   };
 
   const handleNavigateToPricing = () => {
-  const handleNavigateToPricing = () => {
   navigate('/pricing');
 };
 
