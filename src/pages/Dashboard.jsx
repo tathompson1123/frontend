@@ -864,6 +864,7 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+      )}
 
           {/* Services */}
           {currentView === 'services' && (
