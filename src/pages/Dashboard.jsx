@@ -113,35 +113,16 @@ export default function Dashboard() {
   
   const [devicePreview, setDevicePreview] = useState('desktop');
 
-  // Google Business Profile state
-  const [isGBPConnected, setIsGBPConnected] = useState(false);
-  const [gbpProfile, setGBPProfile] = useState(null);
-  const [gbpImages, setGBPImages] = useState([]);
-  const [uploadingImages, setUploadingImages] = useState(false);
-  const [reviews, setReviews] = useState([]);
-  const [replyingToReview, setReplyingToReview] = useState(null);
-  const [reviewReply, setReviewReply] = useState('');
-  const [isGeneratingReply, setIsGeneratingReply] = useState(false);
-  const [reviewRequests, setReviewRequests] = useState([]);
-  const [activeGBPTab, setActiveGBPTab] = useState('images');
+  // Google Business - AI Reply Generator
+const [reviewCustomerName, setReviewCustomerName] = useState('');
+const [reviewRating, setReviewRating] = useState(5);
+const [reviewText, setReviewText] = useState('');
+const [generatedReply, setGeneratedReply] = useState('');
+const [isGeneratingReply, setIsGeneratingReply] = useState(false);
+const [copied, setCopied] = useState(false);
+const [repliesGeneratedToday, setRepliesGeneratedToday] = useState(0);
+const [repliesGeneratedWeek, setRepliesGeneratedWeek] = useState(0);
 
-  // Check for OAuth callback on page load
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const gbpStatus = urlParams.get('gbp');
-    
-    if (gbpStatus === 'connected') {
-      setIsGBPConnected(true);
-      setCurrentView('google-business');
-      // Clean up URL
-      window.history.replaceState({}, '', '/dashboard');
-      // Show success message
-      alert('✅ Google Business Profile connected successfully!');
-    } else if (gbpStatus === 'error') {
-      alert('❌ Failed to connect Google Business Profile. Please try again.');
-      window.history.replaceState({}, '', '/dashboard');
-    }
-  }, []);
 
   // Fetch functions
   useEffect(() => {
@@ -442,106 +423,44 @@ export default function Dashboard() {
     }
   };
 
-  // Google Business Profile Handlers
-  const handleGBPImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (files.length === 0) return;
+ const handleGenerateReviewReply = async () => {
+  if (!reviewText.trim()) {
+    alert('Please enter a review first');
+    return;
+  }
 
-    setUploadingImages(true);
+  setIsGeneratingReply(true);
+  setGeneratedReply('');
 
-    try {
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('image', file);
-        formData.append('userId', user.id);
+  try {
+    const response = await fetch(`${apiUrl}/api/google-business/generate-reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        reviewText: reviewText.trim(),
+        rating: reviewRating,
+        businessName: user.businessName,
+        customerName: reviewCustomerName.trim()
+      })
+    });
 
-        const response = await fetch(`${apiUrl}/api/google-business/upload-image`, {
-          method: 'POST',
-          body: formData
-        });
+    const data = await response.json();
 
-        const data = await response.json();
-
-        if (data.success) {
-          setGBPImages(prev => [...prev, {
-            url: data.imageUrl,
-            geotagged: data.geotagged,
-            uploadedToGBP: data.uploadedToGBP
-          }]);
-        }
-      }
-
-      alert(`✅ ${files.length} photo(s) uploaded and optimized!`);
-    } catch (error) {
-      console.error('Upload error:', error);
-      alert('Failed to upload images');
-    } finally {
-      setUploadingImages(false);
+    if (data.success) {
+      setGeneratedReply(data.reply);
+      setRepliesGeneratedToday(prev => prev + 1);
+      setRepliesGeneratedWeek(prev => prev + 1);
+    } else {
+      alert('Failed to generate reply. Please try again.');
     }
-  };
-
-  const handleGenerateAIReply = async (review) => {
-    setIsGeneratingReply(true);
-
-    try {
-      const response = await fetch(`${apiUrl}/api/google-business/generate-reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          reviewText: review.text,
-          rating: review.rating,
-          businessName: user.businessName
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setReviewReply(data.reply);
-      }
-    } catch (error) {
-      console.error('AI reply error:', error);
-      alert('Failed to generate reply');
-    } finally {
-      setIsGeneratingReply(false);
-    }
-  };
-
-  const handleSubmitReply = async (reviewId) => {
-    if (!reviewReply.trim()) {
-      alert('Please write a reply first');
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiUrl}/api/google-business/post-reply`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          reviewId,
-          reply: reviewReply
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setReviews(prev => prev.map(r =>
-          r.id === reviewId ? { ...r, replied: true, reply: reviewReply } : r
-        ));
-        
-        setReplyingToReview(null);
-        setReviewReply('');
-        
-        alert('✅ Reply posted successfully!');
-      }
-    } catch (error) {
-      console.error('Post reply error:', error);
-      alert('Failed to post reply');
-    }
-  };
+  } catch (error) {
+    console.error('AI reply error:', error);
+    alert('Failed to generate reply. Please try again.');
+  } finally {
+    setIsGeneratingReply(false);
+  }
+};
 
   const fetchGBPData = async () => {
     try {
@@ -569,13 +488,6 @@ export default function Dashboard() {
       console.error('Error fetching GBP data:', error);
     }
   };
-
-  useEffect(() => {
-    if (currentView === 'google-business') {
-      // Always check connection status when viewing this page
-      fetchGBPData();
-    }
-  }, [currentView]);
 
   const menuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
@@ -1076,101 +988,295 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Google Business Profile */}
-          {currentView === 'google-business' && (
-            <div className="space-y-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Google Business Profile</h2>
-                <p className="text-gray-600 mt-1">Manage your Google Business presence with AI</p>
-              </div>
+{/* Google Business Profile - AI Reply Generator */}
+{currentView === 'google-business' && (
+  <div className="space-y-6">
+    {/* Header */}
+    <div>
+      <h2 className="text-2xl font-bold text-gray-900">Google Business Profile</h2>
+      <p className="text-gray-600 mt-1">AI-powered review response generator</p>
+    </div>
 
-              {!isGBPConnected ? (
-                /* Not Connected State */
-                <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
-                  <MapPin className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Connect Your Google Business Profile</h3>
-                  <p className="text-gray-600 mb-6 max-w-md mx-auto">
-                    Connect your Google Business Profile to auto-optimize images, reply to reviews with AI, and send automated review requests.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      try {
-                        const response = await fetch(`${apiUrl}/api/google-business/auth-url?userId=${user.id}`);
-                        const data = await response.json();
-                        
-                        if (data.authUrl) {
-                          window.location.href = data.authUrl;
-                        }
-                      } catch (error) {
-                        console.error('Error starting OAuth:', error);
-                        alert('Failed to connect. Please try again.');
-                      }
-                    }}
-                    className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center gap-2"
-                  >
-                    <MapPin className="w-5 h-5" />
-                    Connect Google Business Profile
-                  </button>
-                </div>
-              ) : (
-                /* Connected State - showing when connected */
+    {/* AI Review Reply Generator */}
+    <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
+          <Sparkles className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">AI Review Reply Generator</h3>
+          <p className="text-sm text-gray-600">Generate professional responses in seconds</p>
+        </div>
+      </div>
+
+      <div className="space-y-5">
+        {/* Customer Name */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Customer Name <span className="text-gray-400">(optional)</span>
+          </label>
+          <input
+            type="text"
+            value={reviewCustomerName}
+            onChange={(e) => setReviewCustomerName(e.target.value)}
+            placeholder="John Smith"
+            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition"
+          />
+        </div>
+
+        {/* Star Rating */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Star Rating
+          </label>
+          <div className="flex items-center gap-2">
+            {[1, 2, 3, 4, 5].map((star) => (
+              <button
+                key={star}
+                type="button"
+                onClick={() => setReviewRating(star)}
+                className="focus:outline-none transition hover:scale-110"
+              >
+                <Star
+                  className={`w-10 h-10 ${
+                    star <= reviewRating
+                      ? 'fill-yellow-400 text-yellow-400'
+                      : 'text-gray-300 hover:text-gray-400'
+                  } transition`}
+                />
+              </button>
+            ))}
+            <span className="ml-3 text-gray-700 font-medium">
+              {reviewRating} {reviewRating === 1 ? 'star' : 'stars'}
+            </span>
+          </div>
+        </div>
+
+        {/* Review Text */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Review Text
+          </label>
+          <textarea
+            value={reviewText}
+            onChange={(e) => setReviewText(e.target.value)}
+            placeholder="Paste the customer's review here..."
+            rows={5}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition resize-none"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Copy the review from Google Business Profile and paste it here
+          </p>
+        </div>
+
+        {/* Generate Button */}
+        <button
+          type="button"
+          onClick={handleGenerateReviewReply}
+          disabled={!reviewText.trim() || isGeneratingReply}
+          className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+        >
+          {isGeneratingReply ? (
+            <>
+              <RefreshCw className="w-6 h-6 animate-spin" />
+              Generating Your Reply...
+            </>
+          ) : (
+            <>
+              <Sparkles className="w-6 h-6" />
+              Generate AI Reply
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* AI Generated Reply */}
+      {generatedReply && (
+        <div className="mt-8 p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl">
+          <div className="flex items-center gap-2 mb-4">
+            <MessageSquare className="w-6 h-6 text-purple-600" />
+            <h4 className="font-bold text-gray-900 text-lg">Your AI-Generated Reply</h4>
+          </div>
+          
+          <div className="bg-white p-4 rounded-lg mb-4 border border-purple-100">
+            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{generatedReply}</p>
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(generatedReply);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2"
+            >
+              {copied ? (
                 <>
-                  <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 bg-gradient-to-r from-purple-600 to-blue-600 rounded-full flex items-center justify-center">
-                          <MapPin className="w-6 h-6 text-white" />
-                        </div>
-                        <div>
-                          <h3 className="font-bold text-gray-900">{gbpProfile?.name || user.businessName}</h3>
-                          <p className="text-sm text-gray-600">Connected to Google Business</p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (confirm('Disconnect from Google Business Profile?')) {
-                            setIsGBPConnected(false);
-                            setGBPProfile(null);
-                          }
-                        }}
-                        className="text-sm text-red-600 hover:text-red-700 font-medium"
-                      >
-                        Disconnect
-                      </button>
-                    </div>
-
-                    <div className="grid md:grid-cols-3 gap-4">
-                      <div className="text-center p-4 bg-blue-50 rounded-lg">
-                        <ImageIcon className="w-6 h-6 text-blue-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{gbpImages.length}</p>
-                        <p className="text-sm text-gray-600">Photos</p>
-                      </div>
-                      <div className="text-center p-4 bg-yellow-50 rounded-lg">
-                        <Star className="w-6 h-6 text-yellow-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{reviews.length}</p>
-                        <p className="text-sm text-gray-600">Reviews</p>
-                      </div>
-                      <div className="text-center p-4 bg-green-50 rounded-lg">
-                        <Mail className="w-6 h-6 text-green-600 mx-auto mb-2" />
-                        <p className="text-2xl font-bold text-gray-900">{reviewRequests.filter(r => r.reviewed).length}/{reviewRequests.length}</p>
-                        <p className="text-sm text-gray-600">Review Requests</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
-                    <Sparkles className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Full Features Coming Soon</h3>
-                    <p className="text-gray-600">
-                      AI photo upload, review replies, and request tracking will be available here
-                    </p>
-                  </div>
+                  <CheckCircle className="w-5 h-5" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="w-5 h-5" />
+                  Copy to Clipboard
                 </>
               )}
+            </button>
+            <button
+              type="button"
+              onClick={handleGenerateReviewReply}
+              className="flex-1 bg-white border-2 border-purple-600 text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 transition flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Regenerate
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-500 mt-3 text-center">
+            Now paste this reply in your Google Business Profile dashboard!
+          </p>
+        </div>
+      )}
+    </div>
+
+    {/* Usage Stats */}
+    <div className="grid md:grid-cols-3 gap-4">
+      <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+        <div className="flex items-center gap-2 mb-2">
+          <Calendar className="w-5 h-5 text-blue-600" />
+          <p className="text-sm font-medium text-blue-900">Today</p>
+        </div>
+        <p className="text-3xl font-bold text-blue-600">{repliesGeneratedToday}</p>
+        <p className="text-xs text-blue-700 mt-1">replies generated</p>
+      </div>
+
+      <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-5 h-5 text-purple-600" />
+          <p className="text-sm font-medium text-purple-900">This Week</p>
+        </div>
+        <p className="text-3xl font-bold text-purple-600">{repliesGeneratedWeek}</p>
+        <p className="text-xs text-purple-700 mt-1">replies generated</p>
+      </div>
+
+      <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className="w-5 h-5 text-green-600" />
+          <p className="text-sm font-medium text-green-900">Time Saved</p>
+        </div>
+        <p className="text-3xl font-bold text-green-600">
+          ~{Math.round(repliesGeneratedWeek * 5 / 60 * 10) / 10}h
+        </p>
+        <p className="text-xs text-green-700 mt-1">this week</p>
+      </div>
+    </div>
+
+    {/* How It Works */}
+    <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8 border-2 border-blue-200">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+          <span className="text-2xl">💡</span>
+        </div>
+        <div className="flex-1">
+          <h4 className="font-bold text-gray-900 text-lg mb-4">How It Works</h4>
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                1
+              </div>
+              <p className="text-gray-700">
+                Open your <strong>Google Business Profile</strong> (business.google.com) and check your reviews
+              </p>
             </div>
-          )}
+            <div className="flex gap-3">
+              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                2
+              </div>
+              <p className="text-gray-700">
+                <strong>Copy the review text</strong> from a customer review
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                3
+              </div>
+              <p className="text-gray-700">
+                <strong>Paste it here</strong>, select the star rating, and optionally add the customer's name
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                4
+              </div>
+              <p className="text-gray-700">
+                Click <strong>"Generate AI Reply"</strong> and watch the magic happen! ✨
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                5
+              </div>
+              <p className="text-gray-700">
+                Review the AI response, click <strong>"Copy to Clipboard"</strong>
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <div className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold text-sm">
+                6
+              </div>
+              <p className="text-gray-700">
+                <strong>Paste the reply</strong> back in Google Business Profile and post! 🎉
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-6 p-4 bg-white rounded-lg border-2 border-green-300">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <p className="text-sm font-semibold text-green-900">
+                Saves you 5-10 minutes per review reply — that's 90% faster than writing manually!
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Quick Tips */}
+    <div className="bg-yellow-50 rounded-xl p-6 border-2 border-yellow-200">
+      <div className="flex items-start gap-3">
+        <span className="text-3xl">💭</span>
+        <div>
+          <h4 className="font-bold text-gray-900 mb-3">Pro Tips</h4>
+          <ul className="space-y-2 text-sm text-gray-700">
+            <li className="flex gap-2">
+              <span className="text-yellow-600">•</span>
+              <span>Including the customer's name makes the reply more personal</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-yellow-600">•</span>
+              <span>For low-star reviews (1-3 stars), the AI will generate an empathetic, solution-focused response</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-yellow-600">•</span>
+              <span>Click "Regenerate" if you want a different tone or approach</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-yellow-600">•</span>
+              <span>You can edit the AI-generated reply before posting if needed</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="text-yellow-600">•</span>
+              <span>Respond to reviews within 24 hours for best customer engagement!</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
           {/* Services */}
           {currentView === 'services' && (            <div className="space-y-6">
