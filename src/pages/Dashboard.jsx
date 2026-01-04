@@ -75,28 +75,17 @@ export default function Dashboard() {
     }
   };
 
-const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes, googleBusinessRes] = await Promise.all([
-  fetch(`${apiUrl}/api/bookings?userId=${user.id}`),
-  fetch(`${apiUrl}/api/services?userId=${user.id}`),
-  fetch(`${apiUrl}/api/employees?userId=${user.id}`),
-  fetch(`${apiUrl}/api/business-hours?userId=${user.id}`),
-  fetch(`${apiUrl}/api/website?userId=${user.id}`),
-  fetch(`${apiUrl}/api/google-business/profile?userId=${user.id}`) // ← ADD THIS
-]);
-
-const googleBusinessDataRes = await googleBusinessRes.json(); // ← ADD THIS
-setGoogleBusinessData(googleBusinessDataRes.profile || null); // ← ADD THIS
-  
   // Fetch initial data on mount
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes] = await Promise.all([
+        const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes, googleBusinessRes] = await Promise.all([
           fetch(`${apiUrl}/api/bookings?userId=${user.id}`),
           fetch(`${apiUrl}/api/services?userId=${user.id}`),
           fetch(`${apiUrl}/api/employees?userId=${user.id}`),
           fetch(`${apiUrl}/api/business-hours?userId=${user.id}`),
-          fetch(`${apiUrl}/api/website?userId=${user.id}`)
+          fetch(`${apiUrl}/api/website?userId=${user.id}`),
+          fetch(`${apiUrl}/api/google-business/profile?userId=${user.id}`)
         ]);
 
         const bookingsData = await bookingsRes.json();
@@ -104,12 +93,14 @@ setGoogleBusinessData(googleBusinessDataRes.profile || null); // ← ADD THIS
         const employeesData = await employeesRes.json();
         const hoursData = await hoursRes.json();
         const websiteDataRes = await websiteRes.json();
+        const googleBusinessDataRes = await googleBusinessRes.json();
 
         setBookings(bookingsData.bookings || []);
         setServices(servicesData.services || []);
         setEmployees(employeesData.employees || []);
         setBusinessHours(hoursData.hours || []);
         setWebsiteData(websiteDataRes.website || null);
+        setGoogleBusinessData(googleBusinessDataRes.profile || null);
 
         // Update user in localStorage with website data if it exists
         if (websiteDataRes.website) {
@@ -223,16 +214,21 @@ setGoogleBusinessData(googleBusinessDataRes.profile || null); // ← ADD THIS
           )}
 
           {currentView === 'website' && (
-            <MyWebsite apiUrl={apiUrl} user={user} navigate={navigate} websiteData={websiteData} />
+            <MyWebsite 
+              apiUrl={apiUrl} 
+              user={user} 
+              navigate={navigate} 
+              websiteData={websiteData} 
+            />
           )}
 
           {currentView === 'google-business' && (
-  <GoogleBusiness 
-    apiUrl={apiUrl} 
-    user={user} 
-    profileData={googleBusinessData} // ← ADD THIS
-  />
-)}
+            <GoogleBusiness 
+              apiUrl={apiUrl} 
+              user={user}
+              profileData={googleBusinessData}
+            />
+          )}
 
           {currentView === 'services' && (
             <Services
