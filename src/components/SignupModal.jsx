@@ -1,341 +1,291 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Check, Sparkles, Zap, TrendingUp, ArrowRight } from 'lucide-react';
+import { useState } from 'react';
+import { AlertCircle, ArrowRight } from 'lucide-react';
 
-const PricingPage = ({ onOpenSignup }) => {
-  const navigate = useNavigate();
-  const [billingCycle, setBillingCycle] = useState('monthly');
+export default function SignupModal({ isOpen, onClose, generatedWebsite, onSuccess }) {
+  const [mode, setMode] = useState('signup'); // 'signup' or 'login'
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    businessName: ''
+  });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showEmailExistsPrompt, setShowEmailExistsPrompt] = useState(false);
+  const [existingEmail, setExistingEmail] = useState('');
 
-  const plans = [
-    {
-      name: 'Original',
-      price: 29.95,
-      popular: false,
-      description: 'Perfect for getting started',
-      features: [
-        {
-          title: 'High Converting AI Website Builder',
-          subtitle: 'Easily make changes using AI',
-          icon: Sparkles
-        },
-        {
-          title: 'Mobile-Responsive Design',
-          subtitle: 'Looks perfect on all devices',
-          icon: Check
-        },
-        {
-          title: 'Custom Domain Connection',
-          subtitle: 'Use your own business domain',
-          icon: Check
-        },
-        {
-          title: '24/7 Website Hosting',
-          subtitle: 'Fast, reliable, and secure',
-          icon: Check
-        },
-        {
-          title: 'Monthly Website Updates',
-          subtitle: 'Up to 3 AI-powered changes per month',
-          icon: Check
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    // Clear errors when user types
+    setError('');
+    setShowEmailExistsPrompt(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setShowEmailExistsPrompt(false);
+
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+      
+      if (mode === 'signup') {
+        // Sign up
+        const response = await fetch(`${apiUrl}/api/auth/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password,
+            businessName: formData.businessName
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          // Save website if provided
+          if (generatedWebsite) {
+            await fetch(`${apiUrl}/api/website`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.token}`
+              },
+              body: JSON.stringify({
+                userId: data.user.id,
+                htmlContent: generatedWebsite
+              })
+            });
+          }
+          
+          // Close modal and trigger success callback
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else {
+          // Check if email already exists
+          if (response.status === 409 || 
+              data.error?.toLowerCase().includes('already') || 
+              data.error?.toLowerCase().includes('exists') ||
+              data.error?.toLowerCase().includes('registered')) {
+            setExistingEmail(formData.email);
+            setShowEmailExistsPrompt(true);
+            setError('This email is already registered.');
+          } else {
+            setError(data.error || 'Signup failed');
+          }
         }
-      ],
-      cta: 'Start Building',
-      gradient: 'from-blue-600 to-cyan-600'
-    },
-    {
-      name: 'Pro Plan',
-      price: 59.95,
-      popular: true,
-      description: 'For businesses ready to scale',
-      features: [
-        {
-          title: 'High Converting AI Website Builder',
-          subtitle: 'Easily make changes using AI',
-          icon: Sparkles
-        },
-        {
-          title: 'Conversation-Starting AI Agent',
-          subtitle: 'Your agent automatically starts a conversation with each person who visits your website',
-          icon: Zap,
-          highlight: true
-        },
-        {
-          title: 'Automated Review Requests',
-          subtitle: 'Automatically sends review requests to customers following completion of jobs - increases reviews left by customers 100x faster than organic',
-          icon: Zap,
-          highlight: true
-        },
-        {
-          title: 'AI SEO Writing (Daily)',
-          subtitle: 'Your AI agent writes SEO every single day, boosting your website\'s ranking without you lifting a finger',
-          icon: Zap,
-          highlight: true
-        },
-        {
-          title: 'Everything in Original',
-          subtitle: 'Plus unlimited monthly updates',
-          icon: Check
+      } else {
+        // Login
+        const response = await fetch(`${apiUrl}/api/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: formData.email,
+            password: formData.password
+          })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          localStorage.setItem('token', data.token);
+          localStorage.setItem('user', JSON.stringify(data.user));
+          
+          // Save website if provided
+          if (generatedWebsite) {
+            await fetch(`${apiUrl}/api/website`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${data.token}`
+              },
+              body: JSON.stringify({
+                userId: data.user.id,
+                htmlContent: generatedWebsite
+              })
+            });
+          }
+          
+          // Close modal and trigger success callback
+          if (onSuccess) {
+            onSuccess();
+          }
+        } else {
+          setError(data.error || 'Login failed. Please check your credentials.');
         }
-      ],
-      cta: 'Go Pro',
-      gradient: 'from-purple-600 to-pink-600'
-    },
-    {
-      name: 'Expert Plan',
-      price: 95.99,
-      popular: false,
-      description: 'Maximum growth & automation',
-      features: [
-        {
-          title: 'High Converting AI Website Builder',
-          subtitle: 'Easily make changes using AI',
-          icon: Sparkles
-        },
-        {
-          title: 'Conversation-Starting AI Agent',
-          subtitle: 'Your agent automatically starts a conversation with each person who visits your website',
-          icon: Zap
-        },
-        {
-          title: 'Automated Review Requests',
-          subtitle: 'Automatically sends review requests to customers following completion of jobs',
-          icon: Zap
-        },
-        {
-          title: 'AI SEO Writing (Daily)',
-          subtitle: 'Your AI agent writes SEO every single day, boosting your ranking',
-          icon: Zap
-        },
-        {
-          title: 'AI Market Research & Recommendations',
-          subtitle: 'Your AI agent does market research and recommends ads to run, offers by seasonality, ways to increase your average ticket price, upsells within your niche to add to increase profit',
-          icon: TrendingUp,
-          highlight: true
-        },
-        {
-          title: 'Priority Support & Strategy Calls',
-          subtitle: 'Monthly strategy sessions with our team',
-          icon: Check
-        }
-      ],
-      cta: 'Become an Expert',
-      gradient: 'from-orange-600 to-red-600'
+      }
+    } catch (error) {
+      console.error('Auth error:', error);
+      setError('Network error. Please try again.');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const switchToLogin = () => {
+    setMode('login');
+    setShowEmailExistsPrompt(false);
+    setError('');
+    // Keep the email, clear password and businessName
+    setFormData(prev => ({
+      ...prev,
+      password: '',
+      businessName: ''
+    }));
+  };
+
+  const switchToSignup = () => {
+    setMode('signup');
+    setShowEmailExistsPrompt(false);
+    setError('');
+  };
+
+  if (!isOpen) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-purple-50 py-16 px-4">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <button
-            onClick={() => navigate('/')}
-            className="mb-8 text-gray-600 hover:text-gray-900 transition inline-flex items-center gap-2"
-          >
-            ← Back to Homepage
-          </button>
-          
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-4">
-            Choose Your Plan
-          </h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Get your AI-powered website and grow your service business
-          </p>
-
-          {/* Billing Toggle */}
-          <div className="inline-flex items-center bg-white rounded-full p-1 shadow-md">
-            <button
-              onClick={() => setBillingCycle('monthly')}
-              className={`px-6 py-2 rounded-full font-medium transition ${
-                billingCycle === 'monthly'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setBillingCycle('annual')}
-              className={`px-6 py-2 rounded-full font-medium transition relative ${
-                billingCycle === 'annual'
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              Annual
-              <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">
-                Save 20%
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Pricing Cards */}
-        <div className="flex flex-col lg:flex-row gap-6 mb-16 justify-center items-stretch max-w-6xl mx-auto">
-          {plans.map((plan, index) => (
-            <div
-              key={index}
-              className={`flex-1 bg-white rounded-2xl shadow-xl overflow-hidden transition-all hover:scale-105 ${
-                plan.popular ? 'ring-4 ring-purple-500 lg:scale-105' : ''
-              } relative`}
-            >
-              {plan.popular && (
-                <div className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-1 text-sm font-semibold text-center">
-                  MOST POPULAR
-                </div>
-              )}
-
-              <div className="p-8">
-                {/* Plan Header */}
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                  {plan.name}
-                </h3>
-                <p className="text-gray-600 mb-6">{plan.description}</p>
-
-                {/* Price */}
-                <div className="mb-8">
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-bold text-gray-900">
-                      ${billingCycle === 'annual' ? (plan.price * 0.8).toFixed(2) : plan.price.toFixed(2)}
-                    </span>
-                    <span className="text-gray-600">/month</span>
-                  </div>
-                  {billingCycle === 'annual' && (
-                    <p className="text-sm text-green-600 mt-2">
-                      Save ${((plan.price * 12) - (plan.price * 0.8 * 12)).toFixed(2)}/year
-                    </p>
-                  )}
-                </div>
-
-                {/* CTA Button */}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {mode === 'signup' ? 'Get Your Website' : 'Welcome Back'}
+        </h2>
+        <p className="text-gray-600 mb-6">
+          {mode === 'signup' 
+            ? 'Create a free account to save and manage your website' 
+            : 'Login to save your website and access your dashboard'}
+        </p>
+        
+        {/* Email Already Exists Prompt */}
+        {showEmailExistsPrompt && (
+          <div className="mb-6 bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-blue-900 mb-2">
+                  Email Already Registered
+                </p>
+                <p className="text-sm text-blue-800 mb-3">
+                  An account with <strong>{existingEmail}</strong> already exists. 
+                  Would you like to login instead?
+                </p>
                 <button
-                  onClick={() => {
-                    const planSlug = plan.name.toLowerCase().replace(' plan', '').replace(' ', '-');
-                    const finalPrice = billingCycle === 'annual' ? (plan.price * 0.8).toFixed(2) : plan.price.toFixed(2);
-                    
-                    // Call the parent's onOpenSignup to trigger the global modal
-                    if (onOpenSignup) {
-                      onOpenSignup(planSlug, finalPrice, billingCycle);
-                    }
-                  }}
-                  className={`w-full py-4 px-6 rounded-xl font-semibold text-white transition-all mb-8 bg-gradient-to-r ${plan.gradient} hover:shadow-lg hover:scale-105 flex items-center justify-center gap-2`}
+                  onClick={switchToLogin}
+                  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
                 >
-                  {plan.cta}
-                  <ArrowRight className="w-5 h-5" />
+                  Login to Existing Account
+                  <ArrowRight className="w-4 h-4" />
                 </button>
-
-                {/* Features */}
-                <div className="space-y-4">
-                  {plan.features.map((feature, idx) => {
-                    const Icon = feature.icon;
-                    return (
-                      <div
-                        key={idx}
-                        className={`flex gap-3 ${
-                          feature.highlight ? 'bg-purple-50 -mx-4 px-4 py-3 rounded-lg' : ''
-                        }`}
-                      >
-                        <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                          feature.highlight
-                            ? 'bg-gradient-to-r from-purple-600 to-pink-600'
-                            : 'bg-blue-100'
-                        }`}>
-                          <Icon className={`w-4 h-4 ${
-                            feature.highlight ? 'text-white' : 'text-blue-600'
-                          }`} />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-gray-900 text-sm">
-                            {feature.title}
-                          </p>
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            {feature.subtitle}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
               </div>
             </div>
-          ))}
-        </div>
-
-        {/* Trust Indicators */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">500+</div>
-              <div className="text-gray-600">Service Businesses Trust Us</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-purple-600 mb-2">98%</div>
-              <div className="text-gray-600">Customer Satisfaction</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-pink-600 mb-2">24/7</div>
-              <div className="text-gray-600">Website Uptime</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-orange-600 mb-2">3x</div>
-              <div className="text-gray-600">Average ROI Increase</div>
-            </div>
           </div>
-        </div>
-
-        {/* FAQ Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            Frequently Asked Questions
-          </h2>
-          <div className="grid md:grid-cols-2 gap-6">
+        )}
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'signup' && (
             <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Can I switch plans anytime?
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately.
-              </p>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Business Name
+              </label>
+              <input
+                type="text"
+                name="businessName"
+                value={formData.businessName}
+                onChange={handleInputChange}
+                required
+                placeholder="e.g., Mike's Plumbing"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+              />
             </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                What happens to my website if I cancel?
-              </h3>
-              <p className="text-gray-600 text-sm">
-                You can download your website HTML before canceling. Your site will remain live until the end of your billing period.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                How does the AI agent work?
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Our AI agent uses advanced technology to engage visitors, qualify leads, and send automated follow-ups - all customized to your business.
-              </p>
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-2">
-                Do I need technical knowledge?
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Not at all! Our AI handles everything. Just tell us about your business and we'll create and manage your website.
-              </p>
-            </div>
+          )}
+          
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+              placeholder="your@email.com"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+            />
           </div>
+          
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
+              minLength={6}
+              placeholder={mode === 'signup' ? 'Minimum 6 characters' : 'Your password'}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+            />
+          </div>
+          
+          {error && !showEmailExistsPrompt && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-lg p-3 text-red-700 text-sm">
+              {error}
+            </div>
+          )}
+          
+          <div className="flex gap-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
+            >
+              {loading 
+                ? 'Please wait...' 
+                : mode === 'signup' 
+                  ? 'Sign Up Free' 
+                  : 'Login'}
+            </button>
+          </div>
+        </form>
+
+        {/* Toggle between Signup/Login */}
+        <div className="mt-6 text-center">
+          <button
+            onClick={() => mode === 'signup' ? switchToLogin() : switchToSignup()}
+            className="text-purple-600 hover:text-purple-700 font-medium text-sm transition-colors"
+          >
+            {mode === 'signup' 
+              ? 'Already have an account? Login' 
+              : "Don't have an account? Sign up"}
+          </button>
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-12">
-          <p className="text-gray-600">
-            All plans include SSL certificate, professional hosting, and customer support
-          </p>
-          <p className="text-sm text-gray-500 mt-2">
-            30-day money-back guarantee • Cancel anytime • No hidden fees
-          </p>
-        </div>
+        {/* Trust Badge */}
+        {mode === 'signup' && (
+          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
+            <p className="text-xs text-gray-500">
+              🔒 Secure signup • ✨ Free forever • 🚀 No credit card required
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
-};
-
-export default PricingPage;
+}
