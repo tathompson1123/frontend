@@ -1,29 +1,61 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Globe, Sparkles, RefreshCw, ExternalLink, Eye } from 'lucide-react';
 
-export default function MyWebsite({ apiUrl, user, navigate }) {
+export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [websiteUrl, setWebsiteUrl] = useState(user.websiteUrl || '');
-  const [showPreview, setShowPreview] = useState(!!user.websiteUrl);
+  const [websiteUrl, setWebsiteUrl] = useState(websiteData?.url || user.websiteUrl || '');
+  const [showPreview, setShowPreview] = useState(!!(websiteData?.url || user.websiteUrl));
+
+  // Update when websiteData prop changes
+  useEffect(() => {
+    if (websiteData?.url) {
+      setWebsiteUrl(websiteData.url);
+      setShowPreview(true);
+    }
+  }, [websiteData]);
 
   const handleGenerateWebsite = async () => {
     setIsGenerating(true);
     try {
+      // Get user data for website generation
       const response = await fetch(`${apiUrl}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id })
+        body: JSON.stringify({ 
+          businessName: user.businessName || 'My Business',
+          businessType: 'service business',
+          services: 'Professional services',
+          description: 'Quality service you can trust'
+        })
       });
 
       const data = await response.json();
       
-      if (data.success) {
-        setWebsiteUrl(data.websiteUrl);
-        setShowPreview(true);
+      if (data.success && data.html) {
+        // Save the generated HTML to the database
+        const saveResponse = await fetch(`${apiUrl}/api/website`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            htmlContent: data.html
+          })
+        });
+
+        const saveData = await saveResponse.json();
         
-        // Update user in localStorage
-        const updatedUser = { ...user, websiteUrl: data.websiteUrl };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
+        if (saveData.success) {
+          // Create a preview URL (you can customize this)
+          const previewUrl = `${apiUrl}/preview/${saveData.website.id}`;
+          setWebsiteUrl(previewUrl);
+          setShowPreview(true);
+          
+          // Update user in localStorage
+          const updatedUser = { ...user, websiteUrl: previewUrl };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        } else {
+          alert('Failed to save website');
+        }
       } else {
         alert('Failed to generate website');
       }
