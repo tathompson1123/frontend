@@ -139,6 +139,7 @@ export default function WebsiteEditor() {
       <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
+            type="button"
             onClick={() => navigate('/dashboard')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
           >
@@ -153,6 +154,7 @@ export default function WebsiteEditor() {
           {/* View Mode Toggle */}
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button
+              type="button"
               onClick={() => setViewMode('preview')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 ${
                 viewMode === 'preview'
@@ -164,6 +166,7 @@ export default function WebsiteEditor() {
               Preview
             </button>
             <button
+              type="button"
               onClick={() => setViewMode('code')}
               className={`px-4 py-2 rounded-md text-sm font-medium transition flex items-center gap-2 ${
                 viewMode === 'code'
@@ -180,6 +183,7 @@ export default function WebsiteEditor() {
           {viewMode === 'preview' && (
             <div className="flex items-center bg-gray-100 rounded-lg p-1">
               <button
+                type="button"
                 onClick={() => setDevicePreview('desktop')}
                 className={`p-2 rounded-md transition ${
                   devicePreview === 'desktop'
@@ -190,6 +194,7 @@ export default function WebsiteEditor() {
                 <Monitor className="w-4 h-4" />
               </button>
               <button
+                type="button"
                 onClick={() => setDevicePreview('mobile')}
                 className={`p-2 rounded-md transition ${
                   devicePreview === 'mobile'
@@ -203,6 +208,7 @@ export default function WebsiteEditor() {
           )}
 
           <button
+            type="button"
             onClick={handleDownload}
             className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition flex items-center gap-2"
           >
@@ -211,6 +217,7 @@ export default function WebsiteEditor() {
           </button>
 
           <button
+            type="button"
             onClick={handleSave}
             disabled={isSaving}
             className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50"
@@ -281,6 +288,7 @@ export default function WebsiteEditor() {
                 disabled={isAIThinking}
               />
               <button
+                type="button"
                 onClick={handleSendMessage}
                 disabled={!inputMessage.trim() || isAIThinking}
                 className="px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
@@ -296,25 +304,25 @@ export default function WebsiteEditor() {
 
         {/* Right Panel - Preview/Code */}
         <div className="flex-1 flex flex-col bg-gray-100">
-          <div className="flex-1 overflow-auto p-6">
-            <div className={`mx-auto transition-all ${
+          <div className="flex-1 overflow-auto p-4">
+            <div className={`h-full mx-auto transition-all ${
               devicePreview === 'mobile' ? 'max-w-md' : 'w-full max-w-7xl'
             }`}>
               {viewMode === 'preview' ? (
-                <div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ minHeight: '600px' }}>
+                <div className="bg-white rounded-xl shadow-2xl overflow-hidden h-full">
                   <iframe
                     srcDoc={currentWebsite}
                     title="Website Preview"
-                    className="w-full h-full"
-                    style={{ minHeight: '600px', border: 'none' }}
+                    className="w-full h-full border-none"
                     sandbox="allow-scripts allow-same-origin"
                   />
                 </div>
               ) : (
-                <div className="bg-gray-900 rounded-xl shadow-2xl overflow-hidden">
+                <div className="bg-gray-900 rounded-xl shadow-2xl overflow-hidden h-full flex flex-col">
                   <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center justify-between">
                     <span className="text-sm text-gray-400 font-mono">HTML Source</span>
                     <button
+                      type="button"
                       onClick={() => {
                         navigator.clipboard.writeText(currentWebsite);
                         alert('Code copied to clipboard!');
@@ -327,8 +335,7 @@ export default function WebsiteEditor() {
                   <textarea
                     value={currentWebsite}
                     onChange={(e) => setCurrentWebsite(e.target.value)}
-                    className="w-full h-full p-4 bg-gray-900 text-gray-100 font-mono text-sm focus:outline-none resize-none"
-                    style={{ minHeight: '600px' }}
+                    className="flex-1 w-full p-4 bg-gray-900 text-gray-100 font-mono text-sm focus:outline-none resize-none"
                     spellCheck="false"
                   />
                 </div>
