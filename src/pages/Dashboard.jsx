@@ -404,7 +404,147 @@ export default function Dashboard() {
       console.error('Error toggling publish:', error);
     }
   };
+// Add these handler functions to your Dashboard component
 
+const handleGBPImageUpload = async (e) => {
+  const files = Array.from(e.target.files);
+  if (files.length === 0) return;
+
+  setUploadingImages(true);
+
+  try {
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('userId', user.id);
+
+      // Upload and geotag image with AI
+      const response = await fetch(`${apiUrl}/api/google-business/upload-image`, {
+        method: 'POST',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setGBPImages(prev => [...prev, {
+          url: data.imageUrl,
+          geotagged: data.geotagged,
+          uploadedToGBP: data.uploadedToGBP
+        }]);
+      }
+    }
+
+    alert(`✅ ${files.length} photo(s) uploaded and optimized!`);
+  } catch (error) {
+    console.error('Upload error:', error);
+    alert('Failed to upload images');
+  } finally {
+    setUploadingImages(false);
+  }
+};
+
+const handleGenerateAIReply = async (review) => {
+  setIsGeneratingReply(true);
+
+  try {
+    const response = await fetch(`${apiUrl}/api/google-business/generate-reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        reviewText: review.text,
+        rating: review.rating,
+        businessName: user.businessName
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      setReviewReply(data.reply);
+    }
+  } catch (error) {
+    console.error('AI reply error:', error);
+    alert('Failed to generate reply');
+  } finally {
+    setIsGeneratingReply(false);
+  }
+};
+
+const handleSubmitReply = async (reviewId) => {
+  if (!reviewReply.trim()) {
+    alert('Please write a reply first');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${apiUrl}/api/google-business/post-reply`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user.id,
+        reviewId,
+        reply: reviewReply
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update reviews list
+      setReviews(prev => prev.map(r =>
+        r.id === reviewId ? { ...r, replied: true, reply: reviewReply } : r
+      ));
+      
+      setReplyingToReview(null);
+      setReviewReply('');
+      
+      alert('✅ Reply posted successfully!');
+    }
+  } catch (error) {
+    console.error('Post reply error:', error);
+    alert('Failed to post reply');
+  }
+};
+
+// Fetch Google Business Profile data when tab loads
+useEffect(() => {
+  if (currentView === 'google-business' && isGBPConnected) {
+    fetchGBPData();
+  }
+}, [currentView, isGBPConnected]);
+
+const fetchGBPData = async () => {
+  try {
+    // Fetch profile info
+    const profileRes = await fetch(`${apiUrl}/api/google-business/profile?userId=${user.id}`);
+    const profileData = await profileRes.json();
+    
+    if (profileData.connected) {
+      setIsGBPConnected(true);
+      setGBPProfile(profileData.profile);
+    }
+
+    // Fetch images
+    const imagesRes = await fetch(`${apiUrl}/api/google-business/images?userId=${user.id}`);
+    const imagesData = await imagesRes.json();
+    setGBPImages(imagesData.images || []);
+
+    // Fetch reviews
+    const reviewsRes = await fetch(`${apiUrl}/api/google-business/reviews?userId=${user.id}`);
+    const reviewsData = await reviewsRes.json();
+    setReviews(reviewsData.reviews || []);
+
+    // Fetch review requests
+    const requestsRes = await fetch(`${apiUrl}/api/google-business/review-requests?userId=${user.id}`);
+    const requestsData = await requestsRes.json();
+    setReviewRequests(requestsData.requests || []);
+    
+  } catch (error) {
+    console.error('Error fetching GBP data:', error);
+  }
+};
   const menuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'My Website' },
