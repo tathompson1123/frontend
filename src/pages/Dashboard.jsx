@@ -570,17 +570,17 @@ const handleSearchBookings = (query) => {
   };
 
   const menuItems = [
-    { id: 'overview', icon: Home, label: 'Overview' },
-    { id: 'website', icon: Globe, label: 'My Website' },
-    { id: 'google-business', icon: MapPin, label: 'Google Business' },
-    { id: 'services', icon: Briefcase, label: 'Services' },
-    { id: 'team', icon: Users, label: 'Team' },
-    { id: 'hours', icon: Clock, label: 'Business Hours' },
-    { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
-    { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
-    { id: 'billing', icon: CreditCard, label: 'Billing' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
-  ];
+  { id: 'overview', icon: Home, label: 'Overview' },
+  { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
+  { id: 'website', icon: Globe, label: 'My Website' },
+  { id: 'google-business', icon: MapPin, label: 'Google Business' },
+  { id: 'services', icon: Briefcase, label: 'Services' },
+  { id: 'team', icon: Users, label: 'Team' },
+  { id: 'hours', icon: Clock, label: 'Business Hours' },
+  { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
+  { id: 'billing', icon: CreditCard, label: 'Billing' },
+  { id: 'settings', icon: Settings, label: 'Settings' },
+];
 
   const plans = [
     {
