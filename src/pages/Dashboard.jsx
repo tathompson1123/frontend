@@ -161,7 +161,31 @@ const [copied, setCopied] = useState(false);
 const [repliesGeneratedToday, setRepliesGeneratedToday] = useState(0);
 const [repliesGeneratedWeek, setRepliesGeneratedWeek] = useState(0);
 
+// Fetch initial data for Overview on mount
+useEffect(() => {
+  const fetchInitialData = async () => {
+    try {
+      // Fetch bookings
+      const bookingsRes = await fetch(`${apiUrl}/api/bookings?userId=${user.id}`);
+      const bookingsData = await bookingsRes.json();
+      setBookings(bookingsData.bookings || []);
 
+      // Fetch services
+      const servicesRes = await fetch(`${apiUrl}/api/services?userId=${user.id}`);
+      const servicesData = await servicesRes.json();
+      setServices(servicesData.services || []);
+
+      // Fetch employees
+      const employeesRes = await fetch(`${apiUrl}/api/employees?userId=${user.id}`);
+      const employeesData = await employeesRes.json();
+      setEmployees(employeesData.employees || []);
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+    }
+  };
+
+  fetchInitialData();
+}, []); // Empty dependency array = runs once on mount
   // Fetch functions
   useEffect(() => {
     if (currentView === 'services') fetchServices();
