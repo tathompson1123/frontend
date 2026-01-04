@@ -39,6 +39,7 @@ export default function Dashboard() {
   const [bookings, setBookings] = useState([]);
   const [businessHours, setBusinessHours] = useState([]);
   const [websiteData, setWebsiteData] = useState(null);
+  const [googleBusinessData, setGoogleBusinessData] = useState(null);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -74,6 +75,18 @@ export default function Dashboard() {
     }
   };
 
+const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes, googleBusinessRes] = await Promise.all([
+  fetch(`${apiUrl}/api/bookings?userId=${user.id}`),
+  fetch(`${apiUrl}/api/services?userId=${user.id}`),
+  fetch(`${apiUrl}/api/employees?userId=${user.id}`),
+  fetch(`${apiUrl}/api/business-hours?userId=${user.id}`),
+  fetch(`${apiUrl}/api/website?userId=${user.id}`),
+  fetch(`${apiUrl}/api/google-business/profile?userId=${user.id}`) // ← ADD THIS
+]);
+
+const googleBusinessDataRes = await googleBusinessRes.json(); // ← ADD THIS
+setGoogleBusinessData(googleBusinessDataRes.profile || null); // ← ADD THIS
+  
   // Fetch initial data on mount
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -214,8 +227,12 @@ export default function Dashboard() {
           )}
 
           {currentView === 'google-business' && (
-            <GoogleBusiness apiUrl={apiUrl} user={user} />
-          )}
+  <GoogleBusiness 
+    apiUrl={apiUrl} 
+    user={user} 
+    profileData={googleBusinessData} // ← ADD THIS
+  />
+)}
 
           {currentView === 'services' && (
             <Services
