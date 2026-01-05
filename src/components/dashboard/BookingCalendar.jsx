@@ -33,6 +33,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
   const datePickerRef = useRef(null);
   
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
+  const [isEditingBooking, setIsEditingBooking] = useState(false);
+  const [editingBookingId, setEditingBookingId] = useState(null);
   const [newBooking, setNewBooking] = useState({
     customerId: '',
     customerName: '',
@@ -87,6 +89,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     
     try {
       console.log('💾 Saving notes for booking:', selectedBooking.id);
+      console.log('💾 User ID:', user.id);
+      console.log('💾 Notes:', bookingNotes);
       
       const response = await fetch(`${apiUrl}/api/bookings/${selectedBooking.id}/notes`, {
         method: 'PUT',
@@ -97,10 +101,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         })
       });
       
+      console.log('💾 Response status:', response.status);
+      
       const data = await response.json();
       console.log('💾 Save response:', data);
       
-      if (data.success) {
+      if (response.ok && data.success) {
         setSelectedBooking({ ...selectedBooking, job_notes: bookingNotes });
         setAllBookings(allBookings.map(b => 
           b.id === selectedBooking.id ? { ...b, job_notes: bookingNotes } : b
@@ -112,7 +118,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         alert('✅ Notes saved successfully!');
       } else {
         console.error('Save failed:', data);
-        alert('Failed to save notes: ' + (data.error || 'Unknown error'));
+        console.error('Full response:', response);
+        alert('Failed to save notes: ' + (data.error || data.message || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error saving notes:', error);
@@ -129,49 +136,96 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     setCreatingBooking(true);
 
     try {
-      const response = await fetch(`${apiUrl}/api/bookings/create`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          serviceId: newBooking.serviceId,
-          bookingDate: newBooking.bookingDate,
-          startTime: newBooking.startTime,
-          employeeId: newBooking.employeeId || null,
-          customerInfo: {
-            name: newBooking.customerName,
-            email: newBooking.customerEmail,
-            phone: newBooking.customerPhone,
-            address: newBooking.customerAddress
-          },
-          customerNotes: newBooking.notes
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        alert('✅ Booking created successfully!');
-        setNewBooking({
-          customerId: '',
-          customerName: '',
-          customerEmail: '',
-          customerPhone: '',
-          customerAddress: '',
-          serviceId: '',
-          employeeId: '',
-          bookingDate: '',
-          startTime: '',
-          notes: ''
+      if (isEditingBooking && editingBookingId) {
+        // Update existing booking
+        const response = await fetch(`${apiUrl}/api/bookings/${editingBookingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            serviceId: newBooking.serviceId,
+            bookingDate: newBooking.bookingDate,
+            startTime: newBooking.startTime,
+            employeeId: newBooking.employeeId || null,
+            customerInfo: {
+              name: newBooking.customerName,
+              email: newBooking.customerEmail,
+              phone: newBooking.customerPhone,
+              address: newBooking.customerAddress
+            },
+            notes: newBooking.notes
+          })
         });
-        setShowCreateBookingModal(false);
-        fetchAllBookings();
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('✅ Booking updated successfully!');
+          setNewBooking({
+            customerId: '',
+            customerName: '',
+            customerEmail: '',
+            customerPhone: '',
+            customerAddress: '',
+            serviceId: '',
+            employeeId: '',
+            bookingDate: '',
+            startTime: '',
+            notes: ''
+          });
+          setShowCreateBookingModal(false);
+          setIsEditingBooking(false);
+          setEditingBookingId(null);
+          fetchAllBookings();
+        } else {
+          alert(data.error || 'Failed to update booking');
+        }
       } else {
-        alert(data.error || 'Failed to create booking');
+        // Create new booking
+        const response = await fetch(`${apiUrl}/api/bookings/create`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.id,
+            serviceId: newBooking.serviceId,
+            bookingDate: newBooking.bookingDate,
+            startTime: newBooking.startTime,
+            employeeId: newBooking.employeeId || null,
+            customerInfo: {
+              name: newBooking.customerName,
+              email: newBooking.customerEmail,
+              phone: newBooking.customerPhone,
+              address: newBooking.customerAddress
+            },
+            customerNotes: newBooking.notes
+          })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          alert('✅ Booking created successfully!');
+          setNewBooking({
+            customerId: '',
+            customerName: '',
+            customerEmail: '',
+            customerPhone: '',
+            customerAddress: '',
+            serviceId: '',
+            employeeId: '',
+            bookingDate: '',
+            startTime: '',
+            notes: ''
+          });
+          setShowCreateBookingModal(false);
+          fetchAllBookings();
+        } else {
+          alert(data.error || 'Failed to create booking');
+        }
       }
     } catch (error) {
-      console.error('Error creating booking:', error);
-      alert('Failed to create booking');
+      console.error('Error saving booking:', error);
+      alert('Failed to save booking');
     } finally {
       setCreatingBooking(false);
     }
@@ -375,18 +429,20 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     <button
                       type="button"
                       onClick={() => {
-                        // Populate the form with booking data
+                        // Populate the form with booking data for editing
+                        setIsEditingBooking(true);
+                        setEditingBookingId(booking.id);
                         setNewBooking({
                           customerId: booking.customer_id,
                           customerName: booking.customer_name,
                           customerEmail: booking.customer_email || '',
                           customerPhone: booking.customer_phone || '',
-                          customerAddress: '',
+                          customerAddress: booking.customer_address || '',
                           serviceId: booking.items?.[0]?.service_id || '',
                           employeeId: booking.employee_id || '',
                           bookingDate: booking.booking_date,
                           startTime: booking.start_time,
-                          notes: booking.customer_notes || ''
+                          notes: booking.job_notes || booking.customer_notes || ''
                         });
                         setShowCreateBookingModal(true);
                       }}
@@ -782,13 +838,19 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Create New Booking</h2>
-                <p className="text-sm text-gray-600 mt-1">Add a new booking to the calendar</p>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {isEditingBooking ? 'Edit Booking' : 'Create New Booking'}
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {isEditingBooking ? 'Update booking details' : 'Add a new booking to the calendar'}
+                </p>
               </div>
               <button
                 type="button"
                 onClick={() => {
                   setShowCreateBookingModal(false);
+                  setIsEditingBooking(false);
+                  setEditingBookingId(null);
                   setNewBooking({
                     customerId: '',
                     customerName: '',
@@ -966,6 +1028,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   type="button"
                   onClick={() => {
                     setShowCreateBookingModal(false);
+                    setIsEditingBooking(false);
+                    setEditingBookingId(null);
                     setNewBooking({
                       customerId: '',
                       customerName: '',
@@ -989,7 +1053,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   disabled={creatingBooking}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {creatingBooking ? 'Creating...' : 'Create Booking'}
+                  {creatingBooking ? 'Saving...' : isEditingBooking ? 'Save Changes' : 'Create Booking'}
                 </button>
               </div>
             </div>
