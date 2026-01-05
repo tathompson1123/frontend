@@ -35,6 +35,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
   const [isEditingBooking, setIsEditingBooking] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState(null);
+  const [serviceTab, setServiceTab] = useState('main'); // 'main' or 'additional'
   const [newBooking, setNewBooking] = useState({
     customerId: '',
     customerName: '',
@@ -42,6 +43,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     customerPhone: '',
     customerAddress: '',
     serviceId: '',
+    additionalServices: [], // Array of additional service IDs
     employeeId: '',
     bookingDate: '',
     startTime: '',
@@ -159,6 +161,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           body: JSON.stringify({
             userId: user.id,
             serviceId: newBooking.serviceId,
+            additionalServiceIds: newBooking.additionalServices,
             bookingDate: newBooking.bookingDate,
             startTime: newBooking.startTime,
             employeeId: newBooking.employeeId || null,
@@ -899,6 +902,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   setShowCreateBookingModal(false);
                   setIsEditingBooking(false);
                   setEditingBookingId(null);
+                  setServiceTab('main');
                   setNewBooking({
                     customerId: '',
                     customerName: '',
@@ -906,6 +910,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     customerPhone: '',
                     customerAddress: '',
                     serviceId: '',
+                    additionalServices: [],
                     employeeId: '',
                     bookingDate: '',
                     startTime: '',
@@ -984,29 +989,216 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
               <div className="bg-green-50 rounded-xl p-4">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-green-600" />
-                  Booking Details
+                  Services
                 </h3>
                 
-                <div className="grid md:grid-cols-2 gap-4">
+                {/* Service Tabs */}
+                <div className="flex gap-2 mb-4 border-b border-gray-300">
+                  <button
+                    type="button"
+                    onClick={() => setServiceTab('main')}
+                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                      serviceTab === 'main'
+                        ? 'text-green-700 border-b-2 border-green-700'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Main Service
+                    {newBooking.serviceId && (
+                      <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
+                        1
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setServiceTab('additional')}
+                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                      serviceTab === 'additional'
+                        ? 'text-green-700 border-b-2 border-green-700'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Additional Services
+                    {newBooking.additionalServices.length > 0 && (
+                      <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
+                        {newBooking.additionalServices.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                {/* Main Service Tab Content */}
+                {serviceTab === 'main' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Service <span className="text-red-500">*</span>
+                      Select Main Service <span className="text-red-500">*</span>
                     </label>
                     <select
                       value={newBooking.serviceId}
                       onChange={(e) => setNewBooking({ ...newBooking, serviceId: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 mb-4"
                       required
                     >
-                      <option value="">Select a service</option>
+                      <option value="">Select main service</option>
                       {services.map(service => (
                         <option key={service.id} value={service.id}>
                           {service.name} - ${service.price} ({service.duration_hours}h)
                         </option>
                       ))}
                     </select>
-                  </div>
 
+                    {newBooking.serviceId && (
+                      <div className="bg-white rounded-lg p-4 border border-green-200">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-green-700" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-1">
+                              {services.find(s => s.id === newBooking.serviceId)?.name}
+                            </h4>
+                            <div className="text-sm text-gray-600 space-y-1">
+                              <div>Duration: {services.find(s => s.id === newBooking.serviceId)?.duration_hours}h</div>
+                              <div className="font-semibold text-green-700">
+                                ${services.find(s => s.id === newBooking.serviceId)?.price}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Additional Services Tab Content */}
+                {serviceTab === 'additional' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Select Additional Services (Optional)
+                    </label>
+                    <div className="border border-gray-300 rounded-lg bg-white max-h-64 overflow-y-auto">
+                      {services.filter(s => s.id !== newBooking.serviceId).length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          {newBooking.serviceId 
+                            ? 'No other services available' 
+                            : 'Please select a main service first'}
+                        </div>
+                      ) : (
+                        services.filter(s => s.id !== newBooking.serviceId).map(service => (
+                          <label
+                            key={service.id}
+                            className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={newBooking.additionalServices.includes(service.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setNewBooking({
+                                    ...newBooking,
+                                    additionalServices: [...newBooking.additionalServices, service.id]
+                                  });
+                                } else {
+                                  setNewBooking({
+                                    ...newBooking,
+                                    additionalServices: newBooking.additionalServices.filter(id => id !== service.id)
+                                  });
+                                }
+                              }}
+                              className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500"
+                            />
+                            <div className="flex-1">
+                              <div className="font-medium text-gray-900">{service.name}</div>
+                              <div className="text-xs text-gray-600">
+                                ${service.price} • {service.duration_hours}h
+                              </div>
+                            </div>
+                          </label>
+                        ))
+                      )}
+                    </div>
+
+                    {newBooking.additionalServices.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        <div className="text-xs font-medium text-gray-700 mb-1">
+                          Selected ({newBooking.additionalServices.length}):
+                        </div>
+                        {newBooking.additionalServices.map(serviceId => {
+                          const service = services.find(s => s.id === serviceId);
+                          return (
+                            <div key={serviceId} className="flex items-center justify-between bg-green-50 rounded-lg p-2">
+                              <div>
+                                <div className="font-medium text-sm text-gray-900">{service?.name}</div>
+                                <div className="text-xs text-gray-600">
+                                  ${service?.price} • {service?.duration_hours}h
+                                </div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setNewBooking({
+                                    ...newBooking,
+                                    additionalServices: newBooking.additionalServices.filter(id => id !== serviceId)
+                                  });
+                                }}
+                                className="text-red-600 hover:text-red-700 p-1"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Total Summary */}
+                {newBooking.serviceId && (
+                  <div className="mt-4 bg-green-100 rounded-lg p-3">
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="font-medium text-gray-700">Total Services:</span>
+                      <span className="font-bold text-gray-900">
+                        {1 + newBooking.additionalServices.length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm mb-2">
+                      <span className="font-medium text-gray-700">Total Duration:</span>
+                      <span className="font-bold text-gray-900">
+                        {(() => {
+                          const mainService = services.find(s => s.id === newBooking.serviceId);
+                          const additionalDuration = newBooking.additionalServices.reduce((total, id) => {
+                            const service = services.find(s => s.id === id);
+                            return total + (service?.duration_hours || 0);
+                          }, 0);
+                          return ((mainService?.duration_hours || 0) + additionalDuration).toFixed(1);
+                        })()}h
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm pt-2 border-t border-green-200">
+                      <span className="font-bold text-gray-700">Total Price:</span>
+                      <span className="font-bold text-green-700 text-lg">
+                        ${(() => {
+                          const mainService = services.find(s => s.id === newBooking.serviceId);
+                          const additionalPrice = newBooking.additionalServices.reduce((total, id) => {
+                            const service = services.find(s => s.id === id);
+                            return total + (parseFloat(service?.price) || 0);
+                          }, 0);
+                          return ((parseFloat(mainService?.price) || 0) + additionalPrice).toFixed(2);
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-green-50 rounded-xl p-4">
+                <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-green-600" />
+                  Schedule
+                </h3>
+                <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Team Member (optional)
