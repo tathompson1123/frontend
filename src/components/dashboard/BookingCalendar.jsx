@@ -507,10 +507,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                         key={offset}
                         className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
                       >
-                      <div
-                        key={offset}
-                        className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
-                      >
                         {dayBookings.map((booking, idx) => (
                           <button
                             key={booking.id}
