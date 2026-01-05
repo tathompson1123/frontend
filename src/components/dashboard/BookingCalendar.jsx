@@ -67,10 +67,13 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
       const response = await fetch(`${apiUrl}/api/bookings?userId=${user.id}`);
       const data = await response.json();
       
+      console.log('📅 Fetched bookings:', data.bookings?.length || 0);
+      
       if (data.bookings) {
         const sorted = data.bookings.sort((a, b) => 
           new Date(b.booking_date) - new Date(a.booking_date)
         );
+        console.log('📅 Sample booking:', sorted[0]);
         setAllBookings(sorted);
         setFilteredBookings(sorted);
       }
@@ -501,6 +504,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       const startHour = parseInt(booking.start_time.split(':')[0]);
                       return startHour === hour;
                     });
+
+                    // Debug: log if we find bookings for this slot
+                    if (dayBookings.length > 0) {
+                      console.log(`📍 Found ${dayBookings.length} booking(s) for ${dateStr} at ${hour}:00`, dayBookings);
+                    }
 
                     return (
                       <div
