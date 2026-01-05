@@ -554,7 +554,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             </div>
 
               {/* Time Slots */}
-              {[9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => (
+              {[9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => {
+                console.log(`🕐 Rendering hour: ${hour}:00`);
+                
+                return (
                 <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
                   <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
                     {hour > 12 ? `${hour - 12}:00 PM` : `${hour}:00 AM`}
@@ -564,15 +567,20 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     date.setDate(currentDate.getDate() - currentDate.getDay() + offset);
                     const dateStr = date.toISOString().split('T')[0];
                     
+                    console.log(`📅 Checking date: ${dateStr} for hour ${hour}`);
+                    console.log(`📊 Total bookings in state: ${allBookings.length}`);
+                    
                     const dayBookings = allBookings.filter(booking => {
+                      console.log(`  🔍 Booking date: ${booking.booking_date}, Match: ${booking.booking_date === dateStr}`);
                       if (booking.booking_date !== dateStr) return false;
                       const startHour = parseInt(booking.start_time.split(':')[0]);
+                      console.log(`  ⏰ Booking time: ${booking.start_time}, Hour: ${startHour}, Match: ${startHour === hour}`);
                       return startHour === hour;
                     });
 
                     // Debug: log if we find bookings for this slot
                     if (dayBookings.length > 0) {
-                      console.log(`📍 Found ${dayBookings.length} booking(s) for ${dateStr} at ${hour}:00`, dayBookings);
+                      console.log(`✅ Found ${dayBookings.length} booking(s) for ${dateStr} at ${hour}:00`, dayBookings);
                     }
 
                     return (
@@ -608,7 +616,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     );
                   })}
                 </div>
-              ))}
+              );
+              })}
             </div>
           </div>
         )}
