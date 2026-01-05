@@ -278,7 +278,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
   return (
     <div className="h-full flex gap-6">
       {/* Left Sidebar - Previous Bookings */}
-      <div className="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-200px)]">
+      <div className="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-120px)]">
         <div className="p-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-900 mb-3">All Bookings</h3>
           
@@ -391,9 +391,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
       </div>
 
       {/* Main Calendar View */}
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-[calc(100vh-120px)]">
         {/* Calendar Header */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="relative" ref={datePickerRef}>
               <button
@@ -453,8 +453,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
 
         {/* Week View Calendar */}
         {calendarView === 'week' && (
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="grid grid-cols-8 border-b border-gray-200">
+          <div className="border border-gray-200 rounded-lg overflow-hidden flex-1 flex flex-col">
+            <div className="grid grid-cols-8 border-b border-gray-200 flex-shrink-0">
               <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
                 Time
               </div>
@@ -483,7 +483,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
               })}
             </div>
 
-            <div className="max-h-[600px] overflow-y-auto">
+            <div className="flex-1 overflow-y-auto">
               {[9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => (
                 <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
                   <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
