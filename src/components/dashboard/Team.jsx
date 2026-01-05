@@ -2,6 +2,22 @@ import { useState } from 'react';
 import { Users, Plus, Edit } from 'lucide-react';
 
 export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, user }) {
+  // Predefined color palette for auto-assignment
+  const colorPalette = [
+    '#ef4444', // Red
+    '#f59e0b', // Orange
+    '#10b981', // Green
+    '#3b82f6', // Blue
+    '#8b5cf6', // Purple
+    '#ec4899', // Pink
+    '#14b8a6', // Teal
+    '#f97316', // Orange-Red
+    '#06b6d4', // Cyan
+    '#84cc16', // Lime
+    '#f43f5e', // Rose
+    '#6366f1', // Indigo
+  ];
+
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [employeeForm, setEmployeeForm] = useState({ 
@@ -25,6 +41,13 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Get next available color based on existing employees
+  const getNextColor = () => {
+    const usedColors = employees.map(emp => emp.color);
+    const availableColor = colorPalette.find(color => !usedColors.includes(color));
+    return availableColor || colorPalette[employees.length % colorPalette.length];
+  };
+
   const handleSaveEmployee = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -47,11 +70,12 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
 
       setShowAddEmployee(false);
       setEditingEmployee(null);
+      // Reset form with next available color for future adds
       setEmployeeForm({ 
         name: '', 
         email: '', 
         phone: '', 
-        color: '#3b82f6',
+        color: getNextColor(),
         workDays: {
           monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
           saturday: false, sunday: false
@@ -91,7 +115,21 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
         </div>
         <button
           type="button"
-          onClick={() => setShowAddEmployee(true)}
+          onClick={() => {
+            setShowAddEmployee(true);
+            // Auto-assign next available color when opening form for new employee
+            setEmployeeForm({
+              name: '', 
+              email: '', 
+              phone: '', 
+              color: getNextColor(),
+              workDays: {
+                monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
+                saturday: false, sunday: false
+              },
+              workHours: { startTime: '09:00', endTime: '17:00' }
+            });
+          }}
           className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
         >
           <Plus className="w-5 h-5" />
@@ -106,7 +144,20 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
           <p className="text-gray-600 mb-6">Add your first employee to get started</p>
           <button
             type="button"
-            onClick={() => setShowAddEmployee(true)}
+            onClick={() => {
+              setShowAddEmployee(true);
+              setEmployeeForm({
+                name: '', 
+                email: '', 
+                phone: '', 
+                color: getNextColor(),
+                workDays: {
+                  monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
+                  saturday: false, sunday: false
+                },
+                workHours: { startTime: '09:00', endTime: '17:00' }
+              });
+            }}
             className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
           >
             Add First Employee
@@ -212,6 +263,42 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
               </div>
 
               <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Calendar Color *</label>
+                <p className="text-xs text-gray-500 mb-3">This color will identify bookings assigned to this team member on the calendar</p>
+                <div className="flex items-center gap-4">
+                  <input
+                    type="color"
+                    value={employeeForm.color}
+                    onChange={(e) => setEmployeeForm({ ...employeeForm, color: e.target.value })}
+                    className="w-20 h-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                  />
+                  <div className="flex-1">
+                    <input
+                      type="text"
+                      value={employeeForm.color}
+                      onChange={(e) => setEmployeeForm({ ...employeeForm, color: e.target.value })}
+                      placeholder="#3b82f6"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none font-mono text-sm"
+                    />
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {colorPalette.slice(0, 8).map(color => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => setEmployeeForm({ ...employeeForm, color })}
+                        className={`w-8 h-8 rounded-full border-2 hover:scale-110 transition-transform ${
+                          employeeForm.color === color ? 'border-gray-900 ring-2 ring-offset-2 ring-gray-900' : 'border-gray-200'
+                        }`}
+                        style={{ backgroundColor: color }}
+                        title={color}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">Work Days *</label>
                 <div className="grid grid-cols-7 gap-2">
                   {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day) => {
@@ -270,11 +357,7 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
                   onClick={() => {
                     setShowAddEmployee(false);
                     setEditingEmployee(null);
-                    setEmployeeForm({ 
-                      name: '', email: '', phone: '', color: '#3b82f6',
-                      workDays: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
-                      workHours: { startTime: '09:00', endTime: '17:00' }
-                    });
+                    // Don't reset form here - let it get reset when opening again
                   }}
                   className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
                 >
