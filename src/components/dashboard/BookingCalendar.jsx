@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   User,
   Phone,
@@ -15,7 +15,8 @@ import {
   Mail,
   MapPin,
   Users,
-  Briefcase
+  Briefcase,
+  ChevronDown
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees }) {
@@ -28,6 +29,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
   const [allBookings, setAllBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef(null);
   
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
   const [newBooking, setNewBooking] = useState({
@@ -46,6 +49,17 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
 
   useEffect(() => {
     fetchAllBookings();
+  }, []);
+
+  // Close date picker when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
+        setShowDatePicker(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchAllBookings = async () => {
@@ -169,6 +183,98 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     setFilteredBookings(filtered);
   };
 
+  // Mini calendar for date picker
+  const MiniCalendar = () => {
+    const [pickerDate, setPickerDate] = useState(new Date(currentDate));
+    
+    const getMonthDays = () => {
+      const year = pickerDate.getFullYear();
+      const month = pickerDate.getMonth();
+      const firstDay = new Date(year, month, 1);
+      const startDate = new Date(firstDay);
+      startDate.setDate(startDate.getDate() - firstDay.getDay());
+      
+      const days = [];
+      const currentDay = new Date(startDate);
+      
+      for (let i = 0; i < 42; i++) {
+        days.push(new Date(currentDay));
+        currentDay.setDate(currentDay.getDate() + 1);
+      }
+      
+      return days;
+    };
+    
+    const monthDays = getMonthDays();
+    
+    return (
+      <div className="absolute top-full left-0 mt-2 bg-white rounded-xl shadow-2xl border border-gray-200 p-4 z-50 w-80">
+        <div className="flex items-center justify-between mb-4">
+          <button
+            type="button"
+            onClick={() => {
+              const newDate = new Date(pickerDate);
+              newDate.setMonth(pickerDate.getMonth() - 1);
+              setPickerDate(newDate);
+            }}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="font-bold text-gray-900">
+            {pickerDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const newDate = new Date(pickerDate);
+              newDate.setMonth(pickerDate.getMonth() + 1);
+              setPickerDate(newDate);
+            }}
+            className="p-1 hover:bg-gray-100 rounded"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1 mb-2">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            <div key={day} className="text-center text-xs font-medium text-gray-600 py-1">
+              {day}
+            </div>
+          ))}
+        </div>
+        
+        <div className="grid grid-cols-7 gap-1">
+          {monthDays.map((day, idx) => {
+            const isCurrentMonth = day.getMonth() === pickerDate.getMonth();
+            const isToday = day.toDateString() === new Date().toDateString();
+            const isSelected = day.toDateString() === currentDate.toDateString();
+            
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => {
+                  setCurrentDate(new Date(day));
+                  setShowDatePicker(false);
+                }}
+                className={`
+                  p-2 text-sm rounded-lg transition
+                  ${!isCurrentMonth ? 'text-gray-300' : 'text-gray-900'}
+                  ${isToday ? 'bg-blue-100 font-bold' : ''}
+                  ${isSelected ? 'bg-blue-600 text-white' : 'hover:bg-gray-100'}
+                `}
+              >
+                {day.getDate()}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="h-full flex gap-6">
       {/* Left Sidebar - Previous Bookings */}
@@ -289,9 +395,17 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <h2 className="text-2xl font-bold text-gray-900">
-              {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h2>
+            <div className="relative" ref={datePickerRef}>
+              <button
+                type="button"
+                onClick={() => setShowDatePicker(!showDatePicker)}
+                className="flex items-center gap-2 text-2xl font-bold text-gray-900 hover:bg-gray-50 px-3 py-2 rounded-lg transition"
+              >
+                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                <ChevronDown className="w-5 h-5" />
+              </button>
+              {showDatePicker && <MiniCalendar />}
+            </div>
             <div className="flex gap-2">
               <button
                 type="button"
@@ -334,31 +448,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
               <Plus className="w-5 h-5" />
               Create Booking
             </button>
-
-            <div className="flex bg-gray-100 rounded-lg p-1">
-              <button
-                type="button"
-                onClick={() => setCalendarView('week')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  calendarView === 'week'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Week
-              </button>
-              <button
-                type="button"
-                onClick={() => setCalendarView('month')}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                  calendarView === 'month'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                Month
-              </button>
-            </div>
           </div>
         </div>
 
@@ -445,19 +534,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   })}
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* Month View Calendar */}
-        {calendarView === 'month' && (
-          <div className="border border-gray-200 rounded-lg overflow-hidden">
-            <div className="p-12 text-center">
-              <Calendar className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Month View</h3>
-              <p className="text-gray-600">
-                Month view is coming soon! Use week view to see your bookings.
-              </p>
             </div>
           </div>
         )}
