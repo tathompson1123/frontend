@@ -53,6 +53,21 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     fetchAllBookings();
   }, []);
 
+  // Scroll to 7am on mount
+  useEffect(() => {
+    const scrollToBusinessHours = () => {
+      const timeSlotContainer = document.querySelector('.time-slots-container');
+      if (timeSlotContainer) {
+        // Each hour is 80px + 1px border = 81px
+        // 7am is hour 7, so scroll to 7 * 81px
+        timeSlotContainer.scrollTop = 7 * 81;
+      }
+    };
+    
+    // Delay slightly to ensure DOM is ready
+    setTimeout(scrollToBusinessHours, 100);
+  }, []);
+
   // Close date picker when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
@@ -522,7 +537,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         {/* Week View Calendar */}
         {calendarView === 'week' && (
           <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto time-slots-container scroll-smooth">
               {/* Header Row */}
               <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-10">
               <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
@@ -554,13 +569,13 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             </div>
 
               {/* Time Slots */}
-              {[9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => {
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((hour) => {
                 console.log(`🕐 Rendering hour: ${hour}:00`);
                 
                 return (
                 <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
                   <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
-                    {hour > 12 ? `${hour - 12}:00 PM` : `${hour}:00 AM`}
+                    {hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`}
                   </div>
                   {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
                     const date = new Date(currentDate);
@@ -590,30 +605,52 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                         key={offset}
                         className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
                       >
-                        {dayBookings.map((booking, idx) => (
-                          <button
-                            key={booking.id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedBooking(booking);
-                              setBookingNotes(booking.job_notes || '');
-                              setShowBookingModal(true);
-                              setEditingNotes(false);
-                            }}
-                            className="w-full text-left p-2 rounded bg-blue-500 text-white text-xs hover:bg-blue-600 transition mb-1"
-                            style={{ marginTop: idx > 0 ? '4px' : '0' }}
-                          >
-                            <div className="font-semibold truncate">
-                              {booking.customer_name}
-                            </div>
-                            <div className="truncate opacity-90">
-                              {booking.items?.[0]?.service_name}
-                            </div>
-                            <div className="text-xs opacity-75">
-                              {booking.start_time} - {booking.end_time}
-                            </div>
-                          </button>
-                        ))}
+                        {dayBookings.map((booking) => {
+                          // Calculate the height based on booking duration
+                          const [startHour, startMin] = booking.start_time.split(':').map(Number);
+                          const [endHour, endMin] = booking.end_time.split(':').map(Number);
+                          
+                          const startMinutes = startHour * 60 + startMin;
+                          const endMinutes = endHour * 60 + endMin;
+                          const durationMinutes = endMinutes - startMinutes;
+                          
+                          // Each hour is 80px tall, so calculate proportional height
+                          const heightPerMinute = 80 / 60; // 80px per hour / 60 minutes
+                          const blockHeight = durationMinutes * heightPerMinute;
+                          
+                          // Calculate top offset for minutes past the hour
+                          const topOffset = startMin * heightPerMinute;
+                          
+                          return (
+                            <button
+                              key={booking.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setBookingNotes(booking.job_notes || '');
+                                setShowBookingModal(true);
+                                setEditingNotes(false);
+                              }}
+                              className="absolute left-2 right-2 rounded bg-blue-500 text-white text-xs hover:bg-blue-600 transition overflow-hidden"
+                              style={{
+                                top: `${topOffset}px`,
+                                height: `${Math.max(blockHeight, 30)}px` // Minimum 30px height
+                              }}
+                            >
+                              <div className="p-2 h-full flex flex-col">
+                                <div className="font-semibold truncate">
+                                  {booking.customer_name}
+                                </div>
+                                <div className="truncate opacity-90 text-[10px]">
+                                  {booking.items?.[0]?.service_name}
+                                </div>
+                                <div className="text-[10px] opacity-75 mt-auto">
+                                  {booking.start_time} - {booking.end_time}
+                                </div>
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     );
                   })}
