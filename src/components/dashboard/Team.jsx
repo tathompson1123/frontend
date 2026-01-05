@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Plus, Edit } from 'lucide-react';
 
 export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, user }) {
@@ -41,11 +41,97 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Groups state
+  const [showGroupsModal, setShowGroupsModal] = useState(false);
+  const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [groups, setGroups] = useState([]);
+  const [groupForm, setGroupForm] = useState({
+    name: '',
+    selectedEmployees: []
+  });
+  const [editingGroup, setEditingGroup] = useState(null);
+
   // Get next available color based on existing employees
   const getNextColor = () => {
     const usedColors = employees.map(emp => emp.color);
     const availableColor = colorPalette.find(color => !usedColors.includes(color));
     return availableColor || colorPalette[employees.length % colorPalette.length];
+  };
+
+  // Fetch groups
+  useEffect(() => {
+    if (user?.id) {
+      fetchGroups();
+    }
+  }, [user]);
+
+  const fetchGroups = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/groups?userId=${user.id}`);
+      const data = await response.json();
+      if (data.groups) {
+        setGroups(data.groups);
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+    }
+  };
+
+  const handleSaveGroup = async (e) => {
+    e.preventDefault();
+    
+    if (!groupForm.name.trim()) {
+      alert('Please enter a group name');
+      return;
+    }
+    
+    if (groupForm.selectedEmployees.length === 0) {
+      alert('Please select at least one team member');
+      return;
+    }
+
+    try {
+      const url = editingGroup
+        ? `${apiUrl}/api/groups/${editingGroup.id}`
+        : `${apiUrl}/api/groups`;
+
+      const response = await fetch(url, {
+        method: editingGroup ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          name: groupForm.name,
+          employeeIds: groupForm.selectedEmployees
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to save group');
+
+      setShowCreateGroupModal(false);
+      setEditingGroup(null);
+      setGroupForm({ name: '', selectedEmployees: [] });
+      fetchGroups();
+    } catch (error) {
+      console.error('Error saving group:', error);
+      alert('Failed to save group');
+    }
+  };
+
+  const handleDeleteGroup = async (groupId) => {
+    if (!confirm('Are you sure you want to delete this group?')) return;
+
+    try {
+      const response = await fetch(`${apiUrl}/api/groups/${groupId}?userId=${user.id}`, {
+        method: 'DELETE'
+      });
+
+      if (!response.ok) throw new Error('Failed to delete group');
+
+      fetchGroups();
+    } catch (error) {
+      console.error('Error deleting group:', error);
+      alert('Failed to delete group');
+    }
   };
 
   const handleSaveEmployee = async (e) => {
@@ -113,28 +199,37 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
           <h2 className="text-2xl font-bold text-gray-900">Team Members</h2>
           <p className="text-gray-600 mt-1">Manage your employees and their schedules</p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            setShowAddEmployee(true);
-            // Auto-assign next available color when opening form for new employee
-            setEmployeeForm({
-              name: '', 
-              email: '', 
-              phone: '', 
-              color: getNextColor(),
-              workDays: {
-                monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
-                saturday: false, sunday: false
-              },
-              workHours: { startTime: '09:00', endTime: '17:00' }
-            });
-          }}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Add Employee
-        </button>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => setShowGroupsModal(true)}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <Users className="w-5 h-5" />
+            Groups
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setShowAddEmployee(true);
+              setEmployeeForm({
+                name: '', 
+                email: '', 
+                phone: '', 
+                color: getNextColor(),
+                workDays: {
+                  monday: true, tuesday: true, wednesday: true, thursday: true, friday: true,
+                  saturday: false, sunday: false
+                },
+                workHours: { startTime: '09:00', endTime: '17:00' }
+              });
+            }}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            Add Employee
+          </button>
+        </div>
       </div>
 
       {employees.length === 0 ? (
@@ -369,6 +464,229 @@ export default function Team({ employees, setEmployees, fetchEmployees, apiUrl, 
                   className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
                 >
                   {isSaving ? 'Saving...' : (editingEmployee ? 'Update Employee' : 'Add Employee')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Groups Modal */}
+      {showGroupsModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Team Groups</h2>
+                <p className="text-sm text-gray-600 mt-1">Manage crews and team groupings</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateGroupModal(true);
+                    setGroupForm({ name: '', selectedEmployees: [] });
+                    setEditingGroup(null);
+                  }}
+                  className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Create Group
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowGroupsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <Users className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {groups.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No groups yet</h3>
+                  <p className="text-gray-600 mb-6">Create your first team group or crew</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateGroupModal(true);
+                      setGroupForm({ name: '', selectedEmployees: [] });
+                      setEditingGroup(null);
+                    }}
+                    className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+                  >
+                    Create First Group
+                  </button>
+                </div>
+              ) : (
+                <div className="grid md:grid-cols-2 gap-4">
+                  {groups.map((group) => (
+                    <div key={group.id} className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-200">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">{group.name}</h3>
+                          <p className="text-sm text-gray-600 mt-1">
+                            {group.employee_ids?.length || 0} member{group.employee_ids?.length !== 1 ? 's' : ''}
+                          </p>
+                        </div>
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingGroup(group);
+                              setGroupForm({
+                                name: group.name,
+                                selectedEmployees: group.employee_ids || []
+                              });
+                              setShowCreateGroupModal(true);
+                            }}
+                            className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGroup(group.id)}
+                            className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"
+                          >
+                            <Users className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        {group.employee_ids && group.employee_ids.length > 0 ? (
+                          group.employee_ids.map(empId => {
+                            const employee = employees.find(e => e.id === empId);
+                            return employee ? (
+                              <div key={empId} className="flex items-center gap-2 bg-white rounded-lg p-2">
+                                <div 
+                                  className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                  style={{ backgroundColor: employee.color }}
+                                >
+                                  {employee.name.charAt(0).toUpperCase()}
+                                </div>
+                                <span className="text-sm font-medium text-gray-900">{employee.name}</span>
+                              </div>
+                            ) : null;
+                          })
+                        ) : (
+                          <p className="text-sm text-gray-500 italic">No members in this group</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create/Edit Group Modal */}
+      {showCreateGroupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {editingGroup ? 'Edit Group' : 'Create New Group'}
+              </h2>
+              <p className="text-sm text-gray-600 mt-1">
+                {editingGroup ? 'Update group details' : 'Create a team group or crew'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveGroup} className="p-6 space-y-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Group Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={groupForm.name}
+                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                  placeholder="e.g., Crew 2, Morning Team, Installation Crew"
+                  required
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-3">
+                  Select Team Members <span className="text-red-500">*</span>
+                </label>
+                <div className="border-2 border-gray-200 rounded-lg max-h-64 overflow-y-auto">
+                  {employees.length === 0 ? (
+                    <div className="p-4 text-center text-gray-500">
+                      No employees available
+                    </div>
+                  ) : (
+                    employees.map((employee) => (
+                      <label
+                        key={employee.id}
+                        className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={groupForm.selectedEmployees.includes(employee.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setGroupForm({
+                                ...groupForm,
+                                selectedEmployees: [...groupForm.selectedEmployees, employee.id]
+                              });
+                            } else {
+                              setGroupForm({
+                                ...groupForm,
+                                selectedEmployees: groupForm.selectedEmployees.filter(id => id !== employee.id)
+                              });
+                            }
+                          }}
+                          className="w-5 h-5 text-indigo-600 rounded focus:ring-2 focus:ring-indigo-500"
+                        />
+                        <div 
+                          className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                          style={{ backgroundColor: employee.color }}
+                        >
+                          {employee.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1">
+                          <div className="font-medium text-gray-900">{employee.name}</div>
+                          {employee.email && (
+                            <div className="text-xs text-gray-600">{employee.email}</div>
+                          )}
+                        </div>
+                      </label>
+                    ))
+                  )}
+                </div>
+                {groupForm.selectedEmployees.length > 0 && (
+                  <div className="mt-2 text-sm text-gray-600">
+                    {groupForm.selectedEmployees.length} member{groupForm.selectedEmployees.length !== 1 ? 's' : ''} selected
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-4 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateGroupModal(false);
+                    setEditingGroup(null);
+                    setGroupForm({ name: '', selectedEmployees: [] });
+                  }}
+                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                >
+                  {editingGroup ? 'Update Group' : 'Create Group'}
                 </button>
               </div>
             </form>
