@@ -489,8 +489,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           customerPhone: booking.customer_phone || '',
                           customerAddress: booking.customer_address || '',
                           serviceId: booking.items?.[0]?.service_id || '',
+                          additionalServices: [], // Initialize as empty array
                           employeeId: booking.employee_id || '',
-                          bookingDate: booking.booking_date,
+                          bookingDate: booking.booking_date.split('T')[0], // Remove time portion
                           startTime: booking.start_time,
                           notes: booking.job_notes || booking.customer_notes || ''
                         });
