@@ -1423,16 +1423,31 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Start Time <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="time"
+                    <select
                       value={newBooking.startTime}
                       onChange={(e) => setNewBooking({ ...newBooking, startTime: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 cursor-pointer"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
                       required
-                      step="900"
-                      min="06:00"
-                      max="22:00"
-                    />
+                    >
+                      <option value="">Select time</option>
+                      {(() => {
+                        const times = [];
+                        for (let hour = 6; hour <= 22; hour++) {
+                          for (let minute = 0; minute < 60; minute += 15) {
+                            const timeValue = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+                            const period = hour >= 12 ? 'PM' : 'AM';
+                            const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+                            const displayTime = `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
+                            times.push(
+                              <option key={timeValue} value={timeValue}>
+                                {displayTime}
+                              </option>
+                            );
+                          }
+                        }
+                        return times;
+                      })()}
+                    </select>
                   </div>
                 </div>
               </div>
