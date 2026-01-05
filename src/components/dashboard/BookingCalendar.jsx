@@ -466,9 +466,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                 return (
                   <div
                     key={offset}
-                    className={`bg-gray-50 p-3 text-center ${offset < 6 ? 'border-r border-gray-200' : ''} ${
+                    className={`bg-gray-50 p-3 text-center ${
                       isToday ? 'bg-blue-50' : ''
-                    }`}
+                    } ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
                   >
                     <div className="text-xs text-gray-500 mb-1">
                       {date.toLocaleDateString('en-US', { weekday: 'short' })}
@@ -503,7 +503,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     return (
                       <div
                         key={offset}
-                        className={`p-2 min-h-[80px] ${offset < 6 ? 'border-r border-gray-200' : ''} hover:bg-gray-50 transition relative`}
+                        className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
                       >
                         {dayBookings.map((booking, idx) => (
                           <button
