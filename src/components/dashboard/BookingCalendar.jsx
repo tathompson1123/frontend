@@ -29,6 +29,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     return `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')}${period}`;
   };
 
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast({ show: false, message: '', type: 'success' });
+    }, 3000); // Auto-dismiss after 3 seconds
+  };
+
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingNotes, setBookingNotes] = useState('');
@@ -40,6 +48,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef(null);
+  
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
   const [isEditingBooking, setIsEditingBooking] = useState(false);
@@ -164,21 +175,21 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           b.id === selectedBooking.id ? { ...b, job_notes: bookingNotes } : b
         ));
         setEditingNotes(false);
-        alert('✅ Notes saved successfully!');
+        showToast('Notes saved successfully!');
       } else {
         console.error('Save failed:', data);
         console.error('Full response:', response);
-        alert('Failed to save notes: ' + (data.error || data.message || 'Unknown error'));
+        showToast('Failed to save notes: ' + (data.error || data.message || 'Unknown error'), 'error');
       }
     } catch (error) {
       console.error('Error saving notes:', error);
-      alert('Failed to save notes: ' + error.message);
+      showToast('Failed to save notes: ' + error.message, 'error');
     }
   };
 
   const handleCreateBooking = async () => {
     if (!newBooking.customerName || !newBooking.serviceId || !newBooking.bookingDate || !newBooking.startTime) {
-      alert('Please fill in all required fields');
+      showToast('Please fill in all required fields', 'error');
       return;
     }
 
@@ -210,7 +221,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         const data = await response.json();
 
         if (data.success) {
-          alert('✅ Booking updated successfully!');
+          showToast('Booking updated successfully!');
           setNewBooking({
             customerId: '',
             customerName: '',
@@ -229,7 +240,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           setEditingBookingId(null);
           fetchAllBookings();
         } else {
-          alert(data.error || 'Failed to update booking');
+          showToast(data.error || 'Failed to update booking', 'error');
         }
       } else {
         // Create new booking
@@ -255,7 +266,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         const data = await response.json();
 
         if (data.success) {
-          alert('✅ Booking created successfully!');
+          showToast('Booking created successfully!');
           setNewBooking({
             customerId: '',
             customerName: '',
@@ -272,12 +283,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           setShowCreateBookingModal(false);
           fetchAllBookings();
         } else {
-          alert(data.error || 'Failed to create booking');
+          showToast(data.error || 'Failed to create booking', 'error');
         }
       }
     } catch (error) {
       console.error('Error saving booking:', error);
-      alert('Failed to save booking');
+      showToast('Failed to save booking', 'error');
     } finally {
       setCreatingBooking(false);
     }
@@ -1412,6 +1423,26 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className="fixed top-4 right-4 z-[60] animate-slide-in">
+          <div className={`rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 min-w-[300px] ${
+            toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+          }`}>
+            {toast.type === 'success' ? (
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            )}
+            <span className="font-medium">{toast.message}</span>
           </div>
         </div>
       )}
