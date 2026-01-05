@@ -936,8 +936,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       type="time"
                       value={newBooking.startTime}
                       onChange={(e) => setNewBooking({ ...newBooking, startTime: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 cursor-pointer"
                       required
+                      step="900"
+                      min="06:00"
+                      max="22:00"
                     />
                   </div>
                 </div>
