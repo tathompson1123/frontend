@@ -1140,7 +1140,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     </label>
                     <select
                       value={newBooking.serviceId}
-                      onChange={(e) => setNewBooking({ ...newBooking, serviceId: e.target.value })}
+                      onChange={(e) => setNewBooking({ ...newBooking, serviceId: Number(e.target.value) || e.target.value })}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 mb-4"
                       required
                     >
@@ -1160,12 +1160,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           </div>
                           <div className="flex-1">
                             <h4 className="font-semibold text-gray-900 mb-1">
-                              {services.find(s => s.id === newBooking.serviceId)?.name}
+                              {services.find(s => s.id == newBooking.serviceId)?.name}
                             </h4>
                             <div className="text-sm text-gray-600 space-y-1">
-                              <div>Duration: {services.find(s => s.id === newBooking.serviceId)?.duration_hours}h</div>
+                              <div>Duration: {services.find(s => s.id == newBooking.serviceId)?.duration_hours}h</div>
                               <div className="font-semibold text-green-700">
-                                ${services.find(s => s.id === newBooking.serviceId)?.price}
+                                ${services.find(s => s.id == newBooking.serviceId)?.price}
                               </div>
                             </div>
                           </div>
@@ -1189,14 +1189,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                             : 'Please select a main service first'}
                         </div>
                       ) : (
-                        services.filter(s => s.id !== newBooking.serviceId).map(service => (
+                        services.filter(s => s.id != newBooking.serviceId).map(service => (
                           <label
                             key={service.id}
                             className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
                           >
                             <input
                               type="checkbox"
-                              checked={newBooking.additionalServices.includes(service.id)}
+                              checked={newBooking.additionalServices.some(id => id == service.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setNewBooking({
@@ -1206,7 +1206,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                                 } else {
                                   setNewBooking({
                                     ...newBooking,
-                                    additionalServices: newBooking.additionalServices.filter(id => id !== service.id)
+                                    additionalServices: newBooking.additionalServices.filter(id => id != service.id)
                                   });
                                 }
                               }}
@@ -1229,7 +1229,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           Selected ({newBooking.additionalServices.length}):
                         </div>
                         {newBooking.additionalServices.map(serviceId => {
-                          const service = services.find(s => s.id === serviceId);
+                          const service = services.find(s => s.id == serviceId);
                           return (
                             <div key={serviceId} className="flex items-center justify-between bg-green-50 rounded-lg p-2">
                               <div>
@@ -1243,7 +1243,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                                 onClick={() => {
                                   setNewBooking({
                                     ...newBooking,
-                                    additionalServices: newBooking.additionalServices.filter(id => id !== serviceId)
+                                    additionalServices: newBooking.additionalServices.filter(id => id != serviceId)
                                   });
                                 }}
                                 className="text-red-600 hover:text-red-700 p-1"
@@ -1271,9 +1271,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       <span className="font-medium text-gray-700">Total Duration:</span>
                       <span className="font-bold text-gray-900">
                         {(() => {
-                          const mainService = services.find(s => s.id === newBooking.serviceId);
+                          const mainService = services.find(s => s.id == newBooking.serviceId);
                           const additionalDuration = newBooking.additionalServices.reduce((total, id) => {
-                            const service = services.find(s => s.id === id);
+                            const service = services.find(s => s.id == id);
                             return total + (service?.duration_hours || 0);
                           }, 0);
                           return ((mainService?.duration_hours || 0) + additionalDuration).toFixed(1);
@@ -1284,9 +1284,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       <span className="font-bold text-gray-700">Total Price:</span>
                       <span className="font-bold text-green-700 text-lg">
                         ${(() => {
-                          const mainService = services.find(s => s.id === newBooking.serviceId);
+                          const mainService = services.find(s => s.id == newBooking.serviceId);
                           const additionalPrice = newBooking.additionalServices.reduce((total, id) => {
-                            const service = services.find(s => s.id === id);
+                            const service = services.find(s => s.id == id);
                             return total + (parseFloat(service?.price) || 0);
                           }, 0);
                           return ((parseFloat(mainService?.price) || 0) + additionalPrice).toFixed(2);
