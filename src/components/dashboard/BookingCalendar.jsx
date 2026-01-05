@@ -404,7 +404,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                 key={idx}
                 type="button"
                 onClick={() => {
-                  setCurrentDate(new Date(day));
+                  // Create a new date using year, month, day to avoid timezone issues
+                  const selectedDate = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+                  setCurrentDate(selectedDate);
                   setShowDatePicker(false);
                 }}
                 className={`
@@ -629,9 +631,21 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                 Time
               </div>
               {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
-                const date = new Date(currentDate);
-                date.setDate(currentDate.getDate() - currentDate.getDay() + offset);
-                const isToday = date.toDateString() === new Date().toDateString();
+                // Use consistent date calculation without timezone issues
+                const year = currentDate.getFullYear();
+                const month = currentDate.getMonth();
+                const day = currentDate.getDate();
+                const baseDate = new Date(year, month, day);
+                const dayOfWeek = baseDate.getDay();
+                
+                // Calculate the date for this column
+                const date = new Date(year, month, day - dayOfWeek + offset);
+                
+                // Check if this is today using date-only comparison
+                const today = new Date();
+                const isToday = date.getFullYear() === today.getFullYear() &&
+                               date.getMonth() === today.getMonth() &&
+                               date.getDate() === today.getDate();
                 
                 return (
                   <div
@@ -663,9 +677,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     {hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`}
                   </div>
                   {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
-                    const date = new Date(currentDate);
-                    date.setDate(currentDate.getDate() - currentDate.getDay() + offset);
-                    const dateStr = date.toISOString().split('T')[0];
+                    // Use UTC to avoid timezone shifts
+                    const year = currentDate.getFullYear();
+                    const month = currentDate.getMonth();
+                    const day = currentDate.getDate();
+                    const baseDate = new Date(year, month, day);
+                    const dayOfWeek = baseDate.getDay();
+                    
+                    // Calculate the date for this column
+                    const date = new Date(year, month, day - dayOfWeek + offset);
+                    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     
                     console.log(`📅 Checking date: ${dateStr} for hour ${hour}`);
                     console.log(`📊 Total bookings in state: ${allBookings.length}`);
