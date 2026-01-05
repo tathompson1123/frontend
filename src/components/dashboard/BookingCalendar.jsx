@@ -678,7 +678,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                                 setShowBookingModal(true);
                                 setEditingNotes(false);
                               }}
-                              className="absolute left-2 right-2 rounded text-white text-xs hover:opacity-90 transition overflow-hidden shadow-md border-l-4"
+                              className="absolute left-2 right-2 rounded text-white text-xs cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden shadow-md border-l-4 z-10"
                               style={{
                                 top: `${topOffset}px`,
                                 height: `${Math.max(blockHeight, 40)}px`, // Minimum 40px height
@@ -687,7 +687,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                                 filter: 'brightness(0.95)'
                               }}
                             >
-                              <div className="p-2 h-full flex flex-col">
+                              <div className="p-2 h-full flex flex-col pointer-events-none">
                                 <div className="font-semibold truncate">
                                   {booking.customer_name}
                                 </div>
