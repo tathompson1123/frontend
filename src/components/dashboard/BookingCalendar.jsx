@@ -55,14 +55,37 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     fetchAllBookings();
   }, []);
 
-  // Scroll to 7am on mount
+  // Scroll to business start time on mount
   useEffect(() => {
-    const scrollToBusinessHours = () => {
-      const timeSlotContainer = document.querySelector('.time-slots-container');
-      if (timeSlotContainer) {
-        // Each hour is 80px + 1px border = 81px
-        // 7am is hour 7, so scroll to 7 * 81px
-        timeSlotContainer.scrollTop = 7 * 81;
+    const scrollToBusinessHours = async () => {
+      try {
+        // Fetch business hours to get start time
+        const response = await fetch(`${apiUrl}/api/business-hours?userId=${user.id}`);
+        const data = await response.json();
+        
+        // Get today's day of week (0 = Sunday, 6 = Saturday)
+        const today = new Date().getDay();
+        const todayHours = data.businessHours?.find(h => h.day_of_week === today);
+        
+        let startHour = 9; // Default to 9am if no business hours found
+        
+        if (todayHours && todayHours.is_open && todayHours.open_time) {
+          // Parse the open time (format: "HH:MM")
+          startHour = parseInt(todayHours.open_time.split(':')[0]);
+        }
+        
+        const timeSlotContainer = document.querySelector('.time-slots-container');
+        if (timeSlotContainer) {
+          // Each hour is approximately 81px (80px + 1px border)
+          timeSlotContainer.scrollTop = startHour * 81;
+        }
+      } catch (error) {
+        console.error('Error fetching business hours for scroll:', error);
+        // Fallback to 9am
+        const timeSlotContainer = document.querySelector('.time-slots-container');
+        if (timeSlotContainer) {
+          timeSlotContainer.scrollTop = 9 * 81;
+        }
       }
     };
     
@@ -525,6 +548,22 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             </div>
           </div>
 
+          {/* Team Member Legend */}
+          {employees && employees.length > 0 && (
+            <div className="flex items-center gap-3 flex-wrap px-2 py-3 bg-gray-50 rounded-lg border border-gray-200">
+              <span className="text-xs font-medium text-gray-600">Team:</span>
+              {employees.map(employee => (
+                <div key={employee.id} className="flex items-center gap-2">
+                  <div 
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: employee.color || '#3b82f6' }}
+                  />
+                  <span className="text-xs text-gray-700">{employee.name}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="flex items-center gap-3">
             <button
               type="button"
@@ -624,6 +663,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           // Calculate top offset for minutes past the hour
                           const topOffset = startMin * heightPerMinute;
                           
+                          // Get employee color
+                          const employee = employees?.find(emp => emp.id === booking.employee_id);
+                          const employeeColor = employee?.color || '#3b82f6';
+                          const employeeName = employee?.name || 'Unassigned';
+                          
                           return (
                             <button
                               key={booking.id}
@@ -634,10 +678,13 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                                 setShowBookingModal(true);
                                 setEditingNotes(false);
                               }}
-                              className="absolute left-2 right-2 rounded bg-blue-500 text-white text-xs hover:bg-blue-600 transition overflow-hidden"
+                              className="absolute left-2 right-2 rounded text-white text-xs hover:opacity-90 transition overflow-hidden shadow-md border-l-4"
                               style={{
                                 top: `${topOffset}px`,
-                                height: `${Math.max(blockHeight, 30)}px` // Minimum 30px height
+                                height: `${Math.max(blockHeight, 40)}px`, // Minimum 40px height
+                                backgroundColor: employeeColor,
+                                borderLeftColor: employeeColor,
+                                filter: 'brightness(0.95)'
                               }}
                             >
                               <div className="p-2 h-full flex flex-col">
@@ -647,7 +694,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                                 <div className="truncate opacity-90 text-[10px]">
                                   {booking.items?.[0]?.service_name}
                                 </div>
-                                <div className="text-[10px] opacity-75 mt-auto">
+                                <div className="flex items-center gap-1 mt-auto">
+                                  <User className="w-3 h-3 opacity-75" />
+                                  <span className="text-[10px] opacity-90 truncate">{employeeName}</span>
+                                </div>
+                                <div className="text-[10px] opacity-75">
                                   {booking.start_time} - {booking.end_time}
                                 </div>
                               </div>
@@ -774,15 +825,27 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     </p>
                   </div>
 
-                  {selectedBooking.employee_name && (
-                    <div>
-                      <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        Team Member
-                      </label>
-                      <p className="text-gray-900 font-medium">{selectedBooking.employee_name}</p>
-                    </div>
-                  )}
+                  {(selectedBooking.employee_name || selectedBooking.employee_id) && (() => {
+                    const employee = employees?.find(emp => emp.id === selectedBooking.employee_id);
+                    const employeeName = selectedBooking.employee_name || employee?.name || 'Assigned';
+                    const employeeColor = employee?.color || '#3b82f6';
+                    
+                    return (
+                      <div>
+                        <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
+                          <Users className="w-4 h-4" />
+                          Team Member
+                        </label>
+                        <div className="flex items-center gap-2 mt-1">
+                          <div 
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: employeeColor }}
+                          />
+                          <p className="text-gray-900 font-medium">{employeeName}</p>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 
