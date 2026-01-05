@@ -1181,8 +1181,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Select Additional Services (Optional)
                     </label>
-                    <div className="border border-gray-300 rounded-lg bg-white max-h-64 overflow-y-auto">
-                      {services.filter(s => s.id !== newBooking.serviceId).length === 0 ? (
+                    <div className="border border-gray-300 rounded-lg bg-gray-50 max-h-64 overflow-y-auto">
+                      {!services || services.length === 0 ? (
+                        <div className="p-4 text-center text-gray-500 text-sm">
+                          No services available
+                        </div>
+                      ) : services.filter(s => s.id != newBooking.serviceId).length === 0 ? (
                         <div className="p-4 text-center text-gray-500 text-sm">
                           {newBooking.serviceId 
                             ? 'No other services available' 
@@ -1192,21 +1196,21 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                         services.filter(s => s.id != newBooking.serviceId).map(service => (
                           <label
                             key={service.id}
-                            className="flex items-center gap-3 p-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                            className="flex items-center gap-3 p-3 bg-white hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition-colors"
                           >
                             <input
                               type="checkbox"
-                              checked={newBooking.additionalServices.some(id => id == service.id)}
+                              checked={newBooking.additionalServices && newBooking.additionalServices.some(id => id == service.id)}
                               onChange={(e) => {
                                 if (e.target.checked) {
                                   setNewBooking({
                                     ...newBooking,
-                                    additionalServices: [...newBooking.additionalServices, service.id]
+                                    additionalServices: [...(newBooking.additionalServices || []), service.id]
                                   });
                                 } else {
                                   setNewBooking({
                                     ...newBooking,
-                                    additionalServices: newBooking.additionalServices.filter(id => id != service.id)
+                                    additionalServices: (newBooking.additionalServices || []).filter(id => id != service.id)
                                   });
                                 }
                               }}
