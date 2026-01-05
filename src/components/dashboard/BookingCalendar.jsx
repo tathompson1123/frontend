@@ -453,8 +453,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
 
         {/* Week View Calendar */}
         {calendarView === 'week' && (
-          <div className="border border-gray-200 rounded-lg overflow-hidden flex-1 flex flex-col">
-            <div className="grid border-b border-gray-200 flex-shrink-0" style={{ gridTemplateColumns: '100px repeat(7, 1fr)' }}>
+          <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto">
+              {/* Header Row */}
+              <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-10">
               <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
                 Time
               </div>
@@ -483,9 +485,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
               })}
             </div>
 
-            <div className="flex-1 overflow-y-auto">
+              {/* Time Slots */}
               {[9, 10, 11, 12, 13, 14, 15, 16, 17].map((hour) => (
-                <div key={hour} className="grid border-b border-gray-100" style={{ gridTemplateColumns: '100px repeat(7, 1fr)' }}>
+                <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
                   <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
                     {hour > 12 ? `${hour - 12}:00 PM` : `${hour}:00 AM`}
                   </div>
@@ -501,6 +503,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     });
 
                     return (
+                      <div
+                        key={offset}
+                        className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
+                      >
                       <div
                         key={offset}
                         className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
