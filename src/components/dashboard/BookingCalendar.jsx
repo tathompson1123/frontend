@@ -571,8 +571,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     console.log(`📊 Total bookings in state: ${allBookings.length}`);
                     
                     const dayBookings = allBookings.filter(booking => {
-                      console.log(`  🔍 Booking date: ${booking.booking_date}, Match: ${booking.booking_date === dateStr}`);
-                      if (booking.booking_date !== dateStr) return false;
+                      // Extract just the date part from the booking date (removes time/timezone)
+                      const bookingDateOnly = booking.booking_date.split('T')[0];
+                      console.log(`  🔍 Booking date: ${booking.booking_date}, Extracted: ${bookingDateOnly}, Checking: ${dateStr}, Match: ${bookingDateOnly === dateStr}`);
+                      if (bookingDateOnly !== dateStr) return false;
                       const startHour = parseInt(booking.start_time.split(':')[0]);
                       console.log(`  ⏰ Booking time: ${booking.start_time}, Hour: ${startHour}, Match: ${startHour === hour}`);
                       return startHour === hour;
