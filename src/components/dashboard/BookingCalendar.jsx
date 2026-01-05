@@ -65,15 +65,30 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     serviceId: '',
     additionalServices: [], // Array of additional service IDs
     employeeId: '',
+    groupId: '', // Add group ID
     bookingDate: '',
     startTime: '',
     notes: ''
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
+  const [groups, setGroups] = useState([]); // Add groups state
 
   useEffect(() => {
     fetchAllBookings();
+    fetchGroups();
   }, []);
+
+  const fetchGroups = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/groups?userId=${user.id}`);
+      const data = await response.json();
+      if (data.groups) {
+        setGroups(data.groups);
+      }
+    } catch (error) {
+      console.error('Error fetching groups:', error);
+    }
+  };
 
   // Scroll to business start time on mount
   useEffect(() => {
@@ -208,6 +223,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             bookingDate: newBooking.bookingDate,
             startTime: newBooking.startTime,
             employeeId: newBooking.employeeId || null,
+            groupId: newBooking.groupId || null,
             customerInfo: {
               name: newBooking.customerName,
               email: newBooking.customerEmail,
@@ -231,6 +247,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             serviceId: '',
             additionalServices: [],
             employeeId: '',
+            groupId: '',
             bookingDate: '',
             startTime: '',
             notes: ''
@@ -253,6 +270,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             bookingDate: newBooking.bookingDate,
             startTime: newBooking.startTime,
             employeeId: newBooking.employeeId || null,
+            groupId: newBooking.groupId || null,
             customerInfo: {
               name: newBooking.customerName,
               email: newBooking.customerEmail,
@@ -276,6 +294,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             serviceId: '',
             additionalServices: [],
             employeeId: '',
+            groupId: '',
             bookingDate: '',
             startTime: '',
             notes: ''
@@ -504,6 +523,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           serviceId: booking.items?.[0]?.service_id || '',
                           additionalServices: [], // Initialize as empty array
                           employeeId: booking.employee_id || '',
+                          groupId: booking.group_id || '',
                           bookingDate: booking.booking_date.split('T')[0], // Remove time portion
                           startTime: booking.start_time,
                           notes: booking.job_notes || booking.customer_notes || ''
@@ -766,6 +786,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       serviceId: selectedBooking.items?.[0]?.service_id || '',
                       additionalServices: [], // TODO: populate if you have multiple services
                       employeeId: selectedBooking.employee_id || '',
+                      groupId: selectedBooking.group_id || '',
                       bookingDate: selectedBooking.booking_date.split('T')[0],
                       startTime: selectedBooking.start_time,
                       notes: selectedBooking.job_notes || selectedBooking.customer_notes || ''
@@ -1027,6 +1048,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     serviceId: '',
                     additionalServices: [],
                     employeeId: '',
+                    groupId: '',
                     bookingDate: '',
                     startTime: '',
                     notes: ''
@@ -1324,22 +1346,64 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   Schedule
                 </h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Team Member (optional)
+                      Assign Team Member or Group (optional)
                     </label>
-                    <select
-                      value={newBooking.employeeId}
-                      onChange={(e) => setNewBooking({ ...newBooking, employeeId: e.target.value })}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500"
-                    >
-                      <option value="">Auto-assign</option>
-                      {employees.map(employee => (
-                        <option key={employee.id} value={employee.id}>
-                          {employee.name}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {/* Team Member Selection */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Individual Team Member</label>
+                        <select
+                          value={newBooking.employeeId}
+                          onChange={(e) => setNewBooking({ 
+                            ...newBooking, 
+                            employeeId: e.target.value,
+                            groupId: '' // Clear group when selecting employee
+                          })}
+                          disabled={!!newBooking.groupId}
+                          className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 ${
+                            newBooking.groupId ? 'bg-gray-100 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          <option value="">Select team member</option>
+                          {employees.map(employee => (
+                            <option key={employee.id} value={employee.id}>
+                              {employee.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Group Selection */}
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Or Assign to Group</label>
+                        <select
+                          value={newBooking.groupId}
+                          onChange={(e) => setNewBooking({ 
+                            ...newBooking, 
+                            groupId: e.target.value,
+                            employeeId: '' // Clear employee when selecting group
+                          })}
+                          disabled={!!newBooking.employeeId}
+                          className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 ${
+                            newBooking.employeeId ? 'bg-gray-100 cursor-not-allowed' : ''
+                          }`}
+                        >
+                          <option value="">Select group</option>
+                          {groups.map(group => (
+                            <option key={group.id} value={group.id}>
+                              {group.name} ({group.employee_ids?.length || 0} members)
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    {!newBooking.employeeId && !newBooking.groupId && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        Leave empty to auto-assign an available team member
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -1404,6 +1468,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       serviceId: '',
                       additionalServices: [],
                       employeeId: '',
+                      groupId: '',
                       bookingDate: '',
                       startTime: '',
                       notes: ''
