@@ -1272,11 +1272,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       <span className="font-bold text-gray-900">
                         {(() => {
                           const mainService = services.find(s => s.id == newBooking.serviceId);
+                          const mainDuration = parseFloat(mainService?.duration_hours) || 0;
                           const additionalDuration = newBooking.additionalServices.reduce((total, id) => {
                             const service = services.find(s => s.id == id);
-                            return total + (service?.duration_hours || 0);
+                            const duration = parseFloat(service?.duration_hours) || 0;
+                            return total + duration;
                           }, 0);
-                          return ((mainService?.duration_hours || 0) + additionalDuration).toFixed(1);
+                          const totalDuration = mainDuration + additionalDuration;
+                          return totalDuration.toFixed(1);
                         })()}h
                       </span>
                     </div>
@@ -1285,11 +1288,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       <span className="font-bold text-green-700 text-lg">
                         ${(() => {
                           const mainService = services.find(s => s.id == newBooking.serviceId);
+                          const mainPrice = parseFloat(mainService?.price) || 0;
                           const additionalPrice = newBooking.additionalServices.reduce((total, id) => {
                             const service = services.find(s => s.id == id);
-                            return total + (parseFloat(service?.price) || 0);
+                            const price = parseFloat(service?.price) || 0;
+                            return total + price;
                           }, 0);
-                          return ((parseFloat(mainService?.price) || 0) + additionalPrice).toFixed(2);
+                          const totalPrice = mainPrice + additionalPrice;
+                          return totalPrice.toFixed(2);
                         })()}
                       </span>
                     </div>
