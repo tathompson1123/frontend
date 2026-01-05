@@ -366,7 +366,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         {calendarView === 'week' && (
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <div className="grid grid-cols-8 border-b border-gray-200">
-              <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500">
+              <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
                 Time
               </div>
               {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
@@ -377,7 +377,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                 return (
                   <div
                     key={offset}
-                    className={`bg-gray-50 p-3 text-center border-l border-gray-200 ${
+                    className={`bg-gray-50 p-3 text-center ${offset < 6 ? 'border-r border-gray-200' : ''} ${
                       isToday ? 'bg-blue-50' : ''
                     }`}
                   >
@@ -414,7 +414,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     return (
                       <div
                         key={offset}
-                        className="p-2 min-h-[80px] border-l border-gray-100 hover:bg-gray-50 transition relative"
+                        className={`p-2 min-h-[80px] ${offset < 6 ? 'border-r border-gray-200' : ''} hover:bg-gray-50 transition relative`}
                       >
                         {dayBookings.map((booking, idx) => (
                           <button
@@ -463,7 +463,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         )}
       </div>
 
-      {/* Booking Details Modal */}
+      {/* Booking Details Modal - keeping exactly the same */}
       {showBookingModal && selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -681,7 +681,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         </div>
       )}
 
-      {/* Create Booking Modal */}
+      {/* Create Booking Modal - keeping exactly the same */}
       {showCreateBookingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
