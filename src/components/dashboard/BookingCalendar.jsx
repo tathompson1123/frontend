@@ -86,6 +86,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     if (!selectedBooking) return;
     
     try {
+      console.log('💾 Saving notes for booking:', selectedBooking.id);
+      
       const response = await fetch(`${apiUrl}/api/bookings/${selectedBooking.id}/notes`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -96,18 +98,25 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
       });
       
       const data = await response.json();
+      console.log('💾 Save response:', data);
       
       if (data.success) {
         setSelectedBooking({ ...selectedBooking, job_notes: bookingNotes });
         setAllBookings(allBookings.map(b => 
           b.id === selectedBooking.id ? { ...b, job_notes: bookingNotes } : b
         ));
+        setFilteredBookings(filteredBookings.map(b => 
+          b.id === selectedBooking.id ? { ...b, job_notes: bookingNotes } : b
+        ));
         setEditingNotes(false);
-        alert('Notes saved successfully!');
+        alert('✅ Notes saved successfully!');
+      } else {
+        console.error('Save failed:', data);
+        alert('Failed to save notes: ' + (data.error || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error saving notes:', error);
-      alert('Failed to save notes');
+      alert('Failed to save notes: ' + error.message);
     }
   };
 
