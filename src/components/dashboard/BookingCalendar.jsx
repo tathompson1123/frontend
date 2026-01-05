@@ -20,6 +20,15 @@ import {
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees }) {
+  // Format time from 24-hour to 12-hour with AM/PM
+  const formatTime = (time24) => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':').map(Number);
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const hours12 = hours % 12 || 12; // Convert 0 to 12 for midnight
+    return `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')}${period}`;
+  };
+
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingNotes, setBookingNotes] = useState('');
@@ -444,7 +453,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-gray-600">
                       <Clock className="w-3 h-3" />
-                      {booking.start_time} - {booking.end_time}
+                      {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                     </div>
                     {booking.employee_name && (
                       <div className="flex items-center gap-2 text-xs text-gray-600">
@@ -699,7 +708,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                                   <span className="text-[10px] opacity-90 truncate">{employeeName}</span>
                                 </div>
                                 <div className="text-[10px] opacity-75">
-                                  {booking.start_time} - {booking.end_time}
+                                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
                                 </div>
                               </div>
                             </button>
@@ -727,17 +736,46 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   Booking #{selectedBooking.booking_number}
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowBookingModal(false);
-                  setSelectedBooking(null);
-                  setEditingNotes(false);
-                }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <X className="w-6 h-6 text-gray-600" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    // Populate the edit form with booking data
+                    setIsEditingBooking(true);
+                    setEditingBookingId(selectedBooking.id);
+                    setNewBooking({
+                      customerId: selectedBooking.customer_id,
+                      customerName: selectedBooking.customer_name,
+                      customerEmail: selectedBooking.customer_email || '',
+                      customerPhone: selectedBooking.customer_phone || '',
+                      customerAddress: selectedBooking.customer_address || '',
+                      serviceId: selectedBooking.items?.[0]?.service_id || '',
+                      additionalServices: [], // TODO: populate if you have multiple services
+                      employeeId: selectedBooking.employee_id || '',
+                      bookingDate: selectedBooking.booking_date.split('T')[0],
+                      startTime: selectedBooking.start_time,
+                      notes: selectedBooking.job_notes || selectedBooking.customer_notes || ''
+                    });
+                    setShowBookingModal(false);
+                    setShowCreateBookingModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                >
+                  <Edit2 className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBookingModal(false);
+                    setSelectedBooking(null);
+                    setEditingNotes(false);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <X className="w-6 h-6 text-gray-600" />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 space-y-6">
@@ -821,7 +859,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       Time
                     </label>
                     <p className="text-gray-900 font-medium">
-                      {selectedBooking.start_time} - {selectedBooking.end_time}
+                      {formatTime(selectedBooking.start_time)} - {formatTime(selectedBooking.end_time)}
                     </p>
                   </div>
 
