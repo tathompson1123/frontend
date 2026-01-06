@@ -197,26 +197,33 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
   };
 
   const getRadiusPixels = () => {
-    // OpenStreetMap zoom levels and their scale
-    // At zoom level z, the map shows approximately:
-    // degrees of latitude = 360 / (2^z)
-    // At latitude ~47° (Seattle), 1 degree longitude ≈ 69 miles × cos(47°) ≈ 47 miles
-    // 1 degree latitude ≈ 69 miles everywhere
+    // Calculate how many miles are shown in the map height
+    // At different zoom levels, the map shows different amounts of area
+    
+    // OpenStreetMap zoom levels - approximate coverage
+    // Each zoom level halves the area shown
+    const zoomScales = {
+      8: 2760,   // ~2,760 miles height
+      9: 1380,   // ~1,380 miles height
+      10: 690,   // ~690 miles height
+      11: 345,   // ~345 miles height
+      12: 172.5, // ~172.5 miles height
+      13: 86.25, // ~86.25 miles height
+      14: 43.13, // ~43.13 miles height
+      15: 21.56  // ~21.56 miles height
+    };
     
     const mapHeightPixels = 384; // h-96 = 384px
+    const milesShownInHeight = zoomScales[zoomLevel] || 345;
     
-    // Calculate degrees shown based on zoom level
-    // The map viewport typically shows: 180 / (2^(zoom-1)) degrees
-    const degreesShown = 180 / Math.pow(2, zoomLevel - 1);
-    
-    // Miles shown on the map
-    const milesShown = degreesShown * 69; // 69 miles per degree latitude
-    
-    // Pixels per mile
-    const pixelsPerMile = mapHeightPixels / milesShown;
+    // Calculate pixels per mile at this zoom level
+    const pixelsPerMile = mapHeightPixels / milesShownInHeight;
     
     // Return radius in pixels
-    return businessInfo.serviceRadius * pixelsPerMile;
+    const calculatedRadius = businessInfo.serviceRadius * pixelsPerMile;
+    
+    // Cap at 500px to prevent circle from being too large
+    return Math.min(calculatedRadius, 500);
   };
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -351,8 +358,15 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Navigation className="w-5 h-5 text-orange-600" />
-          Service Area
+          Service Area (Informational)
         </h3>
+
+        <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200 mb-4">
+          <p className="text-sm text-gray-700">
+            <strong>Note:</strong> This service area is displayed on your website for informational purposes. 
+            Customers from anywhere can still book your services online. Use this to show your primary service zones.
+          </p>
+        </div>
 
         <div className="mb-6">
           <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -618,8 +632,9 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
             <h3 className="font-bold text-gray-900 mb-2">Tips for Business Information</h3>
             <ul className="space-y-1 text-sm text-gray-700">
               <li>• Contact info appears on your website and booking page</li>
-              <li>• Service area determines where customers can book from</li>
-              <li>• The map shows your service radius in real-time</li>
+              <li>• Service area is shown on your website for customer reference</li>
+              <li>• Customers can book from anywhere - service area doesn't restrict bookings</li>
+              <li>• The map helps visualize your primary coverage zones</li>
               <li>• Business hours control when customers can schedule appointments</li>
               <li>• Keep your information up to date for best customer experience</li>
             </ul>
