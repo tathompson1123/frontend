@@ -20,8 +20,15 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
   const [websiteForm, setWebsiteForm] = useState({
     businessName: user.businessName || '',
     businessType: '',
+    tagline: '',
     services: '',
-    description: ''
+    yearsInBusiness: '',
+    certifications: '',
+    description: '',
+    uniqueSellingPoints: '',
+    targetCustomer: '',
+    designStyle: 'professional',
+    colorTheme: ''
   });
 
   // Load website data when component mounts or websiteData changes
@@ -64,8 +71,15 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
         body: JSON.stringify({
           businessName: websiteForm.businessName,
           businessType: websiteForm.businessType,
+          tagline: websiteForm.tagline,
           services: websiteForm.services,
+          yearsInBusiness: websiteForm.yearsInBusiness,
+          certifications: websiteForm.certifications,
           description: websiteForm.description,
+          uniqueSellingPoints: websiteForm.uniqueSellingPoints,
+          targetCustomer: websiteForm.targetCustomer,
+          designStyle: websiteForm.designStyle,
+          colorTheme: websiteForm.colorTheme,
           userId: user.id
         })
       });
@@ -426,79 +440,233 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
       {/* Regenerate Modal */}
       {showEditWebsite && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {currentWebsite ? 'Regenerate Website' : 'Generate Website'}
-            </h2>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {currentWebsite ? 'Regenerate Website' : 'Generate Website'}
+                </h2>
+                <p className="text-gray-600 text-sm mt-1">
+                  Provide detailed information for the best results
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEditWebsite(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
             
             <form onSubmit={handleRegenerateWebsite} className="space-y-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Business Name *
-                </label>
-                <input
-                  type="text"
-                  value={websiteForm.businessName}
-                  onChange={(e) => setWebsiteForm({ ...websiteForm, businessName: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                />
+              {/* Basic Information */}
+              <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-blue-600">📋</span> Basic Information
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Business Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={websiteForm.businessName}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, businessName: e.target.value })}
+                      required
+                      placeholder="e.g., Thompson's Auto Detailing"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Business Type *
+                    </label>
+                    <select
+                      value={websiteForm.businessType}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })}
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    >
+                      <option value="">Select type...</option>
+                      <option value="plumbing">Plumbing</option>
+                      <option value="hvac">HVAC</option>
+                      <option value="landscaping">Landscaping</option>
+                      <option value="cleaning">Cleaning</option>
+                      <option value="electrical">Electrical</option>
+                      <option value="carpentry">Carpentry</option>
+                      <option value="painting">Painting</option>
+                      <option value="roofing">Roofing</option>
+                      <option value="auto-repair">Auto Repair</option>
+                      <option value="auto-detailing">Auto Detailing</option>
+                      <option value="salon">Hair Salon</option>
+                      <option value="spa">Spa/Massage</option>
+                      <option value="fitness">Fitness/Gym</option>
+                      <option value="pet-grooming">Pet Grooming</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Tagline / Slogan
+                    </label>
+                    <input
+                      type="text"
+                      value={websiteForm.tagline || ''}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, tagline: e.target.value })}
+                      placeholder="e.g., Quality Service Since 1995"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">This will appear prominently on your homepage</p>
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Business Type *
-                </label>
-                <select
-                  value={websiteForm.businessType}
-                  onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })}
-                  required
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                >
-                  <option value="">Select type...</option>
-                  <option value="plumbing">Plumbing</option>
-                  <option value="hvac">HVAC</option>
-                  <option value="landscaping">Landscaping</option>
-                  <option value="cleaning">Cleaning</option>
-                  <option value="electrical">Electrical</option>
-                  <option value="carpentry">Carpentry</option>
-                  <option value="painting">Painting</option>
-                  <option value="roofing">Roofing</option>
-                  <option value="auto-repair">Auto Repair</option>
-                  <option value="salon">Hair Salon</option>
-                  <option value="spa">Spa/Massage</option>
-                  <option value="fitness">Fitness</option>
-                  <option value="other">Other</option>
-                </select>
+              {/* Services & Expertise */}
+              <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-purple-600">🔧</span> Services & Expertise
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Services Offered *
+                    </label>
+                    <textarea
+                      value={websiteForm.services}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, services: e.target.value })}
+                      required
+                      placeholder="List your main services (one per line):&#10;• Emergency repairs&#10;• Installations&#10;• Maintenance&#10;• Inspections"
+                      rows={5}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none font-mono text-sm"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Be specific - these will become service pages</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Years in Business
+                    </label>
+                    <input
+                      type="number"
+                      value={websiteForm.yearsInBusiness || ''}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, yearsInBusiness: e.target.value })}
+                      placeholder="e.g., 15"
+                      min="0"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Certifications / Licenses
+                    </label>
+                    <input
+                      type="text"
+                      value={websiteForm.certifications || ''}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, certifications: e.target.value })}
+                      placeholder="e.g., Licensed, Bonded, Insured, BBB A+ Rating"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Services Offered
-                </label>
-                <input
-                  type="text"
-                  value={websiteForm.services}
-                  onChange={(e) => setWebsiteForm({ ...websiteForm, services: e.target.value })}
-                  placeholder="e.g., Emergency repairs, installations, maintenance"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                />
+              {/* About Your Business */}
+              <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-green-600">💼</span> About Your Business
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Business Description *
+                    </label>
+                    <textarea
+                      value={websiteForm.description}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })}
+                      required
+                      placeholder="Tell us about your business:&#10;• What makes you unique?&#10;• Your mission and values&#10;• Your service area&#10;• Customer commitment"
+                      rows={6}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">This will be used in your "About Us" section</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      What Makes You Different?
+                    </label>
+                    <textarea
+                      value={websiteForm.uniqueSellingPoints || ''}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, uniqueSellingPoints: e.target.value })}
+                      placeholder="List 3-5 key differentiators:&#10;• Same-day service available&#10;• 100% satisfaction guarantee&#10;• Eco-friendly products&#10;• Family-owned and operated"
+                      rows={4}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none font-mono text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Target Customer
+                    </label>
+                    <input
+                      type="text"
+                      value={websiteForm.targetCustomer || ''}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, targetCustomer: e.target.value })}
+                      placeholder="e.g., Homeowners, Property managers, Small businesses"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Business Description
-                </label>
-                <textarea
-                  value={websiteForm.description}
-                  onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })}
-                  placeholder="Tell us about your business..."
-                  rows={4}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                />
+              {/* Design Preferences */}
+              <div className="bg-orange-50 rounded-lg p-4 border-2 border-orange-200">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-orange-600">🎨</span> Design Preferences
+                </h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Website Style
+                    </label>
+                    <select
+                      value={websiteForm.designStyle || 'professional'}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, designStyle: e.target.value })}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    >
+                      <option value="professional">Professional & Clean</option>
+                      <option value="modern">Modern & Bold</option>
+                      <option value="friendly">Friendly & Approachable</option>
+                      <option value="luxury">Luxury & Premium</option>
+                      <option value="minimalist">Minimalist</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      Preferred Color Theme (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={websiteForm.colorTheme || ''}
+                      onChange={(e) => setWebsiteForm({ ...websiteForm, colorTheme: e.target.value })}
+                      placeholder="e.g., Blue and white, Green and gold, Red and black"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div className="flex gap-4">
+              {/* Action Buttons */}
+              <div className="flex gap-4 pt-4 border-t-2 border-gray-200">
                 <button
                   type="button"
                   onClick={() => setShowEditWebsite(false)}
@@ -514,15 +682,23 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                   {isRegenerating ? (
                     <>
                       <RefreshCw className="w-5 h-5 animate-spin" />
-                      Generating...
+                      Generating Amazing Website...
                     </>
                   ) : (
                     <>
                       <RefreshCw className="w-5 h-5" />
-                      {currentWebsite ? 'Regenerate' : 'Generate'}
+                      {currentWebsite ? 'Regenerate Website' : 'Generate Website'}
                     </>
                   )}
                 </button>
+              </div>
+
+              {/* Tips */}
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-xs text-gray-600">
+                  💡 <strong>Tip:</strong> The more details you provide, the better your website will be! 
+                  All fields marked with * are required, but filling out optional fields will create a more personalized website.
+                </p>
               </div>
             </form>
           </div>
