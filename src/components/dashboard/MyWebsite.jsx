@@ -65,7 +65,8 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
           businessName: websiteForm.businessName,
           businessType: websiteForm.businessType,
           services: websiteForm.services,
-          description: websiteForm.description
+          description: websiteForm.description,
+          userId: user.id
         })
       });
 
@@ -174,76 +175,167 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                 <button
                   type="button"
                   onClick={() => setDevicePreview('desktop')}
-                  className={`px-3 py-1.5 rounded text-sm ${
+                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
                     devicePreview === 'desktop'
                       ? 'bg-purple-600 text-white'
                       : 'bg-white text-gray-600 border border-gray-300'
                   }`}
                 >
                   <Monitor className="w-4 h-4" />
+                  <span className="hidden sm:inline">Desktop</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => setDevicePreview('mobile')}
-                  className={`px-3 py-1.5 rounded text-sm ${
+                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
                     devicePreview === 'mobile'
                       ? 'bg-purple-600 text-white'
                       : 'bg-white text-gray-600 border border-gray-300'
                   }`}
                 >
                   <Smartphone className="w-4 h-4" />
+                  <span className="hidden sm:inline">Mobile</span>
                 </button>
               </div>
             </div>
             
             <div 
-              className={`mx-auto transition-all ${
-                devicePreview === 'mobile' ? 'max-w-md' : 'w-full'
+              className={`flex items-center justify-center p-8 bg-gradient-to-br from-gray-100 to-gray-200 transition-all ${
+                devicePreview === 'mobile' ? 'min-h-[800px]' : ''
               }`}
-              style={{ height: '600px' }}
+              style={{ minHeight: devicePreview === 'desktop' ? '600px' : '800px' }}
             >
-              <iframe
-                srcDoc={currentWebsite}
-                title="Website Preview"
-                className="w-full h-full border-0"
-                sandbox="allow-scripts allow-same-origin"
-                ref={(iframe) => {
-                  if (iframe && iframe.contentWindow) {
-                    iframe.onload = () => {
-                      try {
-                        const iframeDoc = iframe.contentWindow.document;
-                        
-                        // Allow same-page navigation, prevent external navigation
-                        iframeDoc.addEventListener('click', (e) => {
-                          const link = e.target.closest('a');
-                          if (link) {
-                            const href = link.getAttribute('href');
+              {devicePreview === 'desktop' ? (
+                // Desktop View - Browser Window
+                <div className="w-full bg-white rounded-lg shadow-2xl overflow-hidden border-8 border-gray-800">
+                  <div className="bg-gray-800 px-4 py-2 flex items-center gap-2">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">
+                      {user.business_name || 'Your Website'}.com
+                    </div>
+                  </div>
+                  <iframe
+                    srcDoc={currentWebsite}
+                    title="Website Preview"
+                    className="w-full h-[600px] bg-white border-0"
+                    sandbox="allow-scripts allow-same-origin"
+                    ref={(iframe) => {
+                      if (iframe && iframe.contentWindow) {
+                        iframe.onload = () => {
+                          try {
+                            const iframeDoc = iframe.contentWindow.document;
                             
-                            // Allow anchor links (same-page navigation)
-                            if (href && href.startsWith('#')) {
-                              e.stopPropagation(); // Let the default anchor behavior work
-                              return;
-                            }
-                            
-                            // Prevent external navigation
-                            e.preventDefault();
-                            console.log('External navigation prevented:', href);
+                            iframeDoc.addEventListener('click', (e) => {
+                              const link = e.target.closest('a');
+                              if (link) {
+                                const href = link.getAttribute('href');
+                                if (href && href.startsWith('#')) {
+                                  e.stopPropagation();
+                                  return;
+                                }
+                                e.preventDefault();
+                                console.log('External navigation prevented:', href);
+                              }
+                              
+                              const form = e.target.closest('form');
+                              if (form) {
+                                e.preventDefault();
+                                console.log('Form submission prevented in preview');
+                              }
+                            }, true);
+                          } catch (err) {
+                            console.log('Could not access iframe:', err);
                           }
-                          
-                          // Prevent form submissions
-                          const form = e.target.closest('form');
-                          if (form) {
-                            e.preventDefault();
-                            console.log('Form submission prevented in preview');
-                          }
-                        }, true);
-                      } catch (err) {
-                        console.log('Could not access iframe:', err);
+                        };
                       }
-                    };
-                  }
-                }}
-              />
+                    }}
+                  />
+                </div>
+              ) : (
+                // Mobile View - iPhone Mockup
+                <div className="relative">
+                  {/* iPhone Frame */}
+                  <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
+                    {/* Notch */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+                    
+                    {/* Screen */}
+                    <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
+                      {/* Status Bar */}
+                      <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
+                        <span>9:41</span>
+                        <div className="flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                          </svg>
+                          <span>100%</span>
+                        </div>
+                      </div>
+
+                      {/* Browser Bar */}
+                      <div className="absolute top-11 left-0 right-0 h-12 bg-gray-100 z-10 flex items-center px-3 border-b border-gray-200">
+                        <div className="flex-1 bg-white rounded-full px-4 py-2 text-xs text-gray-500 flex items-center gap-2">
+                          <Globe className="w-3 h-3" />
+                          <span className="truncate">{user.business_name || 'website'}.com</span>
+                        </div>
+                      </div>
+
+                      {/* Website Content */}
+                      <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-auto">
+                        <iframe
+                          srcDoc={currentWebsite}
+                          title="Mobile Website Preview"
+                          className="w-full h-full bg-white border-0"
+                          sandbox="allow-scripts allow-same-origin"
+                          style={{ minHeight: '100%' }}
+                          ref={(iframe) => {
+                            if (iframe && iframe.contentWindow) {
+                              iframe.onload = () => {
+                                try {
+                                  const iframeDoc = iframe.contentWindow.document;
+                                  
+                                  iframeDoc.addEventListener('click', (e) => {
+                                    const link = e.target.closest('a');
+                                    if (link) {
+                                      const href = link.getAttribute('href');
+                                      if (href && href.startsWith('#')) {
+                                        e.stopPropagation();
+                                        return;
+                                      }
+                                      e.preventDefault();
+                                      console.log('External navigation prevented:', href);
+                                    }
+                                    
+                                    const form = e.target.closest('form');
+                                    if (form) {
+                                      e.preventDefault();
+                                      console.log('Form submission prevented in preview');
+                                    }
+                                  }, true);
+                                } catch (err) {
+                                  console.log('Could not access iframe:', err);
+                                }
+                              };
+                            }
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Home Indicator */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
+                  </div>
+
+                  {/* Device Label */}
+                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-sm text-gray-600 font-medium">
+                    iPhone 13 Pro
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
