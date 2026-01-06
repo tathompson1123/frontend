@@ -23,7 +23,7 @@ import MyWebsite from '../components/dashboard/MyWebsite';
 import GoogleBusiness from '../components/dashboard/GoogleBusiness';
 import Services from '../components/dashboard/Services';
 import Team from '../components/dashboard/Team';
-import BusinessHours from '../components/dashboard/BusinessHours';
+import BusinessInformation from '../components/dashboard/BusinessInformation'; // CHANGED: was BusinessHours
 import Analytics from '../components/dashboard/Analytics';
 import Billing from '../components/dashboard/Billing';
 import SettingsPage from '../components/dashboard/Settings';
@@ -144,7 +144,7 @@ export default function Dashboard() {
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'services', icon: Briefcase, label: 'Services' },
     { id: 'team', icon: Users, label: 'Team' },
-    { id: 'hours', icon: Clock, label: 'Business Hours' },
+    { id: 'hours', icon: Clock, label: 'Business Information' }, // CHANGED: was 'Business Hours'
     { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
@@ -262,7 +262,7 @@ export default function Dashboard() {
           )}
 
           {currentView === 'hours' && (
-            <BusinessHours
+            <BusinessInformation
               businessHours={businessHours}
               setBusinessHours={setBusinessHours}
               apiUrl={apiUrl}
