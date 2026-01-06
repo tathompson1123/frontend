@@ -29,6 +29,7 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
   const [isSaving, setIsSaving] = useState(false);
   const [mapCenter, setMapCenter] = useState({ lat: 47.6062, lng: -122.3321 });
   const [isLoadingMap, setIsLoadingMap] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState(11); // Default zoom level
 
   useEffect(() => {
     fetchBusinessInfo();
@@ -196,10 +197,26 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
   };
 
   const getRadiusPixels = () => {
-    const milesPerDegree = 69;
-    const radiusDegrees = businessInfo.serviceRadius / milesPerDegree;
-    const pixelsPerDegree = 200;
-    return radiusDegrees * pixelsPerDegree;
+    // OpenStreetMap zoom levels and their scale
+    // At zoom level z, the map shows approximately:
+    // degrees of latitude = 360 / (2^z)
+    // At latitude ~47° (Seattle), 1 degree longitude ≈ 69 miles × cos(47°) ≈ 47 miles
+    // 1 degree latitude ≈ 69 miles everywhere
+    
+    const mapHeightPixels = 384; // h-96 = 384px
+    
+    // Calculate degrees shown based on zoom level
+    // The map viewport typically shows: 180 / (2^(zoom-1)) degrees
+    const degreesShown = 180 / Math.pow(2, zoomLevel - 1);
+    
+    // Miles shown on the map
+    const milesShown = degreesShown * 69; // 69 miles per degree latitude
+    
+    // Pixels per mile
+    const pixelsPerMile = mapHeightPixels / milesShown;
+    
+    // Return radius in pixels
+    return businessInfo.serviceRadius * pixelsPerMile;
   };
 
   const days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -435,6 +452,29 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
             </div>
 
             <div className="bg-gray-100 rounded-lg p-4 border-2 border-gray-200">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-sm font-medium text-gray-700">Map Zoom</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setZoomLevel(Math.max(8, zoomLevel - 1))}
+                    className="px-3 py-1 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold text-lg"
+                    title="Zoom Out"
+                  >
+                    −
+                  </button>
+                  <span className="text-sm font-medium text-gray-600 min-w-[60px] text-center">
+                    Level {zoomLevel}
+                  </span>
+                  <button
+                    onClick={() => setZoomLevel(Math.min(15, zoomLevel + 1))}
+                    className="px-3 py-1 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold text-lg"
+                    title="Zoom In"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+              
               <div className="relative w-full h-96 bg-gray-200 rounded-lg overflow-hidden">
                 {isLoadingMap && (
                   <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
@@ -446,7 +486,8 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
                 )}
                 
                 <iframe
-                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter.lng - 0.5},${mapCenter.lat - 0.3},${mapCenter.lng + 0.5},${mapCenter.lat + 0.3}&layer=mapnik&marker=${mapCenter.lat},${mapCenter.lng}`}
+                  key={`${mapCenter.lat}-${mapCenter.lng}-${zoomLevel}`}
+                  src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter.lng - 0.5/Math.pow(2, zoomLevel-11)},${mapCenter.lat - 0.3/Math.pow(2, zoomLevel-11)},${mapCenter.lng + 0.5/Math.pow(2, zoomLevel-11)},${mapCenter.lat + 0.3/Math.pow(2, zoomLevel-11)}&layer=mapnik&marker=${mapCenter.lat},${mapCenter.lng}`}
                   className="w-full h-full border-0"
                   title="Service Area Map"
                 />
@@ -458,7 +499,7 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
                   <circle
                     cx="50%"
                     cy="50%"
-                    r={getRadiusPixels()}
+                    r={Math.min(getRadiusPixels(), 500)}
                     fill="rgba(147, 51, 234, 0.2)"
                     stroke="rgba(147, 51, 234, 0.8)"
                     strokeWidth="3"
@@ -480,6 +521,7 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
                 {businessInfo.centerZipCode && (
                   <p className="text-xs mt-1">Centered at zip code: {businessInfo.centerZipCode}</p>
                 )}
+                <p className="text-xs text-gray-500 mt-1">Use +/− buttons to zoom in/out</p>
               </div>
             </div>
 
