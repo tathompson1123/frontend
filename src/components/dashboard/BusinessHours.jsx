@@ -16,8 +16,11 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
   useEffect(() => {
     if (businessHours && businessHours.length > 0) {
       const hoursObj = {};
+      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+      
       businessHours.forEach(day => {
-        hoursObj[day.day_of_week.toLowerCase()] = {
+        const dayName = dayNames[day.day_of_week];
+        hoursObj[dayName] = {
           open: day.is_open,
           start: day.open_time || '09:00',
           end: day.close_time || '17:00'
@@ -30,23 +33,48 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
   const handleSaveHours = async () => {
     setIsSaving(true);
     try {
+      // Convert hours object to array format that server expects
+      const dayMapping = {
+        sunday: 0,
+        monday: 1,
+        tuesday: 2,
+        wednesday: 3,
+        thursday: 4,
+        friday: 5,
+        saturday: 6
+      };
+
+      const hoursArray = Object.entries(hours).map(([dayName, dayData]) => ({
+        day_of_week: dayMapping[dayName],
+        is_open: dayData.open,
+        open_time: dayData.open ? dayData.start : null,
+        close_time: dayData.open ? dayData.end : null
+      }));
+
+      console.log('Sending hours data:', { userId: user.id, hours: hoursArray });
+
       const response = await fetch(`${apiUrl}/api/business-hours`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
-          hours
+          hours: hoursArray
         })
       });
 
-      if (!response.ok) throw new Error('Failed to save hours');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save hours');
+      }
       
       const data = await response.json();
-      setBusinessHours(data.hours);
       alert('Business hours saved successfully!');
+      
+      // Optionally refetch business hours to update the component
+      // setBusinessHours(data.hours);
     } catch (error) {
       console.error('Error saving hours:', error);
-      alert('Failed to save business hours');
+      alert('Failed to save business hours: ' + error.message);
     } finally {
       setIsSaving(false);
     }
