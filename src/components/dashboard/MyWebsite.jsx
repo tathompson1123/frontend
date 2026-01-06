@@ -222,28 +222,42 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                     srcDoc={currentWebsite}
                     title="Website Preview"
                     className="w-full h-[600px] bg-white border-0"
-                    sandbox="allow-scripts allow-same-origin"
+                    sandbox="allow-scripts allow-same-origin allow-popups"
                     ref={(iframe) => {
                       if (iframe && iframe.contentWindow) {
                         iframe.onload = () => {
                           try {
                             const iframeDoc = iframe.contentWindow.document;
                             
+                            // Prevent ALL navigation, only allow hash changes
                             iframeDoc.addEventListener('click', (e) => {
                               const link = e.target.closest('a');
                               if (link) {
                                 const href = link.getAttribute('href');
+                                
+                                // Allow hash navigation (same-page)
                                 if (href && href.startsWith('#')) {
-                                  e.stopPropagation();
+                                  // Let it work naturally
                                   return;
                                 }
+                                
+                                // Allow booking links to open in new tab
+                                if (href && href.includes('/book/')) {
+                                  e.preventDefault();
+                                  window.open(href, '_blank');
+                                  return;
+                                }
+                                
+                                // Block all other navigation
                                 e.preventDefault();
-                                console.log('External navigation prevented:', href);
+                                e.stopPropagation();
+                                console.log('Navigation prevented in preview:', href);
                               }
                               
                               const form = e.target.closest('form');
                               if (form) {
                                 e.preventDefault();
+                                e.stopPropagation();
                                 console.log('Form submission prevented in preview');
                               }
                             }, true);
@@ -290,7 +304,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                           srcDoc={currentWebsite}
                           title="Mobile Website Preview"
                           className="w-full h-full bg-white border-0"
-                          sandbox="allow-scripts allow-same-origin"
+                          sandbox="allow-scripts allow-same-origin allow-popups"
                           style={{ minHeight: '100%' }}
                           ref={(iframe) => {
                             if (iframe && iframe.contentWindow) {
@@ -298,21 +312,35 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                                 try {
                                   const iframeDoc = iframe.contentWindow.document;
                                   
+                                  // Prevent ALL navigation, only allow hash changes
                                   iframeDoc.addEventListener('click', (e) => {
                                     const link = e.target.closest('a');
                                     if (link) {
                                       const href = link.getAttribute('href');
+                                      
+                                      // Allow hash navigation (same-page)
                                       if (href && href.startsWith('#')) {
-                                        e.stopPropagation();
+                                        // Let it work naturally
                                         return;
                                       }
+                                      
+                                      // Allow booking links to open in new tab
+                                      if (href && href.includes('/book/')) {
+                                        e.preventDefault();
+                                        window.open(href, '_blank');
+                                        return;
+                                      }
+                                      
+                                      // Block all other navigation
                                       e.preventDefault();
-                                      console.log('External navigation prevented:', href);
+                                      e.stopPropagation();
+                                      console.log('Navigation prevented in preview:', href);
                                     }
                                     
                                     const form = e.target.closest('form');
                                     if (form) {
                                       e.preventDefault();
+                                      e.stopPropagation();
                                       console.log('Form submission prevented in preview');
                                     }
                                   }, true);
