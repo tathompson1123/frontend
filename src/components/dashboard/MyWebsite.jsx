@@ -26,9 +26,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
     certifications: '',
     description: '',
     uniqueSellingPoints: '',
-    targetCustomer: '',
-    designStyle: 'professional',
-    colorTheme: ''
+    targetCustomer: ''
   });
 
   // Load website data when component mounts or websiteData changes
@@ -78,8 +76,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
           description: websiteForm.description,
           uniqueSellingPoints: websiteForm.uniqueSellingPoints,
           targetCustomer: websiteForm.targetCustomer,
-          designStyle: websiteForm.designStyle,
-          colorTheme: websiteForm.colorTheme,
           userId: user.id
         })
       });
@@ -484,29 +480,15 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       Business Type *
                     </label>
-                    <select
+                    <input
+                      type="text"
                       value={websiteForm.businessType}
                       onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })}
                       required
+                      placeholder="e.g., Plumbing, Auto Detailing, Hair Salon, HVAC"
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                    >
-                      <option value="">Select type...</option>
-                      <option value="plumbing">Plumbing</option>
-                      <option value="hvac">HVAC</option>
-                      <option value="landscaping">Landscaping</option>
-                      <option value="cleaning">Cleaning</option>
-                      <option value="electrical">Electrical</option>
-                      <option value="carpentry">Carpentry</option>
-                      <option value="painting">Painting</option>
-                      <option value="roofing">Roofing</option>
-                      <option value="auto-repair">Auto Repair</option>
-                      <option value="auto-detailing">Auto Detailing</option>
-                      <option value="salon">Hair Salon</option>
-                      <option value="spa">Spa/Massage</option>
-                      <option value="fitness">Fitness/Gym</option>
-                      <option value="pet-grooming">Pet Grooming</option>
-                      <option value="other">Other</option>
-                    </select>
+                    />
+                    <p className="text-xs text-gray-500 mt-1">This determines your website's style and imagery</p>
                   </div>
 
                   <div>
@@ -620,45 +602,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                       value={websiteForm.targetCustomer || ''}
                       onChange={(e) => setWebsiteForm({ ...websiteForm, targetCustomer: e.target.value })}
                       placeholder="e.g., Homeowners, Property managers, Small businesses"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Design Preferences */}
-              <div className="bg-orange-50 rounded-lg p-4 border-2 border-orange-200">
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-orange-600">🎨</span> Design Preferences
-                </h3>
-                
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Website Style
-                    </label>
-                    <select
-                      value={websiteForm.designStyle || 'professional'}
-                      onChange={(e) => setWebsiteForm({ ...websiteForm, designStyle: e.target.value })}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                    >
-                      <option value="professional">Professional & Clean</option>
-                      <option value="modern">Modern & Bold</option>
-                      <option value="friendly">Friendly & Approachable</option>
-                      <option value="luxury">Luxury & Premium</option>
-                      <option value="minimalist">Minimalist</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Preferred Color Theme (Optional)
-                    </label>
-                    <input
-                      type="text"
-                      value={websiteForm.colorTheme || ''}
-                      onChange={(e) => setWebsiteForm({ ...websiteForm, colorTheme: e.target.value })}
-                      placeholder="e.g., Blue and white, Green and gold, Red and black"
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
                     />
                   </div>
