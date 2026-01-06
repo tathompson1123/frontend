@@ -329,11 +329,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData }) {
                     {/* Home Indicator */}
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
                   </div>
-
-                  {/* Device Label */}
-                  <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 text-sm text-gray-600 font-medium">
-                    iPhone 13 Pro
-                  </div>
                 </div>
               )}
             </div>
