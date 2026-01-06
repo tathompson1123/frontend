@@ -4,6 +4,7 @@ import WebsiteGenerator from './pages/WebsiteGenerator';
 import Dashboard from './pages/Dashboard';
 import PricingPage from './pages/PricingPage';
 import WebsiteEditor from './pages/WebsiteEditor';
+import PublicBookingPage from './pages/PublicBookingPage';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/editor" element={<WebsiteEditor />} />
+        <Route path="/book/:businessId" element={<PublicBookingPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
