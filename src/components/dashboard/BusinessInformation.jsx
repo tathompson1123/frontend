@@ -1028,6 +1028,7 @@ export default function BusinessInformation({ businessHours, setBusinessHours, a
             <ul className="space-y-1 text-sm text-gray-700">
               <li>• Contact info appears on your website and booking page</li>
               <li>• Service area determines where customers can book from</li>
+              <li>• The map shows your service radius in real-time</li>
               <li>• Business hours control when customers can schedule appointments</li>
               <li>• Keep your information up to date for best customer experience</li>
             </ul>
