@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Briefcase, Plus, Edit, Clock, Upload } from 'lucide-react';
 
-export default function Services({ services, setServices, fetchServices, apiUrl, user }) {
+export default function Services({ services, setServices, fetchServices, apiUrl, user, authFetch }) {
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState(null);
   const [serviceForm, setServiceForm] = useState({ 
@@ -18,15 +18,10 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
   const handleMediaUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onloadend = () => {
       const mediaType = file.type.startsWith('image/') ? 'image' : 'video';
-      setServiceForm({
-        ...serviceForm,
-        mediaUrl: reader.result,
-        mediaType
-      });
+      setServiceForm({ ...serviceForm, mediaUrl: reader.result, mediaType });
     };
     reader.readAsDataURL(file);
   };
@@ -35,17 +30,14 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
     e.preventDefault();
     setIsSaving(true);
     setSaveError('');
-
     try {
       const url = editingService 
         ? `${apiUrl}/api/services/${editingService.id}`
         : `${apiUrl}/api/services`;
       
-      const response = await fetch(url, {
+      const response = await authFetch(url, {
         method: editingService ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          userId: user.id,
           name: serviceForm.name,
           description: serviceForm.description,
           durationHours: parseFloat(serviceForm.durationHours),
@@ -56,7 +48,6 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
       });
 
       if (!response.ok) throw new Error('Failed to save service');
-
       setShowAddService(false);
       setEditingService(null);
       setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '' });
@@ -83,9 +74,8 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
 
   const handleToggleService = async (id, active) => {
     try {
-      await fetch(`${apiUrl}/api/services/${id}`, {
+      await authFetch(`${apiUrl}/api/services/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ active })
       });
       fetchServices();
@@ -132,17 +122,9 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                 {service.media_url && (
                   <div className="flex-shrink-0">
                     {service.media_type === 'image' ? (
-                      <img 
-                        src={service.media_url} 
-                        alt={service.name}
-                        className="w-32 h-32 object-cover rounded-lg"
-                      />
+                      <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
                     ) : (
-                      <video 
-                        src={service.media_url}
-                        className="w-32 h-32 object-cover rounded-lg"
-                        controls
-                      />
+                      <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
                     )}
                   </div>
                 )}
@@ -155,9 +137,7 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                       {service.active ? 'Active' : 'Inactive'}
                     </span>
                   </div>
-                  {service.description && (
-                    <p className="text-gray-600 mb-4">{service.description}</p>
-                  )}
+                  {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
                   <div className="flex gap-6 text-sm">
                     <div className="flex items-center gap-2 text-gray-700">
                       <Clock className="w-4 h-4" />
@@ -169,13 +149,15 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <button type="button"
+                  <button
+                    type="button"
                     onClick={() => handleEditService(service)}
                     className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     <Edit className="w-5 h-5" />
                   </button>
-                  <button type="button"
+                  <button
+                    type="button"
                     onClick={() => handleToggleService(service.id, !service.active)}
                     className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium"
                   >
@@ -194,12 +176,9 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
               {editingService ? 'Edit Service' : 'Add New Service'}
             </h2>
-            
             <form onSubmit={handleSaveService} className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Service Name *
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Service Name *</label>
                 <input
                   type="text"
                   value={serviceForm.name}
@@ -209,11 +188,8 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
                 />
               </div>
-
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Description
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
                 <textarea
                   value={serviceForm.description}
                   onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
@@ -222,12 +198,9 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
                 />
               </div>
-
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Duration (hours) *
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Duration (hours) *</label>
                   <input
                     type="number"
                     step="0.5"
@@ -239,11 +212,8 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
                   />
                 </div>
-
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Price ($) *
-                  </label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Price ($) *</label>
                   <input
                     type="number"
                     step="0.01"
@@ -256,11 +226,8 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                   />
                 </div>
               </div>
-
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Service Image/Video (Optional)
-                </label>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Service Image/Video (Optional)</label>
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
                   {serviceForm.mediaUrl ? (
                     <div className="space-y-4">
@@ -282,25 +249,16 @@ export default function Services({ services, setServices, fetchServices, apiUrl,
                       <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                       <label className="cursor-pointer">
                         <span className="text-purple-600 hover:text-purple-700 font-medium">Upload a file</span>
-                        <input
-                          type="file"
-                          accept="image/*,video/*"
-                          onChange={handleMediaUpload}
-                          className="hidden"
-                        />
+                        <input type="file" accept="image/*,video/*" onChange={handleMediaUpload} className="hidden" />
                       </label>
                       <p className="text-xs text-gray-500 mt-2">PNG, JPG, MP4 up to 10MB</p>
                     </div>
                   )}
                 </div>
               </div>
-
               {saveError && (
-                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700">
-                  {saveError}
-                </div>
+                <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700">{saveError}</div>
               )}
-
               <div className="flex gap-4">
                 <button
                   type="button"
