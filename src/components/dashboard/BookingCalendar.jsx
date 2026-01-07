@@ -19,22 +19,20 @@ import {
   ChevronDown
 } from 'lucide-react';
 
-export default function BookingCalendar({ apiUrl, user, services, employees }) {
-  // Format time from 24-hour to 12-hour with AM/PM
+export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
   const formatTime = (time24) => {
     if (!time24) return '';
     const [hours, minutes] = time24.split(':').map(Number);
     const period = hours >= 12 ? 'PM' : 'AM';
-    const hours12 = hours % 12 || 12; // Convert 0 to 12 for midnight
+    const hours12 = hours % 12 || 12;
     return `${String(hours12).padStart(2, '0')}:${String(minutes).padStart(2, '0')}${period}`;
   };
 
-  // Show toast notification
   const showToast = (message, type = 'success') => {
     setToast({ show: true, message, type });
     setTimeout(() => {
       setToast({ show: false, message: '', type: 'success' });
-    }, 3000); // Auto-dismiss after 3 seconds
+    }, 3000);
   };
 
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -48,14 +46,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef(null);
-  
-  // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-  
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
   const [isEditingBooking, setIsEditingBooking] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState(null);
-  const [serviceTab, setServiceTab] = useState('main'); // 'main' or 'additional'
+  const [serviceTab, setServiceTab] = useState('main');
   const [newBooking, setNewBooking] = useState({
     customerId: '',
     customerName: '',
@@ -63,15 +58,15 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     customerPhone: '',
     customerAddress: '',
     serviceId: '',
-    additionalServices: [], // Array of additional service IDs
+    additionalServices: [],
     employeeId: '',
-    groupId: '', // Add group ID
+    groupId: '',
     bookingDate: '',
     startTime: '',
     notes: ''
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
-  const [groups, setGroups] = useState([]); // Add groups state
+  const [groups, setGroups] = useState([]);
 
   useEffect(() => {
     fetchAllBookings();
@@ -80,7 +75,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
 
   const fetchGroups = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/groups?userId=${user.id}`);
+      const response = await authFetch(`${apiUrl}/api/groups`);
       const data = await response.json();
       if (data.groups) {
         setGroups(data.groups);
@@ -90,45 +85,32 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
     }
   };
 
-  // Scroll to business start time on mount
   useEffect(() => {
     const scrollToBusinessHours = async () => {
       try {
-        // Fetch business hours to get start time
-        const response = await fetch(`${apiUrl}/api/business-hours?userId=${user.id}`);
+        const response = await authFetch(`${apiUrl}/api/business-hours`);
         const data = await response.json();
-        
-        // Get today's day of week (0 = Sunday, 6 = Saturday)
         const today = new Date().getDay();
-        const todayHours = data.businessHours?.find(h => h.day_of_week === today);
-        
-        let startHour = 9; // Default to 9am if no business hours found
-        
+        const todayHours = data.hours?.find(h => h.day_of_week === today);
+        let startHour = 9;
         if (todayHours && todayHours.is_open && todayHours.open_time) {
-          // Parse the open time (format: "HH:MM")
           startHour = parseInt(todayHours.open_time.split(':')[0]);
         }
-        
         const timeSlotContainer = document.querySelector('.time-slots-container');
         if (timeSlotContainer) {
-          // Each hour is approximately 81px (80px + 1px border)
           timeSlotContainer.scrollTop = startHour * 81;
         }
       } catch (error) {
         console.error('Error fetching business hours for scroll:', error);
-        // Fallback to 9am
         const timeSlotContainer = document.querySelector('.time-slots-container');
         if (timeSlotContainer) {
           timeSlotContainer.scrollTop = 9 * 81;
         }
       }
     };
-    
-    // Delay slightly to ensure DOM is ready
     setTimeout(scrollToBusinessHours, 100);
   }, []);
 
-  // Close date picker when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
       if (datePickerRef.current && !datePickerRef.current.contains(event.target)) {
@@ -141,16 +123,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
 
   const fetchAllBookings = async () => {
     try {
-      const response = await fetch(`${apiUrl}/api/bookings?userId=${user.id}`);
+      const response = await authFetch(`${apiUrl}/api/bookings`);
       const data = await response.json();
-      
-      console.log('📅 Fetched bookings:', data.bookings?.length || 0);
-      
       if (data.bookings) {
         const sorted = data.bookings.sort((a, b) => 
           new Date(b.booking_date) - new Date(a.booking_date)
         );
-        console.log('📅 Sample booking:', sorted[0]);
         setAllBookings(sorted);
         setFilteredBookings(sorted);
       }
@@ -161,26 +139,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
 
   const handleSaveNotes = async () => {
     if (!selectedBooking) return;
-    
     try {
-      console.log('💾 Saving notes for booking:', selectedBooking.id);
-      console.log('💾 User ID:', user.id);
-      console.log('💾 Notes:', bookingNotes);
-      
-      const response = await fetch(`${apiUrl}/api/bookings/${selectedBooking.id}/notes`, {
+      const response = await authFetch(`${apiUrl}/api/bookings/${selectedBooking.id}/notes`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          notes: bookingNotes
-        })
+        body: JSON.stringify({ notes: bookingNotes })
       });
-      
-      console.log('💾 Response status:', response.status);
-      
       const data = await response.json();
-      console.log('💾 Save response:', data);
-      
       if (response.ok && data.success) {
         setSelectedBooking({ ...selectedBooking, job_notes: bookingNotes });
         setAllBookings(allBookings.map(b => 
@@ -192,9 +156,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         setEditingNotes(false);
         showToast('Notes saved successfully!');
       } else {
-        console.error('Save failed:', data);
-        console.error('Full response:', response);
-        showToast('Failed to save notes: ' + (data.error || data.message || 'Unknown error'), 'error');
+        showToast('Failed to save notes: ' + (data.error || 'Unknown error'), 'error');
       }
     } catch (error) {
       console.error('Error saving notes:', error);
@@ -207,17 +169,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
       showToast('Please fill in all required fields', 'error');
       return;
     }
-
     setCreatingBooking(true);
-
     try {
       if (isEditingBooking && editingBookingId) {
-        // Update existing booking
-        const response = await fetch(`${apiUrl}/api/bookings/${editingBookingId}`, {
+        const response = await authFetch(`${apiUrl}/api/bookings/${editingBookingId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: user.id,
             serviceId: newBooking.serviceId,
             additionalServiceIds: newBooking.additionalServices,
             bookingDate: newBooking.bookingDate,
@@ -233,24 +190,13 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             notes: newBooking.notes
           })
         });
-
         const data = await response.json();
-
         if (data.success) {
           showToast('Booking updated successfully!');
           setNewBooking({
-            customerId: '',
-            customerName: '',
-            customerEmail: '',
-            customerPhone: '',
-            customerAddress: '',
-            serviceId: '',
-            additionalServices: [],
-            employeeId: '',
-            groupId: '',
-            bookingDate: '',
-            startTime: '',
-            notes: ''
+            customerId: '', customerName: '', customerEmail: '', customerPhone: '',
+            customerAddress: '', serviceId: '', additionalServices: [],
+            employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
           });
           setShowCreateBookingModal(false);
           setIsEditingBooking(false);
@@ -260,12 +206,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           showToast(data.error || 'Failed to update booking', 'error');
         }
       } else {
-        // Create new booking
-        const response = await fetch(`${apiUrl}/api/bookings/create`, {
+        const response = await authFetch(`${apiUrl}/api/bookings/create`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            userId: user.id,
             serviceId: newBooking.serviceId,
             bookingDate: newBooking.bookingDate,
             startTime: newBooking.startTime,
@@ -280,24 +223,13 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             customerNotes: newBooking.notes
           })
         });
-
         const data = await response.json();
-
         if (data.success) {
           showToast('Booking created successfully!');
           setNewBooking({
-            customerId: '',
-            customerName: '',
-            customerEmail: '',
-            customerPhone: '',
-            customerAddress: '',
-            serviceId: '',
-            additionalServices: [],
-            employeeId: '',
-            groupId: '',
-            bookingDate: '',
-            startTime: '',
-            notes: ''
+            customerId: '', customerName: '', customerEmail: '', customerPhone: '',
+            customerAddress: '', serviceId: '', additionalServices: [],
+            employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
           });
           setShowCreateBookingModal(false);
           fetchAllBookings();
@@ -312,26 +244,22 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
       setCreatingBooking(false);
     }
   };
-  
+
   const handleSearchBookings = (query) => {
     setSearchQuery(query);
-    
     if (!query.trim()) {
       setFilteredBookings(allBookings);
       return;
     }
-    
     const filtered = allBookings.filter(booking => 
       booking.customer_name?.toLowerCase().includes(query.toLowerCase()) ||
       booking.customer_email?.toLowerCase().includes(query.toLowerCase()) ||
       booking.customer_phone?.includes(query) ||
       booking.service_name?.toLowerCase().includes(query.toLowerCase())
     );
-    
     setFilteredBookings(filtered);
   };
 
-  // Mini calendar for date picker
   const MiniCalendar = () => {
     const [pickerDate, setPickerDate] = useState(new Date(currentDate));
     
@@ -341,15 +269,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
       const firstDay = new Date(year, month, 1);
       const startDate = new Date(firstDay);
       startDate.setDate(startDate.getDate() - firstDay.getDay());
-      
       const days = [];
       const currentDay = new Date(startDate);
-      
       for (let i = 0; i < 42; i++) {
         days.push(new Date(currentDay));
         currentDay.setDate(currentDay.getDate() + 1);
       }
-      
       return days;
     };
     
@@ -404,7 +329,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                 key={idx}
                 type="button"
                 onClick={() => {
-                  // Create a new date using year, month, day to avoid timezone issues
                   const selectedDate = new Date(day.getFullYear(), day.getMonth(), day.getDate());
                   setCurrentDate(selectedDate);
                   setShowDatePicker(false);
@@ -427,11 +351,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
 
   return (
     <div className="h-full flex gap-6">
-      {/* Left Sidebar - Previous Bookings */}
       <div className="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-140px)]">
         <div className="p-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-900 mb-3">All Bookings</h3>
-          
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -513,7 +435,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     <button
                       type="button"
                       onClick={() => {
-                        // Populate the form with booking data for editing
                         setIsEditingBooking(true);
                         setEditingBookingId(booking.id);
                         setNewBooking({
@@ -523,10 +444,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           customerPhone: booking.customer_phone || '',
                           customerAddress: booking.customer_address || '',
                           serviceId: booking.items?.[0]?.service_id || '',
-                          additionalServices: [], // Initialize as empty array
+                          additionalServices: [],
                           employeeId: booking.employee_id || '',
                           groupId: booking.group_id || '',
-                          bookingDate: booking.booking_date.split('T')[0], // Remove time portion
+                          bookingDate: booking.booking_date.split('T')[0],
                           startTime: booking.start_time,
                           notes: booking.job_notes || booking.customer_notes || ''
                         });
@@ -544,9 +465,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         </div>
       </div>
 
-      {/* Main Calendar View */}
       <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-[calc(100vh-140px)]">
-        {/* Calendar Header */}
         <div className="flex items-center justify-between mb-6 flex-shrink-0">
           <div className="flex items-center gap-4">
             <div className="relative" ref={datePickerRef}>
@@ -593,7 +512,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
             </div>
           </div>
 
-          {/* Team Member Legend */}
           {employees && employees.length > 0 && (
             <div className="flex items-center gap-3 flex-wrap px-2 py-3 bg-gray-50 rounded-lg border border-gray-200">
               <span className="text-xs font-medium text-gray-600">Team:</span>
@@ -621,90 +539,65 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
           </div>
         </div>
 
-        {/* Week View Calendar */}
         {calendarView === 'week' && (
           <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto time-slots-container scroll-smooth">
-              {/* Header Row */}
               <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-10">
-              <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
-                Time
+                <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
+                  Time
+                </div>
+                {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
+                  const year = currentDate.getFullYear();
+                  const month = currentDate.getMonth();
+                  const day = currentDate.getDate();
+                  const baseDate = new Date(year, month, day);
+                  const dayOfWeek = baseDate.getDay();
+                  const date = new Date(year, month, day - dayOfWeek + offset);
+                  const today = new Date();
+                  const isToday = date.getFullYear() === today.getFullYear() &&
+                                 date.getMonth() === today.getMonth() &&
+                                 date.getDate() === today.getDate();
+                  
+                  return (
+                    <div
+                      key={offset}
+                      className={`bg-gray-50 p-3 text-center ${
+                        isToday ? 'bg-blue-50' : ''
+                      } ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
+                    >
+                      <div className="text-xs text-gray-500 mb-1">
+                        {date.toLocaleDateString('en-US', { weekday: 'short' })}
+                      </div>
+                      <div className={`text-lg font-bold ${
+                        isToday ? 'text-blue-600' : 'text-gray-900'
+                      }`}>
+                        {date.getDate()}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
-                // Use consistent date calculation without timezone issues
-                const year = currentDate.getFullYear();
-                const month = currentDate.getMonth();
-                const day = currentDate.getDate();
-                const baseDate = new Date(year, month, day);
-                const dayOfWeek = baseDate.getDay();
-                
-                // Calculate the date for this column
-                const date = new Date(year, month, day - dayOfWeek + offset);
-                
-                // Check if this is today using date-only comparison
-                const today = new Date();
-                const isToday = date.getFullYear() === today.getFullYear() &&
-                               date.getMonth() === today.getMonth() &&
-                               date.getDate() === today.getDate();
-                
-                return (
-                  <div
-                    key={offset}
-                    className={`bg-gray-50 p-3 text-center ${
-                      isToday ? 'bg-blue-50' : ''
-                    } ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
-                  >
-                    <div className="text-xs text-gray-500 mb-1">
-                      {date.toLocaleDateString('en-US', { weekday: 'short' })}
-                    </div>
-                    <div className={`text-lg font-bold ${
-                      isToday ? 'text-blue-600' : 'text-gray-900'
-                    }`}>
-                      {date.getDate()}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
 
-              {/* Time Slots */}
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((hour) => {
-                console.log(`🕐 Rendering hour: ${hour}:00`);
-                
-                return (
+              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((hour) => (
                 <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
                   <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
                     {hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`}
                   </div>
                   {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
-                    // Use UTC to avoid timezone shifts
                     const year = currentDate.getFullYear();
                     const month = currentDate.getMonth();
                     const day = currentDate.getDate();
                     const baseDate = new Date(year, month, day);
                     const dayOfWeek = baseDate.getDay();
-                    
-                    // Calculate the date for this column
                     const date = new Date(year, month, day - dayOfWeek + offset);
                     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                     
-                    console.log(`📅 Checking date: ${dateStr} for hour ${hour}`);
-                    console.log(`📊 Total bookings in state: ${allBookings.length}`);
-                    
                     const dayBookings = allBookings.filter(booking => {
-                      // Extract just the date part from the booking date (removes time/timezone)
                       const bookingDateOnly = booking.booking_date.split('T')[0];
-                      console.log(`  🔍 Booking date: ${booking.booking_date}, Extracted: ${bookingDateOnly}, Checking: ${dateStr}, Match: ${bookingDateOnly === dateStr}`);
                       if (bookingDateOnly !== dateStr) return false;
                       const startHour = parseInt(booking.start_time.split(':')[0]);
-                      console.log(`  ⏰ Booking time: ${booking.start_time}, Hour: ${startHour}, Match: ${startHour === hour}`);
                       return startHour === hour;
                     });
-
-                    // Debug: log if we find bookings for this slot
-                    if (dayBookings.length > 0) {
-                      console.log(`✅ Found ${dayBookings.length} booking(s) for ${dateStr} at ${hour}:00`, dayBookings);
-                    }
 
                     return (
                       <div
@@ -712,22 +605,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                         className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
                       >
                         {dayBookings.map((booking) => {
-                          // Calculate the height based on booking duration
                           const [startHour, startMin] = booking.start_time.split(':').map(Number);
                           const [endHour, endMin] = booking.end_time.split(':').map(Number);
-                          
                           const startMinutes = startHour * 60 + startMin;
                           const endMinutes = endHour * 60 + endMin;
                           const durationMinutes = endMinutes - startMinutes;
-                          
-                          // Each hour is 80px tall, so calculate proportional height
-                          const heightPerMinute = 80 / 60; // 80px per hour / 60 minutes
+                          const heightPerMinute = 80 / 60;
                           const blockHeight = durationMinutes * heightPerMinute;
-                          
-                          // Calculate top offset for minutes past the hour
                           const topOffset = startMin * heightPerMinute;
-                          
-                          // Get employee color
                           const employee = employees?.find(emp => emp.id === booking.employee_id);
                           const employeeColor = employee?.color || '#3b82f6';
                           const employeeName = employee?.name || 'Unassigned';
@@ -745,7 +630,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                               className="absolute left-2 right-2 rounded text-white text-xs cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden shadow-md border-l-4 z-10"
                               style={{
                                 top: `${topOffset}px`,
-                                height: `${Math.max(blockHeight, 40)}px`, // Minimum 40px height
+                                height: `${Math.max(blockHeight, 40)}px`,
                                 backgroundColor: employeeColor,
                                 borderLeftColor: employeeColor,
                                 filter: 'brightness(0.95)'
@@ -773,14 +658,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     );
                   })}
                 </div>
-              );
-              })}
+              ))}
             </div>
           </div>
         )}
       </div>
 
-      {/* Booking Details Modal - keeping exactly the same */}
       {showBookingModal && selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -795,7 +678,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                 <button
                   type="button"
                   onClick={() => {
-                    // Populate the edit form with booking data
                     setIsEditingBooking(true);
                     setEditingBookingId(selectedBooking.id);
                     setNewBooking({
@@ -805,7 +687,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       customerPhone: selectedBooking.customer_phone || '',
                       customerAddress: selectedBooking.customer_address || '',
                       serviceId: selectedBooking.items?.[0]?.service_id || '',
-                      additionalServices: [], // TODO: populate if you have multiple services
+                      additionalServices: [],
                       employeeId: selectedBooking.employee_id || '',
                       groupId: selectedBooking.group_id || '',
                       bookingDate: selectedBooking.booking_date.split('T')[0],
@@ -851,13 +733,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   <User className="w-5 h-5 text-gray-600" />
                   <h3 className="font-bold text-gray-900">Customer Information</h3>
                 </div>
-                
                 <div className="space-y-3">
                   <div>
                     <label className="text-sm font-medium text-gray-600">Full Name</label>
                     <p className="text-gray-900 font-medium">{selectedBooking.customer_name}</p>
                   </div>
-                  
                   {selectedBooking.customer_email && (
                     <div>
                       <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -867,7 +747,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       <p className="text-gray-900">{selectedBooking.customer_email}</p>
                     </div>
                   )}
-                  
                   {selectedBooking.customer_phone && (
                     <div>
                       <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -877,7 +756,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       <p className="text-gray-900">{selectedBooking.customer_phone}</p>
                     </div>
                   )}
-                  
                   {selectedBooking.customer_address && (
                     <div>
                       <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -895,7 +773,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   <Calendar className="w-5 h-5 text-blue-600" />
                   <h3 className="font-bold text-gray-900">Booking Details</h3>
                 </div>
-                
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-600">Date</label>
@@ -908,7 +785,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       })}
                     </p>
                   </div>
-                  
                   <div>
                     <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
                       <Clock className="w-4 h-4" />
@@ -918,12 +794,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       {formatTime(selectedBooking.start_time)} - {formatTime(selectedBooking.end_time)}
                     </p>
                   </div>
-
                   {(selectedBooking.employee_name || selectedBooking.employee_id) && (() => {
                     const employee = employees?.find(emp => emp.id === selectedBooking.employee_id);
                     const employeeName = selectedBooking.employee_name || employee?.name || 'Assigned';
                     const employeeColor = employee?.color || '#3b82f6';
-                    
                     return (
                       <div>
                         <label className="text-sm font-medium text-gray-600 flex items-center gap-2">
@@ -948,7 +822,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   <Briefcase className="w-5 h-5 text-purple-600" />
                   <h3 className="font-bold text-gray-900">Service Details</h3>
                 </div>
-                
                 {selectedBooking.items && selectedBooking.items.length > 0 ? (
                   <div className="space-y-3">
                     {selectedBooking.items.map((item, idx) => (
@@ -962,7 +835,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                         <p className="font-bold text-gray-900">${parseFloat(item.price).toFixed(2)}</p>
                       </div>
                     ))}
-                    
                     <div className="pt-3 border-t border-purple-200 flex justify-between items-center">
                       <span className="font-bold text-gray-900">Total</span>
                       <span className="text-xl font-bold text-gray-900">
@@ -981,7 +853,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     <FileText className="w-5 h-5 text-green-600" />
                     <h3 className="font-bold text-gray-900">Job Notes</h3>
                   </div>
-                  
                   {!editingNotes ? (
                     <button
                       type="button"
@@ -1014,7 +885,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     </div>
                   )}
                 </div>
-                
                 {editingNotes ? (
                   <textarea
                     value={bookingNotes}
@@ -1040,7 +910,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         </div>
       )}
 
-      {/* Create Booking Modal - keeping exactly the same */}
       {showCreateBookingModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -1061,18 +930,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   setEditingBookingId(null);
                   setServiceTab('main');
                   setNewBooking({
-                    customerId: '',
-                    customerName: '',
-                    customerEmail: '',
-                    customerPhone: '',
-                    customerAddress: '',
-                    serviceId: '',
-                    additionalServices: [],
-                    employeeId: '',
-                    groupId: '',
-                    bookingDate: '',
-                    startTime: '',
-                    notes: ''
+                    customerId: '', customerName: '', customerEmail: '', customerPhone: '',
+                    customerAddress: '', serviceId: '', additionalServices: [],
+                    employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
                   });
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -1087,7 +947,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   <User className="w-5 h-5 text-blue-600" />
                   Customer Information
                 </h3>
-                
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1102,11 +961,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       required
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
                     <input
                       type="email"
                       value={newBooking.customerEmail}
@@ -1115,11 +971,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
                     <input
                       type="tel"
                       value={newBooking.customerPhone}
@@ -1128,11 +981,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Address (optional)
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Address (optional)</label>
                     <input
                       type="text"
                       value={newBooking.customerAddress}
@@ -1149,8 +999,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   <Calendar className="w-5 h-5 text-green-600" />
                   Services
                 </h3>
-                
-                {/* Service Tabs */}
                 <div className="flex gap-2 mb-4 border-b border-gray-300">
                   <button
                     type="button"
@@ -1163,9 +1011,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   >
                     Main Service
                     {newBooking.serviceId && (
-                      <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
-                        1
-                      </span>
+                      <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">1</span>
                     )}
                   </button>
                   <button
@@ -1186,7 +1032,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   </button>
                 </div>
 
-                {/* Main Service Tab Content */}
                 {serviceTab === 'main' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1205,7 +1050,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                         </option>
                       ))}
                     </select>
-
                     {newBooking.serviceId && (
                       <div className="bg-white rounded-lg p-4 border border-green-200">
                         <div className="flex items-start gap-3">
@@ -1229,7 +1073,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   </div>
                 )}
 
-                {/* Additional Services Tab Content */}
                 {serviceTab === 'additional' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1237,14 +1080,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     </label>
                     <div className="border border-gray-300 rounded-lg bg-gray-50 max-h-64 overflow-y-auto">
                       {!services || services.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          No services available
-                        </div>
+                        <div className="p-4 text-center text-gray-500 text-sm">No services available</div>
                       ) : services.filter(s => s.id != newBooking.serviceId).length === 0 ? (
                         <div className="p-4 text-center text-gray-500 text-sm">
-                          {newBooking.serviceId 
-                            ? 'No other services available' 
-                            : 'Please select a main service first'}
+                          {newBooking.serviceId ? 'No other services available' : 'Please select a main service first'}
                         </div>
                       ) : (
                         services.filter(s => s.id != newBooking.serviceId).map(service => (
@@ -1272,15 +1111,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                             />
                             <div className="flex-1">
                               <div className="font-medium text-gray-900">{service.name}</div>
-                              <div className="text-xs text-gray-600">
-                                ${service.price} • {service.duration_hours}h
-                              </div>
+                              <div className="text-xs text-gray-600">${service.price} • {service.duration_hours}h</div>
                             </div>
                           </label>
                         ))
                       )}
                     </div>
-
                     {newBooking.additionalServices.length > 0 && (
                       <div className="mt-3 space-y-2">
                         <div className="text-xs font-medium text-gray-700 mb-1">
@@ -1292,9 +1128,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                             <div key={serviceId} className="flex items-center justify-between bg-green-50 rounded-lg p-2">
                               <div>
                                 <div className="font-medium text-sm text-gray-900">{service?.name}</div>
-                                <div className="text-xs text-gray-600">
-                                  ${service?.price} • {service?.duration_hours}h
-                                </div>
+                                <div className="text-xs text-gray-600">${service?.price} • {service?.duration_hours}h</div>
                               </div>
                               <button
                                 type="button"
@@ -1316,14 +1150,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   </div>
                 )}
 
-                {/* Total Summary */}
                 {newBooking.serviceId && (
                   <div className="mt-4 bg-green-100 rounded-lg p-3">
                     <div className="flex justify-between items-center text-sm mb-2">
                       <span className="font-medium text-gray-700">Total Services:</span>
-                      <span className="font-bold text-gray-900">
-                        {1 + newBooking.additionalServices.length}
-                      </span>
+                      <span className="font-bold text-gray-900">{1 + newBooking.additionalServices.length}</span>
                     </div>
                     <div className="flex justify-between items-center text-sm mb-2">
                       <span className="font-medium text-gray-700">Total Duration:</span>
@@ -1333,11 +1164,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           const mainDuration = parseFloat(mainService?.duration_hours) || 0;
                           const additionalDuration = newBooking.additionalServices.reduce((total, id) => {
                             const service = services.find(s => s.id == id);
-                            const duration = parseFloat(service?.duration_hours) || 0;
-                            return total + duration;
+                            return total + (parseFloat(service?.duration_hours) || 0);
                           }, 0);
-                          const totalDuration = mainDuration + additionalDuration;
-                          return totalDuration.toFixed(1);
+                          return (mainDuration + additionalDuration).toFixed(1);
                         })()}h
                       </span>
                     </div>
@@ -1349,11 +1178,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                           const mainPrice = parseFloat(mainService?.price) || 0;
                           const additionalPrice = newBooking.additionalServices.reduce((total, id) => {
                             const service = services.find(s => s.id == id);
-                            const price = parseFloat(service?.price) || 0;
-                            return total + price;
+                            return total + (parseFloat(service?.price) || 0);
                           }, 0);
-                          const totalPrice = mainPrice + additionalPrice;
-                          return totalPrice.toFixed(2);
+                          return (mainPrice + additionalPrice).toFixed(2);
                         })()}
                       </span>
                     </div>
@@ -1372,16 +1199,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       Assign Team Member or Group (optional)
                     </label>
                     <div className="grid md:grid-cols-2 gap-3">
-                      {/* Team Member Selection */}
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">Individual Team Member</label>
                         <select
                           value={newBooking.employeeId}
-                          onChange={(e) => setNewBooking({ 
-                            ...newBooking, 
-                            employeeId: e.target.value,
-                            groupId: '' // Clear group when selecting employee
-                          })}
+                          onChange={(e) => setNewBooking({ ...newBooking, employeeId: e.target.value, groupId: '' })}
                           disabled={!!newBooking.groupId}
                           className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 ${
                             newBooking.groupId ? 'bg-gray-100 cursor-not-allowed' : ''
@@ -1389,23 +1211,15 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                         >
                           <option value="">Select team member</option>
                           {employees.map(employee => (
-                            <option key={employee.id} value={employee.id}>
-                              {employee.name}
-                            </option>
+                            <option key={employee.id} value={employee.id}>{employee.name}</option>
                           ))}
                         </select>
                       </div>
-
-                      {/* Group Selection */}
                       <div>
                         <label className="block text-xs text-gray-600 mb-1">Or Assign to Group</label>
                         <select
                           value={newBooking.groupId}
-                          onChange={(e) => setNewBooking({ 
-                            ...newBooking, 
-                            groupId: e.target.value,
-                            employeeId: '' // Clear employee when selecting group
-                          })}
+                          onChange={(e) => setNewBooking({ ...newBooking, groupId: e.target.value, employeeId: '' })}
                           disabled={!!newBooking.employeeId}
                           className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 ${
                             newBooking.employeeId ? 'bg-gray-100 cursor-not-allowed' : ''
@@ -1421,12 +1235,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       </div>
                     </div>
                     {!newBooking.employeeId && !newBooking.groupId && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Leave empty to auto-assign an available team member
-                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Leave empty to auto-assign an available team member</p>
                     )}
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Date <span className="text-red-500">*</span>
@@ -1439,7 +1250,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                       required
                     />
                   </div>
-
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Start Time <span className="text-red-500">*</span>
@@ -1459,11 +1269,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                             const period = hour >= 12 ? 'PM' : 'AM';
                             const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
                             const displayTime = `${displayHour}:${String(minute).padStart(2, '0')} ${period}`;
-                            times.push(
-                              <option key={timeValue} value={timeValue}>
-                                {displayTime}
-                              </option>
-                            );
+                            times.push(<option key={timeValue} value={timeValue}>{displayTime}</option>);
                           }
                         }
                         return times;
@@ -1478,7 +1284,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                   <FileText className="w-5 h-5 text-purple-600" />
                   Job Notes (optional)
                 </h3>
-                
                 <textarea
                   value={newBooking.notes}
                   onChange={(e) => setNewBooking({ ...newBooking, notes: e.target.value })}
@@ -1496,18 +1301,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
                     setIsEditingBooking(false);
                     setEditingBookingId(null);
                     setNewBooking({
-                      customerId: '',
-                      customerName: '',
-                      customerEmail: '',
-                      customerPhone: '',
-                      customerAddress: '',
-                      serviceId: '',
-                      additionalServices: [],
-                      employeeId: '',
-                      groupId: '',
-                      bookingDate: '',
-                      startTime: '',
-                      notes: ''
+                      customerId: '', customerName: '', customerEmail: '', customerPhone: '',
+                      customerAddress: '', serviceId: '', additionalServices: [],
+                      employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
                     });
                   }}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
@@ -1528,7 +1324,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees }) {
         </div>
       )}
 
-      {/* Toast Notification */}
       {toast.show && (
         <div className="fixed top-4 right-4 z-[60] animate-slide-in">
           <div className={`rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 min-w-[300px] ${
