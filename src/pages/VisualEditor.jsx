@@ -20,6 +20,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const iframeRef = useRef(null);
   const dragData = useRef(null);
   const selectionData = useRef(null);
+  const updateTimeoutRef = useRef(null);
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -58,11 +59,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       doc.onmousedown = (e) => {
         const el = e.target;
         
-        // If clicking on empty space, start selection box
         if (['BODY', 'HTML'].includes(el.tagName)) {
           e.preventDefault();
           const iframeRect = iframe.getBoundingClientRect();
-          
           selectionData.current = {
             startX: e.clientX - iframeRect.left,
             startY: e.clientY - iframeRect.top,
@@ -71,7 +70,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           return;
         }
 
-        // Don't drag large containers
         if (['MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
           return;
         }
@@ -81,76 +79,50 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         const iframeRect = iframe.getBoundingClientRect();
         const rect = el.getBoundingClientRect();
 
-        // If clicking on already selected element, prepare multi-drag
         if (el.classList.contains('selected')) {
-          // Store data for all selected elements
           const elementsData = selectedElements.map(elem => {
             const elemRect = elem.getBoundingClientRect();
-            let currentLeft = parseInt(elem.style.left) || 0;
-            let currentTop = parseInt(elem.style.top) || 0;
-            
-            if (elem.style.position !== 'absolute') {
-              currentLeft = elemRect.left - iframeRect.left;
-              currentTop = elemRect.top - iframeRect.top;
-            }
-            
             return {
               el: elem,
-              startX: currentLeft,
-              startY: currentTop,
+              startLeft: elemRect.left - iframeRect.left,
+              startTop: elemRect.top - iframeRect.top,
               width: elemRect.width,
               height: elemRect.height
             };
           });
           
-          // Calculate offset from where mouse clicked on first selected element
           const firstRect = selectedElements[0].getBoundingClientRect();
-          const firstLeft = firstRect.left - iframeRect.left;
-          const firstTop = firstRect.top - iframeRect.top;
           
           dragData.current = {
             elements: elementsData,
             moved: false,
-            startMouseX: e.clientX,
-            startMouseY: e.clientY,
-            iframe: iframe,
-            mouseOffsetX: (e.clientX - iframeRect.left) - firstLeft,
-            mouseOffsetY: (e.clientY - iframeRect.top) - firstTop
+            startMouseX: e.clientX - iframeRect.left,
+            startMouseY: e.clientY - iframeRect.top,
+            clickOffsetX: (e.clientX - iframeRect.left) - (firstRect.left - iframeRect.left),
+            clickOffsetY: (e.clientY - iframeRect.top) - (firstRect.top - iframeRect.top),
+            iframe: iframe
           };
           return;
         }
 
-        // Single element click - prepare single drag
-        let currentLeft = parseInt(el.style.left) || 0;
-        let currentTop = parseInt(el.style.top) || 0;
-        
-        if (el.style.position !== 'absolute') {
-          currentLeft = rect.left - iframeRect.left;
-          currentTop = rect.top - iframeRect.top;
-        }
-
-        // Calculate offset where mouse clicked on element
-        const clickOffsetX = (e.clientX - iframeRect.left) - currentLeft;
-        const clickOffsetY = (e.clientY - iframeRect.top) - currentTop;
-
+        // Single element
         dragData.current = {
           elements: [{
             el: el,
-            startX: currentLeft,
-            startY: currentTop,
+            startLeft: rect.left - iframeRect.left,
+            startTop: rect.top - iframeRect.top,
             width: rect.width,
             height: rect.height
           }],
           moved: false,
-          startMouseX: e.clientX,
-          startMouseY: e.clientY,
-          iframe: iframe,
-          mouseOffsetX: clickOffsetX,
-          mouseOffsetY: clickOffsetY
+          startMouseX: e.clientX - iframeRect.left,
+          startMouseY: e.clientY - iframeRect.top,
+          clickOffsetX: (e.clientX - iframeRect.left) - (rect.left - iframeRect.left),
+          clickOffsetY: (e.clientY - iframeRect.top) - (rect.top - iframeRect.top),
+          iframe: iframe
         };
       };
 
-      // Click = select (only if didn't drag)
       doc.onclick = (e) => {
         if (dragData.current?.moved || selectionData.current) {
           dragData.current = null;
@@ -164,14 +136,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           return;
         }
         
-        // Clear or add to selection
         if (!e.shiftKey) {
           doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
           e.target.classList.add('selected');
           setSelectedElements([e.target]);
           loadProps(e.target);
         } else {
-          // Shift-click to add to selection
           if (e.target.classList.contains('selected')) {
             e.target.classList.remove('selected');
             setSelectedElements(prev => prev.filter(el => el !== e.target));
@@ -184,7 +154,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         dragData.current = null;
       };
 
-      // Double click = edit
       doc.ondblclick = (e) => {
         e.preventDefault();
         if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(e.target.tagName)) {
@@ -218,7 +187,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   }, [htmlContent, selectedElements]);
 
   const handleMove = (e) => {
-    // Handle selection box
     if (selectionData.current) {
       const iframe = selectionData.current.iframe;
       const iframeRect = iframe.getBoundingClientRect();
@@ -232,14 +200,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const boxWidth = Math.abs(currentX - selectionData.current.startX);
       const boxHeight = Math.abs(currentY - selectionData.current.startY);
       
-      setSelectionBox({
-        left: boxLeft,
-        top: boxTop,
-        width: boxWidth,
-        height: boxHeight
-      });
+      setSelectionBox({ left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight });
       
-      // Find elements within selection box
       const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
         !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName) &&
         el.offsetParent !== null
@@ -249,16 +211,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         const rect = el.getBoundingClientRect();
         const elLeft = rect.left - iframeRect.left;
         const elTop = rect.top - iframeRect.top;
-        const elRight = elLeft + rect.width;
-        const elBottom = elTop + rect.height;
         
-        const boxRight = boxLeft + boxWidth;
-        const boxBottom = boxTop + boxHeight;
-        
-        if (elLeft >= boxLeft && elRight <= boxRight && elTop >= boxTop && elBottom <= boxBottom) {
-          if (!el.classList.contains('selected')) {
-            el.classList.add('selected');
-          }
+        if (elLeft >= boxLeft && elLeft + rect.width <= boxLeft + boxWidth && 
+            elTop >= boxTop && elTop + rect.height <= boxTop + boxHeight) {
+          el.classList.add('selected');
         } else {
           el.classList.remove('selected');
         }
@@ -267,30 +223,30 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       return;
     }
 
-    // Handle dragging
     if (!dragData.current) return;
 
-    const dx = e.clientX - dragData.current.startMouseX;
-    const dy = e.clientY - dragData.current.startMouseY;
+    const iframeRect = dragData.current.iframe.getBoundingClientRect();
+    const mouseX = e.clientX - iframeRect.left;
+    const mouseY = e.clientY - iframeRect.top;
+    
+    const dx = mouseX - dragData.current.startMouseX;
+    const dy = mouseY - dragData.current.startMouseY;
 
     if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
       dragData.current.moved = true;
       
-      // Make all elements absolute positioned
       dragData.current.elements.forEach(data => {
         const el = data.el;
-        const doc = el.ownerDocument;
-        
         if (!el.classList.contains('selected')) {
-          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+          el.ownerDocument.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
           el.classList.add('selected');
           setSelectedElements([el]);
           loadProps(el);
         }
         
         el.style.position = 'absolute';
-        el.style.left = data.startX + 'px';
-        el.style.top = data.startY + 'px';
+        el.style.left = data.startLeft + 'px';
+        el.style.top = data.startTop + 'px';
         el.style.width = data.width + 'px';
         el.style.margin = '0';
         el.style.opacity = '0.6';
@@ -298,17 +254,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     }
 
     if (dragData.current.moved) {
-      const mouseXInIframe = e.clientX - dragData.current.iframe.getBoundingClientRect().left;
-      const mouseYInIframe = e.clientY - dragData.current.iframe.getBoundingClientRect().top;
+      const doc = dragData.current.iframe.contentDocument;
       
-      let newX = mouseXInIframe - dragData.current.mouseOffsetX;
-      let newY = mouseYInIframe - dragData.current.mouseOffsetY;
+      // Calculate new position (mouse minus click offset)
+      let newX = mouseX - dragData.current.clickOffsetX;
+      let newY = mouseY - dragData.current.clickOffsetY;
       
-      const iframe = dragData.current.iframe;
-      const iframeRect = iframe.getBoundingClientRect();
-      const doc = iframe.contentDocument;
-      
-      // Snap and guide detection
       const snapThreshold = 5;
       const detectedGuides = { vertical: [], horizontal: [] };
       
@@ -321,7 +272,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const elCenterX = newX + firstEl.width / 2;
       const elCenterY = newY + firstEl.height / 2;
       
-      // Show center guides when near page center
       if (Math.abs(elCenterX - pageCenterX) < 20) {
         detectedGuides.vertical.push(pageCenterX);
       }
@@ -329,7 +279,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         detectedGuides.horizontal.push(pageCenterY);
       }
       
-      // Snap to page center
       if (Math.abs(elCenterX - pageCenterX) < snapThreshold) {
         newX = pageCenterX - firstEl.width / 2;
       }
@@ -337,7 +286,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         newY = pageCenterY - firstEl.height / 2;
       }
       
-      // Snap to other elements
       const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
         !dragData.current.elements.some(data => data.el === el) &&
         !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
@@ -346,6 +294,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       
       allElements.forEach(other => {
         const otherRect = other.getBoundingClientRect();
+        const iframeRect = dragData.current.iframe.getBoundingClientRect();
         const otherX = otherRect.left - iframeRect.left;
         const otherY = otherRect.top - iframeRect.top;
         const otherCenterX = otherX + otherRect.width / 2;
@@ -364,13 +313,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       
       setGuides(detectedGuides);
       
-      // Apply movement to all selected elements
-      const deltaX = newX - firstEl.startX;
-      const deltaY = newY - firstEl.startY;
+      const deltaX = newX - firstEl.startLeft;
+      const deltaY = newY - firstEl.startTop;
       
       dragData.current.elements.forEach(data => {
-        data.el.style.left = (data.startX + deltaX) + 'px';
-        data.el.style.top = (data.startY + deltaY) + 'px';
+        data.el.style.left = (data.startLeft + deltaX) + 'px';
+        data.el.style.top = (data.startTop + deltaY) + 'px';
       });
     }
   };
@@ -380,23 +328,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const doc = selectionData.current.iframe.contentDocument;
       const selected = Array.from(doc.querySelectorAll('.selected'));
       setSelectedElements(selected);
-      if (selected.length === 1) {
-        loadProps(selected[0]);
-      }
+      if (selected.length === 1) loadProps(selected[0]);
       selectionData.current = null;
       setSelectionBox(null);
     }
     
     if (dragData.current?.moved) {
-      dragData.current.elements.forEach(data => {
-        data.el.style.opacity = '1';
-      });
+      dragData.current.elements.forEach(data => data.el.style.opacity = '1');
       setGuides({ vertical: [], horizontal: [] });
       notifyUpdateDebounced();
     }
-    setTimeout(() => {
-      dragData.current = null;
-    }, 0);
+    setTimeout(() => { dragData.current = null; }, 0);
   };
 
   useEffect(() => {
@@ -407,6 +349,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       window.removeEventListener('mouseup', handleUp);
     };
   }, [selectedElements]);
+
+  const notifyUpdateDebounced = () => {
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    updateTimeoutRef.current = setTimeout(() => {
+      if (iframeRef.current?.contentDocument) {
+        onUpdate(iframeRef.current.contentDocument.documentElement.outerHTML);
+      }
+    }, 800);
+  };
 
   const loadProps = (el) => {
     const s = window.getComputedStyle(el);
@@ -447,21 +398,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     notifyUpdateDebounced();
   };
 
-  // Debounced update to prevent constant iframe reloads
-  const updateTimeoutRef = useRef(null);
-  const notifyUpdateDebounced = () => {
-    if (updateTimeoutRef.current) {
-      clearTimeout(updateTimeoutRef.current);
-    }
-    
-    updateTimeoutRef.current = setTimeout(() => {
-      if (iframeRef.current?.contentDocument) {
-        const html = iframeRef.current.contentDocument.documentElement.outerHTML;
-        onUpdate(html);
-      }
-    }, 500); // Wait 500ms after last change before updating
-  };
-
   const rgbToHex = (rgb) => {
     if (!rgb || rgb === 'rgba(0, 0, 0, 0)') return '#000000';
     const m = rgb.match(/\d+/g);
@@ -474,20 +410,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       <div className="flex-1 relative">
         <iframe ref={iframeRef} srcDoc={htmlContent} className="w-full h-full border-none" />
         
-        {/* Selection Box */}
         {selectionBox && (
-          <div 
-            className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-10 pointer-events-none z-50"
-            style={{
-              left: `${selectionBox.left}px`,
-              top: `${selectionBox.top}px`,
-              width: `${selectionBox.width}px`,
-              height: `${selectionBox.height}px`
-            }}
-          />
+          <div className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-10 pointer-events-none z-50"
+            style={{ left: `${selectionBox.left}px`, top: `${selectionBox.top}px`, width: `${selectionBox.width}px`, height: `${selectionBox.height}px` }} />
         )}
         
-        {/* Alignment Guides */}
         {guides.vertical.map((x, i) => (
           <div key={`v-${i}`} className="absolute w-px h-full bg-red-500 pointer-events-none z-50" style={{ left: `${x}px` }} />
         ))}
@@ -499,16 +426,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       {selectedElements.length > 0 && (
         <div className="w-72 bg-white border-l overflow-y-auto flex-shrink-0">
           <div className="p-3 border-b bg-purple-50 flex justify-between">
-            <span className="font-bold text-sm">
-              {selectedElements.length === 1 ? 'Properties' : `${selectedElements.length} Selected`}
-            </span>
+            <span className="font-bold text-sm">{selectedElements.length === 1 ? 'Properties' : `${selectedElements.length} Selected`}</span>
             <div className="flex gap-1">
-              <button onClick={duplicate} className="p-1 hover:bg-white rounded" title="Duplicate">
-                <Copy className="w-4 h-4" />
-              </button>
-              <button onClick={deleteEl} className="p-1 hover:bg-white rounded" title="Delete">
-                <Trash2 className="w-4 h-4 text-red-600" />
-              </button>
+              <button onClick={duplicate} className="p-1 hover:bg-white rounded" title="Duplicate"><Copy className="w-4 h-4" /></button>
+              <button onClick={deleteEl} className="p-1 hover:bg-white rounded" title="Delete"><Trash2 className="w-4 h-4 text-red-600" /></button>
             </div>
           </div>
 
@@ -536,15 +457,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             </div>
 
             <div className="flex gap-2">
-              <button onClick={() => updateProp('textAlign', 'left')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'left' ? 'bg-purple-100' : ''}`}>
-                <AlignLeft className="w-4 h-4 mx-auto" />
-              </button>
-              <button onClick={() => updateProp('textAlign', 'center')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'center' ? 'bg-purple-100' : ''}`}>
-                <AlignCenter className="w-4 h-4 mx-auto" />
-              </button>
-              <button onClick={() => updateProp('textAlign', 'right')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'right' ? 'bg-purple-100' : ''}`}>
-                <AlignRight className="w-4 h-4 mx-auto" />
-              </button>
+              <button onClick={() => updateProp('textAlign', 'left')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'left' ? 'bg-purple-100' : ''}`}><AlignLeft className="w-4 h-4 mx-auto" /></button>
+              <button onClick={() => updateProp('textAlign', 'center')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'center' ? 'bg-purple-100' : ''}`}><AlignCenter className="w-4 h-4 mx-auto" /></button>
+              <button onClick={() => updateProp('textAlign', 'right')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'right' ? 'bg-purple-100' : ''}`}><AlignRight className="w-4 h-4 mx-auto" /></button>
             </div>
 
             <div>
