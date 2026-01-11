@@ -78,18 +78,9 @@ export default function Overview({ bookings, services, employees, setCurrentView
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">📊 Overview Dashboard</h1>
-          <p className="text-gray-600 mt-1">Weekly stats with navigation</p>
-        </div>
-        <button
-          onClick={() => setCurrentView('vision')}
-          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all flex items-center gap-2 shadow-lg"
-        >
-          <Target className="w-4 h-4" />
-          View Vision Board
-        </button>
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">📊 Overview Dashboard</h1>
+        <p className="text-gray-600 mt-1">Weekly stats with navigation</p>
       </div>
 
       {/* Week Navigation */}
