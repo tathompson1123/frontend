@@ -36,14 +36,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
 
  const handleRegenerateWebsite = (e) => {
   e.preventDefault();
-  
-  // Navigate to generator with form data
-  navigate('/generate', { 
-    state: { 
-      formData: websiteForm,
-      isRegeneration: true
-    } 
-  });
+  navigate('/loading', { state: { formData: websiteForm } });
 };
 
   return (
