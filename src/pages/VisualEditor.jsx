@@ -326,20 +326,6 @@ const handleMouseUp = (e) => {
   }
 };
 
-  const handleMouseOver = (e) => {
-    if (!isSelecting && !draggedElement) {
-      e.target.classList.add('visual-editor-hover');
-      setHoveredElement(e.target);
-    }
-  };
-
-  const handleMouseOut = (e) => {
-    e.target.classList.remove('visual-editor-hover');
-    if (hoveredElement === e.target) {
-      setHoveredElement(null);
-    }
-  };
-
   const selectElement = (element) => {
     element.classList.add('visual-editor-selected');
     setSelectedElements(prev => [...prev, element]);
