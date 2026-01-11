@@ -16,7 +16,8 @@ import {
   MapPin,
   Users,
   Briefcase,
-  ChevronDown
+  ChevronDown,
+  CheckCircle
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
@@ -134,6 +135,25 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
+    }
+  };
+
+  const handleCompleteBooking = async (bookingId) => {
+    if (!confirm('Mark this booking as completed? This will trigger automated review requests.')) return;
+    try {
+      const response = await authFetch(`${apiUrl}/api/bookings/${bookingId}/complete`, {
+        method: 'PUT'
+      });
+      const data = await response.json();
+      if (data.success) {
+        showToast('✅ Booking completed! Automated review sequence started.');
+        fetchAllBookings();
+      } else {
+        showToast('Failed to mark as completed: ' + (data.error || 'Unknown error'), 'error');
+      }
+    } catch (error) {
+      console.error('Error completing booking:', error);
+      showToast('Failed to mark as completed', 'error');
     }
   };
 
@@ -394,6 +414,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     </div>
                     <span className={`px-2 py-1 text-xs rounded-full ${
                       booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                      booking.status === 'completed' ? 'bg-gray-100 text-gray-700' :
                       booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                       booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                       'bg-gray-100 text-gray-700'
@@ -419,7 +440,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     )}
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="grid grid-cols-3 gap-1">
                     <button
                       type="button"
                       onClick={() => {
@@ -428,9 +449,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         setShowBookingModal(true);
                         setEditingNotes(false);
                       }}
-                      className="flex-1 px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition"
+                      className="px-2 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition"
                     >
-                      View Details
+                      View
                     </button>
                     <button
                       type="button"
@@ -453,9 +474,21 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         });
                         setShowCreateBookingModal(true);
                       }}
-                      className="px-3 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition"
+                      className="px-2 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition"
                     >
                       Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCompleteBooking(booking.id)}
+                      className={`px-2 py-1.5 text-xs font-medium rounded transition ${
+                        booking.status === 'completed'
+                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}
+                      disabled={booking.status === 'completed'}
+                    >
+                      {booking.status === 'completed' ? '✓' : 'Done'}
                     </button>
                   </div>
                 </div>
@@ -675,6 +708,19 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                {selectedBooking.status !== 'completed' && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await handleCompleteBooking(selectedBooking.id);
+                      setShowBookingModal(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition"
+                  >
+                    <CheckCircle className="w-4 h-4" />
+                    Mark Complete
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -720,6 +766,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               <div className="flex items-center gap-3">
                 <span className={`px-4 py-2 rounded-full font-medium ${
                   selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                  selectedBooking.status === 'completed' ? 'bg-gray-100 text-gray-700' :
                   selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                   selectedBooking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
                   'bg-gray-100 text-gray-700'
