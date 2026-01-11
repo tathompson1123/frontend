@@ -296,41 +296,40 @@ export default function WebsiteEditor() {
                   title={`${currentPage} Preview`}
                   className="w-full h-full border-none"
                   ref={(iframe) => {
-                    if (iframe && iframe.contentWindow) {
-                      iframe.onload = () => {
-                        try {
-                          const iframeDoc = iframe.contentWindow.document;
-                          
-                          // Intercept navigation to switch pages within editor
-                          iframeDoc.addEventListener('click', (e) => {
-                            const link = e.target.closest('a');
-                            if (link) {
-                              const href = link.getAttribute('href');
-                              
-                              // Allow anchor links
-                              if (href && href.startsWith('#')) {
-                                return;
-                              }
-                              
-                              // Check if it's a link to another page
-                              if (href && href.endsWith('.html')) {
-                                e.preventDefault();
-                                if (allPages[href]) {
-                                  setCurrentPage(href);
-                                }
-                                return;
-                              }
-                              
-                              // Prevent all other navigation
-                              e.preventDefault();
-                            }
-                          }, true);
-                        } catch (err) {
-                          console.log('Could not access iframe:', err);
-                        }
-                      };
-                    }
-                  }}
+  if (iframe && iframe.contentWindow) {
+    iframe.onload = () => {
+      try {
+        const iframeDoc = iframe.contentWindow.document;
+        
+        // Intercept ALL navigation
+        iframeDoc.addEventListener('click', (e) => {
+          const link = e.target.closest('a');
+          if (link) {
+            const href = link.getAttribute('href');
+            
+            // Allow anchor links (same-page navigation)
+            if (href && href.startsWith('#')) {
+              return; // Let it work normally
+            }
+            
+            // Check if it's a link to another page in our multi-page site
+            if (href && href.endsWith('.html') && allPages[href]) {
+              e.preventDefault();
+              setCurrentPage(href);
+              return;
+            }
+            
+            // PREVENT ALL OTHER NAVIGATION (including homepage links)
+            e.preventDefault();
+            console.log('Navigation blocked:', href);
+          }
+        }, true);
+      } catch (err) {
+        console.log('Could not access iframe:', err);
+      }
+    };
+  }
+}}
                 />
               </div>
             </div>
