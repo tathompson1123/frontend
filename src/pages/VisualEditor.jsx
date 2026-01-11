@@ -18,7 +18,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [editingText, setEditingText] = useState(null);
   const iframeRef = useRef(null);
   
-  // Drag state
   const dragState = useRef({
     isDragging: false,
     element: null,
@@ -56,11 +55,13 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         // Inject styles
         const style = doc.createElement('style');
         style.textContent = `
+          body { position: relative !important; }
           * { box-sizing: border-box; }
-          .ve-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px; }
+          .ve-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px; cursor: pointer !important; }
           .ve-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px; cursor: move !important; }
-          .ve-dragging { opacity: 0.7 !important; z-index: 999999 !important; }
-          [contenteditable="true"] { outline: 2px solid #10b981 !important; user-select: text !important; }
+          .ve-dragging { opacity: 0.7 !important; z-index: 999999 !important; pointer-events: none !important; }
+          .ve-draggable { position: fixed !important; }
+          [contenteditable="true"] { outline: 2px solid #10b981 !important; user-select: text !important; cursor: text !important; }
         `;
         doc.head.appendChild(style);
 
@@ -72,7 +73,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
         // Click to select
         doc.body.addEventListener('click', (e) => {
-          if (editingText) return;
+          if (editingText || dragState.current.isDragging) return;
           e.preventDefault();
           e.stopPropagation();
           handleSelect(e.target, doc);
@@ -94,6 +95,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           
           if (selectedElements.includes(element)) {
             e.preventDefault();
+            e.stopPropagation();
             startDrag(element, e, iframe);
           }
         }, true);
@@ -116,27 +118,46 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   };
 
   const startDrag = (element, e, iframe) => {
-    const rect = element.getBoundingClientRect();
+    const doc = iframe.contentDocument;
     const iframeRect = iframe.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
 
-    // Convert to absolute positioning if needed
-    if (element.style.position !== 'absolute') {
-      const computedLeft = rect.left - iframeRect.left;
-      const computedTop = rect.top - iframeRect.top;
-      
-      element.style.position = 'absolute';
-      element.style.left = `${computedLeft}px`;
-      element.style.top = `${computedTop}px`;
-      element.style.margin = '0';
-    }
+    // Get current computed position
+    const currentLeft = rect.left - iframeRect.left;
+    const currentTop = rect.top - iframeRect.top;
+
+    // Store original styles
+    const originalParent = element.parentNode;
+    const originalNextSibling = element.nextSibling;
+    const originalPosition = element.style.position;
+    const originalLeft = element.style.left;
+    const originalTop = element.style.top;
+    const originalWidth = rect.width;
+    const originalHeight = rect.height;
+
+    // Move to body and make fixed positioned
+    doc.body.appendChild(element);
+    element.style.position = 'fixed';
+    element.style.left = `${currentLeft}px`;
+    element.style.top = `${currentTop}px`;
+    element.style.width = `${originalWidth}px`;
+    element.style.height = `${originalHeight}px`;
+    element.style.margin = '0';
+    element.style.zIndex = '999999';
 
     dragState.current = {
       isDragging: true,
       element: element,
       startX: e.clientX,
       startY: e.clientY,
-      elementStartX: parseInt(element.style.left) || 0,
-      elementStartY: parseInt(element.style.top) || 0
+      elementStartX: currentLeft,
+      elementStartY: currentTop,
+      iframe: iframe,
+      originalParent: originalParent,
+      originalNextSibling: originalNextSibling,
+      originalPosition: originalPosition,
+      originalLeft: originalLeft,
+      originalTop: originalTop
     };
 
     element.classList.add('ve-dragging');
@@ -148,6 +169,13 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
   const handleDragMove = (e) => {
     if (!dragState.current.isDragging) return;
+
+    const iframe = dragState.current.iframe;
+    const iframeRect = iframe.getBoundingClientRect();
+
+    // Calculate position relative to iframe
+    const mouseXInIframe = e.clientX - iframeRect.left;
+    const mouseYInIframe = e.clientY - iframeRect.top;
 
     const dx = e.clientX - dragState.current.startX;
     const dy = e.clientY - dragState.current.startY;
@@ -162,7 +190,20 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const handleDragEnd = () => {
     if (!dragState.current.isDragging) return;
 
-    dragState.current.element.classList.remove('ve-dragging');
+    const element = dragState.current.element;
+    const doc = element.ownerDocument;
+
+    element.classList.remove('ve-dragging');
+
+    // Convert fixed position to absolute on body
+    const currentLeft = parseInt(element.style.left);
+    const currentTop = parseInt(element.style.top);
+
+    // Keep on body with absolute positioning
+    element.style.position = 'absolute';
+    element.style.left = `${currentLeft}px`;
+    element.style.top = `${currentTop}px`;
+
     dragState.current.isDragging = false;
 
     document.removeEventListener('mousemove', handleDragMove);
@@ -172,10 +213,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   };
 
   const handleSelect = (element, doc) => {
-    // Clear previous selections
     selectedElements.forEach(el => el.classList.remove('ve-selected'));
-    
-    // Select new element
     element.classList.add('ve-selected');
     setSelectedElements([element]);
     loadElementProperties(element);
@@ -186,7 +224,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     element.focus();
     setEditingText(element);
 
-    // Select text
     const range = document.createRange();
     range.selectNodeContents(element);
     const selection = window.getSelection();
@@ -238,6 +275,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const duplicateSelected = () => {
     selectedElements.forEach(element => {
       const clone = element.cloneNode(true);
+      clone.classList.remove('ve-selected');
       clone.style.position = 'absolute';
       clone.style.left = `${parseInt(element.style.left || 0) + 20}px`;
       clone.style.top = `${parseInt(element.style.top || 0) + 20}px`;
