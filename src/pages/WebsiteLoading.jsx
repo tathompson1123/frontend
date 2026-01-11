@@ -11,17 +11,42 @@ export default function WebsiteLoading() {
   const [error, setError] = useState(null);
 
   const steps = [
-    { label: 'Analyzing your business...', duration: 8 },
-    { label: 'Designing custom layout...', duration: 12 },
-    { label: 'Selecting perfect color scheme...', duration: 8 },
-    { label: 'Creating hero section...', duration: 10 },
-    { label: 'Building services showcase...', duration: 12 },
-    { label: 'Adding contact information...', duration: 8 },
-    { label: 'Color grading and transitions...', duration: 10 },
-    { label: 'Optimizing for mobile devices...', duration: 8 },
-    { label: 'Adding interactive elements...', duration: 10 },
-    { label: 'Final polish and quality check...', duration: 8 }
-  ];
+  { label: 'Analyzing your business...', duration: 6 },
+  { label: 'Designing custom layout...', duration: 8 },
+  { label: 'Selecting perfect color scheme...', duration: 7 },
+  { label: 'Creating hero section...', duration: 9 },
+  { label: 'Building services showcase...', duration: 10 },
+  { label: 'Adding contact information...', duration: 8 },
+  { label: 'Color grading and transitions...', duration: 9 },
+  { label: 'Optimizing for mobile devices...', duration: 8 },
+  { label: 'Adding interactive elements...', duration: 10 },
+  { label: 'Final polish and quality check...', duration: 10 }
+];
+
+const animateProgress = () => {
+  let stepIndex = 0;
+  let currentProgress = 0;
+  
+  const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
+  
+  const runStep = () => {
+    if (stepIndex < steps.length) {
+      setCurrentStep(stepIndex);
+      
+      const stepDuration = steps[stepIndex].duration * 1000; // Convert seconds to ms
+      const increment = (steps[stepIndex].duration / totalDuration) * 100;
+      
+      setTimeout(() => {
+        currentProgress += increment;
+        setProgress(Math.min(currentProgress, 95)); // Cap at 95 until actual completion
+        stepIndex++;
+        runStep();
+      }, stepDuration);
+    }
+  };
+  
+  runStep();
+};
 
   useEffect(() => {
     // Get form data from navigation state
@@ -101,31 +126,6 @@ export default function WebsiteLoading() {
       setError(err.message || 'Failed to generate website');
       setProgress(0);
     }
-  };
-
-  const animateProgress = () => {
-    let stepIndex = 0;
-    let currentProgress = 0;
-    
-    const totalDuration = steps.reduce((sum, step) => sum + step.duration, 0);
-    
-    const runStep = () => {
-      if (stepIndex < steps.length) {
-        setCurrentStep(stepIndex);
-        
-        const stepDuration = steps[stepIndex].duration * 100; // Convert to ms
-        const increment = (steps[stepIndex].duration / totalDuration) * 100;
-        
-        setTimeout(() => {
-          currentProgress += increment;
-          setProgress(Math.min(currentProgress, 95)); // Cap at 95 until actual completion
-          stepIndex++;
-          runStep();
-        }, stepDuration);
-      }
-    };
-    
-    runStep();
   };
 
   // Redirect to dashboard when done
