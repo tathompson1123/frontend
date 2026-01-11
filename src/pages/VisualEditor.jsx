@@ -232,26 +232,34 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     const dx = mouseX - dragData.current.startMouseX;
     const dy = mouseY - dragData.current.startMouseY;
 
-    if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-      dragData.current.moved = true;
-      
-      dragData.current.elements.forEach(data => {
-        const el = data.el;
-        if (!el.classList.contains('selected')) {
-          el.ownerDocument.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-          el.classList.add('selected');
-          setSelectedElements([el]);
-          loadProps(el);
-        }
-        
-        el.style.position = 'absolute';
-        el.style.left = data.startLeft + 'px';
-        el.style.top = data.startTop + 'px';
-        el.style.width = data.width + 'px';
-        el.style.margin = '0';
-        el.style.opacity = '0.6';
-      });
+   if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+  dragData.current.moved = true;
+  
+  dragData.current.elements.forEach(data => {
+    const el = data.el;
+    const doc = el.ownerDocument;
+    
+    if (!el.classList.contains('selected')) {
+      doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+      el.classList.add('selected');
+      setSelectedElements([el]);
+      loadProps(el);
     }
+    
+    // MOVE TO BODY so position:absolute is relative to document
+    if (el.parentNode !== doc.body) {
+      doc.body.appendChild(el);
+    }
+    
+    el.style.position = 'absolute';
+    el.style.left = data.startLeft + 'px';
+    el.style.top = data.startTop + 'px';
+    el.style.width = data.width + 'px';
+    el.style.margin = '0';
+    el.style.opacity = '0.6';
+    el.style.zIndex = '9999';
+  });
+}
 
     if (dragData.current.moved) {
       const doc = dragData.current.iframe.contentDocument;
