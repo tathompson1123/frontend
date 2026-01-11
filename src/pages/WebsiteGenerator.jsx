@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom'; // Add useLocation
 import { useNavigate } from 'react-router-dom';
 import { Wand2, Sparkles } from 'lucide-react';
 import GenerationProgress from '../components/GenerationProgress';
@@ -6,6 +7,7 @@ import SignupModal from '../components/SignupModal';
 
 export default function WebsiteGenerator() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [generatedWebsite, setGeneratedWebsite] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
@@ -20,6 +22,32 @@ export default function WebsiteGenerator() {
     description: ''
   });
 
+  useEffect(() => {
+  if (location.state?.formData) {
+    const dashboardData = location.state.formData;
+    
+    // Map dashboard form to generator form
+    setFormData({
+      businessName: dashboardData.businessName || '',
+      businessType: dashboardData.businessType || '',
+      services: dashboardData.services || '',
+      description: dashboardData.description || '',
+      tagline: dashboardData.tagline || '',
+      yearsInBusiness: dashboardData.yearsInBusiness || '',
+      certifications: dashboardData.certifications || '',
+      uniqueSellingPoints: dashboardData.uniqueSellingPoints || '',
+      targetCustomer: dashboardData.targetCustomer || ''
+    });
+
+    // Auto-generate if this is a regeneration
+    if (location.state.isRegeneration) {
+      setTimeout(() => {
+        handleGenerate(null, dashboardData);
+      }, 500);
+    }
+  }
+}, [location.state]);
+  
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
