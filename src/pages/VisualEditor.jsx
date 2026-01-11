@@ -41,304 +41,213 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     margin: ''
   });
 
-useEffect(() => {
-  return () => {
-    window.removeEventListener('mousemove', handleMouseMove);
-    window.removeEventListener('mouseup', handleMouseUp);
-  };
-}, []);
-  
   useEffect(() => {
-  if (iframeRef.current) {
-    setupIframe();
-  }
-}, [htmlContent]);
-
-useEffect(() => {
-  // Global mouse move handler
-  const handleGlobalMouseMove = (e) => {
-    if (!draggedElement || !iframeRef.current) return;
-    
-    e.preventDefault();
-    const iframe = iframeRef.current;
-    const iframeRect = iframe.getBoundingClientRect();
-    
-    // Calculate new position
-    const newX = e.clientX - iframeRect.left - dragOffset.x;
-    const newY = e.clientY - iframeRect.top - dragOffset.y;
-    
-    // Update position
-    draggedElement.style.position = 'absolute';
-    draggedElement.style.left = `${newX}px`;
-    draggedElement.style.top = `${newY}px`;
-  };
-
-  // Global mouse up handler
-  const handleGlobalMouseUp = (e) => {
-    if (draggedElement) {
-      draggedElement.classList.remove('visual-editor-dragging');
-      setDraggedElement(null);
-      document.body.style.userSelect = '';
-      notifyUpdate();
+    if (iframeRef.current) {
+      setupIframe();
     }
-    
-    if (isSelecting) {
-      setIsSelecting(false);
-      setSelectionBox(null);
-      selectionStartRef.current = null;
-    }
-  };
+  }, [htmlContent]);
 
-  // Add to both window and document for better coverage
-  window.addEventListener('mousemove', handleGlobalMouseMove, true);
-  window.addEventListener('mouseup', handleGlobalMouseUp, true);
-  document.addEventListener('mousemove', handleGlobalMouseMove, true);
-  document.addEventListener('mouseup', handleGlobalMouseUp, true);
-  
-  return () => {
-    window.removeEventListener('mousemove', handleGlobalMouseMove, true);
-    window.removeEventListener('mouseup', handleGlobalMouseUp, true);
-    document.removeEventListener('mousemove', handleGlobalMouseMove, true);
-    document.removeEventListener('mouseup', handleGlobalMouseUp, true);
-  };
-}, [draggedElement, dragOffset, isSelecting]);
-
-const setupIframe = () => {
-  const iframe = iframeRef.current;
-  if (!iframe || !iframe.contentWindow) return;
-
-  iframe.onload = () => {
-    try {
-      const doc = iframe.contentDocument || iframe.contentWindow.document;
+  useEffect(() => {
+    // Global mouse move handler
+    const handleGlobalMouseMove = (e) => {
+      if (!draggedElement || !iframeRef.current) return;
       
-      // Inject visual editor styles
-      const style = doc.createElement('style');
-      style.textContent = `
-        * {
-          box-sizing: border-box;
-        }
-        .visual-editor-hover {
-          outline: 2px dashed #3b82f6 !important;
-          outline-offset: 2px;
-          cursor: pointer;
-        }
-        .visual-editor-selected {
-          outline: 3px solid #8b5cf6 !important;
-          outline-offset: 2px;
-          cursor: move !important;
-        }
-        .visual-editor-dragging {
-          opacity: 0.8;
-          cursor: move !important;
-          z-index: 10000;
-          pointer-events: none;
-        }
-        [contenteditable="true"] {
-          user-select: text !important;
-          outline: 2px solid #10b981 !important;
-          cursor: text !important;
-        }
-      `;
-      doc.head.appendChild(style);
-
-      // Add event listeners
-      doc.addEventListener('click', handleElementClick, true);
-      doc.addEventListener('dblclick', handleElementDoubleClick, true);
-      doc.addEventListener('mousedown', handleMouseDown, true);
-      doc.addEventListener('mouseover', handleMouseOver, true);
-      doc.addEventListener('mouseout', handleMouseOut, true);
-
-      // Prevent ALL default interactive behavior
-      doc.querySelectorAll('a, button, input, select, textarea').forEach(element => {
-        element.addEventListener('click', (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-        }, true);
-      });
-
-    } catch (err) {
-      console.error('Could not setup visual editor:', err);
-    }
-  };
-};
-
-const handleElementClick = (e) => {
-  e.stopPropagation();
-  const element = e.target;
-  
-  // Select element
-  if (!e.shiftKey && !e.ctrlKey) {
-    clearSelection();
-  }
-  
-  selectElement(element);
-  loadElementProperties(element);
-};
-
-const handleElementDoubleClick = (e) => {
-  e.stopPropagation();
-  e.preventDefault();
-  
-  const element = e.target;
-  
-  // Enable text editing on double-click for text elements
-  if (isTextElement(element)) {
-    enableTextEdit(element);
-  }
-};
-
-const handleMouseDown = (e) => {
-  const element = e.target;
-  
-  // Don't interfere with text editing
-  if (editingText) return;
-  
-  // Start selection box if clicking on empty space
-  if (element.tagName === 'BODY' || element.tagName === 'HTML') {
-    setIsSelecting(true);
-    const iframe = iframeRef.current;
-    const iframeRect = iframe.getBoundingClientRect();
-    selectionStartRef.current = { 
-      x: e.clientX - iframeRect.left, 
-      y: e.clientY - iframeRect.top 
-    };
-    return;
-  }
-
-  // Start dragging if clicking on selected element
-  if (selectedElements.includes(element)) {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    const iframe = iframeRef.current;
-    const iframeRect = iframe.getBoundingClientRect();
-    const rect = element.getBoundingClientRect();
-    
-    // Calculate offset from mouse to element top-left
-    const elementLeft = rect.left - iframeRect.left;
-    const elementTop = rect.top - iframeRect.top;
-    const mouseX = e.clientX - iframeRect.left;
-    const mouseY = e.clientY - iframeRect.top;
-    
-    setDragOffset({
-      x: mouseX - elementLeft,
-      y: mouseY - elementTop
-    });
-    
-    // Make element absolutely positioned if needed
-    const computedPosition = window.getComputedStyle(element).position;
-    if (computedPosition !== 'absolute' && computedPosition !== 'fixed') {
-      element.style.position = 'absolute';
-      element.style.left = `${elementLeft}px`;
-      element.style.top = `${elementTop}px`;
-      element.style.margin = '0';
-    }
-    
-    element.classList.add('visual-editor-dragging');
-    setDraggedElement(element);
-    
-    // Prevent text selection
-    document.body.style.userSelect = 'none';
-  }
-};
-
-const handleMouseOver = (e) => {
-  if (!isSelecting && !draggedElement && !editingText) {
-    e.target.classList.add('visual-editor-hover');
-    setHoveredElement(e.target);
-  }
-};
-
-const handleMouseOut = (e) => {
-  e.target.classList.remove('visual-editor-hover');
-  if (hoveredElement === e.target) {
-    setHoveredElement(null);
-  }
-};
-  
-const handleMouseMove = (e) => {
-  // Update selection box
-  if (isSelecting && selectionStartRef.current) {
-    const iframe = iframeRef.current;
-    const iframeRect = iframe.getBoundingClientRect();
-    
-    const box = {
-      left: Math.min(e.clientX, selectionStartRef.current.x) - iframeRect.left,
-      top: Math.min(e.clientY, selectionStartRef.current.y) - iframeRect.top,
-      width: Math.abs(e.clientX - selectionStartRef.current.x),
-      height: Math.abs(e.clientY - selectionStartRef.current.y)
-    };
-    setSelectionBox(box);
-    
-    // Find elements within selection box
-    const doc = iframe.contentDocument;
-    const elements = Array.from(doc.querySelectorAll('body *'));
-    const selected = [];
-    
-    elements.forEach(el => {
-      const rect = el.getBoundingClientRect();
-      const elLeft = rect.left - iframeRect.left;
-      const elTop = rect.top - iframeRect.top;
-      const elRight = elLeft + rect.width;
-      const elBottom = elTop + rect.height;
+      e.preventDefault();
+      const iframe = iframeRef.current;
+      const iframeRect = iframe.getBoundingClientRect();
       
-      if (
-        elLeft >= box.left &&
-        elRight <= box.left + box.width &&
-        elTop >= box.top &&
-        elBottom <= box.top + box.height &&
-        rect.width > 0 && rect.height > 0
-      ) {
-        selected.push(el);
+      // Calculate new position
+      const newX = e.clientX - iframeRect.left - dragOffset.x;
+      const newY = e.clientY - iframeRect.top - dragOffset.y;
+      
+      // Update position
+      draggedElement.style.position = 'absolute';
+      draggedElement.style.left = `${newX}px`;
+      draggedElement.style.top = `${newY}px`;
+    };
+
+    // Global mouse up handler
+    const handleGlobalMouseUp = (e) => {
+      if (draggedElement) {
+        draggedElement.classList.remove('visual-editor-dragging');
+        setDraggedElement(null);
+        document.body.style.userSelect = '';
+        notifyUpdate();
       }
-    });
-    
-    // Clear previous selection
-    clearSelection();
-    
-    // Select new elements
-    selected.forEach(el => {
-      el.classList.add('visual-editor-selected');
-    });
-    setSelectedElements(selected);
-    
-    return;
-  }
+      
+      if (isSelecting) {
+        setIsSelecting(false);
+        setSelectionBox(null);
+        selectionStartRef.current = null;
+      }
+    };
 
-  // Drag element
-  if (draggedElement) {
+    // Add to both window and document for better coverage
+    window.addEventListener('mousemove', handleGlobalMouseMove, true);
+    window.addEventListener('mouseup', handleGlobalMouseUp, true);
+    document.addEventListener('mousemove', handleGlobalMouseMove, true);
+    document.addEventListener('mouseup', handleGlobalMouseUp, true);
+    
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMouseMove, true);
+      window.removeEventListener('mouseup', handleGlobalMouseUp, true);
+      document.removeEventListener('mousemove', handleGlobalMouseMove, true);
+      document.removeEventListener('mouseup', handleGlobalMouseUp, true);
+    };
+  }, [draggedElement, dragOffset, isSelecting]);
+
+  const setupIframe = () => {
+    const iframe = iframeRef.current;
+    if (!iframe || !iframe.contentWindow) return;
+
+    iframe.onload = () => {
+      try {
+        const doc = iframe.contentDocument || iframe.contentWindow.document;
+        
+        // Inject visual editor styles
+        const style = doc.createElement('style');
+        style.textContent = `
+          * {
+            box-sizing: border-box;
+          }
+          .visual-editor-hover {
+            outline: 2px dashed #3b82f6 !important;
+            outline-offset: 2px;
+            cursor: pointer;
+          }
+          .visual-editor-selected {
+            outline: 3px solid #8b5cf6 !important;
+            outline-offset: 2px;
+            cursor: move !important;
+          }
+          .visual-editor-dragging {
+            opacity: 0.8;
+            cursor: move !important;
+            z-index: 10000;
+            pointer-events: none;
+          }
+          [contenteditable="true"] {
+            user-select: text !important;
+            outline: 2px solid #10b981 !important;
+            cursor: text !important;
+          }
+        `;
+        doc.head.appendChild(style);
+
+        // Add event listeners
+        doc.addEventListener('click', handleElementClick, true);
+        doc.addEventListener('dblclick', handleElementDoubleClick, true);
+        doc.addEventListener('mousedown', handleMouseDown, true);
+        doc.addEventListener('mouseover', handleMouseOver, true);
+        doc.addEventListener('mouseout', handleMouseOut, true);
+
+        // Prevent ALL default interactive behavior
+        doc.querySelectorAll('a, button, input, select, textarea').forEach(element => {
+          element.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }, true);
+        });
+
+      } catch (err) {
+        console.error('Could not setup visual editor:', err);
+      }
+    };
+  };
+
+  const handleElementClick = (e) => {
+    e.stopPropagation();
+    const element = e.target;
+    
+    // Select element
+    if (!e.shiftKey && !e.ctrlKey) {
+      clearSelection();
+    }
+    
+    selectElement(element);
+    loadElementProperties(element);
+  };
+
+  const handleElementDoubleClick = (e) => {
+    e.stopPropagation();
     e.preventDefault();
     
-    const iframe = iframeRef.current;
-    const iframeRect = iframe.getBoundingClientRect();
+    const element = e.target;
     
-    // Calculate new position relative to iframe
-    const newX = e.clientX - iframeRect.left - dragOffset.x;
-    const newY = e.clientY - iframeRect.top - dragOffset.y;
+    // Enable text editing on double-click for text elements
+    if (isTextElement(element)) {
+      enableTextEdit(element);
+    }
+  };
+
+  const handleMouseDown = (e) => {
+    const element = e.target;
     
-    // Update all selected elements
-    selectedElements.forEach(element => {
-      element.style.position = 'absolute';
-      element.style.left = `${newX}px`;
-      element.style.top = `${newY}px`;
-    });
-  }
-};
+    // Don't interfere with text editing
+    if (editingText) return;
+    
+    // Start selection box if clicking on empty space
+    if (element.tagName === 'BODY' || element.tagName === 'HTML') {
+      setIsSelecting(true);
+      const iframe = iframeRef.current;
+      const iframeRect = iframe.getBoundingClientRect();
+      selectionStartRef.current = { 
+        x: e.clientX - iframeRect.left, 
+        y: e.clientY - iframeRect.top 
+      };
+      return;
+    }
 
-const handleMouseUp = (e) => {
-  if (isSelecting) {
-    setIsSelecting(false);
-    setSelectionBox(null);
-    selectionStartRef.current = null;
-  }
+    // Start dragging if clicking on selected element
+    if (selectedElements.includes(element)) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const iframe = iframeRef.current;
+      const iframeRect = iframe.getBoundingClientRect();
+      const rect = element.getBoundingClientRect();
+      
+      // Calculate offset from mouse to element top-left
+      const elementLeft = rect.left - iframeRect.left;
+      const elementTop = rect.top - iframeRect.top;
+      const mouseX = e.clientX - iframeRect.left;
+      const mouseY = e.clientY - iframeRect.top;
+      
+      setDragOffset({
+        x: mouseX - elementLeft,
+        y: mouseY - elementTop
+      });
+      
+      // Make element absolutely positioned if needed
+      const computedPosition = window.getComputedStyle(element).position;
+      if (computedPosition !== 'absolute' && computedPosition !== 'fixed') {
+        element.style.position = 'absolute';
+        element.style.left = `${elementLeft}px`;
+        element.style.top = `${elementTop}px`;
+        element.style.margin = '0';
+      }
+      
+      element.classList.add('visual-editor-dragging');
+      setDraggedElement(element);
+      
+      // Prevent text selection
+      document.body.style.userSelect = 'none';
+    }
+  };
 
-  if (draggedElement) {
-    draggedElement.classList.remove('visual-editor-dragging');
-    setDraggedElement(null);
-    document.body.style.userSelect = '';
-    notifyUpdate();
-  }
-};
+  const handleMouseOver = (e) => {
+    if (!isSelecting && !draggedElement && !editingText) {
+      e.target.classList.add('visual-editor-hover');
+      setHoveredElement(e.target);
+    }
+  };
+
+  const handleMouseOut = (e) => {
+    e.target.classList.remove('visual-editor-hover');
+    if (hoveredElement === e.target) {
+      setHoveredElement(null);
+    }
+  };
 
   const selectElement = (element) => {
     element.classList.add('visual-editor-selected');
@@ -357,26 +266,27 @@ const handleMouseUp = (e) => {
   };
 
   const enableTextEdit = (element) => {
-  element.setAttribute('contenteditable', 'true');
-  element.focus();
-  setEditingText(element);
-  
-  // Select all text for easy editing
-  const range = document.createRange();
-  range.selectNodeContents(element);
-  const selection = window.getSelection();
-  selection.removeAllRanges();
-  selection.addRange(range);
+    element.setAttribute('contenteditable', 'true');
+    element.focus();
+    setEditingText(element);
+    
+    // Select all text for easy editing
+    const range = document.createRange();
+    range.selectNodeContents(element);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
 
-  const handleBlur = () => {
-    element.removeAttribute('contenteditable');
-    setEditingText(null);
-    notifyUpdate();
-    element.removeEventListener('blur', handleBlur);
+    const handleBlur = () => {
+      element.removeAttribute('contenteditable');
+      setEditingText(null);
+      notifyUpdate();
+      element.removeEventListener('blur', handleBlur);
+    };
+    
+    element.addEventListener('blur', handleBlur);
   };
-  
-  element.addEventListener('blur', handleBlur);
-};
+
   const loadElementProperties = (element) => {
     const computed = window.getComputedStyle(element);
     setElementProps({
@@ -470,7 +380,7 @@ const handleMouseUp = (e) => {
       </div>
 
       {/* Properties Panel - Only show when elements selected */}
-     {(selectedElements.length > 0 || editingText) && (
+      {(selectedElements.length > 0 || editingText) && (
         <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto shadow-xl">
           <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
             <div className="flex items-center justify-between mb-2">
