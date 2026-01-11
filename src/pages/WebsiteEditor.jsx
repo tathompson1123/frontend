@@ -245,66 +245,57 @@ export default function WebsiteEditor() {
             </div>
             
             {/* Device Preview Toggle */}
-            <div className="h-6 w-px bg-gray-300" />
-            <div className="flex gap-2">
-              <button 
-                type="button" 
-                onClick={() => setDevicePreview('desktop')} 
-                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-                  devicePreview === 'desktop' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <Monitor className="w-4 h-4" />
-                <span>Desktop</span>
-              </button>
-              <button 
-                type="button" 
-                onClick={() => setDevicePreview('mobile')} 
-                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-                  devicePreview === 'mobile' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <Smartphone className="w-4 h-4" />
-                <span>Mobile</span>
-              </button>
-            </div>
-          </div>
+<div className="h-6 w-px bg-gray-300" />
+<div className="flex gap-2">
+  <button 
+    type="button" 
+    onClick={() => setDevicePreview('desktop')} 
+    className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+      devicePreview === 'desktop' 
+        ? 'bg-purple-600 text-white' 
+        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+    }`}
+  >
+    <Monitor className="w-4 h-4" />
+    <span>Desktop</span>
+  </button>
+  <button 
+    type="button" 
+    onClick={() => setDevicePreview('mobile')} 
+    className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+      devicePreview === 'mobile' 
+        ? 'bg-purple-600 text-white' 
+        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+    }`}
+  >
+    <Smartphone className="w-4 h-4" />
+    <span>Mobile</span>
+  </button>
+</div>
+</div> {/* ✅ Closes "Desktop - Full Controls" */}
 
-          {/* Mobile - Compact Logo + Menu */}
-          <div className="flex lg:hidden items-center gap-4 flex-1">
-            <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
-            
-            {/* Mobile Menu Button */}
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="ml-auto p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
+{/* Mobile - Compact Logo + Menu */}
+<div className="flex lg:hidden items-center gap-4 flex-1">
+  <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
+  
+  {/* Mobile Menu Button */}
+  <button
+    type="button"
+    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+    className="ml-auto p-2 hover:bg-gray-100 rounded-lg"
+  >
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  </button>
+</div>
+</div> {/* ✅ Closes the main flex container that wraps desktop + mobile */}
 
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={isSaving}
-          className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50 flex-shrink-0 ml-4"
-        >
-          {isSaving ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          <span className="hidden md:inline">Save Changes</span>
-        </button>
-      </header>
+<button
+  type="button"
+  onClick={handleSave}
+  disabled={isSaving}
+  className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white roun
 
       {/* Mobile Dropdown Menu */}
       {isMobileMenuOpen && (
@@ -412,58 +403,73 @@ export default function WebsiteEditor() {
                     </div>
                   </div>
                   <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
-                    <iframe
-                      key={currentPage + '-mobile'}
-                      srcDoc={allPages[currentPage]}
-                      title={`${currentPage} Mobile Preview`}
-                      className="border-none"
-                      style={{ 
-                        width: '375px',
-                        minWidth: '375px',
-                        height: '100%',
-                        minHeight: '100%'
-                      }}
-                      ref={(iframe) => {
-                        if (iframe && iframe.contentWindow) {
-                          iframe.onload = () => {
-                            try {
-                              const iframeDoc = iframe.contentWindow.document;
-                              
-                              // Add viewport meta tag to force mobile width
-                              const viewport = iframeDoc.querySelector('meta[name="viewport"]');
-                              if (!viewport) {
-                                const meta = iframeDoc.createElement('meta');
-                                meta.name = 'viewport';
-                                meta.content = 'width=375, initial-scale=1, maximum-scale=1, user-scalable=no';
-                                iframeDoc.head.appendChild(meta);
-                              }
-                              
-                              iframeDoc.addEventListener('click', (e) => {
-                                const link = e.target.closest('a');
-                                if (link) {
-                                  const href = link.getAttribute('href');
-                                  
-                                  if (href && href.startsWith('#')) {
-                                    return;
-                                  }
-                                  
-                                  if (href && href.endsWith('.html') && allPages[href]) {
-                                    e.preventDefault();
-                                    setCurrentPage(href);
-                                    return;
-                                  }
-                                  
-                                  e.preventDefault();
-                                }
-                              }, true);
-                            } catch (err) {
-                              console.log('Could not access iframe:', err);
-                            }
-                          };
-                        }
-                      }}
-                    />
-                  </div>
+  <iframe
+    key={currentPage + '-mobile'}
+    srcDoc={allPages[currentPage]}
+    title={`${currentPage} Mobile Preview`}
+    className="border-none"
+    style={{ 
+      width: '100%',
+      height: '100%',
+      minHeight: '100%'
+    }}
+    ref={(iframe) => {
+      if (iframe && iframe.contentWindow) {
+        iframe.onload = () => {
+          try {
+            const iframeDoc = iframe.contentWindow.document;
+            
+            // Add viewport meta tag and force mobile styles
+            let viewport = iframeDoc.querySelector('meta[name="viewport"]');
+            if (!viewport) {
+              viewport = iframeDoc.createElement('meta');
+              viewport.name = 'viewport';
+              iframeDoc.head.appendChild(viewport);
+            }
+            viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+            
+            // Force body to fit container
+            const style = iframeDoc.createElement('style');
+            style.textContent = `
+              html, body {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow-x: hidden !important;
+                margin: 0 !important;
+                padding: 0 !important;
+              }
+              * {
+                max-width: 100% !important;
+              }
+            `;
+            iframeDoc.head.appendChild(style);
+            
+            iframeDoc.addEventListener('click', (e) => {
+              const link = e.target.closest('a');
+              if (link) {
+                const href = link.getAttribute('href');
+                
+                if (href && href.startsWith('#')) {
+                  return;
+                }
+                
+                if (href && href.endsWith('.html') && allPages[href]) {
+                  e.preventDefault();
+                  setCurrentPage(href);
+                  return;
+                }
+                
+                e.preventDefault();
+              }
+            }, true);
+          } catch (err) {
+            console.log('Could not access iframe:', err);
+          }
+        };
+      }
+    }}
+  />
+</div>
                 </div>
                 <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
               </div>
