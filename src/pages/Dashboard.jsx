@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 // Component imports
+import CustomersLeads from '../components/dashboard/CustomersLeads';
 import Overview from '../components/dashboard/Overview';
 import BookingCalendar from '../components/dashboard/BookingCalendar';
 import MyWebsite from '../components/dashboard/MyWebsite';
@@ -160,8 +161,9 @@ export default function Dashboard() {
 
   const menuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
-    { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
     { id: 'website', icon: Globe, label: 'My Website' },
+    { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
+    { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'services', icon: Briefcase, label: 'Services' },
     { id: 'team', icon: Users, label: 'Team' },
@@ -245,6 +247,15 @@ export default function Dashboard() {
               authFetch={authFetch}
             />
           )}
+
+          {currentView === 'customers-leads' && (
+  <CustomersLeads
+    user={user}
+    setCurrentView={setCurrentView}
+    apiUrl={apiUrl}
+    authFetch={authFetch}
+  />
+)}
 
           {currentView === 'website' && (
             <MyWebsite 
