@@ -411,16 +411,18 @@ export default function WebsiteEditor() {
                       <span>100%</span>
                     </div>
                   </div>
-                  <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
+                 <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
   <iframe
     key={currentPage + '-mobile'}
     srcDoc={allPages[currentPage]}
     title={`${currentPage} Mobile Preview`}
     className="border-none"
     style={{ 
-      width: '100%',
+      width: '375px',
       height: '100%',
-      minHeight: '100%'
+      minHeight: '100%',
+      transform: 'scale(1)',
+      transformOrigin: 'top left'
     }}
     ref={(iframe) => {
       if (iframe && iframe.contentWindow) {
@@ -428,27 +430,37 @@ export default function WebsiteEditor() {
           try {
             const iframeDoc = iframe.contentWindow.document;
             
-            // Add viewport meta tag and force mobile styles
+            // Add viewport meta tag
             let viewport = iframeDoc.querySelector('meta[name="viewport"]');
             if (!viewport) {
               viewport = iframeDoc.createElement('meta');
               viewport.name = 'viewport';
               iframeDoc.head.appendChild(viewport);
             }
-            viewport.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+            viewport.content = 'width=375, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no';
             
-            // Force body to fit container
+            // Force mobile layout
             const style = iframeDoc.createElement('style');
             style.textContent = `
-              html, body {
-                width: 100% !important;
-                max-width: 100% !important;
+              html {
+                width: 375px !important;
+                overflow-x: hidden !important;
+              }
+              body {
+                width: 375px !important;
+                min-width: 375px !important;
+                max-width: 375px !important;
                 overflow-x: hidden !important;
                 margin: 0 !important;
                 padding: 0 !important;
               }
               * {
+                max-width: 375px !important;
+                box-sizing: border-box !important;
+              }
+              img {
                 max-width: 100% !important;
+                height: auto !important;
               }
             `;
             iframeDoc.head.appendChild(style);
@@ -479,12 +491,6 @@ export default function WebsiteEditor() {
     }}
   />
 </div>
-                </div>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* AI Chat Widget */}
         {!isAIChatOpen ? (
