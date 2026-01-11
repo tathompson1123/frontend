@@ -16,17 +16,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [editingText, setEditingText] = useState(null);
   const iframeRef = useRef(null);
-  
-  // Drag state
-  const dragRef = useRef({
-    mouseDown: false,
-    dragging: false,
-    element: null,
-    startMouseX: 0,
-    startMouseY: 0,
-    startElementX: 0,
-    startElementY: 0
-  });
+  const dragData = useRef(null);
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -41,10 +31,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   });
 
   useEffect(() => {
-    setupIframe();
-  }, [htmlContent]);
-
-  const setupIframe = () => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
@@ -52,175 +38,115 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const doc = iframe.contentDocument;
       if (!doc) return;
 
-      // Inject CSS
       const style = doc.createElement('style');
       style.textContent = `
         * { box-sizing: border-box; }
         body { position: relative; min-height: 100vh; }
-        .ve-selected { 
-          outline: 3px solid #8b5cf6 !important; 
-          outline-offset: 2px;
-          cursor: move !important;
-        }
-        .ve-hover { 
-          outline: 2px dashed #3b82f6 !important; 
-          outline-offset: 2px; 
-        }
-        .ve-dragging { 
-          opacity: 0.6 !important;
-          z-index: 99999 !important;
-        }
+        .selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px; cursor: move !important; }
+        .hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px; }
       `;
       doc.head.appendChild(style);
 
-      // Prevent default behaviors
       doc.querySelectorAll('a, button').forEach(el => {
-        el.addEventListener('click', e => e.preventDefault(), true);
+        el.onclick = e => e.preventDefault();
       });
 
-      // Click to select
-      doc.addEventListener('click', (e) => {
-        if (dragRef.current.dragging) return;
-        
+      // Click = select only
+      doc.onclick = (e) => {
+        if (dragData.current?.moved) {
+          dragData.current = null;
+          return;
+        }
+
         e.preventDefault();
-        e.stopPropagation();
-        
-        // Clear previous
-        doc.querySelectorAll('.ve-selected').forEach(el => {
-          el.classList.remove('ve-selected');
-        });
-        
-        // Select clicked
-        e.target.classList.add('ve-selected');
+        doc.querySelectorAll('.selected').forEach(el => el.classList.remove('selected'));
+        e.target.classList.add('selected');
         setSelectedElements([e.target]);
         loadProps(e.target);
-      }, true);
+      };
 
-      // Double-click to edit
-      doc.addEventListener('dblclick', (e) => {
+      // Double click = edit
+      doc.ondblclick = (e) => {
         e.preventDefault();
-        const el = e.target;
-        const textTags = ['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'];
-        
-        if (textTags.includes(el.tagName)) {
-          el.contentEditable = 'true';
-          el.focus();
-          
-          // Select all text
-          const range = doc.createRange();
-          range.selectNodeContents(el);
-          const sel = doc.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-          
-          setEditingText(el);
-          
-          const blur = () => {
-            el.contentEditable = 'false';
+        if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV'].includes(e.target.tagName)) {
+          e.target.contentEditable = 'true';
+          e.target.focus();
+          setEditingText(e.target);
+          e.target.onblur = () => {
+            e.target.contentEditable = 'false';
             setEditingText(null);
             save();
           };
-          el.addEventListener('blur', blur, { once: true });
         }
-      }, true);
+      };
 
-      // Mouse down - prepare for potential drag
-      doc.addEventListener('mousedown', (e) => {
-        if (!e.target.classList.contains('ve-selected')) return;
-        if (editingText) return;
-        
+      // Mousedown on selected = prepare drag
+      doc.onmousedown = (e) => {
+        if (!e.target.classList.contains('selected')) return;
         e.preventDefault();
-        e.stopPropagation();
-        
+
         const el = e.target;
         const rect = el.getBoundingClientRect();
         const iframeRect = iframe.getBoundingClientRect();
-        
-        dragRef.current = {
-          mouseDown: true,
-          dragging: false,
-          element: el,
-          startMouseX: e.clientX,
-          startMouseY: e.clientY,
-          startElementX: parseInt(el.style.left) || (rect.left - iframeRect.left),
-          startElementY: parseInt(el.style.top) || (rect.top - iframeRect.top),
-          originalPosition: el.style.position,
-          originalWidth: rect.width
+
+        dragData.current = {
+          el: el,
+          moved: false,
+          startX: e.clientX,
+          startY: e.clientY,
+          elStartX: rect.left - iframeRect.left,
+          elStartY: rect.top - iframeRect.top,
+          width: rect.width
         };
-      }, true);
+      };
 
-      // Hover effects
-      doc.addEventListener('mouseover', (e) => {
-        if (!dragRef.current.dragging) {
-          e.target.classList.add('ve-hover');
-        }
-      });
-      
-      doc.addEventListener('mouseout', (e) => {
-        e.target.classList.remove('ve-hover');
-      });
+      doc.onmouseover = (e) => e.target.classList.add('hover');
+      doc.onmouseout = (e) => e.target.classList.remove('hover');
     };
-  };
+  }, [htmlContent]);
 
-  // Global mouse move
   useEffect(() => {
-    const move = (e) => {
-      if (!dragRef.current.mouseDown) return;
-      
-      const dx = Math.abs(e.clientX - dragRef.current.startMouseX);
-      const dy = Math.abs(e.clientY - dragRef.current.startMouseY);
-      
-      // Only start dragging if mouse moved more than 5px
-      if (!dragRef.current.dragging && (dx > 5 || dy > 5)) {
-        dragRef.current.dragging = true;
-        
-        const el = dragRef.current.element;
-        
-        // Convert to absolute positioning on first drag
-        if (el.style.position !== 'absolute') {
-          el.style.position = 'absolute';
-          el.style.left = dragRef.current.startElementX + 'px';
-          el.style.top = dragRef.current.startElementY + 'px';
-          el.style.width = dragRef.current.originalWidth + 'px';
-          el.style.margin = '0';
-        }
-        
-        el.classList.add('ve-dragging');
+    const handleMove = (e) => {
+      if (!dragData.current) return;
+
+      const dx = e.clientX - dragData.current.startX;
+      const dy = e.clientY - dragData.current.startY;
+
+      // Start dragging after 3px movement
+      if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+        dragData.current.moved = true;
+        const el = dragData.current.el;
+        el.style.position = 'absolute';
+        el.style.left = dragData.current.elStartX + 'px';
+        el.style.top = dragData.current.elStartY + 'px';
+        el.style.width = dragData.current.width + 'px';
+        el.style.margin = '0';
+        el.style.opacity = '0.6';
       }
-      
-      // Update position while dragging
-      if (dragRef.current.dragging) {
-        requestAnimationFrame(() => {
-          const deltaX = e.clientX - dragRef.current.startMouseX;
-          const deltaY = e.clientY - dragRef.current.startMouseY;
-          
-          const newX = dragRef.current.startElementX + deltaX;
-          const newY = dragRef.current.startElementY + deltaY;
-          
-          dragRef.current.element.style.left = newX + 'px';
-          dragRef.current.element.style.top = newY + 'px';
-        });
+
+      // Move element
+      if (dragData.current.moved) {
+        dragData.current.el.style.left = (dragData.current.elStartX + dx) + 'px';
+        dragData.current.el.style.top = (dragData.current.elStartY + dy) + 'px';
       }
     };
 
-    const up = () => {
-      if (dragRef.current.mouseDown) {
-        if (dragRef.current.dragging) {
-          dragRef.current.element.classList.remove('ve-dragging');
-          save();
-        }
-        
-        dragRef.current.mouseDown = false;
-        dragRef.current.dragging = false;
+    const handleUp = () => {
+      if (dragData.current?.moved) {
+        dragData.current.el.style.opacity = '1';
+        save();
       }
+      setTimeout(() => {
+        dragData.current = null;
+      }, 0);
     };
 
-    window.addEventListener('mousemove', move);
-    window.addEventListener('mouseup', up);
+    window.addEventListener('mousemove', handleMove);
+    window.addEventListener('mouseup', handleUp);
 
     return () => {
-      window.removeEventListener('mousemove', move);
-      window.removeEventListener('mouseup', up);
+      window.removeEventListener('mousemove', handleMove);
+      window.removeEventListener('mouseup', handleUp);
     };
   }, []);
 
@@ -254,7 +180,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const duplicate = () => {
     selectedElements.forEach(el => {
       const c = el.cloneNode(true);
-      c.classList.remove('ve-selected');
+      c.classList.remove('selected');
       c.style.left = (parseInt(el.style.left || 0) + 20) + 'px';
       c.style.top = (parseInt(el.style.top || 0) + 20) + 'px';
       el.parentNode.appendChild(c);
@@ -264,8 +190,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
   const save = () => {
     if (iframeRef.current?.contentDocument) {
-      const html = iframeRef.current.contentDocument.documentElement.outerHTML;
-      onUpdate(html);
+      onUpdate(iframeRef.current.contentDocument.documentElement.outerHTML);
     }
   };
 
@@ -273,121 +198,56 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     if (!rgb || rgb === 'rgba(0, 0, 0, 0)') return '#000000';
     const m = rgb.match(/\d+/g);
     if (!m) return '#000000';
-    return '#' + m.slice(0,3).map(x => {
-      const h = parseInt(x).toString(16);
-      return h.length === 1 ? '0' + h : h;
-    }).join('');
+    return '#' + m.slice(0,3).map(x => ('0' + parseInt(x).toString(16)).slice(-2)).join('');
   };
 
   return (
     <div className="w-full h-full flex">
-      <iframe
-        ref={iframeRef}
-        srcDoc={htmlContent}
-        className="flex-1 border-none bg-white"
-      />
+      <iframe ref={iframeRef} srcDoc={htmlContent} className="flex-1 border-none" />
 
       {selectedElements.length > 0 && (
-        <div className="w-72 bg-white border-l overflow-y-auto flex-shrink-0">
-          <div className="p-3 border-b bg-purple-50 flex justify-between items-center">
-            <span className="font-bold text-sm">Properties</span>
+        <div className="w-72 bg-white border-l overflow-y-auto">
+          <div className="p-3 border-b bg-purple-50 flex justify-between">
+            <span className="font-bold">Properties</span>
             <div className="flex gap-1">
-              <button onClick={duplicate} className="p-1 hover:bg-white rounded" title="Duplicate">
-                <Copy className="w-4 h-4" />
-              </button>
-              <button onClick={deleteEl} className="p-1 hover:bg-white rounded" title="Delete">
-                <Trash2 className="w-4 h-4 text-red-600" />
-              </button>
+              <button onClick={duplicate} className="p-1 hover:bg-white rounded"><Copy className="w-4 h-4" /></button>
+              <button onClick={deleteEl} className="p-1 hover:bg-white rounded"><Trash2 className="w-4 h-4 text-red-600" /></button>
             </div>
           </div>
 
           <div className="p-3 space-y-3">
             <div>
               <label className="text-xs font-bold block mb-1">Width</label>
-              <input
-                type="text"
-                value={elementProps.width}
-                onChange={(e) => updateProp('width', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-sm"
-                placeholder="auto"
-              />
+              <input type="text" value={elementProps.width} onChange={(e) => updateProp('width', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
             </div>
-
             <div>
               <label className="text-xs font-bold block mb-1">Height</label>
-              <input
-                type="text"
-                value={elementProps.height}
-                onChange={(e) => updateProp('height', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-sm"
-                placeholder="auto"
-              />
+              <input type="text" value={elementProps.height} onChange={(e) => updateProp('height', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
             </div>
-
             <div>
               <label className="text-xs font-bold block mb-1">Font Size</label>
-              <input
-                type="text"
-                value={elementProps.fontSize}
-                onChange={(e) => updateProp('fontSize', e.target.value)}
-                className="w-full px-2 py-1 border rounded text-sm"
-              />
+              <input type="text" value={elementProps.fontSize} onChange={(e) => updateProp('fontSize', e.target.value)} className="w-full px-2 py-1 border rounded text-sm" />
             </div>
-
             <div className="flex gap-2">
-              <button
-                onClick={() => updateProp('fontWeight', elementProps.fontWeight === 'bold' ? 'normal' : 'bold')}
-                className={`flex-1 p-2 border rounded ${elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'bg-purple-100' : ''}`}
-              >
+              <button onClick={() => updateProp('fontWeight', elementProps.fontWeight === 'bold' ? 'normal' : 'bold')} className={`flex-1 p-2 border rounded ${elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'bg-purple-100' : ''}`}>
                 <Bold className="w-4 h-4 mx-auto" />
               </button>
-              <button
-                onClick={() => updateProp('fontStyle', elementProps.fontStyle === 'italic' ? 'normal' : 'italic')}
-                className="flex-1 p-2 border rounded"
-              >
+              <button onClick={() => updateProp('fontStyle', 'italic')} className="flex-1 p-2 border rounded">
                 <Italic className="w-4 h-4 mx-auto" />
               </button>
             </div>
-
             <div className="flex gap-2">
-              <button
-                onClick={() => updateProp('textAlign', 'left')}
-                className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'left' ? 'bg-purple-100' : ''}`}
-              >
-                <AlignLeft className="w-4 h-4 mx-auto" />
-              </button>
-              <button
-                onClick={() => updateProp('textAlign', 'center')}
-                className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'center' ? 'bg-purple-100' : ''}`}
-              >
-                <AlignCenter className="w-4 h-4 mx-auto" />
-              </button>
-              <button
-                onClick={() => updateProp('textAlign', 'right')}
-                className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'right' ? 'bg-purple-100' : ''}`}
-              >
-                <AlignRight className="w-4 h-4 mx-auto" />
-              </button>
+              <button onClick={() => updateProp('textAlign', 'left')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'left' ? 'bg-purple-100' : ''}`}><AlignLeft className="w-4 h-4 mx-auto" /></button>
+              <button onClick={() => updateProp('textAlign', 'center')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'center' ? 'bg-purple-100' : ''}`}><AlignCenter className="w-4 h-4 mx-auto" /></button>
+              <button onClick={() => updateProp('textAlign', 'right')} className={`flex-1 p-2 border rounded ${elementProps.textAlign === 'right' ? 'bg-purple-100' : ''}`}><AlignRight className="w-4 h-4 mx-auto" /></button>
             </div>
-
             <div>
               <label className="text-xs font-bold block mb-1">Text Color</label>
-              <input
-                type="color"
-                value={elementProps.color}
-                onChange={(e) => updateProp('color', e.target.value)}
-                className="w-full h-10 cursor-pointer rounded"
-              />
+              <input type="color" value={elementProps.color} onChange={(e) => updateProp('color', e.target.value)} className="w-full h-10 cursor-pointer" />
             </div>
-
             <div>
               <label className="text-xs font-bold block mb-1">Background</label>
-              <input
-                type="color"
-                value={elementProps.backgroundColor}
-                onChange={(e) => updateProp('backgroundColor', e.target.value)}
-                className="w-full h-10 cursor-pointer rounded"
-              />
+              <input type="color" value={elementProps.backgroundColor} onChange={(e) => updateProp('backgroundColor', e.target.value)} className="w-full h-10 cursor-pointer" />
             </div>
           </div>
         </div>
