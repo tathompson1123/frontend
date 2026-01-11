@@ -45,29 +45,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     } 
   });
 };
-      const data = await response.json();
-if (data.success && data.html) {
-  const saveResponse = await authFetch(`${apiUrl}/api/website`, {
-    method: 'POST',
-    body: JSON.stringify({ 
-      htmlContent: data.html,
-      pages: data.pages || { 'index.html': data.html }
-    })
-  });
-  const saveData = await saveResponse.json();
-  if (saveData.success) {
-    setCurrentWebsite(data.html);
-    setShowEditWebsite(false);
-    alert('Website generated successfully!');
-  }
-}
-    } catch (error) {
-      console.error('Error generating website:', error);
-      alert('Failed to generate website');
-    } finally {
-      setIsRegenerating(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
