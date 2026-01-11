@@ -61,42 +61,101 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       });
 
       // Mousedown = prepare drag
-      doc.onmousedown = (e) => {
-        const el = e.target;
-        
-        // Don't drag body, html, or large containers
-        if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
-          return;
-        }
+     // Mousedown = prepare drag or selection
+doc.onmousedown = (e) => {
+  const el = e.target;
+  
+  // If clicking on empty space, start selection box
+  if (['BODY', 'HTML'].includes(el.tagName)) {
+    e.preventDefault();
+    const iframeRect = iframe.getBoundingClientRect();
+    
+    selectionData.current = {
+      startX: e.clientX - iframeRect.left,
+      startY: e.clientY - iframeRect.top,
+      iframe: iframe
+    };
+    return;
+  }
 
-        e.preventDefault();
+  // Don't drag large containers
+  if (['MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
+    return;
+  }
 
-        const rect = el.getBoundingClientRect();
-        const iframeRect = iframe.getBoundingClientRect();
+  e.preventDefault();
 
-        let currentLeft = parseInt(el.style.left) || 0;
-        let currentTop = parseInt(el.style.top) || 0;
-        
-        if (el.style.position !== 'absolute') {
-          currentLeft = rect.left - iframeRect.left;
-          currentTop = rect.top - iframeRect.top;
-        }
+  const iframeRect = iframe.getBoundingClientRect();
+  const rect = el.getBoundingClientRect();
 
-        dragData.current = {
-          el: el,
-          moved: false,
-          startX: e.clientX,
-          startY: e.clientY,
-          elStartX: currentLeft,
-          elStartY: currentTop,
-          width: rect.width,
-          height: rect.height,
-          iframe: iframe,
-          mouseOffsetX: (e.clientX - iframeRect.left) - currentLeft,
-          mouseOffsetY: (e.clientY - iframeRect.top) - currentTop
-        };
+  // If clicking on already selected element, prepare multi-drag
+  if (el.classList.contains('selected')) {
+    // Store data for all selected elements
+    const elementsData = selectedElements.map(elem => {
+      const elemRect = elem.getBoundingClientRect();
+      let currentLeft = parseInt(elem.style.left) || 0;
+      let currentTop = parseInt(elem.style.top) || 0;
+      
+      if (elem.style.position !== 'absolute') {
+        currentLeft = elemRect.left - iframeRect.left;
+        currentTop = elemRect.top - iframeRect.top;
+      }
+      
+      return {
+        el: elem,
+        startX: currentLeft,
+        startY: currentTop,
+        width: elemRect.width,
+        height: elemRect.height
       };
+    });
+    
+    // Calculate offset from first element
+    const firstRect = selectedElements[0].getBoundingClientRect();
+    const firstLeft = firstRect.left - iframeRect.left;
+    const firstTop = firstRect.top - iframeRect.top;
+    
+    dragData.current = {
+      elements: elementsData,
+      moved: false,
+      startMouseX: e.clientX,
+      startMouseY: e.clientY,
+      iframe: iframe,
+      mouseOffsetX: (e.clientX - iframeRect.left) - firstLeft,
+      mouseOffsetY: (e.clientY - iframeRect.top) - firstTop
+    };
+    return;
+  }
 
+  // Single element click - prepare single drag
+  let currentLeft = parseInt(el.style.left) || 0;
+  let currentTop = parseInt(el.style.top) || 0;
+  
+  if (el.style.position !== 'absolute') {
+    currentLeft = rect.left - iframeRect.left;
+    currentTop = rect.top - iframeRect.top;
+  }
+
+  // Calculate offset where mouse clicked on element
+  const clickOffsetX = (e.clientX - iframeRect.left) - currentLeft;
+  const clickOffsetY = (e.clientY - iframeRect.top) - currentTop;
+
+  dragData.current = {
+    elements: [{
+      el: el,
+      startX: currentLeft,
+      startY: currentTop,
+      width: rect.width,
+      height: rect.height
+    }],
+    moved: false,
+    startMouseX: e.clientX,
+    startMouseY: e.clientY,
+    iframe: iframe,
+    mouseOffsetX: clickOffsetX,
+    mouseOffsetY: clickOffsetY
+  };
+};
       // Click = select (only if didn't drag)
       doc.onclick = (e) => {
         if (dragData.current?.moved) {
