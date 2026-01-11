@@ -9,7 +9,6 @@ import {
   Monitor,
   Smartphone,
   X,
-  MessageCircle,
   Undo2,
   Redo2
 } from 'lucide-react';
@@ -35,13 +34,11 @@ export default function WebsiteEditor() {
 
   useEffect(() => {
     const handleKeyboard = (e) => {
-      // Ctrl+Z or Cmd+Z for undo
       if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
         e.preventDefault();
         handleUndo();
       }
       
-      // Ctrl+Y or Cmd+Shift+Z for redo
       if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
         e.preventDefault();
         handleRedo();
@@ -78,7 +75,6 @@ export default function WebsiteEditor() {
           setCurrentPage('index.html');
         }
         
-        // Initialize history with first state
         setHistory([pages]);
         setHistoryIndex(0);
         
@@ -153,7 +149,6 @@ export default function WebsiteEditor() {
     
     setAllPages(newPages);
     
-    // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newPages);
     setHistory(newHistory);
@@ -245,40 +240,39 @@ export default function WebsiteEditor() {
             </div>
             
             {/* Device Preview Toggle */}
-<div className="h-6 w-px bg-gray-300" />
-<div className="flex gap-2">
-  <button 
-    type="button" 
-    onClick={() => setDevicePreview('desktop')} 
-    className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-      devicePreview === 'desktop' 
-        ? 'bg-purple-600 text-white' 
-        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-    }`}
-  >
-    <Monitor className="w-4 h-4" />
-    <span>Desktop</span>
-  </button>
-  <button 
-    type="button" 
-    onClick={() => setDevicePreview('mobile')} 
-    className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-      devicePreview === 'mobile' 
-        ? 'bg-purple-600 text-white' 
-        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-    }`}
-  >
-    <Smartphone className="w-4 h-4" />
-    <span>Mobile</span>
-  </button>
-</div>
-</div> {/* ✅ Closes "Desktop - Full Controls" */}
+            <div className="h-6 w-px bg-gray-300" />
+            <div className="flex gap-2">
+              <button 
+                type="button" 
+                onClick={() => setDevicePreview('desktop')} 
+                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+                  devicePreview === 'desktop' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Monitor className="w-4 h-4" />
+                <span>Desktop</span>
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setDevicePreview('mobile')} 
+                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+                  devicePreview === 'mobile' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Mobile</span>
+              </button>
+            </div>
+          </div>
 
- {/* Mobile - Compact Logo + Menu */}
+          {/* Mobile - Compact Logo + Menu */}
           <div className="flex lg:hidden items-center gap-4 flex-1">
             <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
             
-            {/* Mobile Menu Button */}
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -309,7 +303,6 @@ export default function WebsiteEditor() {
       {/* Mobile Dropdown Menu */}
       {isMobileMenuOpen && (
         <div className="lg:hidden bg-white border-b border-gray-200 p-4 space-y-4 z-10">
-          {/* Page Tabs */}
           <div>
             <label className="text-xs font-semibold text-gray-600 mb-2 block">PAGE</label>
             <div className="flex flex-wrap gap-2">
@@ -332,7 +325,6 @@ export default function WebsiteEditor() {
             </div>
           </div>
 
-          {/* Device Toggle */}
           <div>
             <label className="text-xs font-semibold text-gray-600 mb-2 block">PREVIEW</label>
             <div className="flex gap-2">
@@ -368,7 +360,7 @@ export default function WebsiteEditor() {
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200">
         
-        {/* Undo/Redo Buttons - Top Left Above Preview */}
+        {/* Undo/Redo Buttons */}
         <div className="absolute top-4 left-4 z-30 flex gap-2">
           <button
             onClick={handleUndo}
@@ -407,94 +399,97 @@ export default function WebsiteEditor() {
                   <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
                     <span>9:41</span>
                     <div className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                      </svg>
                       <span>100%</span>
                     </div>
                   </div>
-                 <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
-  <iframe
-    key={currentPage + '-mobile'}
-    srcDoc={allPages[currentPage]}
-    title={`${currentPage} Mobile Preview`}
-    className="border-none"
-    style={{ 
-      width: '375px',
-      height: '100%',
-      minHeight: '100%',
-      transform: 'scale(1)',
-      transformOrigin: 'top left'
-    }}
-    ref={(iframe) => {
-      if (iframe && iframe.contentWindow) {
-        iframe.onload = () => {
-          try {
-            const iframeDoc = iframe.contentWindow.document;
-            
-            // Add viewport meta tag
-            let viewport = iframeDoc.querySelector('meta[name="viewport"]');
-            if (!viewport) {
-              viewport = iframeDoc.createElement('meta');
-              viewport.name = 'viewport';
-              iframeDoc.head.appendChild(viewport);
-            }
-            viewport.content = 'width=375, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no';
-            
-            // Force mobile layout
-            const style = iframeDoc.createElement('style');
-            style.textContent = `
-              html {
-                width: 375px !important;
-                overflow-x: hidden !important;
-              }
-              body {
-                width: 375px !important;
-                min-width: 375px !important;
-                max-width: 375px !important;
-                overflow-x: hidden !important;
-                margin: 0 !important;
-                padding: 0 !important;
-              }
-              * {
-                max-width: 375px !important;
-                box-sizing: border-box !important;
-              }
-              img {
-                max-width: 100% !important;
-                height: auto !important;
-              }
-            `;
-            iframeDoc.head.appendChild(style);
-            
-            iframeDoc.addEventListener('click', (e) => {
-              const link = e.target.closest('a');
-              if (link) {
-                const href = link.getAttribute('href');
-                
-                if (href && href.startsWith('#')) {
-                  return;
-                }
-                
-                if (href && href.endsWith('.html') && allPages[href]) {
-                  e.preventDefault();
-                  setCurrentPage(href);
-                  return;
-                }
-                
-                e.preventDefault();
-              }
-            }, true);
-          } catch (err) {
-            console.log('Could not access iframe:', err);
-          }
-        };
-      }
-    }}
-  />
-</div>
+                  <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
+                    <iframe
+                      key={currentPage + '-mobile'}
+                      srcDoc={allPages[currentPage]}
+                      title={`${currentPage} Mobile Preview`}
+                      className="border-none"
+                      style={{ 
+                        width: '375px',
+                        height: '100%',
+                        minHeight: '100%'
+                      }}
+                      ref={(iframe) => {
+                        if (iframe && iframe.contentWindow) {
+                          iframe.onload = () => {
+                            try {
+                              const iframeDoc = iframe.contentWindow.document;
+                              
+                              let viewport = iframeDoc.querySelector('meta[name="viewport"]');
+                              if (!viewport) {
+                                viewport = iframeDoc.createElement('meta');
+                                viewport.name = 'viewport';
+                                iframeDoc.head.appendChild(viewport);
+                              }
+                              viewport.content = 'width=375, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                              
+                              const style = iframeDoc.createElement('style');
+                              style.textContent = `
+                                html {
+                                  width: 375px !important;
+                                  overflow-x: hidden !important;
+                                }
+                                body {
+                                  width: 375px !important;
+                                  min-width: 375px !important;
+                                  max-width: 375px !important;
+                                  overflow-x: hidden !important;
+                                  margin: 0 !important;
+                                  padding: 0 !important;
+                                }
+                                * {
+                                  max-width: 375px !important;
+                                  box-sizing: border-box !important;
+                                }
+                                img {
+                                  max-width: 100% !important;
+                                  height: auto !important;
+                                }
+                              `;
+                              iframeDoc.head.appendChild(style);
+                              
+                              iframeDoc.addEventListener('click', (e) => {
+                                const link = e.target.closest('a');
+                                if (link) {
+                                  const href = link.getAttribute('href');
+                                  
+                                  if (href && href.startsWith('#')) {
+                                    return;
+                                  }
+                                  
+                                  if (href && href.endsWith('.html') && allPages[href]) {
+                                    e.preventDefault();
+                                    setCurrentPage(href);
+                                    return;
+                                  }
+                                  
+                                  e.preventDefault();
+                                }
+                              }, true);
+                            } catch (err) {
+                              console.log('Could not access iframe:', err);
+                            }
+                          };
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* AI Chat Widget */}
         {!isAIChatOpen ? (
-          /* Collapsed - Floating Button */
           <button
             onClick={() => setIsAIChatOpen(true)}
             className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-110 transition-all z-50 flex items-center gap-2"
@@ -503,9 +498,7 @@ export default function WebsiteEditor() {
             <span className="font-semibold">AI Assistant</span>
           </button>
         ) : (
-          /* Expanded - Chat Widget */
           <div className="fixed bottom-8 right-8 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
-            {/* Widget Header */}
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-2xl flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-purple-600" />
@@ -519,7 +512,6 @@ export default function WebsiteEditor() {
               </button>
             </div>
 
-            {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3">
               {messages.map((message, index) => (
                 <div
@@ -548,7 +540,6 @@ export default function WebsiteEditor() {
               )}
             </div>
 
-            {/* Input */}
             <div className="p-3 border-t border-gray-200 rounded-b-2xl">
               <div className="flex gap-2">
                 <input
