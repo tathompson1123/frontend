@@ -312,12 +312,23 @@ export default function WebsiteEditor() {
               return; // Let it work normally
             }
             
-            // Check if it's a link to another page in our multi-page site
-            if (href && href.endsWith('.html') && allPages[href]) {
-              e.preventDefault();
-              setCurrentPage(href);
-              return;
-            }
+           // Check if it's a link to another page in our multi-page site
+if (href && href.endsWith('.html')) {
+  console.log('🔗 Clicked:', href);
+  console.log('📄 Available pages:', Object.keys(allPages));
+  console.log('✅ Page exists?', !!allPages[href]);
+  
+  if (allPages[href]) {
+    e.preventDefault();
+    setCurrentPage(href);
+    console.log('✅ Switched to:', href);
+    return;
+  }
+}
+
+// PREVENT ALL OTHER NAVIGATION (including homepage links)
+e.preventDefault();
+console.log('🚫 Navigation blocked:', href);
             
             // PREVENT ALL OTHER NAVIGATION (including homepage links)
             e.preventDefault();
