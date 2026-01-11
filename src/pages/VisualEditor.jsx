@@ -81,25 +81,40 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       };
 
       // Mousedown on selected = prepare drag
-      doc.onmousedown = (e) => {
-        if (!e.target.classList.contains('selected')) return;
-        e.preventDefault();
+    const handleMove = (e) => {
+  if (!dragData.current) return;
 
-        const el = e.target;
-        const rect = el.getBoundingClientRect();
-        const iframeRect = iframe.getBoundingClientRect();
+  const dx = e.clientX - dragData.current.startX;
+  const dy = e.clientY - dragData.current.startY;
 
-        dragData.current = {
-          el: el,
-          moved: false,
-          startX: e.clientX,
-          startY: e.clientY,
-          elStartX: rect.left - iframeRect.left,
-          elStartY: rect.top - iframeRect.top,
-          width: rect.width,
-          iframe: iframe
-        };
-      };
+  // Start dragging after 3px movement
+  if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+    dragData.current.moved = true;
+    const el = dragData.current.el;
+    el.style.position = 'absolute';
+    el.style.left = dragData.current.elStartX + 'px';
+    el.style.top = dragData.current.elStartY + 'px';
+    el.style.width = dragData.current.width + 'px';
+    el.style.margin = '0';
+    el.style.opacity = '0.6';
+  }
+
+  // Move element - keep mouse at same relative position
+  if (dragData.current.moved) {
+    const iframe = dragData.current.iframe;
+    const iframeRect = iframe.getBoundingClientRect();
+    
+    const mouseXInIframe = e.clientX - iframeRect.left;
+    const mouseYInIframe = e.clientY - iframeRect.top;
+    
+    // Position element so mouse stays at same offset
+    const newX = mouseXInIframe - dragData.current.offsetX;
+    const newY = mouseYInIframe - dragData.current.offsetY;
+    
+    dragData.current.el.style.left = newX + 'px';
+    dragData.current.el.style.top = newY + 'px';
+  }
+};
 
       // IMPORTANT: Add mousemove and mouseup to iframe doc too
       doc.onmousemove = handleMove;
