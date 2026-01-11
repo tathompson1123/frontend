@@ -69,12 +69,10 @@ useEffect(() => {
 useEffect(() => {
   // Add global mouse listeners
   const handleGlobalMouseMove = (e) => {
-    if (draggedElement) {
+    if (draggedElement && iframeRef.current) {
       e.preventDefault();
       
       const iframe = iframeRef.current;
-      if (!iframe) return;
-      
       const iframeRect = iframe.getBoundingClientRect();
       
       // Calculate new position relative to iframe
@@ -105,12 +103,12 @@ useEffect(() => {
     }
   };
 
-  window.addEventListener('mousemove', handleGlobalMouseMove);
-  window.addEventListener('mouseup', handleGlobalMouseUp);
+  document.addEventListener('mousemove', handleGlobalMouseMove);
+  document.addEventListener('mouseup', handleGlobalMouseUp);
   
   return () => {
-    window.removeEventListener('mousemove', handleGlobalMouseMove);
-    window.removeEventListener('mouseup', handleGlobalMouseUp);
+    document.removeEventListener('mousemove', handleGlobalMouseMove);
+    document.removeEventListener('mouseup', handleGlobalMouseUp);
   };
 }, [draggedElement, isSelecting, selectedElements, dragOffset]);
 
@@ -153,14 +151,21 @@ const setupIframe = () => {
 
       // Add event listeners
       doc.addEventListener('click', handleElementClick, true);
-      doc.addEventListener('dblclick', handleElementDoubleClick, true); // ✅ ADD THIS
+      doc.addEventListener('dblclick', handleElementDoubleClick, true);
       doc.addEventListener('mousedown', handleMouseDown, true);
       doc.addEventListener('mouseover', handleMouseOver, true);
       doc.addEventListener('mouseout', handleMouseOut, true);
 
-      // Prevent default link behavior
-      doc.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', (e) => e.preventDefault());
+      // Prevent ALL default interactive behavior
+      doc.querySelectorAll('a, button, input, select, textarea').forEach(element => {
+        element.addEventListener('click', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, true);
+        
+        element.addEventListener('mousedown', (e) => {
+          e.preventDefault();
+        }, true);
       });
 
     } catch (err) {
@@ -168,7 +173,6 @@ const setupIframe = () => {
     }
   };
 };
-
 const handleElementClick = (e) => {
   e.stopPropagation();
   const element = e.target;
