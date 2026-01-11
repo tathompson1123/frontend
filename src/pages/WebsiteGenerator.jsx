@@ -87,31 +87,38 @@ export default function WebsiteGenerator() {
     runStep();
   };
 
-  const handleGenerate = async (e) => {
-    e.preventDefault();
-    setIsGenerating(true);
-    setError(null);
-    setProgress(0);
-    setBuildStatus('Starting AI generation...');
-
-    simulateBuildProgress();
-
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-      const response = await fetch(`${apiUrl}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          businessName: formData.businessName,
-          businessType: formData.businessType,
-          services: formData.services,
-          description: formData.description
-        })
-      });
-
+ const handleGenerate = async (e, preFilledData = null) => {
+  if (e) e.preventDefault(); // Make this conditional
+  
+  const dataToSubmit = preFilledData || formData; // Add this line
+  
+  setIsGenerating(true);
+  setError(null);
+  setProgress(0);
+  setBuildStatus('Starting AI generation...');
+  simulateBuildProgress();
+  
+  try {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    
+    const response = await fetch(`${apiUrl}/api/generate`, { // Fix: Add parentheses
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+  businessName: dataToSubmit.businessName,
+  businessType: dataToSubmit.businessType,
+  tagline: dataToSubmit.tagline,
+  services: dataToSubmit.services,
+  yearsInBusiness: dataToSubmit.yearsInBusiness,
+  certifications: dataToSubmit.certifications,
+  description: dataToSubmit.description,
+  uniqueSellingPoints: dataToSubmit.uniqueSellingPoints,
+  targetCustomer: dataToSubmit.targetCustomer
+})
+    });
+    
       const data = await response.json();
 
       if (!response.ok) {
