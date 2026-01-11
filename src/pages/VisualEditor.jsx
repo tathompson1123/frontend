@@ -16,8 +16,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [editingText, setEditingText] = useState(null);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
+  const [selectionBox, setSelectionBox] = useState(null);
   const iframeRef = useRef(null);
   const dragData = useRef(null);
+  const selectionData = useRef(null);
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -45,14 +47,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         body { position: relative; min-height: 100vh; }
         .selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px; cursor: move !important; }
         .hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px; cursor: pointer !important; }
-        .guide-line { 
-          position: fixed; 
-          background: #ef4444; 
-          z-index: 999998;
-          pointer-events: none;
-        }
-        .guide-v { width: 1px; height: 100%; top: 0; }
-        .guide-h { height: 1px; width: 100%; left: 0; }
       `;
       doc.head.appendChild(style);
 
@@ -60,8 +54,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         el.onclick = e => e.preventDefault();
       });
 
-      // Mousedown = prepare drag
-     // Mousedown = prepare drag or selection
+// Mousedown = prepare drag or selection
 doc.onmousedown = (e) => {
   const el = e.target;
   
@@ -110,7 +103,7 @@ doc.onmousedown = (e) => {
       };
     });
     
-    // Calculate offset from first element
+    // Calculate offset from where mouse clicked on first selected element
     const firstRect = selectedElements[0].getBoundingClientRect();
     const firstLeft = firstRect.left - iframeRect.left;
     const firstTop = firstRect.top - iframeRect.top;
@@ -156,24 +149,66 @@ doc.onmousedown = (e) => {
     mouseOffsetY: clickOffsetY
   };
 };
+        // Single element click - prepare single drag
+        const rect = el.getBoundingClientRect();
+        const iframeRect = iframe.getBoundingClientRect();
+
+        let currentLeft = parseInt(el.style.left) || 0;
+        let currentTop = parseInt(el.style.top) || 0;
+        
+        if (el.style.position !== 'absolute') {
+          currentLeft = rect.left - iframeRect.left;
+          currentTop = rect.top - iframeRect.top;
+        }
+
+        dragData.current = {
+          elements: [{
+            el: el,
+            startX: currentLeft,
+            startY: currentTop,
+            width: rect.width,
+            height: rect.height
+          }],
+          moved: false,
+          startMouseX: e.clientX,
+          startMouseY: e.clientY,
+          iframe: iframe,
+          mouseOffsetX: (e.clientX - iframeRect.left) - currentLeft,
+          mouseOffsetY: (e.clientY - iframeRect.top) - currentTop
+        };
+      };
+
       // Click = select (only if didn't drag)
       doc.onclick = (e) => {
-        if (dragData.current?.moved) {
+        if (dragData.current?.moved || selectionData.current) {
           dragData.current = null;
+          selectionData.current = null;
           return;
         }
 
         e.preventDefault();
         
-        // Don't select body/html
         if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
           return;
         }
         
-        doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-        e.target.classList.add('selected');
-        setSelectedElements([e.target]);
-        loadProps(e.target);
+        // Clear or add to selection
+        if (!e.shiftKey) {
+          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+          e.target.classList.add('selected');
+          setSelectedElements([e.target]);
+          loadProps(e.target);
+        } else {
+          // Shift-click to add to selection
+          if (e.target.classList.contains('selected')) {
+            e.target.classList.remove('selected');
+            setSelectedElements(prev => prev.filter(el => el !== e.target));
+          } else {
+            e.target.classList.add('selected');
+            setSelectedElements(prev => [...prev, e.target]);
+          }
+        }
+        
         dragData.current = null;
       };
 
@@ -202,37 +237,92 @@ doc.onmousedown = (e) => {
       doc.onmousemove = handleMove;
       doc.onmouseup = handleUp;
       doc.onmouseover = (e) => {
-        if (!dragData.current?.moved && !['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
+        if (!dragData.current?.moved && !selectionData.current && !['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
           e.target.classList.add('hover');
         }
       };
       doc.onmouseout = (e) => e.target.classList.remove('hover');
     };
-  }, [htmlContent]);
+  }, [htmlContent, selectedElements]);
 
   const handleMove = (e) => {
+    // Handle selection box
+    if (selectionData.current) {
+      const iframe = selectionData.current.iframe;
+      const iframeRect = iframe.getBoundingClientRect();
+      const doc = iframe.contentDocument;
+      
+      const currentX = e.clientX - iframeRect.left;
+      const currentY = e.clientY - iframeRect.top;
+      
+      const boxLeft = Math.min(selectionData.current.startX, currentX);
+      const boxTop = Math.min(selectionData.current.startY, currentY);
+      const boxWidth = Math.abs(currentX - selectionData.current.startX);
+      const boxHeight = Math.abs(currentY - selectionData.current.startY);
+      
+      setSelectionBox({
+        left: boxLeft,
+        top: boxTop,
+        width: boxWidth,
+        height: boxHeight
+      });
+      
+      // Find elements within selection box
+      const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
+        !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName) &&
+        el.offsetParent !== null
+      );
+      
+      allElements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const elLeft = rect.left - iframeRect.left;
+        const elTop = rect.top - iframeRect.top;
+        const elRight = elLeft + rect.width;
+        const elBottom = elTop + rect.height;
+        
+        const boxRight = boxLeft + boxWidth;
+        const boxBottom = boxTop + boxHeight;
+        
+        if (elLeft >= boxLeft && elRight <= boxRight && elTop >= boxTop && elBottom <= boxBottom) {
+          if (!el.classList.contains('selected')) {
+            el.classList.add('selected');
+          }
+        } else {
+          el.classList.remove('selected');
+        }
+      });
+      
+      return;
+    }
+
+    // Handle dragging
     if (!dragData.current) return;
 
-    const dx = e.clientX - dragData.current.startX;
-    const dy = e.clientY - dragData.current.startY;
+    const dx = e.clientX - dragData.current.startMouseX;
+    const dy = e.clientY - dragData.current.startMouseY;
 
     if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
       dragData.current.moved = true;
-      const el = dragData.current.el;
       
-      // Select element when drag starts
-      const doc = el.ownerDocument;
-      doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-      el.classList.add('selected');
-      setSelectedElements([el]);
-      loadProps(el);
-      
-      el.style.position = 'absolute';
-      el.style.left = dragData.current.elStartX + 'px';
-      el.style.top = dragData.current.elStartY + 'px';
-      el.style.width = dragData.current.width + 'px';
-      el.style.margin = '0';
-      el.style.opacity = '0.6';
+      // Make all elements absolute positioned
+      dragData.current.elements.forEach(data => {
+        const el = data.el;
+        const doc = el.ownerDocument;
+        
+        if (!el.classList.contains('selected')) {
+          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+          el.classList.add('selected');
+          setSelectedElements([el]);
+          loadProps(el);
+        }
+        
+        el.style.position = 'absolute';
+        el.style.left = data.startX + 'px';
+        el.style.top = data.startY + 'px';
+        el.style.width = data.width + 'px';
+        el.style.margin = '0';
+        el.style.opacity = '0.6';
+      });
     }
 
     if (dragData.current.moved) {
@@ -240,42 +330,45 @@ doc.onmousedown = (e) => {
       const iframeRect = iframe.getBoundingClientRect();
       const doc = iframe.contentDocument;
       
-      // Calculate new position
+      // Calculate new position for first element
       const mouseXInIframe = e.clientX - iframeRect.left;
       const mouseYInIframe = e.clientY - iframeRect.top;
       
       let newX = mouseXInIframe - dragData.current.mouseOffsetX;
       let newY = mouseYInIframe - dragData.current.mouseOffsetY;
       
-      // Snap threshold
+      // Snap and guide detection
       const snapThreshold = 5;
       const detectedGuides = { vertical: [], horizontal: [] };
       
-      // Page center guide
       const pageWidth = doc.body.scrollWidth;
       const pageHeight = doc.body.scrollHeight;
       const pageCenterX = pageWidth / 2;
       const pageCenterY = pageHeight / 2;
       
-      const elCenterX = newX + dragData.current.width / 2;
-      const elCenterY = newY + dragData.current.height / 2;
-      const elRight = newX + dragData.current.width;
-      const elBottom = newY + dragData.current.height;
+      const firstEl = dragData.current.elements[0];
+      const elCenterX = newX + firstEl.width / 2;
+      const elCenterY = newY + firstEl.height / 2;
+      
+      // Show center guides when near page center
+      if (Math.abs(elCenterX - pageCenterX) < 20) {
+        detectedGuides.vertical.push(pageCenterX);
+      }
+      if (Math.abs(elCenterY - pageCenterY) < 20) {
+        detectedGuides.horizontal.push(pageCenterY);
+      }
       
       // Snap to page center
       if (Math.abs(elCenterX - pageCenterX) < snapThreshold) {
-        newX = pageCenterX - dragData.current.width / 2;
-        detectedGuides.vertical.push(pageCenterX);
+        newX = pageCenterX - firstEl.width / 2;
       }
-      
       if (Math.abs(elCenterY - pageCenterY) < snapThreshold) {
-        newY = pageCenterY - dragData.current.height / 2;
-        detectedGuides.horizontal.push(pageCenterY);
+        newY = pageCenterY - firstEl.height / 2;
       }
       
       // Snap to other elements
       const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
-        el !== dragData.current.el && 
+        !dragData.current.elements.some(data => data.el === el) &&
         !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
         el.offsetParent !== null
       );
@@ -286,44 +379,47 @@ doc.onmousedown = (e) => {
         const otherY = otherRect.top - iframeRect.top;
         const otherCenterX = otherX + otherRect.width / 2;
         const otherCenterY = otherY + otherRect.height / 2;
-        const otherRight = otherX + otherRect.width;
-        const otherBottom = otherY + otherRect.height;
         
-        // Vertical alignment guides
-        if (Math.abs(newX - otherX) < snapThreshold) {
-          newX = otherX;
-          detectedGuides.vertical.push(otherX);
-        } else if (Math.abs(elCenterX - otherCenterX) < snapThreshold) {
-          newX = otherCenterX - dragData.current.width / 2;
+        if (Math.abs(elCenterX - otherCenterX) < snapThreshold) {
+          newX = otherCenterX - firstEl.width / 2;
           detectedGuides.vertical.push(otherCenterX);
-        } else if (Math.abs(elRight - otherRight) < snapThreshold) {
-          newX = otherRight - dragData.current.width;
-          detectedGuides.vertical.push(otherRight);
         }
         
-        // Horizontal alignment guides
-        if (Math.abs(newY - otherY) < snapThreshold) {
-          newY = otherY;
-          detectedGuides.horizontal.push(otherY);
-        } else if (Math.abs(elCenterY - otherCenterY) < snapThreshold) {
-          newY = otherCenterY - dragData.current.height / 2;
+        if (Math.abs(elCenterY - otherCenterY) < snapThreshold) {
+          newY = otherCenterY - firstEl.height / 2;
           detectedGuides.horizontal.push(otherCenterY);
-        } else if (Math.abs(elBottom - otherBottom) < snapThreshold) {
-          newY = otherBottom - dragData.current.height;
-          detectedGuides.horizontal.push(otherBottom);
         }
       });
       
       setGuides(detectedGuides);
       
-      dragData.current.el.style.left = newX + 'px';
-      dragData.current.el.style.top = newY + 'px';
+      // Apply movement to all selected elements
+      const deltaX = newX - firstEl.startX;
+      const deltaY = newY - firstEl.startY;
+      
+      dragData.current.elements.forEach(data => {
+        data.el.style.left = (data.startX + deltaX) + 'px';
+        data.el.style.top = (data.startY + deltaY) + 'px';
+      });
     }
   };
 
   const handleUp = () => {
+    if (selectionData.current) {
+      const doc = selectionData.current.iframe.contentDocument;
+      const selected = Array.from(doc.querySelectorAll('.selected'));
+      setSelectedElements(selected);
+      if (selected.length === 1) {
+        loadProps(selected[0]);
+      }
+      selectionData.current = null;
+      setSelectionBox(null);
+    }
+    
     if (dragData.current?.moved) {
-      dragData.current.el.style.opacity = '1';
+      dragData.current.elements.forEach(data => {
+        data.el.style.opacity = '1';
+      });
       setGuides({ vertical: [], horizontal: [] });
       save();
     }
@@ -339,7 +435,7 @@ doc.onmousedown = (e) => {
       window.removeEventListener('mousemove', handleMove);
       window.removeEventListener('mouseup', handleUp);
     };
-  }, []);
+  }, [selectedElements]);
 
   const loadProps = (el) => {
     const s = window.getComputedStyle(el);
@@ -398,6 +494,19 @@ doc.onmousedown = (e) => {
       <div className="flex-1 relative">
         <iframe ref={iframeRef} srcDoc={htmlContent} className="w-full h-full border-none" />
         
+        {/* Selection Box */}
+        {selectionBox && (
+          <div 
+            className="absolute border-2 border-blue-500 bg-blue-500 bg-opacity-10 pointer-events-none z-50"
+            style={{
+              left: `${selectionBox.left}px`,
+              top: `${selectionBox.top}px`,
+              width: `${selectionBox.width}px`,
+              height: `${selectionBox.height}px`
+            }}
+          />
+        )}
+        
         {/* Alignment Guides */}
         {guides.vertical.map((x, i) => (
           <div key={`v-${i}`} className="absolute w-px h-full bg-red-500 pointer-events-none z-50" style={{ left: `${x}px` }} />
@@ -410,7 +519,9 @@ doc.onmousedown = (e) => {
       {selectedElements.length > 0 && (
         <div className="w-72 bg-white border-l overflow-y-auto flex-shrink-0">
           <div className="p-3 border-b bg-purple-50 flex justify-between">
-            <span className="font-bold">Properties</span>
+            <span className="font-bold text-sm">
+              {selectedElements.length === 1 ? 'Properties' : `${selectedElements.length} Selected`}
+            </span>
             <div className="flex gap-1">
               <button onClick={duplicate} className="p-1 hover:bg-white rounded" title="Duplicate">
                 <Copy className="w-4 h-4" />
