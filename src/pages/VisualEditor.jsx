@@ -52,6 +52,18 @@ useEffect(() => {
   if (iframeRef.current) {
     setupIframe();
   }
+  
+  // Cleanup function
+  return () => {
+    if (iframeRef.current && iframeRef.current.contentDocument) {
+      const doc = iframeRef.current.contentDocument;
+      doc.removeEventListener('click', handleElementClick, true);
+      doc.removeEventListener('dblclick', handleElementDoubleClick, true);
+      doc.removeEventListener('mousedown', handleMouseDown, true);
+      doc.removeEventListener('mouseover', handleMouseOver, true);
+      doc.removeEventListener('mouseout', handleMouseOut, true);
+    }
+  };
 }, [htmlContent]);
 
 useEffect(() => {
