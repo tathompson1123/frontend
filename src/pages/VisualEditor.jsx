@@ -16,9 +16,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [hoveredElement, setHoveredElement] = useState(null);
   const [editingText, setEditingText] = useState(null);
-  const [draggedElement, setDraggedElement] = useState(null);
-  const [dragStart, setDragStart] = useState(null);
   const iframeRef = useRef(null);
+  
+  // Drag state
+  const dragState = useRef({
+    isDragging: false,
+    element: null,
+    startX: 0,
+    startY: 0,
+    elementStartX: 0,
+    elementStartY: 0
+  });
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -32,195 +40,170 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     margin: ''
   });
 
-  // Setup iframe
   useEffect(() => {
-    if (!iframeRef.current) return;
-    
+    setupIframe();
+  }, [htmlContent]);
+
+  const setupIframe = () => {
     const iframe = iframeRef.current;
-    
+    if (!iframe) return;
+
     iframe.onload = () => {
       try {
         const doc = iframe.contentDocument;
-        
+        if (!doc) return;
+
         // Inject styles
         const style = doc.createElement('style');
         style.textContent = `
           * { box-sizing: border-box; }
-          .visual-editor-hover {
-            outline: 2px dashed #3b82f6 !important;
-            outline-offset: 2px;
-            cursor: pointer !important;
-          }
-          .visual-editor-selected {
-            outline: 3px solid #8b5cf6 !important;
-            outline-offset: 2px;
-            cursor: move !important;
-          }
-          .visual-editor-dragging {
-            opacity: 0.6 !important;
-            cursor: move !important;
-            z-index: 99999 !important;
-          }
-          [contenteditable="true"] {
-            user-select: text !important;
-            outline: 2px solid #10b981 !important;
-            cursor: text !important;
-          }
+          .ve-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px; }
+          .ve-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px; cursor: move !important; }
+          .ve-dragging { opacity: 0.7 !important; z-index: 999999 !important; }
+          [contenteditable="true"] { outline: 2px solid #10b981 !important; user-select: text !important; }
         `;
         doc.head.appendChild(style);
 
-        // Add event listeners
-        doc.body.addEventListener('click', handleClick, true);
-        doc.body.addEventListener('dblclick', handleDoubleClick, true);
-        doc.body.addEventListener('mousedown', handleMouseDown, true);
-        doc.body.addEventListener('mouseover', handleMouseOver);
-        doc.body.addEventListener('mouseout', handleMouseOut);
-
-        // Disable all interactive elements
+        // Disable all links and buttons
         doc.querySelectorAll('a, button, form').forEach(el => {
-          el.addEventListener('click', (e) => {
+          el.addEventListener('click', (e) => e.preventDefault(), true);
+          el.addEventListener('submit', (e) => e.preventDefault(), true);
+        });
+
+        // Click to select
+        doc.body.addEventListener('click', (e) => {
+          if (editingText) return;
+          e.preventDefault();
+          e.stopPropagation();
+          handleSelect(e.target, doc);
+        }, true);
+
+        // Double-click to edit text
+        doc.body.addEventListener('dblclick', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (isTextElement(e.target)) {
+            handleTextEdit(e.target);
+          }
+        }, true);
+
+        // Mouse down to start drag
+        doc.body.addEventListener('mousedown', (e) => {
+          if (editingText) return;
+          const element = e.target;
+          
+          if (selectedElements.includes(element)) {
             e.preventDefault();
-            e.stopPropagation();
-          }, true);
-          el.addEventListener('submit', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-          }, true);
+            startDrag(element, e, iframe);
+          }
+        }, true);
+
+        // Hover effects
+        doc.body.addEventListener('mouseover', (e) => {
+          if (!dragState.current.isDragging && !editingText) {
+            e.target.classList.add('ve-hover');
+          }
+        });
+
+        doc.body.addEventListener('mouseout', (e) => {
+          e.target.classList.remove('ve-hover');
         });
 
       } catch (err) {
         console.error('Setup error:', err);
       }
     };
-  }, [htmlContent]);
+  };
 
-  // Global mouse handlers for dragging
-  useEffect(() => {
-    const handleMouseMove = (e) => {
-      if (!draggedElement || !dragStart || !iframeRef.current) return;
+  const startDrag = (element, e, iframe) => {
+    const rect = element.getBoundingClientRect();
+    const iframeRect = iframe.getBoundingClientRect();
 
-      const iframe = iframeRef.current;
-      const iframeRect = iframe.getBoundingClientRect();
+    // Convert to absolute positioning if needed
+    if (element.style.position !== 'absolute') {
+      const computedLeft = rect.left - iframeRect.left;
+      const computedTop = rect.top - iframeRect.top;
       
-      const x = e.clientX - iframeRect.left - dragStart.offsetX;
-      const y = e.clientY - iframeRect.top - dragStart.offsetY;
+      element.style.position = 'absolute';
+      element.style.left = `${computedLeft}px`;
+      element.style.top = `${computedTop}px`;
+      element.style.margin = '0';
+    }
 
-      draggedElement.style.position = 'absolute';
-      draggedElement.style.left = `${x}px`;
-      draggedElement.style.top = `${y}px`;
-      draggedElement.style.margin = '0';
+    dragState.current = {
+      isDragging: true,
+      element: element,
+      startX: e.clientX,
+      startY: e.clientY,
+      elementStartX: parseInt(element.style.left) || 0,
+      elementStartY: parseInt(element.style.top) || 0
     };
 
-    const handleMouseUp = () => {
-      if (draggedElement) {
-        draggedElement.classList.remove('visual-editor-dragging');
-        setDraggedElement(null);
-        setDragStart(null);
-        notifyUpdate();
-      }
-    };
+    element.classList.add('ve-dragging');
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    // Add global listeners
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+  };
 
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
-    };
-  }, [draggedElement, dragStart]);
+  const handleDragMove = (e) => {
+    if (!dragState.current.isDragging) return;
 
-  const handleClick = (e) => {
-    if (editingText) return;
+    const dx = e.clientX - dragState.current.startX;
+    const dy = e.clientY - dragState.current.startY;
+
+    const newX = dragState.current.elementStartX + dx;
+    const newY = dragState.current.elementStartY + dy;
+
+    dragState.current.element.style.left = `${newX}px`;
+    dragState.current.element.style.top = `${newY}px`;
+  };
+
+  const handleDragEnd = () => {
+    if (!dragState.current.isDragging) return;
+
+    dragState.current.element.classList.remove('ve-dragging');
+    dragState.current.isDragging = false;
+
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+
+    notifyUpdate();
+  };
+
+  const handleSelect = (element, doc) => {
+    // Clear previous selections
+    selectedElements.forEach(el => el.classList.remove('ve-selected'));
     
-    e.stopPropagation();
-    e.preventDefault();
-    
-    const element = e.target;
-    clearSelection();
-    selectElement(element);
+    // Select new element
+    element.classList.add('ve-selected');
+    setSelectedElements([element]);
     loadElementProperties(element);
   };
 
-  const handleDoubleClick = (e) => {
-    e.stopPropagation();
-    e.preventDefault();
-    
-    const element = e.target;
-    if (isTextElement(element)) {
-      enableTextEdit(element);
-    }
-  };
-
-  const handleMouseDown = (e) => {
-    if (editingText) return;
-
-    const element = e.target;
-    
-    if (selectedElements.includes(element)) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const iframe = iframeRef.current;
-      const iframeRect = iframe.getBoundingClientRect();
-      const rect = element.getBoundingClientRect();
-
-      const offsetX = e.clientX - rect.left;
-      const offsetY = e.clientY - rect.top;
-
-      setDragStart({ offsetX, offsetY });
-      setDraggedElement(element);
-      element.classList.add('visual-editor-dragging');
-    }
-  };
-
-  const handleMouseOver = (e) => {
-    if (!draggedElement && !editingText) {
-      e.target.classList.add('visual-editor-hover');
-      setHoveredElement(e.target);
-    }
-  };
-
-  const handleMouseOut = (e) => {
-    e.target.classList.remove('visual-editor-hover');
-    if (hoveredElement === e.target) {
-      setHoveredElement(null);
-    }
-  };
-
-  const selectElement = (element) => {
-    element.classList.add('visual-editor-selected');
-    setSelectedElements([element]);
-  };
-
-  const clearSelection = () => {
-    selectedElements.forEach(el => {
-      el.classList.remove('visual-editor-selected');
-    });
-    setSelectedElements([]);
-  };
-
-  const isTextElement = (element) => {
-    return ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'SPAN', 'A', 'BUTTON', 'LI', 'DIV'].includes(element.tagName);
-  };
-
-  const enableTextEdit = (element) => {
+  const handleTextEdit = (element) => {
     element.setAttribute('contenteditable', 'true');
     element.focus();
     setEditingText(element);
 
+    // Select text
     const range = document.createRange();
     range.selectNodeContents(element);
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(range);
 
-    const handleBlur = () => {
+    const onBlur = () => {
       element.removeAttribute('contenteditable');
       setEditingText(null);
       notifyUpdate();
     };
 
-    element.addEventListener('blur', handleBlur, { once: true });
+    element.addEventListener('blur', onBlur, { once: true });
+  };
+
+  const isTextElement = (element) => {
+    return ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'SPAN', 'A', 'BUTTON', 'LI', 'DIV'].includes(element.tagName);
   };
 
   const loadElementProperties = (element) => {
@@ -295,21 +278,16 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto shadow-xl">
           <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-bold text-gray-900">Element Properties</h3>
+              <h3 className="font-bold text-gray-900">Properties</h3>
               <div className="flex gap-1">
-                <button onClick={duplicateSelected} className="p-1.5 hover:bg-white rounded" title="Duplicate">
+                <button onClick={duplicateSelected} className="p-1.5 hover:bg-white rounded">
                   <Copy className="w-4 h-4 text-gray-600" />
                 </button>
-                <button onClick={deleteSelected} className="p-1.5 hover:bg-white rounded" title="Delete">
+                <button onClick={deleteSelected} className="p-1.5 hover:bg-white rounded">
                   <Trash2 className="w-4 h-4 text-red-600" />
                 </button>
               </div>
             </div>
-            {selectedElements.length === 1 && (
-              <p className="text-xs text-gray-600">
-                {selectedElements[0].tagName.toLowerCase()}
-              </p>
-            )}
           </div>
 
           <div className="p-4 space-y-4">
