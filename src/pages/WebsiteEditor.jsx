@@ -260,11 +260,9 @@ export default function WebsiteEditor() {
       <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200 p-8">
         {/* Centered Preview */}
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ 
-          width: devicePreview === 'desktop' ? '1400px' : '375px',
-          height: devicePreview === 'desktop' ? '900px' : '667px',
-          maxWidth: '95%',
-          maxHeight: '95%'
-        }}>
+  width: devicePreview === 'desktop' ? '100%' : '375px',
+  height: devicePreview === 'desktop' ? '100%' : '667px'
+}}>
           {devicePreview === 'desktop' ? (
             editMode === 'visual' ? (
               <VisualEditor 
@@ -311,59 +309,60 @@ export default function WebsiteEditor() {
               />
             )
           ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-              <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-                <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
-                    <span>9:41</span>
-                    <div className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
-                      <span>100%</span>
-                    </div>
-                  </div>
-                  <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
-                    <iframe
-                      key={currentPage + '-mobile'}
-                      srcDoc={allPages[currentPage]}
-                      title={`${currentPage} Mobile Preview`}
-                      className="w-full h-full border-none"
-                      ref={(iframe) => {
-                        if (iframe && iframe.contentWindow) {
-                          iframe.onload = () => {
-                            try {
-                              const iframeDoc = iframe.contentWindow.document;
-                              
-                              iframeDoc.addEventListener('click', (e) => {
-                                const link = e.target.closest('a');
-                                if (link) {
-                                  const href = link.getAttribute('href');
-                                  
-                                  if (href && href.startsWith('#')) {
-                                    return;
-                                  }
-                                  
-                                  if (href && href.endsWith('.html') && allPages[href]) {
-                                    e.preventDefault();
-                                    setCurrentPage(href);
-                                    return;
-                                  }
-                                  
-                                  e.preventDefault();
-                                }
-                              }, true);
-                            } catch (err) {
-                              console.log('Could not access iframe:', err);
-                            }
-                          };
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
-              </div>
-            </div>
+           <div className="w-full h-full flex items-center justify-center bg-gray-100">
+  <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
+    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+    <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
+        <span>9:41</span>
+        <div className="flex items-center gap-1">
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+          <span>100%</span>
+        </div>
+      </div>
+      <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
+        <iframe
+          key={currentPage + '-mobile'}
+          srcDoc={allPages[currentPage]}
+          title={`${currentPage} Mobile Preview`}
+          className="w-full min-h-full border-none"
+          style={{ width: '375px' }}
+          ref={(iframe) => {
+            if (iframe && iframe.contentWindow) {
+              iframe.onload = () => {
+                try {
+                  const iframeDoc = iframe.contentWindow.document;
+                  
+                  iframeDoc.addEventListener('click', (e) => {
+                    const link = e.target.closest('a');
+                    if (link) {
+                      const href = link.getAttribute('href');
+                      
+                      if (href && href.startsWith('#')) {
+                        return;
+                      }
+                      
+                      if (href && href.endsWith('.html') && allPages[href]) {
+                        e.preventDefault();
+                        setCurrentPage(href);
+                        return;
+                      }
+                      
+                      e.preventDefault();
+                    }
+                  }, true);
+                } catch (err) {
+                  console.log('Could not access iframe:', err);
+                }
+              };
+            }
+          }}
+        />
+      </div>
+    </div>
+    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
+  </div>
+</div>
           )}
         </div>
 
