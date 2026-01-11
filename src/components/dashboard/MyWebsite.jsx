@@ -89,7 +89,9 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   </div>
                   <div className="overflow-hidden">
                  <iframe srcDoc={currentWebsite} title="Website Preview" className="w-full h-[600px] bg-white border-0 pointer-events-none" sandbox="" />
-                </div>
+  </div>
+</div>
+
               ) : (
                 <div className="relative">
                   <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
