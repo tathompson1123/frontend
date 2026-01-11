@@ -303,28 +303,40 @@ export default function WebsiteEditor() {
         
         // Intercept ALL navigation
         iframeDoc.addEventListener('click', (e) => {
-          const link = e.target.closest('a');
-          if (link) {
-            const href = link.getAttribute('href');
-            
-            // Allow anchor links (same-page navigation)
-            if (href && href.startsWith('#')) {
-              return; // Let it work normally
-            }
-            
-           // Check if it's a link to another page in our multi-page site
-if (href && href.endsWith('.html')) {
-  console.log('🔗 Clicked:', href);
-  console.log('📄 Available pages:', Object.keys(allPages));
-  console.log('✅ Page exists?', !!allPages[href]);
-  
-  if (allPages[href]) {
+  const link = e.target.closest('a');
+  if (link) {
+    const href = link.getAttribute('href');
+    
+    console.log('🔗 Link clicked!');
+    console.log('   href value:', href);
+    console.log('   href type:', typeof href);
+    console.log('   ends with .html?', href ? href.endsWith('.html') : 'href is null');
+    console.log('   Available pages:', Object.keys(allPages));
+    
+    // Allow anchor links (same-page navigation)
+    if (href && href.startsWith('#')) {
+      console.log('✅ Allowing anchor link');
+      return;
+    }
+    
+    // Check if it's a link to another page
+    if (href && href.endsWith('.html')) {
+      console.log('🔍 Checking if page exists in allPages...');
+      console.log('   allPages[href]:', allPages[href] ? 'EXISTS' : 'DOES NOT EXIST');
+      
+      if (allPages[href]) {
+        e.preventDefault();
+        setCurrentPage(href);
+        console.log('✅ Switched to page:', href);
+        return;
+      }
+    }
+    
+    // PREVENT ALL OTHER NAVIGATION
     e.preventDefault();
-    setCurrentPage(href);
-    console.log('✅ Switched to:', href);
-    return;
+    console.log('🚫 Navigation blocked:', href);
   }
-}
+}, true);
 
 // PREVENT ALL OTHER NAVIGATION (including homepage links)
 e.preventDefault();
