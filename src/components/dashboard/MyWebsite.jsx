@@ -34,24 +34,17 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     }
   };
 
-  const handleRegenerateWebsite = async (e) => {
-    e.preventDefault();
-    setIsRegenerating(true);
-    try {
-      const response = await authFetch(`${apiUrl}/api/generate`, {
-        method: 'POST',
-        body: JSON.stringify({
-          businessName: websiteForm.businessName,
-          businessType: websiteForm.businessType,
-          tagline: websiteForm.tagline,
-          services: websiteForm.services,
-          yearsInBusiness: websiteForm.yearsInBusiness,
-          certifications: websiteForm.certifications,
-          description: websiteForm.description,
-          uniqueSellingPoints: websiteForm.uniqueSellingPoints,
-          targetCustomer: websiteForm.targetCustomer
-        })
-      });
+ const handleRegenerateWebsite = (e) => {
+  e.preventDefault();
+  
+  // Navigate to generator with form data
+  navigate('/generate', { 
+    state: { 
+      formData: websiteForm,
+      isRegeneration: true
+    } 
+  });
+};
       const data = await response.json();
 if (data.success && data.html) {
   const saveResponse = await authFetch(`${apiUrl}/api/website`, {
