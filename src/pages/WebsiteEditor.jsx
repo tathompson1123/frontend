@@ -8,8 +8,6 @@ import {
   Loader2,
   Monitor,
   Smartphone,
-  Wand2,
-  Edit3,
   X,
   MessageCircle
 } from 'lucide-react';
