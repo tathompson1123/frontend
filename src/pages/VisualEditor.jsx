@@ -110,41 +110,33 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     };
   }, [htmlContent]);
 
-  const handleMove = (e) => {
-    if (!dragData.current) return;
+ const handleMove = (e) => {
+  if (!dragData.current) return;
 
-    const dx = e.clientX - dragData.current.startX;
-    const dy = e.clientY - dragData.current.startY;
+  const dx = e.clientX - dragData.current.startX;
+  const dy = e.clientY - dragData.current.startY;
 
-    // Start dragging after 3px movement
-    if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-      dragData.current.moved = true;
-      const el = dragData.current.el;
-      el.style.position = 'absolute';
-      el.style.left = dragData.current.elStartX + 'px';
-      el.style.top = dragData.current.elStartY + 'px';
-      el.style.width = dragData.current.width + 'px';
-      el.style.margin = '0';
-      el.style.opacity = '0.6';
-    }
+  // Start dragging after 3px movement
+  if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+    dragData.current.moved = true;
+    const el = dragData.current.el;
+    el.style.position = 'absolute';
+    el.style.left = dragData.current.elStartX + 'px';
+    el.style.top = dragData.current.elStartY + 'px';
+    el.style.width = dragData.current.width + 'px';
+    el.style.margin = '0';
+    el.style.opacity = '0.6';
+  }
 
-    // Move element
-    if (dragData.current.moved) {
-      const iframe = dragData.current.iframe;
-      const iframeRect = iframe.getBoundingClientRect();
-      
-      // Calculate position relative to iframe viewport
-      const mouseXInIframe = e.clientX - iframeRect.left;
-      const mouseYInIframe = e.clientY - iframeRect.top;
-      
-      const newX = mouseXInIframe - (dragData.current.startX - dragData.current.elStartX - iframeRect.left);
-      const newY = mouseYInIframe - (dragData.current.startY - dragData.current.elStartY - iframeRect.top);
-      
-      dragData.current.el.style.left = newX + 'px';
-      dragData.current.el.style.top = newY + 'px';
-    }
-  };
-
+  // Move element
+  if (dragData.current.moved) {
+    const newX = dragData.current.elStartX + dx;
+    const newY = dragData.current.elStartY + dy;
+    
+    dragData.current.el.style.left = newX + 'px';
+    dragData.current.el.style.top = newY + 'px';
+  }
+};
   const handleUp = () => {
     if (dragData.current?.moved) {
       dragData.current.el.style.opacity = '1';
