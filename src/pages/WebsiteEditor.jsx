@@ -9,7 +9,9 @@ import {
   Monitor,
   Smartphone,
   Wand2,
-  Edit3
+  Edit3,
+  X,
+  MessageCircle
 } from 'lucide-react';
 import VisualEditor from '../components/VisualEditor';
 
@@ -19,7 +21,8 @@ export default function WebsiteEditor() {
   const [currentPage, setCurrentPage] = useState('index.html');
   const [isSaving, setIsSaving] = useState(false);
   const [devicePreview, setDevicePreview] = useState('desktop');
-  const [editMode, setEditMode] = useState('ai'); // 'ai' or 'visual'
+  const [editMode, setEditMode] = useState('visual');
+  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   
   // AI Chat state
   const [messages, setMessages] = useState([]);
@@ -224,18 +227,6 @@ export default function WebsiteEditor() {
             <div className="flex gap-2">
               <button 
                 type="button" 
-                onClick={() => setEditMode('ai')} 
-                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-                  editMode === 'ai' 
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                }`}
-              >
-                <Wand2 className="w-4 h-4" />
-                <span>AI Edit</span>
-              </button>
-              <button 
-                type="button" 
                 onClick={() => setEditMode('visual')} 
                 className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
                   editMode === 'visual' 
@@ -266,18 +257,76 @@ export default function WebsiteEditor() {
       </header>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {editMode === 'ai' ? (
-          <>
-            {/* AI Mode - Preview + Chat */}
-            <div className="flex-1 bg-gray-100 overflow-auto p-4">
-              <div className="h-full w-full flex items-center justify-center">
-                {devicePreview === 'desktop' ? (
-                  <div className="bg-white rounded-xl shadow-2xl overflow-hidden h-full w-full">
+      <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200 p-8">
+        {/* Centered Preview */}
+        <div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ 
+          width: devicePreview === 'desktop' ? '1400px' : '375px',
+          height: devicePreview === 'desktop' ? '900px' : '667px',
+          maxWidth: '95%',
+          maxHeight: '95%'
+        }}>
+          {devicePreview === 'desktop' ? (
+            editMode === 'visual' ? (
+              <VisualEditor 
+                htmlContent={allPages[currentPage]}
+                onUpdate={handleVisualUpdate}
+                currentPage={currentPage}
+              />
+            ) : (
+              <iframe
+                key={currentPage}
+                srcDoc={allPages[currentPage]}
+                title={`${currentPage} Preview`}
+                className="w-full h-full border-none"
+                ref={(iframe) => {
+                  if (iframe && iframe.contentWindow) {
+                    iframe.onload = () => {
+                      try {
+                        const iframeDoc = iframe.contentWindow.document;
+                        
+                        iframeDoc.addEventListener('click', (e) => {
+                          const link = e.target.closest('a');
+                          if (link) {
+                            const href = link.getAttribute('href');
+                            
+                            if (href && href.startsWith('#')) {
+                              return;
+                            }
+                            
+                            if (href && href.endsWith('.html') && allPages[href]) {
+                              e.preventDefault();
+                              setCurrentPage(href);
+                              return;
+                            }
+                            
+                            e.preventDefault();
+                          }
+                        }, true);
+                      } catch (err) {
+                        console.log('Could not access iframe:', err);
+                      }
+                    };
+                  }
+                }}
+              />
+            )
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+                <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                  <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
                     <iframe
-                      key={currentPage}
+                      key={currentPage + '-mobile'}
                       srcDoc={allPages[currentPage]}
-                      title={`${currentPage} Preview`}
+                      title={`${currentPage} Mobile Preview`}
                       className="w-full h-full border-none"
                       ref={(iframe) => {
                         if (iframe && iframe.contentWindow) {
@@ -311,137 +360,95 @@ export default function WebsiteEditor() {
                       }}
                     />
                   </div>
-                ) : (
-                  <div className="relative">
-                    <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-                      <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
-                        <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
-                          <span>9:41</span>
-                          <div className="flex items-center gap-1">
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
-                            <span>100%</span>
-                          </div>
-                        </div>
-                        <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
-                          <iframe
-                            key={currentPage + '-mobile'}
-                            srcDoc={allPages[currentPage]}
-                            title={`${currentPage} Mobile Preview`}
-                            className="w-full h-full border-none"
-                            ref={(iframe) => {
-                              if (iframe && iframe.contentWindow) {
-                                iframe.onload = () => {
-                                  try {
-                                    const iframeDoc = iframe.contentWindow.document;
-                                    
-                                    iframeDoc.addEventListener('click', (e) => {
-                                      const link = e.target.closest('a');
-                                      if (link) {
-                                        const href = link.getAttribute('href');
-                                        
-                                        if (href && href.startsWith('#')) {
-                                          return;
-                                        }
-                                        
-                                        if (href && href.endsWith('.html') && allPages[href]) {
-                                          e.preventDefault();
-                                          setCurrentPage(href);
-                                          return;
-                                        }
-                                        
-                                        e.preventDefault();
-                                      }
-                                    }, true);
-                                  } catch (err) {
-                                    console.log('Could not access iframe:', err);
-                                  }
-                                };
-                              }
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
-                    </div>
-                  </div>
-                )}
+                </div>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
               </div>
             </div>
+          )}
+        </div>
 
-            {/* AI Chat Panel */}
-            <div className="w-80 bg-white border-l border-gray-200 flex flex-col">
-              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-5 h-5 text-purple-600" />
-                  <h2 className="font-bold text-gray-900">AI Editor</h2>
-                </div>
-                <p className="text-xs text-gray-600">
-                  Make changes to {getPageDisplayName(currentPage)}
-                </p>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div
-                      className={`max-w-[85%] rounded-lg px-3 py-2 ${
-                        message.role === 'user'
-                          ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-900'
-                      }`}
-                    >
-                      <p className="text-xs whitespace-pre-wrap">{message.content}</p>
-                    </div>
-                  </div>
-                ))}
-
-                {isAIThinking && (
-                  <div className="flex justify-start">
-                    <div className="bg-gray-100 rounded-lg px-3 py-2 flex items-center gap-2">
-                      <Loader2 className="w-3 h-3 animate-spin text-purple-600" />
-                      <p className="text-xs text-gray-600">AI is thinking...</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="p-3 border-t border-gray-200">
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={inputMessage}
-                    onChange={(e) => setInputMessage(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="What would you like to change?"
-                    className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                    disabled={isAIThinking}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleSendMessage}
-                    disabled={!inputMessage.trim() || isAIThinking}
-                    className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    <Send className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  💡 "Change headline" or "Make button green"
-                </p>
-              </div>
-            </div>
-          </>
+        {/* AI Chat Widget */}
+        {!isAIChatOpen ? (
+          /* Collapsed - Floating Button */
+          <button
+            onClick={() => setIsAIChatOpen(true)}
+            className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-110 transition-all z-50 flex items-center gap-2"
+          >
+            <Sparkles className="w-6 h-6" />
+            <span className="font-semibold">AI Assistant</span>
+          </button>
         ) : (
-          /* Visual Editor Mode */
-          <VisualEditor 
-            htmlContent={allPages[currentPage]}
-            onUpdate={handleVisualUpdate}
-            currentPage={currentPage}
-          />
+          /* Expanded - Chat Widget */
+          <div className="fixed bottom-8 right-8 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
+            {/* Widget Header */}
+            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <h3 className="font-bold text-gray-900">AI Assistant</h3>
+              </div>
+              <button
+                onClick={() => setIsAIChatOpen(false)}
+                className="p-1 hover:bg-white rounded-full transition"
+              >
+                <X className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                      message.role === 'user'
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-900'
+                    }`}
+                  >
+                    <p className="text-xs whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                </div>
+              ))}
+
+              {isAIThinking && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin text-purple-600" />
+                    <p className="text-xs text-gray-600">AI is thinking...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="p-3 border-t border-gray-200 rounded-b-2xl">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask AI to make changes..."
+                  className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                  disabled={isAIThinking}
+                />
+                <button
+                  type="button"
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isAIThinking}
+                  className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Try: "Make the button blue"
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </div>
