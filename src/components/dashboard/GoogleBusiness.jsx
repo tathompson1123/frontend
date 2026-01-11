@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Sparkles, Star, RefreshCw, Copy, CheckCircle, MessageSquare,
   Calendar, TrendingUp, Clock, Users, BarChart3
@@ -13,6 +13,24 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   const [copied, setCopied] = useState(false);
   const [repliesGeneratedToday, setRepliesGeneratedToday] = useState(0);
   const [repliesGeneratedWeek, setRepliesGeneratedWeek] = useState(0);
+
+  // Fetch stats on mount
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/google-business/stats`);
+      const data = await response.json();
+      if (data.success) {
+        setRepliesGeneratedToday(data.stats.today || 0);
+        setRepliesGeneratedWeek(data.stats.week || 0);
+      }
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+    }
+  };
 
   const handleGenerateReviewReply = async () => {
     if (!reviewText.trim()) { alert('Please enter a review first'); return; }
@@ -31,8 +49,8 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
       const data = await response.json();
       if (data.success) {
         setGeneratedReply(data.reply);
-        setRepliesGeneratedToday(prev => prev + 1);
-        setRepliesGeneratedWeek(prev => prev + 1);
+        // Refresh stats after generating
+        fetchStats();
       } else {
         alert('Failed to generate reply. Please try again.');
       }
@@ -46,6 +64,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
 
   return (
     <div className="space-y-6">
+      {/* Rest of your component stays the same */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Google Business Profile</h2>
         <p className="text-gray-600 mt-1">AI-powered review response generator</p>
@@ -147,6 +166,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
           </div>
         </div>
 
+        {/* Rest of the component... (keep all the Why Respond section, etc.) */}
         <div className="space-y-6">
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-8 shadow-sm border-2 border-green-200">
             <div className="flex items-center gap-3 mb-6">
