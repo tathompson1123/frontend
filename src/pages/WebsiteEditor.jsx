@@ -27,22 +27,27 @@ export default function WebsiteEditor() {
   }, []);
 
   const fetchWebsite = async () => {
-    try {
-      const response = await fetch(`${apiUrl}/api/website?userId=${user.id}`);
-      const data = await response.json();
-      if (data.website) {
-        setCurrentWebsite(data.website.html_content);
-        
-        // Add welcome message
-        setMessages([{
-          role: 'assistant',
-          content: "Hi! I'm your AI website editor. I can help you make changes to your website. Just tell me what you'd like to change!\n\nFor example:\n• \"Change the hero text to 'Welcome to our shop'\"\n• \"Make the button blue\"\n• \"Add a new section about our services\""
-        }]);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${apiUrl}/api/website`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    } catch (error) {
-      console.error('Error fetching website:', error);
+    });
+    const data = await response.json();
+    if (data.website) {
+      setCurrentWebsite(data.website.html_content);
+      
+      // Add welcome message
+      setMessages([{
+        role: 'assistant',
+        content: "Hi! I'm your AI website editor. I can help you make changes to your website. Just tell me what you'd like to change!\n\nFor example:\n• \"Change the hero text to 'Welcome to our shop'\"\n• \"Make the button blue\"\n• \"Add a new section about our services\""
+      }]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching website:', error);
+  }
+};
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isAIThinking) return;
