@@ -15,6 +15,7 @@ import {
 export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [editingText, setEditingText] = useState(null);
+  const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const iframeRef = useRef(null);
   const dragData = useRef(null);
 
@@ -44,6 +45,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         body { position: relative; min-height: 100vh; }
         .selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px; cursor: move !important; }
         .hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px; cursor: pointer !important; }
+        .guide-line { 
+          position: fixed; 
+          background: #ef4444; 
+          z-index: 999998;
+          pointer-events: none;
+        }
+        .guide-v { width: 1px; height: 100%; top: 0; }
+        .guide-h { height: 1px; width: 100%; left: 0; }
       `;
       doc.head.appendChild(style);
 
@@ -53,9 +62,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
       // Mousedown = prepare drag
       doc.onmousedown = (e) => {
+        const el = e.target;
+        
+        // Don't drag body, html, or large containers
+        if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
+          return;
+        }
+
         e.preventDefault();
 
-        const el = e.target;
         const rect = el.getBoundingClientRect();
         const iframeRect = iframe.getBoundingClientRect();
 
@@ -75,9 +90,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           elStartX: currentLeft,
           elStartY: currentTop,
           width: rect.width,
+          height: rect.height,
           iframe: iframe,
-          offsetX: e.clientX - rect.left,
-          offsetY: e.clientY - rect.top
+          mouseOffsetX: (e.clientX - iframeRect.left) - currentLeft,
+          mouseOffsetY: (e.clientY - iframeRect.top) - currentTop
         };
       };
 
@@ -89,6 +105,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         }
 
         e.preventDefault();
+        
+        // Don't select body/html
+        if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
+          return;
+        }
+        
         doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
         e.target.classList.add('selected');
         setSelectedElements([e.target]);
@@ -121,7 +143,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       doc.onmousemove = handleMove;
       doc.onmouseup = handleUp;
       doc.onmouseover = (e) => {
-        if (!dragData.current?.moved) {
+        if (!dragData.current?.moved && !['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
           e.target.classList.add('hover');
         }
       };
@@ -157,12 +179,83 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     if (dragData.current.moved) {
       const iframe = dragData.current.iframe;
       const iframeRect = iframe.getBoundingClientRect();
+      const doc = iframe.contentDocument;
       
+      // Calculate new position
       const mouseXInIframe = e.clientX - iframeRect.left;
       const mouseYInIframe = e.clientY - iframeRect.top;
       
-      const newX = mouseXInIframe - dragData.current.offsetX;
-      const newY = mouseYInIframe - dragData.current.offsetY;
+      let newX = mouseXInIframe - dragData.current.mouseOffsetX;
+      let newY = mouseYInIframe - dragData.current.mouseOffsetY;
+      
+      // Snap threshold
+      const snapThreshold = 5;
+      const detectedGuides = { vertical: [], horizontal: [] };
+      
+      // Page center guide
+      const pageWidth = doc.body.scrollWidth;
+      const pageHeight = doc.body.scrollHeight;
+      const pageCenterX = pageWidth / 2;
+      const pageCenterY = pageHeight / 2;
+      
+      const elCenterX = newX + dragData.current.width / 2;
+      const elCenterY = newY + dragData.current.height / 2;
+      const elRight = newX + dragData.current.width;
+      const elBottom = newY + dragData.current.height;
+      
+      // Snap to page center
+      if (Math.abs(elCenterX - pageCenterX) < snapThreshold) {
+        newX = pageCenterX - dragData.current.width / 2;
+        detectedGuides.vertical.push(pageCenterX);
+      }
+      
+      if (Math.abs(elCenterY - pageCenterY) < snapThreshold) {
+        newY = pageCenterY - dragData.current.height / 2;
+        detectedGuides.horizontal.push(pageCenterY);
+      }
+      
+      // Snap to other elements
+      const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
+        el !== dragData.current.el && 
+        !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
+        el.offsetParent !== null
+      );
+      
+      allElements.forEach(other => {
+        const otherRect = other.getBoundingClientRect();
+        const otherX = otherRect.left - iframeRect.left;
+        const otherY = otherRect.top - iframeRect.top;
+        const otherCenterX = otherX + otherRect.width / 2;
+        const otherCenterY = otherY + otherRect.height / 2;
+        const otherRight = otherX + otherRect.width;
+        const otherBottom = otherY + otherRect.height;
+        
+        // Vertical alignment guides
+        if (Math.abs(newX - otherX) < snapThreshold) {
+          newX = otherX;
+          detectedGuides.vertical.push(otherX);
+        } else if (Math.abs(elCenterX - otherCenterX) < snapThreshold) {
+          newX = otherCenterX - dragData.current.width / 2;
+          detectedGuides.vertical.push(otherCenterX);
+        } else if (Math.abs(elRight - otherRight) < snapThreshold) {
+          newX = otherRight - dragData.current.width;
+          detectedGuides.vertical.push(otherRight);
+        }
+        
+        // Horizontal alignment guides
+        if (Math.abs(newY - otherY) < snapThreshold) {
+          newY = otherY;
+          detectedGuides.horizontal.push(otherY);
+        } else if (Math.abs(elCenterY - otherCenterY) < snapThreshold) {
+          newY = otherCenterY - dragData.current.height / 2;
+          detectedGuides.horizontal.push(otherCenterY);
+        } else if (Math.abs(elBottom - otherBottom) < snapThreshold) {
+          newY = otherBottom - dragData.current.height;
+          detectedGuides.horizontal.push(otherBottom);
+        }
+      });
+      
+      setGuides(detectedGuides);
       
       dragData.current.el.style.left = newX + 'px';
       dragData.current.el.style.top = newY + 'px';
@@ -172,12 +265,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const handleUp = () => {
     if (dragData.current?.moved) {
       dragData.current.el.style.opacity = '1';
+      setGuides({ vertical: [], horizontal: [] });
       save();
     }
     setTimeout(() => {
-      if (dragData.current && !dragData.current.moved) {
-        dragData.current = null;
-      }
+      dragData.current = null;
     }, 0);
   };
 
@@ -243,11 +335,21 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   };
 
   return (
-    <div className="w-full h-full flex">
-      <iframe ref={iframeRef} srcDoc={htmlContent} className="flex-1 border-none" />
+    <div className="w-full h-full flex relative">
+      <div className="flex-1 relative">
+        <iframe ref={iframeRef} srcDoc={htmlContent} className="w-full h-full border-none" />
+        
+        {/* Alignment Guides */}
+        {guides.vertical.map((x, i) => (
+          <div key={`v-${i}`} className="absolute w-px h-full bg-red-500 pointer-events-none z-50" style={{ left: `${x}px` }} />
+        ))}
+        {guides.horizontal.map((y, i) => (
+          <div key={`h-${i}`} className="absolute w-full h-px bg-red-500 pointer-events-none z-50" style={{ top: `${y}px` }} />
+        ))}
+      </div>
 
       {selectedElements.length > 0 && (
-        <div className="w-72 bg-white border-l overflow-y-auto">
+        <div className="w-72 bg-white border-l overflow-y-auto flex-shrink-0">
           <div className="p-3 border-b bg-purple-50 flex justify-between">
             <span className="font-bold">Properties</span>
             <div className="flex gap-1">
