@@ -141,6 +141,7 @@ const setupIframe = () => {
 
       // Add event listeners
       doc.addEventListener('click', handleElementClick, true);
+      doc.addEventListener('dblclick', handleElementDoubleClick, true); // ✅ ADD THIS
       doc.addEventListener('mousedown', handleMouseDown, true);
       doc.addEventListener('mouseover', handleMouseOver, true);
       doc.addEventListener('mouseout', handleMouseOut, true);
@@ -173,6 +174,18 @@ const handleElementClick = (e) => {
   
   selectElement(element);
   loadElementProperties(element);
+};
+
+  const handleElementDoubleClick = (e) => {
+  e.stopPropagation();
+  e.preventDefault();
+  
+  const element = e.target;
+  
+  // Enable text editing on double-click for text elements
+  if (isTextElement(element)) {
+    enableTextEdit(element);
+  }
 };
 
 const handleMouseDown = (e) => {
@@ -343,17 +356,26 @@ const handleMouseUp = (e) => {
   };
 
   const enableTextEdit = (element) => {
-    element.setAttribute('contenteditable', 'true');
-    element.focus();
-    setEditingText(element);
+  element.setAttribute('contenteditable', 'true');
+  element.focus();
+  setEditingText(element);
+  
+  // Select all text for easy editing
+  const range = document.createRange();
+  range.selectNodeContents(element);
+  const selection = window.getSelection();
+  selection.removeAllRanges();
+  selection.addRange(range);
 
-    element.addEventListener('blur', () => {
-      element.removeAttribute('contenteditable');
-      setEditingText(null);
-      notifyUpdate();
-    }, { once: true });
+  const handleBlur = () => {
+    element.removeAttribute('contenteditable');
+    setEditingText(null);
+    notifyUpdate();
+    element.removeEventListener('blur', handleBlur);
   };
-
+  
+  element.addEventListener('blur', handleBlur);
+};
   const loadElementProperties = (element) => {
     const computed = window.getComputedStyle(element);
     setElementProps({
@@ -447,7 +469,7 @@ const handleMouseUp = (e) => {
       </div>
 
       {/* Properties Panel - Only show when elements selected */}
-      {selectedElements.length > 0 && (
+     {(selectedElements.length > 0 || editingText) && (
         <div className="w-80 bg-white border-l border-gray-200 overflow-y-auto shadow-xl">
           <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
             <div className="flex items-center justify-between mb-2">
