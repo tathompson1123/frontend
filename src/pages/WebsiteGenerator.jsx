@@ -1,6 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom'; // Add useLocation
-import { useNavigate } from 'react-router-dom';
 import { Wand2, Sparkles } from 'lucide-react';
 import GenerationProgress from '../components/GenerationProgress';
 import SignupModal from '../components/SignupModal';
@@ -129,13 +128,31 @@ export default function WebsiteGenerator() {
         setBuildStatus('Complete! 🎉');
         setProgress(100);
         
-        setTimeout(() => {
-          console.log('✅ Setting generated website, length:', data.html.length);
-          console.log('✅ First 200 chars:', data.html.substring(0, 200));
-          setGeneratedWebsite(data.html);
-          setIsGenerating(false);
-          setError(null);
-        }, 500);
+setTimeout(() => {
+  console.log('✅ Setting generated website, length:', data.html.length);
+  console.log('✅ First 200 chars:', data.html.substring(0, 200));
+  setGeneratedWebsite(data.html);
+  
+  // Auto-save if logged in
+  const token = localStorage.getItem('token');
+  if (token) {
+    fetch(`${apiUrl}/api/website`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        htmlContent: data.html,
+        pages: data.pages || { 'index.html': data.html }
+      })
+    }).then(() => console.log('✅ Website auto-saved'))
+      .catch(err => console.error('⚠️ Could not auto-save:', err));
+  }
+  
+  setIsGenerating(false);
+  setError(null);
+}, 500);
       } else {
         throw new Error('Invalid response from server');
       }
