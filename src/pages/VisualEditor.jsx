@@ -96,51 +96,67 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           startY: e.clientY,
           elStartX: rect.left - iframeRect.left,
           elStartY: rect.top - iframeRect.top,
-          width: rect.width
+          width: rect.width,
+          iframe: iframe
         };
       };
+
+      // IMPORTANT: Add mousemove and mouseup to iframe doc too
+      doc.onmousemove = handleMove;
+      doc.onmouseup = handleUp;
 
       doc.onmouseover = (e) => e.target.classList.add('hover');
       doc.onmouseout = (e) => e.target.classList.remove('hover');
     };
   }, [htmlContent]);
 
+  const handleMove = (e) => {
+    if (!dragData.current) return;
+
+    const dx = e.clientX - dragData.current.startX;
+    const dy = e.clientY - dragData.current.startY;
+
+    // Start dragging after 3px movement
+    if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+      dragData.current.moved = true;
+      const el = dragData.current.el;
+      el.style.position = 'absolute';
+      el.style.left = dragData.current.elStartX + 'px';
+      el.style.top = dragData.current.elStartY + 'px';
+      el.style.width = dragData.current.width + 'px';
+      el.style.margin = '0';
+      el.style.opacity = '0.6';
+    }
+
+    // Move element
+    if (dragData.current.moved) {
+      const iframe = dragData.current.iframe;
+      const iframeRect = iframe.getBoundingClientRect();
+      
+      // Calculate position relative to iframe viewport
+      const mouseXInIframe = e.clientX - iframeRect.left;
+      const mouseYInIframe = e.clientY - iframeRect.top;
+      
+      const newX = mouseXInIframe - (dragData.current.startX - dragData.current.elStartX - iframeRect.left);
+      const newY = mouseYInIframe - (dragData.current.startY - dragData.current.elStartY - iframeRect.top);
+      
+      dragData.current.el.style.left = newX + 'px';
+      dragData.current.el.style.top = newY + 'px';
+    }
+  };
+
+  const handleUp = () => {
+    if (dragData.current?.moved) {
+      dragData.current.el.style.opacity = '1';
+      save();
+    }
+    setTimeout(() => {
+      dragData.current = null;
+    }, 0);
+  };
+
+  // Also add to window for when mouse leaves iframe
   useEffect(() => {
-    const handleMove = (e) => {
-      if (!dragData.current) return;
-
-      const dx = e.clientX - dragData.current.startX;
-      const dy = e.clientY - dragData.current.startY;
-
-      // Start dragging after 3px movement
-      if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-        dragData.current.moved = true;
-        const el = dragData.current.el;
-        el.style.position = 'absolute';
-        el.style.left = dragData.current.elStartX + 'px';
-        el.style.top = dragData.current.elStartY + 'px';
-        el.style.width = dragData.current.width + 'px';
-        el.style.margin = '0';
-        el.style.opacity = '0.6';
-      }
-
-      // Move element
-      if (dragData.current.moved) {
-        dragData.current.el.style.left = (dragData.current.elStartX + dx) + 'px';
-        dragData.current.el.style.top = (dragData.current.elStartY + dy) + 'px';
-      }
-    };
-
-    const handleUp = () => {
-      if (dragData.current?.moved) {
-        dragData.current.el.style.opacity = '1';
-        save();
-      }
-      setTimeout(() => {
-        dragData.current = null;
-      }, 0);
-    };
-
     window.addEventListener('mousemove', handleMove);
     window.addEventListener('mouseup', handleUp);
 
