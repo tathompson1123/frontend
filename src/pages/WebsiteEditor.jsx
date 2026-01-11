@@ -13,7 +13,7 @@ import {
   X,
   MessageCircle
 } from 'lucide-react';
-import VisualEditor from '../components/VisualEditor';
+import VisualEditor from './VisualEditor';
 
 export default function WebsiteEditor() {
   const navigate = useNavigate();
