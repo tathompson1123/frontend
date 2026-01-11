@@ -63,103 +63,103 @@ style.textContent = `
 `;
 
       // Mousedown = prepare drag or selection
-      doc.onmousedown = (e) => {
-        const el = e.target;
-        
-        if (['BODY', 'HTML'].includes(el.tagName)) {
-          e.preventDefault();
-          const iframeRect = iframe.getBoundingClientRect();
-          selectionData.current = {
-            startX: e.clientX - iframeRect.left,
-            startY: e.clientY - iframeRect.top,
-            iframe: iframe
-          };
-          return;
-        }
+      // Mousedown = prepare drag ONLY if already selected
+doc.onmousedown = (e) => {
+  const el = e.target;
+  
+  // If clicking on empty space, start selection box
+  if (['BODY', 'HTML'].includes(el.tagName)) {
+    e.preventDefault();
+    const iframeRect = iframe.getBoundingClientRect();
+    selectionData.current = {
+      startX: e.clientX - iframeRect.left,
+      startY: e.clientY - iframeRect.top,
+      iframe: iframe
+    };
+    return;
+  }
 
-        if (['MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
-          return;
-        }
+  // Don't drag large containers
+  if (['MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
+    return;
+  }
 
-        e.preventDefault();
-
-        const iframeRect = iframe.getBoundingClientRect();
-        const rect = el.getBoundingClientRect();
-
-        if (el.classList.contains('selected')) {
-          const elementsData = selectedElements.map(elem => {
-            const elemRect = elem.getBoundingClientRect();
-            return {
-              el: elem,
-              startLeft: elemRect.left - iframeRect.left,
-              startTop: elemRect.top - iframeRect.top,
-              width: elemRect.width,
-              height: elemRect.height
-            };
-          });
-          
-          const firstRect = selectedElements[0].getBoundingClientRect();
-          
-          dragData.current = {
-            elements: elementsData,
-            moved: false,
-            startMouseX: e.clientX - iframeRect.left,
-            startMouseY: e.clientY - iframeRect.top,
-            clickOffsetX: (e.clientX - iframeRect.left) - (firstRect.left - iframeRect.left),
-            clickOffsetY: (e.clientY - iframeRect.top) - (firstRect.top - iframeRect.top),
-            iframe: iframe
-          };
-          return;
-        }
-
-        // Single element
-        dragData.current = {
-          elements: [{
-            el: el,
-            startLeft: rect.left - iframeRect.left,
-            startTop: rect.top - iframeRect.top,
-            width: rect.width,
-            height: rect.height
-          }],
-          moved: false,
-          startMouseX: e.clientX - iframeRect.left,
-          startMouseY: e.clientY - iframeRect.top,
-          clickOffsetX: (e.clientX - iframeRect.left) - (rect.left - iframeRect.left),
-          clickOffsetY: (e.clientY - iframeRect.top) - (rect.top - iframeRect.top),
-          iframe: iframe
-        };
+  // ONLY prepare drag if element is ALREADY selected
+  if (el.classList.contains('selected')) {
+    e.preventDefault();
+    
+    const iframeRect = iframe.getBoundingClientRect();
+    const elementsData = selectedElements.map(elem => {
+      const elemRect = elem.getBoundingClientRect();
+      return {
+        el: elem,
+        startLeft: elemRect.left - iframeRect.left,
+        startTop: elemRect.top - iframeRect.top,
+        width: elemRect.width,
+        height: elemRect.height
       };
+    });
+    
+    const firstRect = selectedElements[0].getBoundingClientRect();
+    
+    dragData.current = {
+      elements: elementsData,
+      moved: false,
+      startMouseX: e.clientX - iframeRect.left,
+      startMouseY: e.clientY - iframeRect.top,
+      clickOffsetX: (e.clientX - iframeRect.left) - (firstRect.left - iframeRect.left),
+      clickOffsetY: (e.clientY - iframeRect.top) - (firstRect.top - iframeRect.top),
+      iframe: iframe
+    };
+  }
+};
 
-      doc.onclick = (e) => {
-        if (dragData.current?.moved || selectionData.current) {
-          dragData.current = null;
-          selectionData.current = null;
-          return;
-        }
+// Click = select element (make it draggable for next time)
+doc.onclick = (e) => {
+  // Don't select if we just finished dragging
+  if (dragData.current?.moved) {
+    dragData.current = null;
+    return;
+  }
+  
+  // Don't select if we're finishing selection box
+  if (selectionData.current) {
+    selectionData.current = null;
+    return;
+  }
 
-        e.preventDefault();
-        
-        if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
-          return;
-        }
-        
-        if (!e.shiftKey) {
-          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-          e.target.classList.add('selected');
-          setSelectedElements([e.target]);
-          loadProps(e.target);
-        } else {
-          if (e.target.classList.contains('selected')) {
-            e.target.classList.remove('selected');
-            setSelectedElements(prev => prev.filter(el => el !== e.target));
-          } else {
-            e.target.classList.add('selected');
-            setSelectedElements(prev => [...prev, e.target]);
-          }
-        }
-        
-        dragData.current = null;
-      };
+  e.preventDefault();
+  e.stopPropagation();
+  
+  const el = e.target;
+  
+  if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
+    // Clicked empty space - deselect all
+    doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+    setSelectedElements([]);
+    return;
+  }
+  
+  // Select element
+  if (!e.shiftKey) {
+    // Clear previous selection
+    doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+    el.classList.add('selected');
+    setSelectedElements([el]);
+    loadProps(el);
+  } else {
+    // Shift-click to add/remove from selection
+    if (el.classList.contains('selected')) {
+      el.classList.remove('selected');
+      setSelectedElements(prev => prev.filter(e => e !== el));
+    } else {
+      el.classList.add('selected');
+      setSelectedElements(prev => [...prev, el]);
+    }
+  }
+  
+  dragData.current = null;
+};
 
       doc.ondblclick = (e) => {
         e.preventDefault();
