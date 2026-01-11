@@ -42,124 +42,123 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const doc = iframe.contentDocument;
       if (!doc) return;
 
-      // Update the CSS in the style tag:
-const style = doc.createElement('style');
-style.textContent = `
-  * { box-sizing: border-box; }
-  body { position: relative; min-height: 100vh; }
-  .selected { 
-    outline: 3px solid #8b5cf6 !important; 
-    outline-offset: 2px; 
-    cursor: move !important; 
-  }
-  .hover { 
-    outline: 2px dashed #3b82f6 !important; 
-    outline-offset: 2px; 
-    cursor: move !important; 
-  }
-  .selected *, .hover * {
-    cursor: move !important;
-  }
-`;
+      const style = doc.createElement('style');
+      style.textContent = `
+        * { box-sizing: border-box; }
+        body { position: relative; min-height: 100vh; }
+        .selected { 
+          outline: 3px solid #8b5cf6 !important; 
+          outline-offset: 2px; 
+          cursor: move !important; 
+        }
+        .hover { 
+          outline: 2px dashed #3b82f6 !important; 
+          outline-offset: 2px; 
+          cursor: move !important; 
+        }
+        .selected *, .hover * {
+          cursor: move !important;
+        }
+      `;
+      doc.head.appendChild(style);
 
-      // Mousedown = prepare drag or selection
+      doc.querySelectorAll('a, button').forEach(el => {
+        el.onclick = e => e.preventDefault();
+      });
+
       // Mousedown = prepare drag ONLY if already selected
-doc.onmousedown = (e) => {
-  const el = e.target;
-  
-  // If clicking on empty space, start selection box
-  if (['BODY', 'HTML'].includes(el.tagName)) {
-    e.preventDefault();
-    const iframeRect = iframe.getBoundingClientRect();
-    selectionData.current = {
-      startX: e.clientX - iframeRect.left,
-      startY: e.clientY - iframeRect.top,
-      iframe: iframe
-    };
-    return;
-  }
+      doc.onmousedown = (e) => {
+        const el = e.target;
+        
+        if (['BODY', 'HTML'].includes(el.tagName)) {
+          e.preventDefault();
+          const iframeRect = iframe.getBoundingClientRect();
+          selectionData.current = {
+            startX: e.clientX - iframeRect.left,
+            startY: e.clientY - iframeRect.top,
+            iframe: iframe
+          };
+          return;
+        }
 
-  // Don't drag large containers
-  if (['MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
-    return;
-  }
+        if (['MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
+          return;
+        }
 
-  // ONLY prepare drag if element is ALREADY selected
-  if (el.classList.contains('selected')) {
-    e.preventDefault();
-    
-    const iframeRect = iframe.getBoundingClientRect();
-    const elementsData = selectedElements.map(elem => {
-      const elemRect = elem.getBoundingClientRect();
-      return {
-        el: elem,
-        startLeft: elemRect.left - iframeRect.left,
-        startTop: elemRect.top - iframeRect.top,
-        width: elemRect.width,
-        height: elemRect.height
+        // ONLY prepare drag if element is ALREADY selected
+        if (el.classList.contains('selected')) {
+          e.preventDefault();
+          
+          const iframeRect = iframe.getBoundingClientRect();
+          const elementsData = selectedElements.map(elem => {
+            const elemRect = elem.getBoundingClientRect();
+            return {
+              el: elem,
+              startLeft: elemRect.left - iframeRect.left,
+              startTop: elemRect.top - iframeRect.top,
+              width: elemRect.width,
+              height: elemRect.height
+            };
+          });
+          
+          const firstRect = selectedElements[0].getBoundingClientRect();
+          
+          dragData.current = {
+            elements: elementsData,
+            moved: false,
+            startMouseX: e.clientX - iframeRect.left,
+            startMouseY: e.clientY - iframeRect.top,
+            clickOffsetX: (e.clientX - iframeRect.left) - (firstRect.left - iframeRect.left),
+            clickOffsetY: (e.clientY - iframeRect.top) - (firstRect.top - iframeRect.top),
+            iframe: iframe
+          };
+        }
       };
-    });
-    
-    const firstRect = selectedElements[0].getBoundingClientRect();
-    
-    dragData.current = {
-      elements: elementsData,
-      moved: false,
-      startMouseX: e.clientX - iframeRect.left,
-      startMouseY: e.clientY - iframeRect.top,
-      clickOffsetX: (e.clientX - iframeRect.left) - (firstRect.left - iframeRect.left),
-      clickOffsetY: (e.clientY - iframeRect.top) - (firstRect.top - iframeRect.top),
-      iframe: iframe
-    };
-  }
-};
 
-// Click = select element (make it draggable for next time)
-doc.onclick = (e) => {
-  // Don't select if we just finished dragging
-  if (dragData.current?.moved) {
-    dragData.current = null;
-    return;
-  }
-  
-  // Don't select if we're finishing selection box
-  if (selectionData.current) {
-    selectionData.current = null;
-    return;
-  }
+      // Mouseup = select element
+      doc.onmouseup = (e) => {
+        // If we were dragging, don't select
+        if (dragData.current?.moved) {
+          return;
+        }
+        
+        // If we were selection boxing, don't select
+        if (selectionData.current) {
+          return;
+        }
+        
+        // If we just mousedown on a selected element (preparing to drag), don't reselect
+        if (dragData.current && !dragData.current.moved) {
+          dragData.current = null;
+          return;
+        }
 
-  e.preventDefault();
-  e.stopPropagation();
-  
-  const el = e.target;
-  
-  if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
-    // Clicked empty space - deselect all
-    doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-    setSelectedElements([]);
-    return;
-  }
-  
-  // Select element
-  if (!e.shiftKey) {
-    // Clear previous selection
-    doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-    el.classList.add('selected');
-    setSelectedElements([el]);
-    loadProps(el);
-  } else {
-    // Shift-click to add/remove from selection
-    if (el.classList.contains('selected')) {
-      el.classList.remove('selected');
-      setSelectedElements(prev => prev.filter(e => e !== el));
-    } else {
-      el.classList.add('selected');
-      setSelectedElements(prev => [...prev, el]);
-    }
-  }
-  
-  dragData.current = null;
-};
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const el = e.target;
+        
+        if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
+          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+          setSelectedElements([]);
+          return;
+        }
+        
+        if (!e.shiftKey) {
+          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+          el.classList.add('selected');
+          setSelectedElements([el]);
+          loadProps(el);
+        } else {
+          if (el.classList.contains('selected')) {
+            el.classList.remove('selected');
+            setSelectedElements(prev => prev.filter(elem => elem !== el));
+          } else {
+            el.classList.add('selected');
+            setSelectedElements(prev => [...prev, el]);
+          }
+        }
+      };
 
       doc.ondblclick = (e) => {
         e.preventDefault();
@@ -182,8 +181,6 @@ doc.onclick = (e) => {
         }
       };
 
-      doc.onmousemove = handleMove;
-      doc.onmouseup = handleUp;
       doc.onmouseover = (e) => {
         if (!dragData.current?.moved && !selectionData.current && !['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
           e.target.classList.add('hover');
@@ -194,154 +191,141 @@ doc.onclick = (e) => {
   }, [htmlContent, selectedElements]);
 
   const handleMove = (e) => {
-  if (selectionData.current) {
-    const iframe = selectionData.current.iframe;
-    const iframeRect = iframe.getBoundingClientRect();
-    const doc = iframe.contentDocument;
-    
-    const currentX = e.clientX - iframeRect.left;
-    const currentY = e.clientY - iframeRect.top;
-    
-    const boxLeft = Math.min(selectionData.current.startX, currentX);
-    const boxTop = Math.min(selectionData.current.startY, currentY);
-    const boxWidth = Math.abs(currentX - selectionData.current.startX);
-    const boxHeight = Math.abs(currentY - selectionData.current.startY);
-    
-    setSelectionBox({ left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight });
-    
-    const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
-      !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName) &&
-      el.offsetParent !== null
-    );
-    
-    allElements.forEach(el => {
-      const rect = el.getBoundingClientRect();
-      const elLeft = rect.left - iframeRect.left;
-      const elTop = rect.top - iframeRect.top;
+    if (selectionData.current) {
+      const iframe = selectionData.current.iframe;
+      const iframeRect = iframe.getBoundingClientRect();
+      const doc = iframe.contentDocument;
       
-      if (elLeft >= boxLeft && elLeft + rect.width <= boxLeft + boxWidth && 
-          elTop >= boxTop && elTop + rect.height <= boxTop + boxHeight) {
-        el.classList.add('selected');
-      } else {
-        el.classList.remove('selected');
-      }
-    });
-    
-    return;
-  }
+      const currentX = e.clientX - iframeRect.left;
+      const currentY = e.clientY - iframeRect.top;
+      
+      const boxLeft = Math.min(selectionData.current.startX, currentX);
+      const boxTop = Math.min(selectionData.current.startY, currentY);
+      const boxWidth = Math.abs(currentX - selectionData.current.startX);
+      const boxHeight = Math.abs(currentY - selectionData.current.startY);
+      
+      setSelectionBox({ left: boxLeft, top: boxTop, width: boxWidth, height: boxHeight });
+      
+      const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
+        !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName) &&
+        el.offsetParent !== null
+      );
+      
+      allElements.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        const elLeft = rect.left - iframeRect.left;
+        const elTop = rect.top - iframeRect.top;
+        
+        if (elLeft >= boxLeft && elLeft + rect.width <= boxLeft + boxWidth && 
+            elTop >= boxTop && elTop + rect.height <= boxTop + boxHeight) {
+          el.classList.add('selected');
+        } else {
+          el.classList.remove('selected');
+        }
+      });
+      
+      return;
+    }
 
-  if (!dragData.current) return;
+    if (!dragData.current) return;
 
-  const iframeRect = dragData.current.iframe.getBoundingClientRect();
-  const mouseX = e.clientX - iframeRect.left;
-  const mouseY = e.clientY - iframeRect.top;
-  
-  const dx = mouseX - dragData.current.startMouseX;
-  const dy = mouseY - dragData.current.startMouseY;
-
-  if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-    dragData.current.moved = true;
+    const iframeRect = dragData.current.iframe.getBoundingClientRect();
+    const mouseX = e.clientX - iframeRect.left;
+    const mouseY = e.clientY - iframeRect.top;
     
-    dragData.current.elements.forEach(data => {
-      const el = data.el;
-      const doc = el.ownerDocument;
+    const dx = mouseX - dragData.current.startMouseX;
+    const dy = mouseY - dragData.current.startMouseY;
+
+    if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+      dragData.current.moved = true;
       
-      if (!el.classList.contains('selected')) {
-        doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-        el.classList.add('selected');
-        setSelectedElements([el]);
-        loadProps(el);
-      }
-      
-      // Move to body so position:absolute is relative to document
-      if (el.parentNode !== doc.body) {
-        doc.body.appendChild(el);
-      }
-      
-      el.style.position = 'absolute';
-      el.style.left = data.startLeft + 'px';
-      el.style.top = data.startTop + 'px';
-      
-      // Only set width for block elements, not inline text
-      const display = window.getComputedStyle(el).display;
-      if (display === 'block' || display === 'flex' || display === 'grid') {
+      dragData.current.elements.forEach(data => {
+        const el = data.el;
+        const doc = el.ownerDocument;
+        
+        // Move to body
+        if (el.parentNode !== doc.body) {
+          doc.body.appendChild(el);
+        }
+        
+        el.style.position = 'absolute';
+        el.style.left = data.startLeft + 'px';
+        el.style.top = data.startTop + 'px';
         el.style.width = data.width + 'px';
-      }
-      
-      el.style.margin = '0';
-      el.style.opacity = '0.6';
-      el.style.zIndex = '9999';
-    });
-  }
+        el.style.margin = '0';
+        el.style.opacity = '0.6';
+        el.style.zIndex = '9999';
+      });
+    }
 
-  if (dragData.current.moved) {
-    const doc = dragData.current.iframe.contentDocument;
-    
-    let newX = mouseX - dragData.current.clickOffsetX;
-    let newY = mouseY - dragData.current.clickOffsetY;
-    
-    const snapThreshold = 5;
-    const detectedGuides = { vertical: [], horizontal: [] };
-    
-    const pageWidth = doc.body.scrollWidth;
-    const pageHeight = doc.body.scrollHeight;
-    const pageCenterX = pageWidth / 2;
-    const pageCenterY = pageHeight / 2;
-    
-    const firstEl = dragData.current.elements[0];
-    const elCenterX = newX + firstEl.width / 2;
-    const elCenterY = newY + firstEl.height / 2;
-    
-    if (Math.abs(elCenterX - pageCenterX) < 20) {
-      detectedGuides.vertical.push(pageCenterX);
-    }
-    if (Math.abs(elCenterY - pageCenterY) < 20) {
-      detectedGuides.horizontal.push(pageCenterY);
-    }
-    
-    if (Math.abs(elCenterX - pageCenterX) < snapThreshold) {
-      newX = pageCenterX - firstEl.width / 2;
-    }
-    if (Math.abs(elCenterY - pageCenterY) < snapThreshold) {
-      newY = pageCenterY - firstEl.height / 2;
-    }
-    
-    const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
-      !dragData.current.elements.some(data => data.el === el) &&
-      !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
-      el.offsetParent !== null
-    );
-    
-    allElements.forEach(other => {
-      const otherRect = other.getBoundingClientRect();
-      const otherX = otherRect.left - iframeRect.left;
-      const otherY = otherRect.top - iframeRect.top;
-      const otherCenterX = otherX + otherRect.width / 2;
-      const otherCenterY = otherY + otherRect.height / 2;
+    if (dragData.current.moved) {
+      const doc = dragData.current.iframe.contentDocument;
       
-      if (Math.abs(elCenterX - otherCenterX) < snapThreshold) {
-        newX = otherCenterX - firstEl.width / 2;
-        detectedGuides.vertical.push(otherCenterX);
+      let newX = mouseX - dragData.current.clickOffsetX;
+      let newY = mouseY - dragData.current.clickOffsetY;
+      
+      const snapThreshold = 5;
+      const detectedGuides = { vertical: [], horizontal: [] };
+      
+      const pageWidth = doc.body.scrollWidth;
+      const pageHeight = doc.body.scrollHeight;
+      const pageCenterX = pageWidth / 2;
+      const pageCenterY = pageHeight / 2;
+      
+      const firstEl = dragData.current.elements[0];
+      const elCenterX = newX + firstEl.width / 2;
+      const elCenterY = newY + firstEl.height / 2;
+      
+      if (Math.abs(elCenterX - pageCenterX) < 20) {
+        detectedGuides.vertical.push(pageCenterX);
+      }
+      if (Math.abs(elCenterY - pageCenterY) < 20) {
+        detectedGuides.horizontal.push(pageCenterY);
       }
       
-      if (Math.abs(elCenterY - otherCenterY) < snapThreshold) {
-        newY = otherCenterY - firstEl.height / 2;
-        detectedGuides.horizontal.push(otherCenterY);
+      if (Math.abs(elCenterX - pageCenterX) < snapThreshold) {
+        newX = pageCenterX - firstEl.width / 2;
       }
-    });
-    
-    setGuides(detectedGuides);
-    
-    const deltaX = newX - firstEl.startLeft;
-    const deltaY = newY - firstEl.startTop;
-    
-    dragData.current.elements.forEach(data => {
-      data.el.style.left = (data.startLeft + deltaX) + 'px';
-      data.el.style.top = (data.startTop + deltaY) + 'px';
-    });
-  }
-};
-  
+      if (Math.abs(elCenterY - pageCenterY) < snapThreshold) {
+        newY = pageCenterY - firstEl.height / 2;
+      }
+      
+      const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
+        !dragData.current.elements.some(data => data.el === el) &&
+        !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
+        el.offsetParent !== null
+      );
+      
+      allElements.forEach(other => {
+        const otherRect = other.getBoundingClientRect();
+        const otherX = otherRect.left - iframeRect.left;
+        const otherY = otherRect.top - iframeRect.top;
+        const otherCenterX = otherX + otherRect.width / 2;
+        const otherCenterY = otherY + otherRect.height / 2;
+        
+        if (Math.abs(elCenterX - otherCenterX) < snapThreshold) {
+          newX = otherCenterX - firstEl.width / 2;
+          detectedGuides.vertical.push(otherCenterX);
+        }
+        
+        if (Math.abs(elCenterY - otherCenterY) < snapThreshold) {
+          newY = otherCenterY - firstEl.height / 2;
+          detectedGuides.horizontal.push(otherCenterY);
+        }
+      });
+      
+      setGuides(detectedGuides);
+      
+      const deltaX = newX - firstEl.startLeft;
+      const deltaY = newY - firstEl.startTop;
+      
+      dragData.current.elements.forEach(data => {
+        data.el.style.left = (data.startLeft + deltaX) + 'px';
+        data.el.style.top = (data.startTop + deltaY) + 'px';
+      });
+    }
+  };
+
   const handleUp = () => {
     if (selectionData.current) {
       const doc = selectionData.current.iframe.contentDocument;
