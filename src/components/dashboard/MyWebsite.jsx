@@ -87,6 +87,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     <div className="flex gap-1.5"><div className="w-3 h-3 rounded-full bg-red-500"></div><div className="w-3 h-3 rounded-full bg-yellow-500"></div><div className="w-3 h-3 rounded-full bg-green-500"></div></div>
                     <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">{user.business_name || 'Your Website'}.com</div>
                   </div>
+                  <div className="overflow-hidden">
                  <iframe srcDoc={currentWebsite} title="Website Preview" className="w-full h-[600px] bg-white border-0 pointer-events-none" sandbox="" />
                 </div>
               ) : (
@@ -104,7 +105,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                       <div className="absolute top-11 left-0 right-0 h-12 bg-gray-100 z-10 flex items-center px-3 border-b border-gray-200">
                         <div className="flex-1 bg-white rounded-full px-4 py-2 text-xs text-gray-500 flex items-center gap-2"><Globe className="w-3 h-3" /><span className="truncate">{user.business_name || 'website'}.com</span></div>
                       </div>
-                      <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-auto">
+                      <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
                         <iframe srcDoc={currentWebsite} title="Mobile Website Preview" className="w-full h-full bg-white border-0 pointer-events-none" sandbox="" style={{ minHeight: '100%' }} />
                       </div>
                     </div>
