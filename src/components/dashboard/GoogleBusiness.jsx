@@ -53,9 +53,10 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
       return;
     }
 
-    // Validate it's a Google review link
-    if (!reviewLink.includes('google.com') || !reviewLink.includes('review')) {
-      alert('Please enter a valid Google review link. It should contain "google.com" and "review".');
+    // Validate it's a Google review link (g.page or google.com)
+    const link = reviewLink.toLowerCase();
+    if (!link.includes('g.page') && !link.includes('google.com')) {
+      alert('Please enter a valid Google review link (should contain g.page or google.com)');
       return;
     }
 
