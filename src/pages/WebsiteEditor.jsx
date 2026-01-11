@@ -5,12 +5,14 @@ import {
   Sparkles, 
   Save,
   Send,
-  Loader2
+  Loader2,
+  FileText
 } from 'lucide-react';
 
 export default function WebsiteEditor() {
   const navigate = useNavigate();
-  const [currentWebsite, setCurrentWebsite] = useState('');
+  const [allPages, setAllPages] = useState({});
+  const [currentPage, setCurrentPage] = useState('index.html');
   const [isSaving, setIsSaving] = useState(false);
   
   // AI Chat state
@@ -18,7 +20,6 @@ export default function WebsiteEditor() {
   const [inputMessage, setInputMessage] = useState('');
   const [isAIThinking, setIsAIThinking] = useState(false);
   
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   // Load website on mount
@@ -27,27 +28,36 @@ export default function WebsiteEditor() {
   }, []);
 
   const fetchWebsite = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${apiUrl}/api/website`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    });
-    const data = await response.json();
-    if (data.website) {
-      setCurrentWebsite(data.website.html_content);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${apiUrl}/api/website`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
       
-      // Add welcome message
-      setMessages([{
-        role: 'assistant',
-        content: "Hi! I'm your AI website editor. I can help you make changes to your website. Just tell me what you'd like to change!\n\nFor example:\n• \"Change the hero text to 'Welcome to our shop'\"\n• \"Make the button blue\"\n• \"Add a new section about our services\""
-      }]);
+      if (data.website) {
+        // Check if we have multiple pages
+        if (data.website.pages) {
+          setAllPages(data.website.pages);
+          setCurrentPage('index.html');
+        } else {
+          // Single page website
+          setAllPages({ 'index.html': data.website.html_content });
+          setCurrentPage('index.html');
+        }
+        
+        // Add welcome message
+        setMessages([{
+          role: 'assistant',
+          content: "Hi! I'm your AI website editor. I can help you make changes to your website. Just tell me what you'd like to change!\n\nFor example:\n• \"Change the hero text to 'Welcome to our shop'\"\n• \"Make the button blue\"\n• \"Add a new section about our services\""
+        }]);
+      }
+    } catch (error) {
+      console.error('Error fetching website:', error);
     }
-  } catch (error) {
-    console.error('Error fetching website:', error);
-  }
-};
+  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isAIThinking) return;
@@ -60,13 +70,17 @@ export default function WebsiteEditor() {
     setIsAIThinking(true);
 
     try {
-      // Call AI API to modify website
+      const token = localStorage.getItem('token');
+      
+      // Call AI API to modify current page
       const response = await fetch(`${apiUrl}/api/website/ai-edit`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
-          userId: user.id,
-          currentHTML: currentWebsite,
+          currentHTML: allPages[currentPage],
           userRequest: userMessage
         })
       });
@@ -74,8 +88,11 @@ export default function WebsiteEditor() {
       const data = await response.json();
 
       if (data.success) {
-        // Update website with AI changes
-        setCurrentWebsite(data.updatedHTML);
+        // Update current page with AI changes
+        setAllPages(prev => ({
+          ...prev,
+          [currentPage]: data.updatedHTML
+        }));
         
         // Add AI response to chat
         setMessages(prev => [...prev, {
@@ -102,12 +119,16 @@ export default function WebsiteEditor() {
   const handleSave = async () => {
     setIsSaving(true);
     try {
+      const token = localStorage.getItem('token');
       await fetch(`${apiUrl}/api/website`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify({
-          userId: user.id,
-          htmlContent: currentWebsite
+          htmlContent: allPages['index.html'],
+          pages: allPages
         })
       });
       alert('Website saved successfully! ✅');
@@ -117,6 +138,16 @@ export default function WebsiteEditor() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  // Get page display name
+  const getPageDisplayName = (filename) => {
+    return filename
+      .replace('.html', '')
+      .replace('-', ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
 
   return (
@@ -134,6 +165,13 @@ export default function WebsiteEditor() {
           </button>
           <div className="h-6 w-px bg-gray-300" />
           <h1 className="text-xl font-bold text-gray-900">Website Editor</h1>
+          
+          {/* Page indicator */}
+          <div className="bg-purple-100 px-3 py-1 rounded-full">
+            <span className="text-sm font-medium text-purple-700">
+              Editing: {getPageDisplayName(currentPage)}
+            </span>
+          </div>
         </div>
 
         <div className="flex items-center gap-3">
@@ -148,7 +186,7 @@ export default function WebsiteEditor() {
             ) : (
               <Save className="w-4 h-4" />
             )}
-            Save Changes
+            Save All Pages
           </button>
         </div>
       </header>
@@ -163,7 +201,7 @@ export default function WebsiteEditor() {
               <h2 className="font-bold text-gray-900">AI Editor Assistant</h2>
             </div>
             <p className="text-sm text-gray-600">
-              Tell me what changes you'd like to make
+              Tell me what changes you'd like to make to {getPageDisplayName(currentPage)}
             </p>
           </div>
 
@@ -223,76 +261,78 @@ export default function WebsiteEditor() {
           </div>
         </div>
 
-        {/* Right Panel - Preview */}
+        {/* Right Panel - Preview & Page Selector */}
         <div className="flex-1 flex flex-col bg-gray-100">
+          {/* Page Selector */}
+          <div className="bg-white border-b border-gray-200 p-4">
+            <div className="flex items-center gap-2 mb-2">
+              <FileText className="w-4 h-4 text-gray-600" />
+              <span className="text-sm font-semibold text-gray-700">Pages:</span>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {Object.keys(allPages).map((pageName) => (
+                <button
+                  key={pageName}
+                  onClick={() => setCurrentPage(pageName)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    currentPage === pageName
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {getPageDisplayName(pageName)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Preview */}
           <div className="flex-1 overflow-auto p-4">
             <div className="h-full w-full max-w-7xl mx-auto">
               <div className="bg-white rounded-xl shadow-2xl overflow-hidden h-full">
                 <iframe
-                  srcDoc={currentWebsite}
-                  title="Website Preview"
+                  key={currentPage} // Force reload when page changes
+                  srcDoc={allPages[currentPage]}
+                  title={`${currentPage} Preview`}
                   className="w-full h-full border-none"
-                  sandbox="allow-scripts allow-same-origin"
                   ref={(iframe) => {
                     if (iframe && iframe.contentWindow) {
                       iframe.onload = () => {
                         try {
                           const iframeDoc = iframe.contentWindow.document;
-                            
-                            // Allow same-page navigation, prevent external navigation
-                            iframeDoc.addEventListener('click', (e) => {
-                              const link = e.target.closest('a');
-                              if (link) {
-                                const href = link.getAttribute('href');
-                                
-                                // Allow anchor links (same-page navigation like #services, #about)
-                                if (href && href.startsWith('#')) {
-                                  e.stopPropagation(); // Let the default anchor behavior work
-                                  return;
-                                }
-                                
-                                // Prevent external navigation
-                                e.preventDefault();
-                                console.log('External navigation prevented:', href);
+                          
+                          // Intercept navigation to switch pages within editor
+                          iframeDoc.addEventListener('click', (e) => {
+                            const link = e.target.closest('a');
+                            if (link) {
+                              const href = link.getAttribute('href');
+                              
+                              // Allow anchor links
+                              if (href && href.startsWith('#')) {
+                                return;
                               }
                               
-                              // Prevent form submissions
-                              const form = e.target.closest('form');
-                              if (form) {
+                              // Check if it's a link to another page
+                              if (href && href.endsWith('.html')) {
                                 e.preventDefault();
-                                console.log('Form submission prevented in preview');
+                                if (allPages[href]) {
+                                  setCurrentPage(href);
+                                }
+                                return;
                               }
-                            }, true);
-                          } catch (err) {
-                            console.log('Could not access iframe:', err);
-                          }
-                        };
-                      }
-                    }}
-                  />
-                </div>
-              ) : (
-                <div className="bg-gray-900 rounded-xl shadow-2xl overflow-hidden h-full flex flex-col">
-                  <div className="bg-gray-800 px-4 py-2 border-b border-gray-700 flex items-center justify-between">
-                    <span className="text-sm text-gray-400 font-mono">HTML Source</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        navigator.clipboard.writeText(currentWebsite);
-                        alert('Code copied to clipboard!');
-                      }}
-                      className="text-xs text-purple-400 hover:text-purple-300"
-                    >
-                      Copy Code
-                    </button>
-                  </div>
-                  <textarea
-                    value={currentWebsite}
-                    onChange={(e) => setCurrentWebsite(e.target.value)}
-                    className="flex-1 w-full p-4 bg-gray-900 text-gray-100 font-mono text-sm focus:outline-none resize-none"
-                    spellCheck="false"
-                  />
-                </div>
+                              
+                              // Prevent all other navigation
+                              e.preventDefault();
+                            }
+                          }, true);
+                        } catch (err) {
+                          console.log('Could not access iframe:', err);
+                        }
+                      };
+                    }
+                  }}
+                />
+              </div>
             </div>
           </div>
         </div>
