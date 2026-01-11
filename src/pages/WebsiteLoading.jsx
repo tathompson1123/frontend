@@ -20,7 +20,7 @@ export default function WebsiteLoading() {
   { label: 'Color grading and transitions...', duration: 9 },
   { label: 'Optimizing for mobile devices...', duration: 8 },
   { label: 'Adding interactive elements...', duration: 10 },
-  { label: 'Final polish and quality check...', duration: 10 }
+  { label: 'Final polish and quality check...(it's not bugged, still generating)', duration: 10 }
 ];
 
 const animateProgress = () => {
