@@ -42,18 +42,25 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const doc = iframe.contentDocument;
       if (!doc) return;
 
-      const style = doc.createElement('style');
-      style.textContent = `
-        * { box-sizing: border-box; }
-        body { position: relative; min-height: 100vh; }
-        .selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px; cursor: move !important; }
-        .hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px; cursor: pointer !important; }
-      `;
-      doc.head.appendChild(style);
-
-      doc.querySelectorAll('a, button').forEach(el => {
-        el.onclick = e => e.preventDefault();
-      });
+      // Update the CSS in the style tag:
+const style = doc.createElement('style');
+style.textContent = `
+  * { box-sizing: border-box; }
+  body { position: relative; min-height: 100vh; }
+  .selected { 
+    outline: 3px solid #8b5cf6 !important; 
+    outline-offset: 2px; 
+    cursor: move !important; 
+  }
+  .hover { 
+    outline: 2px dashed #3b82f6 !important; 
+    outline-offset: 2px; 
+    cursor: move !important; 
+  }
+  .selected *, .hover * {
+    cursor: move !important;
+  }
+`;
 
       // Mousedown = prepare drag or selection
       doc.onmousedown = (e) => {
