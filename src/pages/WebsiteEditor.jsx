@@ -112,28 +112,29 @@ export default function WebsiteEditor() {
   };
 
   const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`${apiUrl}/api/website`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          htmlContent: allPages['index.html'],
-          pages: allPages
-        })
-      });
-      alert('Website saved successfully! ✅');
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('Failed to save website');
-    } finally {
-      setIsSaving(false);
-    }
-  };
+  setIsSaving(true);
+  try {
+    const token = localStorage.getItem('token');
+    await fetch(`${apiUrl}/api/website`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        htmlContent: allPages['index.html'],
+        pages: allPages
+      })
+    });
+    
+    // Navigate back to dashboard after successful save
+    navigate('/dashboard?tab=website');
+  } catch (error) {
+    console.error('Save error:', error);
+    alert('Failed to save website');
+    setIsSaving(false);
+  }
+};
 
   const getPageDisplayName = (filename) => {
     return filename
