@@ -17,9 +17,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [editingText, setEditingText] = useState(null);
   const iframeRef = useRef(null);
   
-  // Simple drag state
+  // Drag state
   const dragRef = useRef({
-    active: false,
+    mouseDown: false,
+    dragging: false,
     element: null,
     startMouseX: 0,
     startMouseY: 0,
@@ -79,7 +80,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
       // Click to select
       doc.addEventListener('click', (e) => {
-        if (dragRef.current.active) return;
+        if (dragRef.current.dragging) return;
         
         e.preventDefault();
         e.stopPropagation();
@@ -123,7 +124,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         }
       }, true);
 
-      // Start drag
+      // Mouse down - prepare for potential drag
       doc.addEventListener('mousedown', (e) => {
         if (!e.target.classList.contains('ve-selected')) return;
         if (editingText) return;
@@ -135,30 +136,22 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         const rect = el.getBoundingClientRect();
         const iframeRect = iframe.getBoundingClientRect();
         
-        // Convert to absolute positioning
-        if (el.style.position !== 'absolute') {
-          el.style.position = 'absolute';
-          el.style.left = (rect.left - iframeRect.left) + 'px';
-          el.style.top = (rect.top - iframeRect.top) + 'px';
-          el.style.width = rect.width + 'px';
-          el.style.margin = '0';
-        }
-        
         dragRef.current = {
-          active: true,
+          mouseDown: true,
+          dragging: false,
           element: el,
           startMouseX: e.clientX,
           startMouseY: e.clientY,
-          startElementX: parseInt(el.style.left) || 0,
-          startElementY: parseInt(el.style.top) || 0
+          startElementX: parseInt(el.style.left) || (rect.left - iframeRect.left),
+          startElementY: parseInt(el.style.top) || (rect.top - iframeRect.top),
+          originalPosition: el.style.position,
+          originalWidth: rect.width
         };
-        
-        el.classList.add('ve-dragging');
       }, true);
 
       // Hover effects
       doc.addEventListener('mouseover', (e) => {
-        if (!dragRef.current.active) {
+        if (!dragRef.current.dragging) {
           e.target.classList.add('ve-hover');
         }
       });
@@ -172,31 +165,57 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   // Global mouse move
   useEffect(() => {
     const move = (e) => {
-      if (!dragRef.current.active || !dragRef.current.element) return;
+      if (!dragRef.current.mouseDown) return;
       
-      requestAnimationFrame(() => {
-        const dx = e.clientX - dragRef.current.startMouseX;
-        const dy = e.clientY - dragRef.current.startMouseY;
+      const dx = Math.abs(e.clientX - dragRef.current.startMouseX);
+      const dy = Math.abs(e.clientY - dragRef.current.startMouseY);
+      
+      // Only start dragging if mouse moved more than 5px
+      if (!dragRef.current.dragging && (dx > 5 || dy > 5)) {
+        dragRef.current.dragging = true;
         
-        const newX = dragRef.current.startElementX + dx;
-        const newY = dragRef.current.startElementY + dy;
+        const el = dragRef.current.element;
         
-        dragRef.current.element.style.left = newX + 'px';
-        dragRef.current.element.style.top = newY + 'px';
-      });
-    };
-
-    const up = () => {
-      if (dragRef.current.active) {
-        if (dragRef.current.element) {
-          dragRef.current.element.classList.remove('ve-dragging');
+        // Convert to absolute positioning on first drag
+        if (el.style.position !== 'absolute') {
+          el.style.position = 'absolute';
+          el.style.left = dragRef.current.startElementX + 'px';
+          el.style.top = dragRef.current.startElementY + 'px';
+          el.style.width = dragRef.current.originalWidth + 'px';
+          el.style.margin = '0';
         }
-        dragRef.current.active = false;
-        save();
+        
+        el.classList.add('ve-dragging');
+      }
+      
+      // Update position while dragging
+      if (dragRef.current.dragging) {
+        requestAnimationFrame(() => {
+          const deltaX = e.clientX - dragRef.current.startMouseX;
+          const deltaY = e.clientY - dragRef.current.startMouseY;
+          
+          const newX = dragRef.current.startElementX + deltaX;
+          const newY = dragRef.current.startElementY + deltaY;
+          
+          dragRef.current.element.style.left = newX + 'px';
+          dragRef.current.element.style.top = newY + 'px';
+        });
       }
     };
 
-    window.addEventListener('mousemove', move, { passive: true });
+    const up = () => {
+      if (dragRef.current.mouseDown) {
+        if (dragRef.current.dragging) {
+          dragRef.current.element.classList.remove('ve-dragging');
+          save();
+        }
+        
+        dragRef.current.mouseDown = false;
+        dragRef.current.dragging = false;
+      }
+    };
+
+    window.addEventListener('mousemove', move);
     window.addEventListener('mouseup', up);
 
     return () => {
