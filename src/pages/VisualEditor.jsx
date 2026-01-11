@@ -120,6 +120,40 @@ doc.onmousedown = (e) => {
     return;
   }
 
+// Click = select (only if didn't drag)
+doc.onclick = (e) => {
+  if (dragData.current?.moved || selectionData.current) {
+    dragData.current = null;
+    selectionData.current = null;
+    return;
+  }
+
+  e.preventDefault();
+  
+  if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
+    return;
+  }
+  
+  // Clear or add to selection
+  if (!e.shiftKey) {
+    doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
+    e.target.classList.add('selected');
+    setSelectedElements([e.target]);
+    loadProps(e.target);
+  } else {
+    // Shift-click to add to selection
+    if (e.target.classList.contains('selected')) {
+      e.target.classList.remove('selected');
+      setSelectedElements(prev => prev.filter(el => el !== e.target));
+    } else {
+      e.target.classList.add('selected');
+      setSelectedElements(prev => [...prev, e.target]);
+    }
+  }
+  
+  dragData.current = null;
+};
+
   // Single element click - prepare single drag
   let currentLeft = parseInt(el.style.left) || 0;
   let currentTop = parseInt(el.style.top) || 0;
