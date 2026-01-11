@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import HomePage from './pages/HomePage';
 import WebsiteGenerator from './pages/WebsiteGenerator';
+import WebsiteLoading from './pages/WebsiteLoading';
 import Dashboard from './pages/Dashboard';
 import PricingPage from './pages/PricingPage';
 import WebsiteEditor from './pages/WebsiteEditor';
@@ -11,6 +12,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/loading" element={<WebsiteLoading />} />
         <Route path="/generate" element={<WebsiteGenerator />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
