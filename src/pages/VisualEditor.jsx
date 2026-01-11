@@ -201,7 +201,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           e.target.onblur = () => {
             e.target.contentEditable = 'false';
             setEditingText(null);
-            save();
+            notifyUpdateDebounced();
           };
         }
       };
@@ -298,16 +298,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     }
 
     if (dragData.current.moved) {
-      const iframe = dragData.current.iframe;
-      const iframeRect = iframe.getBoundingClientRect();
-      const doc = iframe.contentDocument;
-      
-      // Calculate new position for first element
-      const mouseXInIframe = e.clientX - iframeRect.left;
-      const mouseYInIframe = e.clientY - iframeRect.top;
+      const mouseXInIframe = e.clientX - dragData.current.iframe.getBoundingClientRect().left;
+      const mouseYInIframe = e.clientY - dragData.current.iframe.getBoundingClientRect().top;
       
       let newX = mouseXInIframe - dragData.current.mouseOffsetX;
       let newY = mouseYInIframe - dragData.current.mouseOffsetY;
+      
+      const iframe = dragData.current.iframe;
+      const iframeRect = iframe.getBoundingClientRect();
+      const doc = iframe.contentDocument;
       
       // Snap and guide detection
       const snapThreshold = 5;
@@ -393,7 +392,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         data.el.style.opacity = '1';
       });
       setGuides({ vertical: [], horizontal: [] });
-      save();
+      notifyUpdateDebounced();
     }
     setTimeout(() => {
       dragData.current = null;
@@ -427,13 +426,13 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const updateProp = (prop, val) => {
     selectedElements.forEach(el => el.style[prop] = val);
     setElementProps(p => ({ ...p, [prop]: val }));
-    save();
+    notifyUpdateDebounced();
   };
 
   const deleteEl = () => {
     selectedElements.forEach(el => el.remove());
     setSelectedElements([]);
-    save();
+    notifyUpdateDebounced();
   };
 
   const duplicate = () => {
@@ -445,13 +444,22 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       c.style.top = (parseInt(el.style.top || 0) + 20) + 'px';
       el.parentNode.appendChild(c);
     });
-    save();
+    notifyUpdateDebounced();
   };
 
-  const save = () => {
-    if (iframeRef.current?.contentDocument) {
-      onUpdate(iframeRef.current.contentDocument.documentElement.outerHTML);
+  // Debounced update to prevent constant iframe reloads
+  const updateTimeoutRef = useRef(null);
+  const notifyUpdateDebounced = () => {
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
     }
+    
+    updateTimeoutRef.current = setTimeout(() => {
+      if (iframeRef.current?.contentDocument) {
+        const html = iframeRef.current.contentDocument.documentElement.outerHTML;
+        onUpdate(html);
+      }
+    }, 500); // Wait 500ms after last change before updating
   };
 
   const rgbToHex = (rgb) => {
