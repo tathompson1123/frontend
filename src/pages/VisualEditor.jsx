@@ -239,7 +239,7 @@ doc.onclick = (e) => {
     const dx = mouseX - dragData.current.startMouseX;
     const dy = mouseY - dragData.current.startMouseY;
 
-   if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
+  if (!dragData.current.moved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
   dragData.current.moved = true;
   
   dragData.current.elements.forEach(data => {
@@ -253,7 +253,7 @@ doc.onclick = (e) => {
       loadProps(el);
     }
     
-    // MOVE TO BODY so position:absolute is relative to document
+    // Move to body so position:absolute is relative to document
     if (el.parentNode !== doc.body) {
       doc.body.appendChild(el);
     }
@@ -261,7 +261,7 @@ doc.onclick = (e) => {
     el.style.position = 'absolute';
     el.style.left = data.startLeft + 'px';
     el.style.top = data.startTop + 'px';
-    el.style.width = data.width + 'px';
+    // REMOVED: el.style.width = data.width + 'px';  ← This was forcing the width
     el.style.margin = '0';
     el.style.opacity = '0.6';
     el.style.zIndex = '9999';
