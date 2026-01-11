@@ -665,9 +665,9 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
                   <Send className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600 font-medium">No review requests found</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    {googlePlaceId 
+                    {reviewLink 
                       ? 'Mark bookings as completed to start automated review campaigns'
-                      : 'Set up your Google Place ID above to enable automated review requests'
+                      : 'Set up your Google review link above to enable automated review requests'
                     }
                   </p>
                 </div>
