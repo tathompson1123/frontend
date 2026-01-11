@@ -1,5 +1,3 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Sparkles, 
@@ -9,7 +7,9 @@ import {
   Monitor,
   Smartphone,
   X,
-  MessageCircle
+  MessageCircle,
+  Undo2,
+  Redo2
 } from 'lucide-react';
 import VisualEditor from './VisualEditor';
 
@@ -21,6 +21,8 @@ export default function WebsiteEditor() {
   const [devicePreview, setDevicePreview] = useState('desktop');
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [history, setHistory] = useState([]);
+const [historyIndex, setHistoryIndex] = useState(-1);
   
   // AI Chat state
   const [messages, setMessages] = useState([]);
@@ -29,38 +31,64 @@ export default function WebsiteEditor() {
   
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+useEffect(() => {
+  const handleKeyboard = (e) => {
+    // Ctrl+Z or Cmd+Z for undo
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      handleUndo();
+    }
+    
+    // Ctrl+Y or Cmd+Shift+Z for redo
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+      e.preventDefault();
+      handleRedo();
+    }
+  };
+
+  window.addEventListener('keydown', handleKeyboard);
+  return () => window.removeEventListener('keydown', handleKeyboard);
+}, [historyIndex, history]);
+  
   useEffect(() => {
     fetchWebsite();
   }, []);
 
   const fetchWebsite = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/website`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
-      
-      if (data.website) {
-        if (data.website.pages) {
-          setAllPages(data.website.pages);
-          setCurrentPage('index.html');
-        } else {
-          setAllPages({ 'index.html': data.website.html_content });
-          setCurrentPage('index.html');
-        }
-        
-        setMessages([{
-          role: 'assistant',
-          content: "Hi! I'm your AI website editor. Tell me what you'd like to change!\n\nExamples:\n• \"Change the hero text\"\n• \"Make the button blue\"\n• \"Add a services section\""
-        }]);
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${apiUrl}/api/website`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
       }
-    } catch (error) {
-      console.error('Error fetching website:', error);
+    });
+    const data = await response.json();
+    
+    if (data.website) {
+      let pages;
+      if (data.website.pages) {
+        pages = data.website.pages;
+        setAllPages(pages);
+        setCurrentPage('index.html');
+      } else {
+        pages = { 'index.html': data.website.html_content };
+        setAllPages(pages);
+        setCurrentPage('index.html');
+      }
+      
+      // Initialize history with first state
+      setHistory([pages]);
+      setHistoryIndex(0);
+      
+      setMessages([{
+        role: 'assistant',
+        content: "Hi! I'm your AI website editor. Tell me what you'd like to change!\n\nExamples:\n• \"Change the hero text\"\n• \"Make the button blue\"\n• \"Add a services section\""
+      }]);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching website:', error);
+  }
+};
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isAIThinking) return;
@@ -116,11 +144,33 @@ export default function WebsiteEditor() {
   };
 
   const handleVisualUpdate = (updatedHTML) => {
-    setAllPages(prev => ({
-      ...prev,
-      [currentPage]: updatedHTML
-    }));
+  const newPages = {
+    ...allPages,
+    [currentPage]: updatedHTML
   };
+  
+  setAllPages(newPages);
+  
+  // Add to history
+  const newHistory = history.slice(0, historyIndex + 1);
+  newHistory.push(newPages);
+  setHistory(newHistory);
+  setHistoryIndex(newHistory.length - 1);
+};
+
+const handleUndo = () => {
+  if (historyIndex > 0) {
+    setHistoryIndex(historyIndex - 1);
+    setAllPages(history[historyIndex - 1]);
+  }
+};
+
+const handleRedo = () => {
+  if (historyIndex < history.length - 1) {
+    setHistoryIndex(historyIndex + 1);
+    setAllPages(history[historyIndex + 1]);
+  }
+};
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -310,8 +360,29 @@ export default function WebsiteEditor() {
       </div>
     </div>
     
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200 p-8">
+     {/* Main Content */}
+<div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200">
+  
+  {/* Undo/Redo Buttons - Top Left Above Preview */}
+  <div className="absolute top-4 left-4 z-30 flex gap-2">
+    <button
+      onClick={handleUndo}
+      disabled={historyIndex <= 0}
+      className="p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+      title="Undo (Ctrl+Z)"
+    >
+      <Undo2 className="w-5 h-5 text-gray-700" />
+    </button>
+    <button
+      onClick={handleRedo}
+      disabled={historyIndex >= history.length - 1}
+      className="p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
+      title="Redo (Ctrl+Y)"
+    >
+      <Redo2 className="w-5 h-5 text-gray-700" />
+    </button>
+  </div>
+  
         {/* Centered Preview */}
         <div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ 
   width: devicePreview === 'desktop' ? '100%' : '375px',
