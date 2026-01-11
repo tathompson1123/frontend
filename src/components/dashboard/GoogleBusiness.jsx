@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { 
   Sparkles, Star, RefreshCw, Copy, CheckCircle, MessageSquare,
   Calendar, TrendingUp, Clock, Users, BarChart3, Send, Mail, 
-  Phone, ExternalLink, CheckCircle2, XCircle, Loader2
+  Phone, ExternalLink, CheckCircle2, XCircle, Loader2, Info, AlertCircle,
+  Link as LinkIcon
 } from 'lucide-react';
 
 export default function GoogleBusiness({ apiUrl, user, authFetch }) {
@@ -21,14 +22,60 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   // Review Requests State
   const [reviewRequests, setReviewRequests] = useState([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
-  const [filterStatus, setFilterStatus] = useState('all'); // all, sent, completed, failed
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [googlePlaceId, setGooglePlaceId] = useState('');
+  const [reviewLink, setReviewLink] = useState('');
+  const [savingPlaceId, setSavingPlaceId] = useState(false);
+  const [showPlaceIdInfo, setShowPlaceIdInfo] = useState(false);
 
   useEffect(() => {
     fetchStats();
+    fetchUserPlaceId();
     if (activeTab === 'review-requests') {
       fetchReviewRequests();
     }
   }, [activeTab]);
+
+  const fetchUserPlaceId = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/user/profile`);
+      const data = await response.json();
+      if (data.user?.google_place_id) {
+        const placeId = data.user.google_place_id;
+        setGooglePlaceId(placeId);
+        setReviewLink(`https://search.google.com/local/writereview?placeid=${placeId}`);
+      }
+    } catch (error) {
+      console.error('Error fetching user place ID:', error);
+    }
+  };
+
+  const handleSavePlaceId = async () => {
+    if (!googlePlaceId.trim()) {
+      alert('Please enter a Google Place ID');
+      return;
+    }
+
+    setSavingPlaceId(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/user/google-place-id`, {
+        method: 'POST',
+        body: JSON.stringify({ googlePlaceId: googlePlaceId.trim() })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setReviewLink(`https://search.google.com/local/writereview?placeid=${googlePlaceId.trim()}`);
+        alert('✅ Google Place ID saved! Your review automation is now active.');
+      } else {
+        alert('Failed to save: ' + (data.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving place ID:', error);
+      alert('Failed to save Google Place ID');
+    } finally {
+      setSavingPlaceId(false);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -393,6 +440,152 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
           {/* REVIEW REQUESTS TAB */}
           {activeTab === 'review-requests' && (
             <div className="space-y-6">
+              {/* Setup Section */}
+              {!googlePlaceId && (
+                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-xl p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0">
+                      <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
+                        <AlertCircle className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">Setup Required: Connect Your Google Business Profile</h3>
+                      <p className="text-gray-700 mb-4">
+                        To enable automated review requests, we need your Google Place ID. This allows us to send customers 
+                        a direct link to leave reviews on your Google Business Profile.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Google Place ID Input */}
+              <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <LinkIcon className="w-6 h-6 text-purple-600" />
+                    <h3 className="text-lg font-bold text-gray-900">Google Review Link Setup</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowPlaceIdInfo(!showPlaceIdInfo)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition text-sm font-medium"
+                  >
+                    <Info className="w-4 h-4" />
+                    How to Find This
+                  </button>
+                </div>
+
+                {showPlaceIdInfo && (
+                  <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <h4 className="font-bold text-blue-900 mb-3 flex items-center gap-2">
+                      <Info className="w-5 h-5" />
+                      How to Get Your Google Place ID
+                    </h4>
+                    <ol className="space-y-2 text-sm text-blue-900">
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold">1.</span>
+                        <span>Go to <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer" className="underline font-semibold">Google's Place ID Finder</a></span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold">2.</span>
+                        <span>Search for your business name and location</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold">3.</span>
+                        <span>Click on your business when it appears in the results</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold">4.</span>
+                        <span>Copy the <strong>Place ID</strong> (starts with "ChIJ...")</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-bold">5.</span>
+                        <span>Paste it in the field below</span>
+                      </li>
+                    </ol>
+                    <div className="mt-3 p-3 bg-white rounded border border-blue-300">
+                      <p className="text-xs font-medium text-blue-900 mb-1">Example Place ID:</p>
+                      <p className="font-mono text-sm text-blue-700">ChIJN1t_tDeuEmsRUsoyG83frY4</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Google Place ID <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={googlePlaceId}
+                      onChange={(e) => setGooglePlaceId(e.target.value)}
+                      placeholder="ChIJN1t_tDeuEmsRUsoyG83frY4"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none font-mono text-sm"
+                    />
+                  </div>
+
+                  {reviewLink && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Your Review Link (This is what customers will receive)
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={reviewLink}
+                          readOnly
+                          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-600 font-mono text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(reviewLink);
+                            alert('Review link copied!');
+                          }}
+                          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition flex items-center gap-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Copy
+                        </button>
+                        <a
+                          href={reviewLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition flex items-center gap-2"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                          Test
+                        </a>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Click "Test" to make sure this link takes you to your Google review page
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleSavePlaceId}
+                    disabled={savingPlaceId || !googlePlaceId.trim()}
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {savingPlaceId ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-5 h-5" />
+                        Save & Activate Review Automation
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
               {/* Stats Overview */}
               <div className="grid grid-cols-4 gap-4">
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
@@ -476,7 +669,10 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
                   <Send className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                   <p className="text-gray-600 font-medium">No review requests found</p>
                   <p className="text-sm text-gray-500 mt-1">
-                    Review requests will appear here after bookings are completed
+                    {googlePlaceId 
+                      ? 'Mark bookings as completed to start automated review campaigns'
+                      : 'Set up your Google Place ID above to enable automated review requests'
+                    }
                   </p>
                 </div>
               ) : (
