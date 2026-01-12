@@ -1,13 +1,56 @@
 // WebsiteChatAgent.jsx
-import { useState } from 'react';
-import { Power, Settings, Copy, Check, ExternalLink, MessageCircle, TrendingUp } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Power, Copy, Check, ExternalLink, MessageCircle, TrendingUp, Calendar, Users } from 'lucide-react';
 
-export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
+export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView }) {
   const [isEnabled, setIsEnabled] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [agentConfig, setAgentConfig] = useState({
+    agentName: 'Kurt',
+    greetingMessage: "Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?",
+    autoOpenDelay: 3
+  });
+  const [stats, setStats] = useState({
+    conversations: 0,
+    leadsCaptured: 0,
+    avgResponse: '2.3s',
+    bookingsCreated: 0
+  });
 
-  const embedCode = `<!-- Thompson's Auto Detailing - AI Chat Widget -->
+  useEffect(() => {
+    loadAgentConfig();
+    loadStats();
+  }, []);
+
+  const loadAgentConfig = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/config`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.config) {
+          setAgentConfig(data.config);
+          setIsEnabled(data.config.enabled || false);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading config:', error);
+    }
+  };
+
+  const loadStats = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
+  const embedCode = `<!-- AI Chat Widget -->
 <script>
   (function() {
     const script = document.createElement('script');
@@ -38,6 +81,21 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
     }
   };
 
+  const saveConfiguration = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/config`, {
+        method: 'POST',
+        body: JSON.stringify(agentConfig)
+      });
+      if (response.ok) {
+        alert('Configuration saved successfully!');
+      }
+    } catch (error) {
+      console.error('Error saving config:', error);
+      alert('Failed to save configuration');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Status Card */}
@@ -61,29 +119,47 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-4 gap-4 mb-6">
           <div className="bg-blue-50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-blue-600 mb-2">
               <MessageCircle className="w-5 h-5" />
               <span className="text-sm font-medium">Conversations</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">47</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.conversations}</p>
             <p className="text-xs text-gray-600 mt-1">This month</p>
           </div>
           <div className="bg-green-50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-green-600 mb-2">
-              <TrendingUp className="w-5 h-5" />
+              <Users className="w-5 h-5" />
               <span className="text-sm font-medium">Leads Captured</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">23</p>
-            <p className="text-xs text-gray-600 mt-1">48.9% conversion</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.leadsCaptured}</p>
+            <button
+              onClick={() => setCurrentView('customers-leads')}
+              className="text-xs text-green-600 hover:text-green-700 font-medium mt-1"
+            >
+              View in CRM →
+            </button>
           </div>
           <div className="bg-purple-50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-purple-600 mb-2">
-              <MessageCircle className="w-5 h-5" />
+              <Calendar className="w-5 h-5" />
+              <span className="text-sm font-medium">Bookings</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{stats.bookingsCreated}</p>
+            <button
+              onClick={() => setCurrentView('booking-calendar')}
+              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+            >
+              View Calendar →
+            </button>
+          </div>
+          <div className="bg-orange-50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-orange-600 mb-2">
+              <TrendingUp className="w-5 h-5" />
               <span className="text-sm font-medium">Avg Response</span>
             </div>
-            <p className="text-2xl font-bold text-gray-900">2.3s</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.avgResponse}</p>
             <p className="text-xs text-gray-600 mt-1">Instant replies</p>
           </div>
         </div>
@@ -100,7 +176,8 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
               </label>
               <input
                 type="text"
-                defaultValue="Kurt"
+                value={agentConfig.agentName}
+                onChange={(e) => setAgentConfig({ ...agentConfig, agentName: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -111,7 +188,8 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
                 Initial Greeting
               </label>
               <textarea
-                defaultValue="Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?"
+                value={agentConfig.greetingMessage}
+                onChange={(e) => setAgentConfig({ ...agentConfig, greetingMessage: e.target.value })}
                 rows="3"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
@@ -124,15 +202,42 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
               </label>
               <input
                 type="number"
-                defaultValue="3"
+                value={agentConfig.autoOpenDelay}
+                onChange={(e) => setAgentConfig({ ...agentConfig, autoOpenDelay: Number(e.target.value) })}
                 min="0"
                 max="60"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
 
+            {/* Capabilities */}
+            <div className="bg-blue-50 rounded-lg p-4">
+              <h4 className="font-semibold text-gray-900 mb-3">Agent Capabilities</h4>
+              <div className="space-y-2 text-sm text-gray-700">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <span>Captures leads automatically (email, phone, name)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <span>Creates bookings and adds to calendar</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <span>Answers questions about services and pricing</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <span>Provides availability and scheduling options</span>
+                </div>
+              </div>
+            </div>
+
             {/* Save Button */}
-            <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={saveConfiguration}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               Save Configuration
             </button>
           </div>
@@ -201,7 +306,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
             </div>
             <div>
               <p className="font-medium text-gray-900">Visitor lands on your website</p>
-              <p className="text-sm text-gray-600">The chat widget automatically appears after 3 seconds</p>
+              <p className="text-sm text-gray-600">The chat widget automatically appears after {agentConfig.autoOpenDelay} seconds</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -210,7 +315,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
             </div>
             <div>
               <p className="font-medium text-gray-900">AI initiates conversation</p>
-              <p className="text-sm text-gray-600">Kurt greets them naturally and asks what they need</p>
+              <p className="text-sm text-gray-600">{agentConfig.agentName} greets them naturally and asks what they need</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -219,7 +324,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
             </div>
             <div>
               <p className="font-medium text-gray-900">Captures lead information</p>
-              <p className="text-sm text-gray-600">Automatically detects and saves contact details to your CRM</p>
+              <p className="text-sm text-gray-600">Automatically detects and saves contact details to Customers & Leads</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -227,8 +332,8 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch }) {
               4
             </div>
             <div>
-              <p className="font-medium text-gray-900">Books appointments or answers questions</p>
-              <p className="text-sm text-gray-600">Can schedule services, provide pricing, or answer FAQs</p>
+              <p className="font-medium text-gray-900">Books appointments directly</p>
+              <p className="text-sm text-gray-600">Can schedule services and add them to your Booking Calendar automatically</p>
             </div>
           </div>
         </div>
