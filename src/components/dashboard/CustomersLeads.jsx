@@ -21,6 +21,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newRecord, setNewRecord] = useState({});
 
   useEffect(() => {
     fetchLeads();
@@ -162,6 +164,60 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     setEditValue('');
   };
 
+  const addRecord = async () => {
+    try {
+      if (activeTab === 'leads') {
+        // Add new lead
+        const response = await authFetch(`${apiUrl}/api/leads`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: newRecord.name || '',
+            email: newRecord.email || '',
+            phone: newRecord.phone || '',
+            status: newRecord.status || 'new',
+            source: newRecord.source || 'manual',
+            notes: newRecord.notes || ''
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setLeads([...leads, data.lead]);
+          setShowAddModal(false);
+          setNewRecord({});
+        } else {
+          alert('Failed to add lead');
+        }
+      } else {
+        // Add new customer
+        const response = await authFetch(`${apiUrl}/api/customers`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: newRecord.name || '',
+            email: newRecord.email || '',
+            phone: newRecord.phone || '',
+            last_service: newRecord.last_service || '',
+            last_service_date: newRecord.last_service_date || '',
+            left_review: newRecord.left_review || 'N',
+            notes: newRecord.notes || ''
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setCustomers([...customers, data.customer]);
+          setShowAddModal(false);
+          setNewRecord({});
+        } else {
+          alert('Failed to add customer');
+        }
+      }
+    } catch (error) {
+      console.error('Error adding record:', error);
+      alert('Failed to add record');
+    }
+  };
+
   const deleteLead = async (leadId) => {
     if (!confirm('Delete this lead?')) return;
     try {
@@ -285,7 +341,13 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               Filter
             </button>
           </div>
-          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2">
+          <button 
+            onClick={() => {
+              setShowAddModal(true);
+              setNewRecord({});
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
+          >
             <Plus className="w-4 h-4" />
             Add {activeTab === 'leads' ? 'Lead' : 'Customer'}
           </button>
