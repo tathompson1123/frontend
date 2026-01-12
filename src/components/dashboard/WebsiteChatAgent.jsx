@@ -268,26 +268,24 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
           </button>
         </div>
 
-                <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
+        <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
           <pre className="text-sm text-green-400 font-mono">
             {embedCode}
-         </pre>
+          </pre>
         </div>
 
         <div className="mt-4 flex items-center gap-4">
-          
-            href="#"
-            onClick={(e) => {
-              e.preventDefault();
-              setShowPreview(true);
-            }}
+          <button
+            onClick={() => setShowPreview(true)}
             className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
           >
             <ExternalLink className="w-4 h-4" />
-            Preview on Website
-          </a>
+            Preview Widget
+          </button>
           
-            href="/docs/installation"
+            href="https://docs.example.com/installation"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-2 text-gray-600 hover:text-gray-700 text-sm font-medium"
           >
             View Installation Guide
@@ -296,7 +294,6 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
       </div>
 
       {/* How It Works */}
-
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h3>
         <div className="space-y-3">
