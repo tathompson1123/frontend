@@ -346,19 +346,3 @@ export default function Dashboard() {
     </div>
   );
 }
-```
-
-**Changes made:**
-
-1. ✅ Added `Bot` icon import
-2. ✅ Added `AIAgents` component import
-3. ✅ Added `'ai-agents'` menu item with Bot icon
-4. ✅ Added AI Agents view rendering
-5. ✅ Added scroll to sidebar nav for longer menu
-
-**File structure you need:**
-```
-frontend/src/components/dashboard/
-├── AIAgents.jsx (main container with tabs)
-├── WebsiteChatAgent.jsx (website chat config)
-└── LeadFormAgent.jsx (lead form auto-responder)
