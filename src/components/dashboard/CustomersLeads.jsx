@@ -10,7 +10,9 @@ import {
   GripVertical,
   Plus,
   Trash2,
-  Filter
+  Filter,
+  Download,
+  Upload
 } from 'lucide-react';
 
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
@@ -23,6 +25,164 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [editValue, setEditValue] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRecord, setNewRecord] = useState({});
+
+  // Add these functions after your existing state declarations
+
+  const exportToCSV = () => {
+    const data = activeTab === 'leads' ? leads : customers;
+    if (data.length === 0) {
+      alert('No data to export');
+      return;
+    }
+
+    // Get column headers
+    const headers = activeTab === 'leads' 
+      ? ['ID', 'Name', 'Status', 'Phone', 'Email', 'Source', 'Notes']
+      : ['ID', 'Name', 'Phone', 'Email', 'Service Booked', 'Service Date', 'Left Review', 'Notes'];
+
+    // Convert data to CSV format
+    const csvRows = [];
+    csvRows.push(headers.join(','));
+
+    data.forEach(record => {
+      const values = activeTab === 'leads'
+        ? [
+            record.id,
+            `"${record.name || ''}"`,
+            record.status || '',
+            record.phone || '',
+            record.email || '',
+            record.source || '',
+            `"${record.notes || ''}"`
+          ]
+        : [
+            record.id,
+            `"${record.name || ''}"`,
+            record.phone || '',
+            record.email || '',
+            `"${record.last_service || ''}"`,
+            record.last_service_date || '',
+            record.left_review || '',
+            `"${record.notes || ''}"`
+          ];
+      csvRows.push(values.join(','));
+    });
+
+    // Create blob and download
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${activeTab}_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  };
+
+  const importFromCSV = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const text = e.target.result;
+        const rows = text.split('\n').map(row => row.trim()).filter(row => row);
+        
+        if (rows.length < 2) {
+          alert('CSV file is empty or invalid');
+          return;
+        }
+
+        // Skip header row
+        const dataRows = rows.slice(1);
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const row of dataRows) {
+          // Simple CSV parsing (handles quoted fields)
+          const values = row.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g).map(val => 
+            val.replace(/^"|"$/g, '').trim()
+          );
+
+          if (activeTab === 'leads') {
+            const [id, name, status, phone, email, source, notes] = values;
+            
+            try {
+              const response = await authFetch(`${apiUrl}/api/leads`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  name: name || '',
+                  status: status || 'new',
+                  phone: phone || '',
+                  email: email || '',
+                  source: source || 'manual',
+                  notes: notes || ''
+                })
+              });
+
+              if (response.ok) {
+                successCount++;
+              } else {
+                errorCount++;
+              }
+            } catch (error) {
+              console.error('Error importing lead:', error);
+              errorCount++;
+            }
+          } else {
+            const [id, name, phone, email, last_service, last_service_date, left_review, notes] = values;
+            
+            try {
+              const response = await authFetch(`${apiUrl}/api/customers`, {
+                method: 'POST',
+                body: JSON.stringify({
+                  name: name || '',
+                  phone: phone || '',
+                  email: email || '',
+                  last_service: last_service || '',
+                  last_service_date: last_service_date || null,
+                  left_review: left_review || 'N',
+                  notes: notes || ''
+                })
+              });
+
+              if (response.ok) {
+                successCount++;
+              } else {
+                errorCount++;
+              }
+            } catch (error) {
+              console.error('Error importing customer:', error);
+              errorCount++;
+            }
+          }
+        }
+
+        alert(`Import complete!\nSuccess: ${successCount}\nErrors: ${errorCount}`);
+        
+        // Refresh data
+        if (activeTab === 'leads') {
+          fetchLeads();
+        } else {
+          fetchCustomers();
+        }
+
+      } catch (error) {
+        console.error('Error parsing CSV:', error);
+        alert('Failed to parse CSV file. Please check the format.');
+      }
+    };
+
+    reader.readAsText(file);
+    // Reset input so same file can be uploaded again
+    event.target.value = '';
+  };
+
+  // Rest of your existing functions remain the same...
+  // (fetchLeads, fetchCustomers, updateLeadField, etc.)
 
   useEffect(() => {
     fetchLeads();
@@ -353,17 +513,41 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               Filter
             </button>
           </div>
-          <button 
-            onClick={() => {
-              console.log('Add button clicked, activeTab:', activeTab);
-              setShowAddModal(true);
-              setNewRecord({});
-            }}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            Add {activeTab === 'leads' ? 'Lead' : 'Customer'}
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Export Button */}
+            <button 
+              onClick={exportToCSV}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Export CSV
+            </button>
+            
+            {/* Import Button */}
+            <label className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
+              <Upload className="w-4 h-4" />
+              Import CSV
+              <input
+                type="file"
+                accept=".csv"
+                onChange={importFromCSV}
+                className="hidden"
+              />
+            </label>
+
+            {/* Add Button */}
+            <button 
+              onClick={() => {
+                console.log('Add button clicked, activeTab:', activeTab);
+                setShowAddModal(true);
+                setNewRecord({});
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 flex items-center gap-2"
+            >
+              <Plus className="w-4 h-4" />
+              Add {activeTab === 'leads' ? 'Lead' : 'Customer'}
+            </button>
+          </div>
         </div>
 
         {/* Table */}
@@ -406,7 +590,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
       </div>
 
-      {/* Add Record Modal */}
+      {/* Add Record Modal - Keep your existing modal code */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
@@ -603,6 +787,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   );
 }
 
+// Keep your existing LeadsTable, CustomersTable, and helper functions unchanged
 function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead }) {
   if (leads.length === 0) {
     return (
