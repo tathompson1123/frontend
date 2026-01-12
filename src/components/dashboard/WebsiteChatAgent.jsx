@@ -289,7 +289,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
             className="flex items-center gap-2 text-gray-600 hover:text-gray-700 text-sm font-medium"
           >
             View Installation Guide
-          </a>
+          </button>
         </div>
       </div>
 
