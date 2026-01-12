@@ -13,7 +13,8 @@ import {
   Settings,
   LogOut,
   Menu,
-  X
+  X,
+  Bot
 } from 'lucide-react';
 
 // Component imports
@@ -28,6 +29,7 @@ import BusinessInformation from '../components/dashboard/BusinessInformation';
 import Analytics from '../components/dashboard/Analytics';
 import Billing from '../components/dashboard/Billing';
 import SettingsPage from '../components/dashboard/Settings';
+import AIAgents from '../components/dashboard/AIAgents';
 
 // Helper function for authenticated API calls
 const authFetch = async (url, options = {}) => {
@@ -164,6 +166,7 @@ export default function Dashboard() {
     { id: 'website', icon: Globe, label: 'My Website' },
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
     { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
+    { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'services', icon: Briefcase, label: 'Services' },
     { id: 'team', icon: Users, label: 'Team' },
@@ -193,7 +196,7 @@ export default function Dashboard() {
         </div>
 
         {/* Navigation Menu */}
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
             return (
@@ -249,13 +252,22 @@ export default function Dashboard() {
           )}
 
           {currentView === 'customers-leads' && (
-  <CustomersLeads
-    user={user}
-    setCurrentView={setCurrentView}
-    apiUrl={apiUrl}
-    authFetch={authFetch}
-  />
-)}
+            <CustomersLeads
+              user={user}
+              setCurrentView={setCurrentView}
+              apiUrl={apiUrl}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'ai-agents' && (
+            <AIAgents
+              user={user}
+              setCurrentView={setCurrentView}
+              apiUrl={apiUrl}
+              authFetch={authFetch}
+            />
+          )}
 
           {currentView === 'website' && (
             <MyWebsite 
@@ -334,3 +346,19 @@ export default function Dashboard() {
     </div>
   );
 }
+```
+
+**Changes made:**
+
+1. ✅ Added `Bot` icon import
+2. ✅ Added `AIAgents` component import
+3. ✅ Added `'ai-agents'` menu item with Bot icon
+4. ✅ Added AI Agents view rendering
+5. ✅ Added scroll to sidebar nav for longer menu
+
+**File structure you need:**
+```
+frontend/src/components/dashboard/
+├── AIAgents.jsx (main container with tabs)
+├── WebsiteChatAgent.jsx (website chat config)
+└── LeadFormAgent.jsx (lead form auto-responder)
