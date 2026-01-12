@@ -35,12 +35,11 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       const response = await authFetch(`${apiUrl}/api/leads`);
       if (response.ok) {
         const data = await response.json();
-        // Add sample data if empty for demonstration
         const fetchedLeads = data.leads || [];
         if (fetchedLeads.length === 0) {
           setLeads([
             {
-              id: 1,
+              id: 'demo-1',
               name: 'John Smith',
               status: 'new',
               phone: '+1234567890',
@@ -55,10 +54,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       }
     } catch (error) {
       console.error('Error fetching leads:', error);
-      // Show sample data on error for demonstration
       setLeads([
         {
-          id: 1,
+          id: 'demo-1',
           name: 'John Smith',
           status: 'new',
           phone: '+1234567890',
@@ -77,12 +75,11 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       const response = await authFetch(`${apiUrl}/api/customers`);
       if (response.ok) {
         const data = await response.json();
-        // Add sample data if empty for demonstration
         const fetchedCustomers = data.customers || [];
         if (fetchedCustomers.length === 0) {
           setCustomers([
             {
-              id: 1,
+              id: 'demo-1',
               name: 'Jane Doe',
               phone: '+1987654321',
               email: 'jane.doe@example.com',
@@ -98,10 +95,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       }
     } catch (error) {
       console.error('Error fetching customers:', error);
-      // Show sample data on error for demonstration
       setCustomers([
         {
-          id: 1,
+          id: 'demo-1',
           name: 'Jane Doe',
           phone: '+1987654321',
           email: 'jane.doe@example.com',
@@ -166,8 +162,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
   const addRecord = async () => {
     try {
+      console.log('Adding record:', { activeTab, newRecord });
+
       if (activeTab === 'leads') {
-        // Add new lead
         const response = await authFetch(`${apiUrl}/api/leads`, {
           method: 'POST',
           body: JSON.stringify({
@@ -180,16 +177,19 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           })
         });
 
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+
         if (response.ok) {
-          const data = await response.json();
-          setLeads([...leads, data.lead]);
+          setLeads([...leads.filter(l => !String(l.id).startsWith('demo')), data.lead]);
           setShowAddModal(false);
           setNewRecord({});
+          alert('Lead added successfully!');
         } else {
-          alert('Failed to add lead');
+          alert(`Failed to add lead: ${data.error || 'Unknown error'}`);
         }
       } else {
-        // Add new customer
         const response = await authFetch(`${apiUrl}/api/customers`, {
           method: 'POST',
           body: JSON.stringify({
@@ -197,28 +197,36 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             email: newRecord.email || '',
             phone: newRecord.phone || '',
             last_service: newRecord.last_service || '',
-            last_service_date: newRecord.last_service_date || '',
+            last_service_date: newRecord.last_service_date || null,
             left_review: newRecord.left_review || 'N',
             notes: newRecord.notes || ''
           })
         });
 
+        console.log('Response status:', response.status);
+        const data = await response.json();
+        console.log('Response data:', data);
+
         if (response.ok) {
-          const data = await response.json();
-          setCustomers([...customers, data.customer]);
+          setCustomers([...customers.filter(c => !String(c.id).startsWith('demo')), data.customer]);
           setShowAddModal(false);
           setNewRecord({});
+          alert('Customer added successfully!');
         } else {
-          alert('Failed to add customer');
+          alert(`Failed to add customer: ${data.error || 'Unknown error'}`);
         }
       }
     } catch (error) {
       console.error('Error adding record:', error);
-      alert('Failed to add record');
+      alert('Failed to add record. Check console for details.');
     }
   };
 
   const deleteLead = async (leadId) => {
+    if (String(leadId).startsWith('demo')) {
+      alert('Cannot delete demo data');
+      return;
+    }
     if (!confirm('Delete this lead?')) return;
     try {
       const response = await authFetch(`${apiUrl}/api/leads/${leadId}`, { method: 'DELETE' });
@@ -229,6 +237,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   };
 
   const deleteCustomer = async (customerId) => {
+    if (String(customerId).startsWith('demo')) {
+      alert('Cannot delete demo data');
+      return;
+    }
     if (!confirm('Delete this customer?')) return;
     try {
       const response = await authFetch(`${apiUrl}/api/customers/${customerId}`, { method: 'DELETE' });
@@ -343,6 +355,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           </div>
           <button 
             onClick={() => {
+              console.log('Add button clicked, activeTab:', activeTab);
               setShowAddModal(true);
               setNewRecord({});
             }}
@@ -392,6 +405,200 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           {activeTab === 'leads' ? filteredLeads.length : filteredCustomers.length} records
         </div>
       </div>
+
+      {/* Add Record Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">
+                Add New {activeTab === 'leads' ? 'Lead' : 'Customer'}
+              </h2>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  setNewRecord({});
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {activeTab === 'leads' ? (
+                <>
+                  {/* Lead Form */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input
+                      type="text"
+                      value={newRecord.name || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Enter name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={newRecord.email || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      value={newRecord.phone || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="+1234567890"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Stage</label>
+                    <select
+                      value={newRecord.status || 'new'}
+                      onChange={(e) => setNewRecord({ ...newRecord, status: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="new">New</option>
+                      <option value="contacted_email">Contacted (Email)</option>
+                      <option value="contacted_sms">Contacted (SMS)</option>
+                      <option value="qualified">Qualified</option>
+                      <option value="converted">Converted</option>
+                      <option value="not_interested">Not Interested</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Source</label>
+                    <select
+                      value={newRecord.source || 'manual'}
+                      onChange={(e) => setNewRecord({ ...newRecord, source: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="manual">Manual</option>
+                      <option value="lead_form">Lead Form</option>
+                      <option value="ai_chat_agent">AI Chat Agent</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea
+                      value={newRecord.notes || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows="3"
+                      placeholder="Add any notes..."
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Customer Form */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                    <input
+                      type="text"
+                      value={newRecord.name || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Customer name"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={newRecord.email || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, email: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="email@example.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                    <input
+                      type="tel"
+                      value={newRecord.phone || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, phone: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="+1234567890"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Service Booked</label>
+                    <input
+                      type="text"
+                      value={newRecord.last_service || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, last_service: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="HVAC Maintenance"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Service Date</label>
+                    <input
+                      type="date"
+                      value={newRecord.last_service_date || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, last_service_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Left Review</label>
+                    <select
+                      value={newRecord.left_review || 'N'}
+                      onChange={(e) => setNewRecord({ ...newRecord, left_review: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="N">No</option>
+                      <option value="Y">Yes</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+                    <textarea
+                      value={newRecord.notes || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      rows="3"
+                      placeholder="Add any notes..."
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowAddModal(false);
+                    setNewRecord({});
+                  }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    console.log('Save button clicked');
+                    addRecord();
+                  }}
+                  disabled={!newRecord.name}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Add {activeTab === 'leads' ? 'Lead' : 'Customer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
