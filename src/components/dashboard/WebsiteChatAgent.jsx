@@ -282,10 +282,8 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
             <ExternalLink className="w-4 h-4" />
             Preview Widget
           </button>
-          
-            href="https://docs.example.com/installation"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => window.open('https://docs.example.com/installation', '_blank')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-700 text-sm font-medium"
           >
             View Installation Guide
