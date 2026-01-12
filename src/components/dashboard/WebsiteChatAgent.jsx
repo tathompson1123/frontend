@@ -1,4 +1,3 @@
-// WebsiteChatAgent.jsx
 import { useState, useEffect } from 'react';
 import { Power, Copy, Check, ExternalLink, MessageCircle, TrendingUp, Calendar, Users } from 'lucide-react';
 
@@ -55,7 +54,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
   (function() {
     const script = document.createElement('script');
     script.src = '${window.location.origin}/chat-widget.js';
-    script.setAttribute('data-business-id', '${user?.business_id || 'your-business-id'}');
+    script.setAttribute('data-business-id', '${user?.id || 'your-business-id'}');
     script.async = true;
     document.body.appendChild(script);
   })();
