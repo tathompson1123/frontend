@@ -66,34 +66,48 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const toggleAgent = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/website`, {
-        method: 'PATCH',
-        body: JSON.stringify({ enabled: !isEnabled })
-      });
-      if (response.ok) {
-        setIsEnabled(!isEnabled);
-      }
-    } catch (error) {
-      console.error('Error toggling agent:', error);
+ const toggleAgent = async () => {
+  try {
+    const response = await authFetch(`${apiUrl}/api/agents/website`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ enabled: !isEnabled })
+    });
+    
+    if (response.ok) {
+      setIsEnabled(!isEnabled);
+      alert(`Agent ${!isEnabled ? 'activated' : 'deactivated'}!`);
     }
-  };
+  } catch (error) {
+    console.error('Error toggling agent:', error);
+    alert('Failed to toggle agent');
+  }
+};
 
   const saveConfiguration = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/website/config`, {
-        method: 'POST',
-        body: JSON.stringify(agentConfig)
-      });
-      if (response.ok) {
-        alert('Configuration saved successfully!');
-      }
-    } catch (error) {
-      console.error('Error saving config:', error);
-      alert('Failed to save configuration');
+  try {
+    const response = await authFetch(`${apiUrl}/api/agents/website/config`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(agentConfig)
+    });
+    
+    if (response.ok) {
+      alert('✅ Configuration saved successfully!');
+      loadAgentConfig(); // Reload to confirm
+    } else {
+      const error = await response.json();
+      alert('Failed to save: ' + (error.error || 'Unknown error'));
     }
-  };
+  } catch (error) {
+    console.error('Error saving config:', error);
+    alert('Failed to save configuration');
+  }
+};
 
   return (
     <div className="space-y-6">
