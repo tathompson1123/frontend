@@ -85,22 +85,29 @@ Kurt
   };
 
   const saveTemplates = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/templates`, {
-        method: 'POST',
-        body: JSON.stringify({
-          email: emailTemplate,
-          sms: smsTemplate
-        })
-      });
-      if (response.ok) {
-        alert('Templates saved successfully!');
-      }
-    } catch (error) {
-      console.error('Error saving templates:', error);
-      alert('Failed to save templates');
+  try {
+    const response = await authFetch(`${apiUrl}/api/agents/leadform/templates`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        email: emailTemplate,
+        sms: smsTemplate
+      })
+    });
+    
+    if (response.ok) {
+      alert('✅ Templates saved successfully!');
+    } else {
+      const error = await response.json();
+      alert('Failed to save: ' + (error.error || 'Unknown error'));
     }
-  };
+  } catch (error) {
+    console.error('Error saving templates:', error);
+    alert('Failed to save templates');
+  }
+};
 
   return (
     <div className="space-y-6">
