@@ -18,10 +18,11 @@ import {
 } from 'lucide-react';
 
 // Component imports
-import CustomersLeads from '../components/dashboard/CustomersLeads';
 import Overview from '../components/dashboard/Overview';
-import BookingCalendar from '../components/dashboard/BookingCalendar';
 import MyWebsite from '../components/dashboard/MyWebsite';
+import BookingCalendar from '../components/dashboard/BookingCalendar';
+import CustomersLeads from '../components/dashboard/CustomersLeads';
+import AIAgents from '../components/dashboard/AIAgents';
 import GoogleBusiness from '../components/dashboard/GoogleBusiness';
 import Services from '../components/dashboard/Services';
 import Team from '../components/dashboard/Team';
@@ -29,7 +30,6 @@ import BusinessInformation from '../components/dashboard/BusinessInformation';
 import Analytics from '../components/dashboard/Analytics';
 import Billing from '../components/dashboard/Billing';
 import SettingsPage from '../components/dashboard/Settings';
-import AIAgents from '../components/dashboard/AIAgents';
 
 // Helper function for authenticated API calls
 const authFetch = async (url, options = {}) => {
