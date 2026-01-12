@@ -1,8 +1,8 @@
 // LeadFormAgent.jsx
 import { useState, useEffect } from 'react';
-import { Power, Mail, Clock, CheckCircle, AlertCircle, TrendingUp } from 'lucide-react';
+import { Power, Mail, Clock, CheckCircle, TrendingUp, Calendar, Users } from 'lucide-react';
 
-export default function LeadFormAgent({ user, apiUrl, authFetch }) {
+export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView }) {
   const [isEnabled, setIsEnabled] = useState(true);
   const [emailTemplate, setEmailTemplate] = useState('');
   const [smsTemplate, setSmsTemplate] = useState('');
@@ -10,7 +10,8 @@ export default function LeadFormAgent({ user, apiUrl, authFetch }) {
     total: 0,
     emailsSent: 0,
     smsSent: 0,
-    responseRate: 0
+    responseRate: 0,
+    bookingsCreated: 0
   });
 
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch }) {
   const getDefaultEmailTemplate = () => {
     return `Hey {{name}},
 
-Thanks for reaching out to Thompson's Auto Detailing! I'm Kurt, and I just saw your request come through.
+Thanks for reaching out! I'm Kurt, and I just saw your request come through.
 
 You mentioned you're interested in {{service}}. I'd love to help you out with that!
 
@@ -62,12 +63,11 @@ What day works best for you? Or if you want, just reply with your phone number a
 Looking forward to working with you!
 
 Kurt
-Thompson's Auto Detailing
 (555) 123-4567`;
   };
 
   const getDefaultSmsTemplate = () => {
-    return `Hey {{name}}, it's Kurt from Thompson's Auto Detailing! Just got your request for {{service}}. When's a good time to chat? - Kurt`;
+    return `Hey {{name}}, it's Kurt! Just got your request for {{service}}. When's a good time to chat? - Kurt`;
   };
 
   const toggleAgent = async () => {
@@ -125,7 +125,7 @@ Thompson's Auto Detailing
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-5 gap-4 mb-6">
           <div className="bg-blue-50 rounded-lg p-4">
             <div className="flex items-center gap-2 text-blue-600 mb-2">
               <Mail className="w-5 h-5" />
@@ -156,7 +156,25 @@ Thompson's Auto Detailing
               <span className="text-sm font-medium">Response Rate</span>
             </div>
             <p className="text-2xl font-bold text-gray-900">{responseStats.responseRate}%</p>
-            <p className="text-xs text-gray-600 mt-1">Avg time: 2min</p>
+            <button
+              onClick={() => setCurrentView('customers-leads')}
+              className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
+            >
+              View Leads →
+            </button>
+          </div>
+          <div className="bg-indigo-50 rounded-lg p-4">
+            <div className="flex items-center gap-2 text-indigo-600 mb-2">
+              <Calendar className="w-5 h-5" />
+              <span className="text-sm font-medium">Bookings</span>
+            </div>
+            <p className="text-2xl font-bold text-gray-900">{responseStats.bookingsCreated}</p>
+            <button
+              onClick={() => setCurrentView('booking-calendar')}
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
+            >
+              View Calendar →
+            </button>
           </div>
         </div>
 
@@ -205,6 +223,22 @@ Thompson's Auto Detailing
                 <div>
                   <p className="font-medium text-gray-900">Follow-up Email</p>
                   <p className="text-sm text-gray-600">Send if no response after 24 hours</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <Calendar className="w-5 h-5 text-indigo-600" />
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900">Auto-Create Booking</p>
+                  <p className="text-sm text-gray-600">Add lead to calendar if service & date mentioned</p>
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -264,7 +298,7 @@ Thompson's Auto Detailing
             </div>
             <div>
               <p className="font-medium text-gray-900">Lead submits form</p>
-              <p className="text-sm text-gray-600">Lead appears in your Customers & Leads tab</p>
+              <p className="text-sm text-gray-600">Lead appears in your Customers & Leads tab with source "lead_form"</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -281,8 +315,8 @@ Thompson's Auto Detailing
               3
             </div>
             <div>
-              <p className="font-medium text-gray-900">Follow-up if needed</p>
-              <p className="text-sm text-gray-600">Automatic follow-up email after 24 hours if no response</p>
+              <p className="font-medium text-gray-900">Auto-create booking (if enabled)</p>
+              <p className="text-sm text-gray-600">If service and date are mentioned, booking is created in your calendar</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -290,8 +324,8 @@ Thompson's Auto Detailing
               4
             </div>
             <div>
-              <p className="font-medium text-gray-900">Track everything</p>
-              <p className="text-sm text-gray-600">Monitor response rates and lead status in your dashboard</p>
+              <p className="font-medium text-gray-900">Follow-up if needed</p>
+              <p className="text-sm text-gray-600">Automatic follow-up email after 24 hours if no response</p>
             </div>
           </div>
         </div>
