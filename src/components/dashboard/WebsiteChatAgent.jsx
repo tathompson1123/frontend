@@ -273,6 +273,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
             {embedCode}
          </pre>
         </div>
+
         <div className="mt-4 flex items-center gap-4">
           
             href="#"
@@ -293,7 +294,9 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
           </a>
         </div>
       </div>
+
       {/* How It Works */}
+
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h3>
         <div className="space-y-3">
