@@ -65,9 +65,19 @@ export default function AIAgents({ user, setCurrentView, apiUrl, authFetch }) {
 
       {/* Tab Content */}
       {activeTab === 'website' ? (
-        <WebsiteChatAgent user={user} apiUrl={apiUrl} authFetch={authFetch} />
+        <WebsiteChatAgent 
+          user={user} 
+          apiUrl={apiUrl} 
+          authFetch={authFetch}
+          setCurrentView={setCurrentView}
+        />
       ) : (
-        <LeadFormAgent user={user} apiUrl={apiUrl} authFetch={authFetch} />
+        <LeadFormAgent 
+          user={user} 
+          apiUrl={apiUrl} 
+          authFetch={authFetch}
+          setCurrentView={setCurrentView}
+        />
       )}
     </div>
   );
