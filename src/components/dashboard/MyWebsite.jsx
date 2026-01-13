@@ -836,17 +836,23 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           </button>
 
           <div className="text-center">
-            <p className="text-xs text-gray-500">
-              Taking longer than expected? <button onClick={() => window.open('mailto:support@yoursaas.com?subject=Domain Help&body=Domain: ' + customDomain, '_blank')} className="text-blue-600 hover:underline">Contact Support</button>
-            </p>
-          </div>
+  <p className="text-xs text-gray-500">
+    Taking longer than expected? <button onClick={() => window.open('mailto:support@yoursaas.com?subject=Domain Help&body=Domain: ' + customDomain, '_blank')} className="text-blue-600 hover:underline">Contact Support</button>
+  </p>
+</div>
         </div>
       )}
     </div>
   </>
 )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-      {/* Generate Website Modal (unchanged) */}
+     {/* Generate Website Modal */}
       {showEditWebsite && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
