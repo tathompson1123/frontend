@@ -114,40 +114,50 @@ export default function Billing({ user, apiUrl, authFetch }) {
     }
   ];
 
-  return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          Choose Your Growth Plan
-        </h1>
-        <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-          Get AI-powered tools that work 24/7 to grow your business
-        </p>
+ return (
+  <div className="max-w-7xl mx-auto px-4 py-8">
+    {/* Header */}
+    <div className="text-center mb-12">
+      <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        Choose Your Growth Plan
+      </h1>
+      <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+        Get AI-powered tools that work 24/7 to grow your business
+      </p>
 
-        {/* Billing Toggle */}
-        <div className="mt-8 inline-flex items-center gap-3 bg-gray-100 rounded-full p-1">
-          <button
-            onClick={() => setShowAnnual(false)}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
-              !showAnnual ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-            }`}
-          >
-            Monthly
-          </button>
-          <button
-            onClick={() => setShowAnnual(true)}
-            className={`px-6 py-2 rounded-full font-medium transition-all ${
-              showAnnual ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-            }`}
-          >
-            Annual
-            <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-              Save 15%
-            </span>
-          </button>
+      {/* No Plan Warning */}
+      {!user?.plan && (
+        <div className="mt-6 mx-auto max-w-xl p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl">
+          <p className="text-yellow-900 font-semibold flex items-center justify-center gap-2">
+            <span className="text-2xl">⚠️</span>
+            Please select a plan to access your dashboard features
+          </p>
         </div>
+      )}
+
+      {/* Billing Toggle */}
+      <div className="mt-8 inline-flex items-center gap-3 bg-gray-100 rounded-full p-1">
+        <button
+          onClick={() => setShowAnnual(false)}
+          className={`px-6 py-2 rounded-full font-medium transition-all ${
+            !showAnnual ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+          }`}
+        >
+          Monthly
+        </button>
+        <button
+          onClick={() => setShowAnnual(true)}
+          className={`px-6 py-2 rounded-full font-medium transition-all ${
+            showAnnual ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
+          }`}
+        >
+          Annual
+          <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+            Save 15%
+          </span>
+        </button>
       </div>
+    </div>
 
       {/* Pro Plan Value Proposition */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-8 mb-12">
