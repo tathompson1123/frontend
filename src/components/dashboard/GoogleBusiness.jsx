@@ -28,12 +28,21 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   const [showLinkInfo, setShowLinkInfo] = useState(false);
 
   useEffect(() => {
-    fetchStats();
-    fetchUserReviewLink();
-    if (activeTab === 'review-requests') {
-      fetchReviewRequests();
-    }
-  }, [activeTab]);
+  fetchStats();
+  fetchUserReviewLink();
+  loadReviewConfig(); // Add this
+  if (activeTab === 'review-requests') {
+    fetchReviewRequests();
+  }
+}, [activeTab]);
+
+  const [reviewConfig, setReviewConfig] = useState({
+  messageTemplate: "Hi {name}! Thank you for choosing {business}. We'd love to hear about your experience! Could you take a moment to leave us a review?",
+  incentive: "$10 off your next service",
+  incentiveEnabled: true,
+  autoSendEnabled: true,
+  sendDelay: 24
+});
 
   const fetchUserReviewLink = async () => {
     try {
@@ -156,6 +165,45 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
     const date = new Date(dateString);
     return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
+
+  const loadReviewConfig = async () => {
+  try {
+    const response = await authFetch(`${apiUrl}/api/review-config`);
+    if (response.ok) {
+      const data = await response.json();
+      if (data.config) {
+        setReviewConfig({
+          messageTemplate: data.config.message_template,
+          incentive: data.config.incentive,
+          incentiveEnabled: data.config.incentive_enabled,
+          autoSendEnabled: data.config.auto_send_enabled,
+          sendDelay: data.config.send_delay
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error loading config:', error);
+  }
+};
+
+const saveReviewConfig = async () => {
+  try {
+    const response = await authFetch(`${apiUrl}/api/review-config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(reviewConfig)
+    });
+    
+    if (response.ok) {
+      alert('✅ Review request settings saved!');
+    } else {
+      alert('Failed to save settings');
+    }
+  } catch (error) {
+    console.error('Error saving config:', error);
+    alert('Failed to save settings');
+  }
+};
 
   return (
     <div className="space-y-6">
@@ -582,6 +630,151 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
                   </button>
                 </div>
               </div>
+
+              {/* Review Request Configuration */}
+{reviewLink && (
+  <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
+    <div className="flex items-center justify-between mb-6">
+      <div>
+        <h3 className="text-lg font-bold text-gray-900">Review Request Settings</h3>
+        <p className="text-sm text-gray-600 mt-1">Customize your review request message and incentive</p>
+      </div>
+      <button
+        onClick={saveReviewConfig}
+        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+      >
+        <CheckCircle className="w-4 h-4" />
+        Save Settings
+      </button>
+    </div>
+
+    <div className="grid md:grid-cols-2 gap-6">
+      {/* Message Template */}
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Message Template
+          </label>
+          <textarea
+            value={reviewConfig.messageTemplate}
+            onChange={(e) => setReviewConfig({ ...reviewConfig, messageTemplate: e.target.value })}
+            rows="6"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            placeholder="Enter your review request message..."
+          />
+          <p className="text-xs text-gray-500 mt-2">
+            Available variables: <code className="bg-gray-100 px-1 rounded">{'{name}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{business}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{service}'}</code>
+          </p>
+        </div>
+
+        {/* Preview */}
+        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+          <p className="text-xs font-medium text-gray-700 mb-2">Preview:</p>
+          <p className="text-sm text-gray-900">
+            {reviewConfig.messageTemplate
+              .replace('{name}', 'John')
+              .replace('{business}', user.businessName || 'Your Business')
+              .replace('{service}', 'HVAC Maintenance')}
+          </p>
+          {reviewConfig.incentiveEnabled && reviewConfig.incentive && (
+            <div className="mt-3 pt-3 border-t border-gray-300">
+              <p className="text-xs font-medium text-gray-700 mb-1">Incentive:</p>
+              <p className="text-sm text-green-700 font-semibold">🎁 {reviewConfig.incentive}</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Incentive & Settings */}
+      <div className="space-y-4">
+        {/* Incentive Toggle */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div>
+            <p className="font-medium text-gray-900">Offer Incentive</p>
+            <p className="text-sm text-gray-600">Encourage reviews with a reward</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={reviewConfig.incentiveEnabled}
+              onChange={(e) => setReviewConfig({ ...reviewConfig, incentiveEnabled: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* Incentive Text */}
+        {reviewConfig.incentiveEnabled && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Incentive Offer
+            </label>
+            <input
+              type="text"
+              value={reviewConfig.incentive}
+              onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., $10 off your next service"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              💡 Examples: "$10 off next service", "15% discount on next booking", "Free service upgrade"
+            </p>
+          </div>
+        )}
+
+        {/* Auto-send Toggle */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div>
+            <p className="font-medium text-gray-900">Auto-Send Requests</p>
+            <p className="text-sm text-gray-600">Automatically send after service completion</p>
+          </div>
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={reviewConfig.autoSendEnabled}
+              onChange={(e) => setReviewConfig({ ...reviewConfig, autoSendEnabled: e.target.checked })}
+              className="sr-only peer"
+            />
+            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          </label>
+        </div>
+
+        {/* Send Delay */}
+        {reviewConfig.autoSendEnabled && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Send After Service
+            </label>
+            <select
+              value={reviewConfig.sendDelay}
+              onChange={(e) => setReviewConfig({ ...reviewConfig, sendDelay: parseInt(e.target.value) })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="0">Immediately</option>
+              <option value="1">1 hour later</option>
+              <option value="6">6 hours later</option>
+              <option value="24">24 hours later (recommended)</option>
+              <option value="48">48 hours later</option>
+              <option value="72">3 days later</option>
+            </select>
+          </div>
+        )}
+
+        {/* Stats Box */}
+        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
+          <p className="text-sm font-medium text-gray-900 mb-3">💡 Pro Tips:</p>
+          <ul className="space-y-2 text-xs text-gray-700">
+            <li>• Personalize with customer names for better response rates</li>
+            <li>• Send 24 hours after service for best results</li>
+            <li>• Keep incentives simple and easy to redeem</li>
+            <li>• Test different messages to see what works best</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
 
               {/* Stats Overview */}
               <div className="grid grid-cols-4 gap-4">
