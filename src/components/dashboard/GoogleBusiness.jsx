@@ -1059,17 +1059,17 @@ const saveReviewConfig = async () => {
                             <p className="font-mono font-bold text-purple-600 text-lg">
                               {request.incentive_code}
                             </p>
-                          </div>
-                        )}
+  </div>
+)}
                       </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
-          )}
-        </div>
-      </div>
+          )}  
+        </div> 
+      </div>  
 
       {/* How It Works - Only show on Reply Generator tab */}
       {activeTab === 'reply-generator' && (
