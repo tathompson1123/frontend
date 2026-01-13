@@ -647,199 +647,204 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
 
                 <div className="p-6 space-y-6">
                   {!customDomain ? (
-                    // Step 1: Enter Domain
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
-                      <div className="flex items-start gap-4 mb-4">
-                        <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                          1
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold text-gray-900">Enter Your Domain</h3>
-                          <p className="text-sm text-gray-600 mt-1">The domain you already own</p>
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Your Domain Name
-                          </label>
-                          <input
-                            type="text"
-                            value={domainInput}
-                            onChange={(e) => setDomainInput(e.target.value.toLowerCase())}
-                            placeholder="yourbusiness.com"
-                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-                          />
-                        </div>
-
-                        <button
-                          onClick={addCustomDomain}
-                          disabled={domainLoading || !domainInput.trim()}
-                          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                        >
-                          {domainLoading ? (
-                            <><Loader className="w-5 h-5 animate-spin" />Adding Domain...</>
-                          ) : (
-                            <>Continue <ArrowRight className="w-5 h-5" /></>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      {/* Domain Confirmed */}
-                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
-                        <div className="flex items-start gap-4">
-                          <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                            <Check className="w-6 h-6" />
-                          </div>
-                          <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">Domain: {customDomain}</h3>
-                            <p className="text-sm text-gray-600">Ready to connect</p>
-                          </div>
-                          <button
-                            onClick={removeDomain}
-                            className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg"
-                          >
-                            Change
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Step 2: DNS Setup */}
-                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                            2
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Add DNS Records</h3>
-                            <p className="text-sm text-gray-600 mt-1">Point your domain to our servers</p>
-                          </div>
-                        </div>
-
-                        <div className="space-y-4">
-                          <div className="bg-white rounded-lg p-4 border border-purple-200">
-                            <p className="text-sm font-medium text-gray-900 mb-3">Add these records at your domain registrar:</p>
-                            
-                            <div className="border rounded-lg overflow-hidden">
-                              <table className="w-full text-sm">
-                                <thead className="bg-gray-50">
-                                  <tr>
-                                    <th className="px-4 py-3 text-left font-medium text-gray-700">Type</th>
-                                    <th className="px-4 py-3 text-left font-medium text-gray-700">Name</th>
-                                    <th className="px-4 py-3 text-left font-medium text-gray-700">Value</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                  <tr className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 font-mono text-blue-600">A</td>
-                                    <td className="px-4 py-3 font-mono">@</td>
-                                    <td className="px-4 py-3 font-mono text-blue-600">76.76.21.21</td>
-                                  </tr>
-                                  <tr className="hover:bg-gray-50">
-                                    <td className="px-4 py-3 font-mono text-blue-600">CNAME</td>
-                                    <td className="px-4 py-3 font-mono">www</td>
-                                    <td className="px-4 py-3 font-mono text-blue-600">cname.vercel-dns.com</td>
-                                  </tr>
-                                </tbody>
-                              </table>
-                            </div>
-                          </div>
-
-                          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                            <p className="font-medium text-gray-900 mb-2">📝 How to add DNS records:</p>
-                            <ol className="space-y-2 text-sm text-gray-700 list-decimal list-inside">
-                              <li>Log in to where you bought {customDomain}</li>
-                              <li>Find "DNS Settings" or "DNS Management"</li>
-                              <li>Add both records from the table above</li>
-                              <li>Save changes</li>
-                              <li>Wait 5-60 minutes for propagation</li>
-                            </ol>
-                          </div>
-
-                          <div>
-                            <p className="text-sm font-medium text-gray-700 mb-2">Quick guides by registrar:</p>
-                            <div className="flex gap-2 flex-wrap">
-                              <a href="https://www.namecheap.com/support/knowledgebase/article.aspx/319/2237/how-can-i-set-up-an-a-address-record-for-my-domain/" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
-                                Namecheap <ExternalLink className="w-3 h-3" />
-                              </a>
-                              <a href="https://www.godaddy.com/help/add-an-a-record-19238" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
-                                GoDaddy <ExternalLink className="w-3 h-3" />
-                              </a>
-                              <a href="https://support.google.com/domains/answer/3290350" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
-                                Google Domains <ExternalLink className="w-3 h-3" />
-                              </a>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Step 3: Verify */}
-                      <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border-2 border-green-200">
-                        <div className="flex items-start gap-4 mb-4">
-                          <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-                            3
-                          </div>
-                          <div>
-                            <h3 className="text-lg font-semibold text-gray-900">Verify Connection</h3>
-                            <p className="text-sm text-gray-600 mt-1">Check if DNS has propagated</p>
-                          </div>
-                        </div>
-
-                        {domainStatus === 'verified' ? (
-  <div className="text-center py-6">
-    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-      <Check className="w-8 h-8 text-green-600" />
+  // Step 1: Enter Domain
+  <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+    <div className="flex items-start gap-4 mb-4">
+      <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+        1
+      </div>
+      <div>
+        <h3 className="text-lg font-semibold text-gray-900">Enter Your Domain</h3>
+        <p className="text-sm text-gray-600 mt-1">The domain you already own</p>
+      </div>
     </div>
-    <h4 className="text-lg font-semibold text-gray-900 mb-2">🎉 Domain Connected!</h4>
-    <p className="text-gray-600 mb-4">
-      Your website is now live at <strong className="text-green-700">{customDomain}</strong>
-    </p>
-    <button
-      onClick={() => window.open(`https://${customDomain}`, '_blank')}
-      className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
-    >
-      Visit Your Website <ExternalLink className="w-4 h-4" />
-    </button>
-  </div>
-                        ) : (
-                          <div className="space-y-4">
-                            <div className="bg-white rounded-lg p-4 border border-yellow-200 bg-yellow-50">
-                              <div className="flex items-start gap-3">
-                                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                                <div className="text-sm">
-                                  <p className="font-medium text-yellow-900">Waiting for DNS Propagation</p>
-                                  <p className="text-yellow-700 mt-1">
-                                    This usually takes 5-60 minutes. Click "Check Status" to verify.
-                                  </p>
-                                </div>
-                              </div>
-                            </div>
 
-                            <button
-                              onClick={checkDomainStatus}
-                              disabled={domainLoading}
-                              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                            >
-                              {domainLoading ? (
-                                <><Loader className="w-5 h-5 animate-spin" />Checking...</>
-                              ) : (
-                                <><RefreshCw className="w-5 h-5" />Check Status</>
-                              )}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
+    <div className="space-y-4">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          Your Domain Name
+        </label>
+        <input
+          type="text"
+          value={domainInput}
+          onChange={(e) => setDomainInput(e.target.value.toLowerCase())}
+          placeholder="yourbusiness.com"
+          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+        />
+      </div>
+
+      <button
+        onClick={addCustomDomain}
+        disabled={domainLoading || !domainInput.trim()}
+        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {domainLoading ? (
+          <><Loader className="w-5 h-5 animate-spin" />Adding Domain...</>
+        ) : (
+          <>Continue <ArrowRight className="w-5 h-5" /></>
+        )}
+      </button>
+    </div>
+  </div>
+) : (
+  <>
+    {/* Domain Confirmed */}
+    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+          <Check className="w-6 h-6" />
+        </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold text-gray-900">Domain: {customDomain}</h3>
+          <p className="text-sm text-gray-600">Ready to connect</p>
+        </div>
+        <button
+          onClick={removeDomain}
+          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+        >
+          Change
+        </button>
+      </div>
+    </div>
+
+    {/* Step 2: Update Nameservers (SIMPLE!) */}
+    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+          2
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Update Your Nameservers</h3>
+          <p className="text-sm text-gray-600 mt-1">One simple step - just copy these 2 nameservers</p>
+        </div>
+      </div>
+
+      <div className="space-y-4">
+        <div className="bg-white rounded-lg p-4 border border-purple-200">
+          <p className="text-sm font-medium text-gray-900 mb-3">
+            Copy these nameservers to your domain registrar:
+          </p>
+          
+          <div className="space-y-2 mb-4">
+            <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <span className="font-mono text-purple-900 font-semibold flex-1">ns1.vercel-dns.com</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText('ns1.vercel-dns.com');
+                  alert('Copied!');
+                }}
+                className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+              >
+                Copy
+              </button>
+            </div>
+            <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+              <span className="font-mono text-purple-900 font-semibold flex-1">ns2.vercel-dns.com</span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText('ns2.vercel-dns.com');
+                  alert('Copied!');
+                }}
+                className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+          <p className="font-medium text-gray-900 mb-2">📝 How to update nameservers:</p>
+          <ol className="space-y-2 text-sm text-gray-700 list-decimal list-inside">
+            <li>Log in to where you bought {customDomain}</li>
+            <li>Find "Nameservers" or "DNS Management"</li>
+            <li>Replace existing nameservers with the two above</li>
+            <li>Save changes</li>
+            <li>Wait 5-60 minutes for changes to take effect</li>
+          </ol>
+        </div>
+
+        <div>
+          <p className="text-sm font-medium text-gray-700 mb-2">Need help? Quick guides:</p>
+          <div className="flex gap-2 flex-wrap">
+            <a href="https://www.namecheap.com/support/knowledgebase/article.aspx/767/10/how-to-change-dns-for-a-domain/" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
+              Namecheap <ExternalLink className="w-3 h-3" />
+            </a>
+            <a href="https://www.godaddy.com/help/change-nameservers-for-my-domains-664" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
+              GoDaddy <ExternalLink className="w-3 h-3" />
+            </a>
+            <a href="https://support.google.com/domains/answer/3290309" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
+              Google Domains <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {/* Step 3: Verify */}
+    <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border-2 border-green-200">
+      <div className="flex items-start gap-4 mb-4">
+        <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+          3
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Verify Connection</h3>
+          <p className="text-sm text-gray-600 mt-1">Check if nameservers have updated</p>
+        </div>
+      </div>
+
+      {domainStatus === 'verified' ? (
+        <div className="text-center py-6">
+          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Check className="w-8 h-8 text-green-600" />
+          </div>
+          <h4 className="text-lg font-semibold text-gray-900 mb-2">🎉 Domain Connected!</h4>
+          <p className="text-gray-600 mb-4">
+            Your website is now live at <strong className="text-green-700">{customDomain}</strong>
+          </p>
+          <button
+            onClick={() => window.open(`https://${customDomain}`, '_blank')}
+            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
+          >
+            Visit Your Website <ExternalLink className="w-4 h-4" />
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          <div className="bg-white rounded-lg p-4 border border-yellow-200 bg-yellow-50">
+            <div className="flex items-start gap-3">
+              <Loader className="w-5 h-5 text-yellow-600 animate-spin mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-yellow-900">Waiting for Nameserver Update</p>
+                <p className="text-yellow-700 mt-1">
+                  This usually takes 5-60 minutes. Sometimes up to 24 hours depending on your registrar.
+                </p>
               </div>
+            </div>
+          </div>
+
+          <button
+            onClick={checkDomainStatus}
+            disabled={domainLoading}
+            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {domainLoading ? (
+              <><Loader className="w-5 h-5 animate-spin" />Checking...</>
+            ) : (
+              <><RefreshCw className="w-5 h-5" />Check Status</>
             )}
+          </button>
+
+          <div className="text-center">
+            <p className="text-xs text-gray-500">
+              Taking longer than expected? <button onClick={() => window.open('mailto:support@yoursaas.com?subject=Domain Help&body=Domain: ' + customDomain, '_blank')} className="text-blue-600 hover:underline">Contact Support</button>
+            </p>
           </div>
         </div>
       )}
+    </div>
+  </>
+)}
 
       {/* Generate Website Modal (unchanged) */}
       {showEditWebsite && (
