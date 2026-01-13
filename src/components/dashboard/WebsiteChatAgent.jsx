@@ -2,6 +2,12 @@ import { useState, useEffect } from 'react';
 import { Power, Copy, Check, ExternalLink, MessageCircle, TrendingUp, Calendar, Users } from 'lucide-react';
 
 export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView }) {
+  console.log('🚀 WebsiteChatAgent loaded');
+  console.log('👤 User:', user);
+  console.log('🔗 API URL:', apiUrl);
+  console.log('🔑 authFetch exists:', !!authFetch);
+
+export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView }) {
   const [isEnabled, setIsEnabled] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
@@ -22,20 +28,35 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     loadStats();
   }, []);
 
-  const loadAgentConfig = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/website/config`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.config) {
-          setAgentConfig(data.config);
-          setIsEnabled(data.config.enabled || false);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading config:', error);
+ const loadAgentConfig = async () => {
+  try {
+    console.log('🔍 Loading config from:', `${apiUrl}/api/agents/website/config`);
+    const response = await authFetch(`${apiUrl}/api/agents/website/config`);
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response ok:', response.ok);
+    
+    if (response.status === 403) {
+      const errorData = await response.json();
+      console.error('❌ Plan upgrade required:', errorData);
+      alert('This feature requires a Pro plan. Please upgrade to continue.');
+      return;
     }
-  };
+    
+    if (response.ok) {
+      const data = await response.json();
+      console.log('✅ Config loaded:', data);
+      if (data.config) {
+        setAgentConfig(data.config);
+        setIsEnabled(data.config.enabled || false);
+      }
+    } else {
+      const errorText = await response.text();
+      console.error('❌ Failed to load config:', response.status, errorText);
+    }
+  } catch (error) {
+    console.error('❌ Error loading config:', error);
+  }
+};
 
   const loadStats = async () => {
     try {
