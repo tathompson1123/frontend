@@ -74,6 +74,9 @@ Kurt
     try {
       const response = await authFetch(`${apiUrl}/api/agents/leadform`, {
         method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ enabled: !isEnabled })
       });
       if (response.ok) {
@@ -85,29 +88,29 @@ Kurt
   };
 
   const saveTemplates = async () => {
-  try {
-    const response = await authFetch(`${apiUrl}/api/agents/leadform/templates`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        email: emailTemplate,
-        sms: smsTemplate
-      })
-    });
-    
-    if (response.ok) {
-      alert('✅ Templates saved successfully!');
-    } else {
-      const error = await response.json();
-      alert('Failed to save: ' + (error.error || 'Unknown error'));
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/leadform/templates`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          email: emailTemplate,
+          sms: smsTemplate
+        })
+      });
+      
+      if (response.ok) {
+        alert('✅ Templates saved successfully!');
+      } else {
+        const error = await response.json();
+        alert('Failed to save: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving templates:', error);
+      alert('Failed to save templates');
     }
-  } catch (error) {
-    console.error('Error saving templates:', error);
-    alert('Failed to save templates');
-  }
-};
+  };
 
   return (
     <div className="space-y-6">
@@ -260,7 +263,9 @@ Kurt
         <div className="border-t border-gray-200 pt-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Email Template</h3>
-            <span className="text-xs text-gray-500">Available variables: {{name}}, {{email}}, {{phone}}, {{service}}, {{message}}</span>
+            <span className="text-xs text-gray-500">
+              {`Available variables: {{name}}, {{email}}, {{phone}}, {{service}}, {{message}}`}
+            </span>
           </div>
           <textarea
             value={emailTemplate}
