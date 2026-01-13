@@ -111,6 +111,13 @@ export default function Dashboard() {
     }
   };
 
+  useEffect(() => {
+  // Redirect to billing if no plan selected
+  if (user && !user.plan && currentView !== 'billing') {
+    setCurrentView('billing');
+  }
+}, [user, currentView]);
+
   // Fetch initial data on mount
   useEffect(() => {
     const fetchInitialData = async () => {
