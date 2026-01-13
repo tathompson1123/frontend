@@ -1,17 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Power, Copy, Check, ExternalLink, MessageCircle, TrendingUp, Calendar, Users } from 'lucide-react';
+import { Power, MessageCircle, TrendingUp, Calendar, Users } from 'lucide-react';
 
 export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView }) {
-  // Debug logs
-  console.log('🚀 WebsiteChatAgent loaded');
-  console.log('👤 User:', user);
-  console.log('🔗 API URL:', apiUrl);
-  console.log('🔑 authFetch exists:', !!authFetch);
-
-  // State declarations
   const [isEnabled, setIsEnabled] = useState(true);
-  const [copied, setCopied] = useState(false);
-  const [showPreview, setShowPreview] = useState(false);
   const [agentConfig, setAgentConfig] = useState({
     agentName: 'Kurt',
     greetingMessage: "Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?",
@@ -29,35 +20,20 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     loadStats();
   }, []);
 
- const loadAgentConfig = async () => {
-  try {
-    console.log('🔍 Loading config from:', `${apiUrl}/api/agents/website/config`);
-    const response = await authFetch(`${apiUrl}/api/agents/website/config`);
-    console.log('📡 Response status:', response.status);
-    console.log('📡 Response ok:', response.ok);
-    
-    if (response.status === 403) {
-      const errorData = await response.json();
-      console.error('❌ Plan upgrade required:', errorData);
-      alert('This feature requires a Pro plan. Please upgrade to continue.');
-      return;
-    }
-    
-    if (response.ok) {
-      const data = await response.json();
-      console.log('✅ Config loaded:', data);
-      if (data.config) {
-        setAgentConfig(data.config);
-        setIsEnabled(data.config.enabled || false);
+  const loadAgentConfig = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/config`);
+      if (response.ok) {
+        const data = await response.json();
+        if (data.config) {
+          setAgentConfig(data.config);
+          setIsEnabled(data.config.enabled || false);
+        }
       }
-    } else {
-      const errorText = await response.text();
-      console.error('❌ Failed to load config:', response.status, errorText);
+    } catch (error) {
+      console.error('Error loading config:', error);
     }
-  } catch (error) {
-    console.error('❌ Error loading config:', error);
-  }
-};
+  };
 
   const loadStats = async () => {
     try {
@@ -71,65 +47,48 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     }
   };
 
-  const embedCode = `<!-- AI Chat Widget -->
-<script>
-  (function() {
-    const script = document.createElement('script');
-    script.src = '${window.location.origin}/chat-widget.js';
-    script.setAttribute('data-business-id', '${user?.id || 'your-business-id'}');
-    script.async = true;
-    document.body.appendChild(script);
-  })();
-</script>`;
-
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(embedCode);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const toggleAgent = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ enabled: !isEnabled })
+      });
+      
+      if (response.ok) {
+        setIsEnabled(!isEnabled);
+        alert(`Agent ${!isEnabled ? 'activated' : 'deactivated'}!`);
+      }
+    } catch (error) {
+      console.error('Error toggling agent:', error);
+      alert('Failed to toggle agent');
+    }
   };
 
- const toggleAgent = async () => {
-  try {
-    const response = await authFetch(`${apiUrl}/api/agents/website`, {
-      method: 'PATCH',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ enabled: !isEnabled })
-    });
-    
-    if (response.ok) {
-      setIsEnabled(!isEnabled);
-      alert(`Agent ${!isEnabled ? 'activated' : 'deactivated'}!`);
-    }
-  } catch (error) {
-    console.error('Error toggling agent:', error);
-    alert('Failed to toggle agent');
-  }
-};
-
   const saveConfiguration = async () => {
-  try {
-    const response = await authFetch(`${apiUrl}/api/agents/website/config`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify(agentConfig)
-    });
-    
-    if (response.ok) {
-      alert('✅ Configuration saved successfully!');
-      loadAgentConfig(); // Reload to confirm
-    } else {
-      const error = await response.json();
-      alert('Failed to save: ' + (error.error || 'Unknown error'));
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/config`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(agentConfig)
+      });
+      
+      if (response.ok) {
+        alert('✅ Configuration saved successfully!');
+        loadAgentConfig();
+      } else {
+        const error = await response.json();
+        alert('Failed to save: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving config:', error);
+      alert('Failed to save configuration');
     }
-  } catch (error) {
-    console.error('Error saving config:', error);
-    alert('Failed to save configuration');
-  }
-};
+  };
 
   return (
     <div className="space-y-6">
@@ -138,7 +97,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Website Chat Agent</h2>
-            <p className="text-gray-600 mt-1">Live chat widget for your website visitors</p>
+            <p className="text-gray-600 mt-1">Automatically integrated with your published website</p>
           </div>
           <button
             onClick={toggleAgent}
@@ -279,57 +238,13 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
         </div>
       </div>
 
-      {/* Installation */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Installation</h3>
-            <p className="text-sm text-gray-600 mt-1">Add this code to your website</p>
-          </div>
-          <button
-            onClick={handleCopyCode}
-            className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-          >
-            {copied ? (
-              <>
-                <Check className="w-4 h-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <Copy className="w-4 h-4" />
-                Copy Code
-              </>
-            )}
-          </button>
-        </div>
-
-        <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-          <pre className="text-sm text-green-400 font-mono">
-            {embedCode}
-          </pre>
-        </div>
-
-        <div className="mt-4 flex items-center gap-4">
-          <button
-            onClick={() => setShowPreview(true)}
-            className="flex items-center gap-2 text-blue-600 hover:text-blue-700 text-sm font-medium"
-          >
-            <ExternalLink className="w-4 h-4" />
-            Preview Widget
-          </button>
-          <button
-            onClick={() => window.open('https://docs.example.com/installation', '_blank')}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-700 text-sm font-medium"
-          >
-            View Installation Guide
-          </button>
-        </div>
-      </div>
-
-      {/* How It Works */}
+      {/* Auto-Integration Notice */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ Automatic Integration</h3>
+        <p className="text-gray-700 mb-4">
+          The AI chat agent is automatically integrated with your website when you publish it from the Website tab. 
+          No code installation needed!
+        </p>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
@@ -367,6 +282,12 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
               <p className="text-sm text-gray-600">Can schedule services and add them to your Booking Calendar automatically</p>
             </div>
           </div>
+        </div>
+
+        <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
+          <p className="text-sm text-gray-700">
+            💡 <strong>Tip:</strong> Make sure your website is published from the Website tab for the chat agent to be active on your live site.
+          </p>
         </div>
       </div>
     </div>
