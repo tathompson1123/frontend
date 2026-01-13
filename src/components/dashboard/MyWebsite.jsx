@@ -218,7 +218,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 </button>
               </div>
             </div>
-            <div className={`flex items-center justify-center p-8 bg-gradient-to-br from-gray-100 to-gray-200 transition-all`} style={{ minHeight: devicePreview === 'desktop' ? '600px' : '800px' }}>
+            <div className={`flex items-center justify-center p-8 bg-gradient-to-br from-gray-100 to-gray-200 transition-all`} style={{ minHeight: devicePreview === 'desktop' ? '450px' : '800px' }}>
               {devicePreview === 'desktop' ? (
                 <div className="w-full bg-white rounded-lg shadow-2xl overflow-hidden border-8 border-gray-800">
                   <div className="bg-gray-800 px-4 py-2 flex items-center gap-2">
@@ -232,7 +232,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     </div>
                   </div>
                   <div className="overflow-hidden">
-                    <iframe srcDoc={currentWebsite} title="Website Preview" className="w-full h-[600px] bg-white border-0 pointer-events-none" sandbox="" />
+                    <iframe srcDoc={currentWebsite} title="Website Preview" className="w-full h-[450px] bg-white border-0 pointer-events-none" sandbox="" />
                   </div>
                 </div>
               ) : (
