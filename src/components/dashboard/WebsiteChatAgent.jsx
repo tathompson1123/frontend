@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import { Power, Copy, Check, ExternalLink, MessageCircle, TrendingUp, Calendar, Users } from 'lucide-react';
 
 export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView }) {
+  // Debug logs
   console.log('🚀 WebsiteChatAgent loaded');
   console.log('👤 User:', user);
   console.log('🔗 API URL:', apiUrl);
   console.log('🔑 authFetch exists:', !!authFetch);
 
-export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView }) {
+  // State declarations
   const [isEnabled, setIsEnabled] = useState(true);
   const [copied, setCopied] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
