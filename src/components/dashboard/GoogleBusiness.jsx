@@ -631,7 +631,7 @@ const saveReviewConfig = async () => {
                 </div>
               </div>
 
-              {/* Review Request Configuration */}
+{/* Review Request Configuration */}
 {reviewLink && (
   <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
     <div className="flex items-center justify-between mb-6">
@@ -744,20 +744,23 @@ const saveReviewConfig = async () => {
         {reviewConfig.autoSendEnabled && (
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Send After Service
+              First Email Timing
             </label>
             <select
               value={reviewConfig.sendDelay}
               onChange={(e) => setReviewConfig({ ...reviewConfig, sendDelay: parseInt(e.target.value) })}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              <option value="0">Immediately</option>
+              <option value="0">Immediately after service</option>
               <option value="1">1 hour later</option>
               <option value="6">6 hours later</option>
               <option value="24">24 hours later (recommended)</option>
               <option value="48">48 hours later</option>
               <option value="72">3 days later</option>
             </select>
+            <p className="text-xs text-gray-500 mt-2">
+              📱 SMS is always sent 2 hours after service for immediate impact. This setting controls when the first email is sent.
+            </p>
           </div>
         )}
 
@@ -765,13 +768,104 @@ const saveReviewConfig = async () => {
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
           <p className="text-sm font-medium text-gray-900 mb-3">💡 Pro Tips:</p>
           <ul className="space-y-2 text-xs text-gray-700">
+            <li>• SMS sent automatically 2 hours after service (optimal timing)</li>
             <li>• Personalize with customer names for better response rates</li>
-            <li>• Send 24 hours after service for best results</li>
+            <li>• Send first email 24 hours after service for best results</li>
             <li>• Keep incentives simple and easy to redeem</li>
             <li>• Test different messages to see what works best</li>
           </ul>
         </div>
       </div>
+    </div> 
+
+    {/* Add this right after the settings grid, before closing the config section */}
+{reviewConfig.autoSendEnabled && (
+  <div className="mt-6 p-5 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+    <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+      <Calendar className="w-5 h-5 text-purple-600" />
+      Your Review Request Timeline
+    </h4>
+    <div className="space-y-3">
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
+          2 hours
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Phone className="w-4 h-4 text-blue-600" />
+            <span className="font-semibold text-gray-900">SMS (Step 1)</span>
+          </div>
+          <p className="text-xs text-gray-600">
+            Strike while the iron is hot - immediate impact after service
+          </p>
+        </div>
+      </div>
+      
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
+          {reviewConfig.sendDelay === 0 ? 'Immediately' : 
+           reviewConfig.sendDelay === 1 ? '1 hour' :
+           reviewConfig.sendDelay === 6 ? '6 hours' :
+           reviewConfig.sendDelay === 24 ? '24 hours' :
+           reviewConfig.sendDelay === 48 ? '48 hours' :
+           '3 days'}
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Mail className="w-4 h-4 text-purple-600" />
+            <span className="font-semibold text-gray-900">Email (Step 2)</span>
+          </div>
+          <p className="text-xs text-gray-600">
+            Professional follow-up with incentive details
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
+          +2 days
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Mail className="w-4 h-4 text-purple-600" />
+            <span className="font-semibold text-gray-900">Reminder Email (Step 3)</span>
+          </div>
+          <p className="text-xs text-gray-600">Friendly reminder about the reward</p>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
+          +4 days
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Mail className="w-4 h-4 text-purple-600" />
+            <span className="font-semibold text-gray-900">Urgency Email (Step 4)</span>
+          </div>
+          <p className="text-xs text-gray-600">Creating urgency - "Don't miss out!"</p>
+        </div>
+      </div>
+
+      <div className="flex items-start gap-3">
+        <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
+          +6 days
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            <Mail className="w-4 h-4 text-purple-600" />
+            <span className="font-semibold text-gray-900">Final Email (Step 5)</span>
+          </div>
+          <p className="text-xs text-gray-600">Last chance - offer expires soon!</p>
+        </div>
+      </div>
+    </div>
+
+    <div className="mt-4 p-3 bg-white rounded border border-green-300">
+      <p className="text-xs text-green-800 flex items-center gap-2">
+        <CheckCircle className="w-4 h-4" />
+        <strong>This 5-step sequence maximizes review completion while minimizing costs (1 SMS + 4 emails)</strong>
+      </p>
     </div>
   </div>
 )}
