@@ -325,13 +325,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             console.log('  - Current style.left:', firstElement.el.style.left, 'style.top:', firstElement.el.style.top);
           }
           
+          // Use document coordinates, not viewport coordinates
           const elemCenterX = newLeft + firstElement.width / 2;
           const elemCenterY = newTop + firstElement.height / 2;
           
           const snapThreshold = 10; // Slightly larger threshold for easier snapping
           const detectedGuides = { vertical: [], horizontal: [] };
-          
-          const iframeRect = dragStateRef.current.iframeRect;
           
           // Find parent section/container
           const draggingElement = firstElement.el;
@@ -341,12 +340,25 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             parentSection = doc.body;
           }
           
-          // Get parent section dimensions
+          // Get parent section dimensions in DOCUMENT coordinates
           const parentRect = parentSection.getBoundingClientRect();
-          const parentLeft = parentRect.left - iframeRect.left;
-          const parentTop = parentRect.top - iframeRect.top;
+          const iframeRect = dragStateRef.current.iframeRect;
+          
+          // Convert to document coordinates by accounting for scroll
+          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+          
+          const parentLeft = parentRect.left - iframeRect.left + scrollLeft;
+          const parentTop = parentRect.top - iframeRect.top + scrollTop;
           const parentCenterX = parentLeft + parentRect.width / 2;
           const parentCenterY = parentTop + parentRect.height / 2;
+          
+          if (Math.random() < 0.1) {
+            console.log('📐 Snap calculations:');
+            console.log('  - elemCenterX:', elemCenterX, 'parentCenterX:', parentCenterX);
+            console.log('  - Difference:', Math.abs(elemCenterX - parentCenterX));
+            console.log('  - Scroll:', scrollLeft, scrollTop);
+          }
           
           // SNAP TO PARENT SECTION CENTER (Horizontal)
           if (Math.abs(elemCenterX - parentCenterX) < snapThreshold) {
@@ -368,7 +380,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             });
           }
           
-          // SNAP TO OTHER ELEMENTS (Center to Center only)
+          // SNAP TO OTHER ELEMENTS (Center to Center only) - also in document coordinates
           const siblingElements = Array.from(parentSection.querySelectorAll('*')).filter(el => 
             !dragStateRef.current.elements.some(data => data.el === el) &&
             !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE'].includes(el.tagName) &&
@@ -380,8 +392,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           
           siblingElements.forEach(other => {
             const otherRect = other.getBoundingClientRect();
-            const otherCenterX = (otherRect.left - iframeRect.left) + otherRect.width / 2;
-            const otherCenterY = (otherRect.top - iframeRect.top) + otherRect.height / 2;
+            // Convert to document coordinates
+            const otherLeft = otherRect.left - iframeRect.left + scrollLeft;
+            const otherTop = otherRect.top - iframeRect.top + scrollTop;
+            const otherCenterX = otherLeft + otherRect.width / 2;
+            const otherCenterY = otherTop + otherRect.height / 2;
             
             // Snap center to center (horizontal)
             if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
