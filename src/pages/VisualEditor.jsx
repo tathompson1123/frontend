@@ -247,24 +247,35 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             
             // Check if it's a pure container (only has structural elements)
             const onlyStructural = children.every(child => 
-              ['DIV', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE', 'NAV'].includes(child.tagName)
+              ['DIV', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE', 'NAV', 'UL', 'OL'].includes(child.tagName)
             );
             
-            // Also check if it's a wrapper with no direct text content
+            // Also check if it's a wrapper with no direct text content or images
             const hasDirectText = Array.from(el.childNodes).some(node => 
               node.nodeType === 3 && node.textContent.trim().length > 0
             );
             
-            // If it's a container with only structural elements and no direct text, don't allow dragging
-            if (onlyStructural && children.length > 0 && !hasDirectText) {
+            const hasImages = el.querySelectorAll('img').length > 0;
+            const hasButtons = el.querySelectorAll('button, a.btn, a.button').length > 0;
+            
+            // If it's a container with only structural elements and no direct text/images/buttons, don't allow dragging
+            if (onlyStructural && children.length > 0 && !hasDirectText && !hasImages && !hasButtons) {
               console.log('  ⚠️ Skipping container div with only structural children');
               return null;
             }
             
             // Also skip very large containers (likely layout containers)
             const rect = el.getBoundingClientRect();
-            if (rect.width > window.innerWidth * 0.8 && children.length > 3) {
-              console.log('  ⚠️ Skipping large layout container');
+            const windowWidth = el.ownerDocument.defaultView.innerWidth;
+            if (rect.width > windowWidth * 0.7 && children.length > 2) {
+              console.log('  ⚠️ Skipping large layout container (width:', rect.width, ')');
+              return null;
+            }
+            
+            // Skip nearly empty containers (less than 10 chars of text)
+            const textContent = el.textContent?.trim() || '';
+            if (textContent.length < 10 && children.length > 1) {
+              console.log('  ⚠️ Skipping nearly empty container (text length:', textContent.length, ')');
               return null;
             }
           }
@@ -469,19 +480,29 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const viewportCenterX = iframeRect.width / 2;
           const viewportCenterY = iframeRect.height / 2;
           
-          // Convert element position to viewport coordinates for comparison
-          const elemViewportCenterX = newLeft + firstElement.width / 2;
-          const elemViewportCenterY = newTop + firstElement.height / 2;
+          // CRITICAL: Elements are positioned relative to their offsetParent, not viewport
+          // Get the offsetParent's position to convert element coords to viewport coords
+          const draggingElement = firstElement.el;
+          const offsetParent = draggingElement.offsetParent || doc.body;
+          const parentRect = offsetParent.getBoundingClientRect();
+          const parentOffsetX = parentRect.left;
+          const parentOffsetY = parentRect.top;
+          
+          // Convert element center to viewport coordinates
+          const elemViewportCenterX = newLeft + parentOffsetX + firstElement.width / 2;
+          const elemViewportCenterY = newTop + parentOffsetY + firstElement.height / 2;
           
           if (Math.random() < 0.1) {
             console.log('📐 Snap calculations:');
             console.log('  - elemViewportCenterX:', elemViewportCenterX, 'viewportCenterX:', viewportCenterX);
+            console.log('  - parentOffsetX:', parentOffsetX, 'newLeft:', newLeft);
             console.log('  - Difference:', Math.abs(elemViewportCenterX - viewportCenterX));
           }
           
           // SNAP TO PAGE CENTER (Horizontal)
           if (Math.abs(elemViewportCenterX - viewportCenterX) < snapThreshold) {
-            newLeft = viewportCenterX - firstElement.width / 2;
+            // Convert viewport center back to parent-relative coordinates
+            newLeft = viewportCenterX - parentOffsetX - firstElement.width / 2;
             detectedGuides.vertical.push({ 
               x: viewportCenterX, 
               type: 'center', 
@@ -491,7 +512,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           
           // SNAP TO PAGE CENTER (Vertical)
           if (Math.abs(elemViewportCenterY - viewportCenterY) < snapThreshold) {
-            newTop = viewportCenterY - firstElement.height / 2;
+            // Convert viewport center back to parent-relative coordinates
+            newTop = viewportCenterY - parentOffsetY - firstElement.height / 2;
             detectedGuides.horizontal.push({ 
               y: viewportCenterY, 
               type: 'center', 
