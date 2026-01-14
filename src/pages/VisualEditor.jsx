@@ -149,11 +149,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         console.log('🟢 MOUSEDOWN EVENT');
         console.log('Target:', target.tagName, target.className);
         console.log('State BEFORE:');
-        console.log('  - isMouseDown:', isMouseDownRef.current);
-        console.log('  - dragStarted:', dragStartedRef.current);
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
         console.log('  - dragStateRef.current:', dragStateRef.current);
         console.log('  - Has editor-selected class:', target.classList.contains('editor-selected'));
         console.log('  - Currently selected elements:', doc.querySelectorAll('.editor-selected').length);
+        console.log('  - Event handlers attached:', !!eventHandlersRef.current);
         
         // Ignore structural elements
         if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
@@ -166,12 +167,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         e.preventDefault();
         e.stopPropagation();
         
+        console.log('⚙️ Setting state variables...');
         isMouseDownRef.current = true;
         dragStartedRef.current = false;
         
-        console.log('State AFTER setting isMouseDown = true:');
-        console.log('  - isMouseDown:', isMouseDownRef.current);
-        console.log('  - dragStarted:', dragStartedRef.current);
+        console.log('State AFTER setting refs:');
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
+        console.log('  - Refs are working:', isMouseDownRef.current === true);
 
         // If clicking on already selected element, prepare to drag
         if (target.classList.contains('editor-selected')) {
@@ -179,6 +182,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const iframeRect = iframe.getBoundingClientRect();
           const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
           console.log('  - Found', currentlySelected.length, 'selected elements');
+          console.log('  - iframeRect:', iframeRect);
           
           const elementsData = currentlySelected.map(elem => {
             prepareElementForDrag(elem, doc);
@@ -202,6 +206,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           };
           
           console.log('  - Created dragStateRef with', elementsData.length, 'elements');
+          console.log('  - Start position:', e.clientX, e.clientY);
+          console.log('  - dragStateRef.current is set:', !!dragStateRef.current);
         } else {
           // Clicking on new element
           console.log('✅ PREPARING TO SELECT (new element)');
@@ -214,15 +220,24 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           console.log('  - Stored clickedElement for selection on mouseup');
         }
         
-        console.log('Final dragStateRef.current:', dragStateRef.current);
+        console.log('Final state check:');
+        console.log('  - dragStateRef.current:', dragStateRef.current);
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
         console.log('═══════════════════════════════════════');
       };
 
       const handleMouseMove = (e) => {
-        if (!isMouseDownRef.current || !dragStateRef.current) {
-          // Too noisy, only log if we expected to be dragging
+        // Check if we should be moving at all
+        const shouldMove = isMouseDownRef.current && dragStateRef.current;
+        
+        if (!shouldMove) {
+          // Only log occasionally to avoid spam
           if (isMouseDownRef.current && !dragStateRef.current) {
-            console.log('⚠️ MOUSEMOVE - isMouseDown true but no dragStateRef');
+            console.log('⚠️ MOUSEMOVE - isMouseDown true but no dragStateRef!');
+            console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+            console.log('  - dragStateRef.current:', dragStateRef.current);
+            console.log('  - This should never happen!');
           }
           return;
         }
@@ -236,15 +251,22 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           console.log('🔄 STARTING DRAG (moved >5px)');
           console.log('  - dx:', dx, 'dy:', dy);
           console.log('  - dragStateRef.current.elements:', dragStateRef.current.elements?.length);
+          console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+          console.log('  - dragStartedRef.current (before):', dragStartedRef.current);
           
           dragStartedRef.current = true;
           dragStateRef.current.moved = true;
+          
+          console.log('  - dragStartedRef.current (after):', dragStartedRef.current);
+          console.log('  - dragStateRef.current.moved:', dragStateRef.current.moved);
           
           if (dragStateRef.current.elements) {
             dragStateRef.current.elements.forEach(data => {
               data.el.classList.add('editor-dragging');
             });
             console.log('  - Added editor-dragging class to', dragStateRef.current.elements.length, 'elements');
+          } else {
+            console.log('  - ⚠️ NO ELEMENTS TO DRAG!');
           }
           console.log('───────────────────────────────────────');
         }
@@ -359,19 +381,22 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         console.log('═══════════════════════════════════════');
         console.log('🔵 MOUSEUP EVENT');
         console.log('State at mouseup:');
-        console.log('  - isMouseDown:', isMouseDownRef.current);
-        console.log('  - dragStarted:', dragStartedRef.current);
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
         console.log('  - dragStateRef.current:', dragStateRef.current);
         console.log('  - dragStateRef.current?.moved:', dragStateRef.current?.moved);
+        console.log('  - Event handlers still attached:', !!eventHandlersRef.current);
         
         if (!isMouseDownRef.current) {
           console.log('❌ ABORT - isMouseDown is false (event already handled or never started)');
+          console.log('   This might indicate handlers were removed or refs were reset');
           console.log('═══════════════════════════════════════');
           return;
         }
         
+        console.log('⚙️ Setting isMouseDownRef.current = false');
         isMouseDownRef.current = false;
-        console.log('Set isMouseDown = false');
+        console.log('   Confirmed: isMouseDownRef.current =', isMouseDownRef.current);
         
         // If we were dragging, save and cleanup
         if (dragStartedRef.current && dragStateRef.current?.elements) {
@@ -380,16 +405,29 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           
           dragStateRef.current.elements.forEach(data => {
             data.el.classList.remove('editor-dragging');
-            console.log('    - Cleaned up:', data.el.tagName);
+            console.log('    - Cleaned up:', data.el.tagName, 'position:', data.el.style.position);
           });
           
           setGuides({ vertical: [], horizontal: [] });
+          
+          console.log('  - Calling saveChanges()...');
           saveChanges();
+          
+          console.log('  - Resetting drag state...');
           dragStateRef.current = null;
           dragStartedRef.current = false;
           
           console.log('✅ DRAG COMPLETE - All state reset');
+          console.log('Post-drag state:');
+          console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+          console.log('  - dragStartedRef.current:', dragStartedRef.current);
+          console.log('  - dragStateRef.current:', dragStateRef.current);
+          console.log('  - Event handlers ref:', !!eventHandlersRef.current);
+          console.log('  - Doc still accessible:', !!doc);
           console.log('═══════════════════════════════════════');
+          
+          // CRITICAL: Test if handlers are still working
+          console.log('🧪 TESTING: Click again to verify handlers are still attached');
           return;
         }
         
@@ -453,15 +491,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           console.log('⚠️ dragStateRef.moved is true but dragStarted is false - inconsistent state');
         }
         
+        console.log('⚙️ Final cleanup...');
         dragStateRef.current = null;
         dragStartedRef.current = false;
         
-        console.log('✅ SELECTION COMPLETE - State reset');
-        console.log('Final state:');
-        console.log('  - isMouseDown:', isMouseDownRef.current);
-        console.log('  - dragStarted:', dragStartedRef.current);
+        console.log('✅ SELECTION/MOUSEUP COMPLETE - State reset');
+        console.log('Final state check:');
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
         console.log('  - dragStateRef.current:', dragStateRef.current);
         console.log('  - Elements with .editor-selected:', doc.querySelectorAll('.editor-selected').length);
+        console.log('  - Event handlers still there:', !!eventHandlersRef.current);
         console.log('═══════════════════════════════════════');
       };
 
