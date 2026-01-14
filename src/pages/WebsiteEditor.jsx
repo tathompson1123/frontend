@@ -141,20 +141,30 @@ export default function WebsiteEditor() {
     }
   };
 
-  const handleVisualUpdate = (updatedHTML) => {
-    const newPages = {
-      ...allPages,
-      [currentPage]: updatedHTML
-    };
-    
-    setAllPages(newPages);
-    
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(newPages);
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
+const handleVisualUpdate = (updatedHTML) => {
+  console.log('=== HANDLE VISUAL UPDATE ===');
+  console.log('Current allPages:', allPages);
+  console.log('Current page:', currentPage);
+  console.log('Updated HTML length:', updatedHTML?.length);
+  
+  const newPages = {
+    ...allPages,
+    [currentPage]: updatedHTML
   };
-
+  
+  console.log('New pages object:', newPages);
+  console.log('New pages keys:', Object.keys(newPages));
+  
+  setAllPages(newPages);
+  
+  const newHistory = history.slice(0, historyIndex + 1);
+  newHistory.push(newPages);
+  setHistory(newHistory);
+  setHistoryIndex(newHistory.length - 1);
+  
+  console.log('=== UPDATE COMPLETE ===');
+};
+  
   const handleUndo = () => {
     if (historyIndex > 0) {
       setHistoryIndex(historyIndex - 1);
