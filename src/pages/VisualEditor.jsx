@@ -464,6 +464,31 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             }
           }
           
+          // NEW: For headings and paragraphs, check if they're part of a text group
+          if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P'].includes(el.tagName)) {
+            // Find parent that might contain grouped text
+            const parent = el.parentElement;
+            
+            // Check if parent is a simple text container (div with only text elements)
+            if (parent && parent.tagName === 'DIV') {
+              const siblings = Array.from(parent.children);
+              
+              // If parent only contains headings/paragraphs (text group), select the parent
+              const onlyTextElements = siblings.every(child => 
+                ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'SPAN'].includes(child.tagName)
+              );
+              
+              // Check that it's not a huge container
+              const rect = parent.getBoundingClientRect();
+              const isSmallContainer = rect.width < el.ownerDocument.defaultView.innerWidth * 0.5;
+              
+              if (onlyTextElements && siblings.length > 1 && siblings.length <= 5 && isSmallContainer) {
+                console.log('  ✅ Grouping text elements - selecting parent div');
+                return parent;
+              }
+            }
+          }
+          
           // For container divs, check if they have draggable children
           // If a div only contains other divs/sections, it's not draggable
           if (el.tagName === 'DIV') {
