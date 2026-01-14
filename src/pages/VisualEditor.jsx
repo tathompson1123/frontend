@@ -22,6 +22,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   const isMouseDownRef = useRef(false); // Use ref instead of local variable
   const dragStartedRef = useRef(false); // Use ref instead of local variable
   const lastSavedHtmlRef = useRef(''); // Track last saved HTML to prevent reload loops
+  const isSavingRef = useRef(false); // Track if we're currently saving (to prevent reload loops)
   
   // CRITICAL: Initialize with htmlContent, but handle undefined case
   const [initialHtml, setInitialHtml] = useState(htmlContent || '<html><body><h1>Loading...</h1></body></html>');
@@ -41,26 +42,30 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   // Track the last page to detect actual page changes
   const lastPageRef = useRef(currentPage);
   const hasLoadedRef = useRef(false);
-  const lastHtmlContentRef = useRef(htmlContent); // Track last HTML content for undo/redo
+  const lastHtmlContentRef = useRef(null); // Track last HTML content for undo/redo (start null)
 
   // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
     const pageChanged = lastPageRef.current !== currentPage;
     const isFirstLoad = !hasLoadedRef.current;
     const contentChanged = lastHtmlContentRef.current !== htmlContent;
+    const isExternalChange = contentChanged && !isSavingRef.current;
     
     console.log('📄 Page/content changed - currentPage:', currentPage);
     console.log('   htmlContent length:', htmlContent?.length);
-    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad, '| contentChanged:', contentChanged);
+    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad);
+    console.log('   contentChanged:', contentChanged, '| isSaving:', isSavingRef.current);
+    console.log('   isExternalChange (undo/redo):', isExternalChange);
     console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
     
-    // Update if: page changed OR first load OR content actually changed (for undo/redo)
-    if ((pageChanged || isFirstLoad || contentChanged) && htmlContent && htmlContent.length > 0) {
-      console.log('   ✅ Updating initialHtml (page changed, first load, or content changed)');
+    // Update if: page changed OR first load OR external content change (undo/redo)
+    if ((pageChanged || isFirstLoad || isExternalChange) && htmlContent && htmlContent.length > 0) {
+      console.log('   ✅ Updating initialHtml (page changed, first load, or undo/redo)');
       setInitialHtml(htmlContent);
       hasLoadedRef.current = true;
       lastPageRef.current = currentPage;
       lastHtmlContentRef.current = htmlContent;
+      isSavingRef.current = false; // Reset flag
       
       // Reset editor state
       setSelectedElements([]);
@@ -69,7 +74,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     } else if (!htmlContent || htmlContent.length === 0) {
       console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
     } else {
-      console.log('   ℹ️ Skipping - identical content (no changes)');
+      console.log('   ℹ️ Skipping - internal save (no reload needed)');
+      isSavingRef.current = false; // Reset flag even if skipping
     }
   }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
 
@@ -1165,7 +1171,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         if (cleanedHTML !== lastSavedHtmlRef.current) {
           console.log('  - HTML changed, calling onUpdate...');
           lastSavedHtmlRef.current = cleanedHTML;
-          lastHtmlContentRef.current = cleanedHTML; // Update this too to prevent reload
+          isSavingRef.current = true; // Mark as internal save
           onUpdate(cleanedHTML);
         } else {
           console.log('  - HTML unchanged, skipping onUpdate');
