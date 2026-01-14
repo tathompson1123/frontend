@@ -22,6 +22,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const isMouseDownRef = useRef(false); // Use ref instead of local variable
   const dragStartedRef = useRef(false); // Use ref instead of local variable
   const lastSavedHtmlRef = useRef(''); // Track last saved HTML to prevent reload loops
+  const isEditingRef = useRef(false); // Track if currently editing text
   
   // CRITICAL: Initialize with htmlContent, but handle undefined case
   const [initialHtml, setInitialHtml] = useState(htmlContent || '<html><body><h1>Loading...</h1></body></html>');
@@ -202,6 +203,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
       // Setup event handlers
       const handleMouseDown = (e) => {
+        // Don't allow dragging if we're editing text
+        if (isEditingRef.current) {
+          console.log('⚠️ Ignoring mousedown - text editing in progress');
+          return;
+        }
+        
         let target = e.target;
         
         // CRITICAL: Find the right element to select/drag
@@ -731,12 +738,31 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         e.preventDefault();
         e.stopPropagation();
         
-        const target = e.target;
+        let target = e.target;
+        
+        // Use the same smart targeting as mousedown to find the right element
+        if (['SPAN', 'STRONG', 'EM', 'B', 'I', 'U'].includes(target.tagName)) {
+          const parent = target.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
+          if (parent) target = parent;
+        }
         
         if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(target.tagName)) {
+          console.log('✏️ Starting text edit mode');
+          
+          // Set editing flag to block dragging
+          isEditingRef.current = true;
+          
+          // Remove hover and selected classes temporarily
+          target.classList.remove('editor-hover');
+          const wasSelected = target.classList.contains('editor-selected');
+          target.classList.remove('editor-selected');
+          
+          // Make editable
           target.contentEditable = 'true';
+          target.style.cursor = 'text';
           target.focus();
           
+          // Select all text
           const range = doc.createRange();
           range.selectNodeContents(target);
           const sel = doc.getSelection();
@@ -744,8 +770,19 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           sel.addRange(range);
           
           const handleBlur = () => {
+            console.log('✏️ Ending text edit mode');
             target.contentEditable = 'false';
+            target.style.cursor = '';
             target.removeEventListener('blur', handleBlur);
+            
+            // Restore selected state if it was selected
+            if (wasSelected) {
+              target.classList.add('editor-selected');
+            }
+            
+            // Re-enable dragging
+            isEditingRef.current = false;
+            
             saveChanges();
           };
           
