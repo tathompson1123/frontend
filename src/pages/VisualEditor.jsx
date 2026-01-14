@@ -77,9 +77,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       
       setInitialHtml(htmlContent);
       
-      // CRITICAL: Force iframe reload on external changes (undo/redo)
-      if (isExternalChange) {
-        console.log('   🔄 Forcing iframe reload (incrementing key)');
+      // CRITICAL: Only force reload for undo/redo (not first load)
+      if (isExternalChange && !isFirstLoad) {
+        console.log('   🔄 Forcing iframe reload for undo/redo (incrementing key)');
         setReloadKey(prev => prev + 1);
       }
       
@@ -1080,7 +1080,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         }
       }
     };
-  }, [currentPage, reloadKey]); // Depend on currentPage AND reloadKey to reinit after undo
+  }, [currentPage, reloadKey]); // Depend on currentPage and reloadKey
 
   const prepareElementForDrag = (elem, doc) => {
     const computed = window.getComputedStyle(elem);
