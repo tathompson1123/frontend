@@ -60,8 +60,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         setTimeout(initEditor, 100);
         return;
       }
+      
+      // CRITICAL: Wait for actual content, not just empty body
+      if (!doc.body.children || doc.body.children.length === 0) {
+        console.log('⏳ Body is empty, waiting for content...');
+        setTimeout(initEditor, 100);
+        return;
+      }
 
-      console.log('✅ Initializing editor on:', doc.body);
+      console.log('✅ Initializing editor on body with', doc.body.children.length, 'children');
 
       // Remove old event listeners if they exist
       if (eventHandlersRef.current) {
