@@ -21,6 +21,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const eventHandlersRef = useRef(null);
   const isMouseDownRef = useRef(false); // Use ref instead of local variable
   const dragStartedRef = useRef(false); // Use ref instead of local variable
+  const lastSavedHtmlRef = useRef(''); // Track last saved HTML to prevent reload loops
+  const initialHtmlRef = useRef(htmlContent); // Store initial HTML
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -39,7 +41,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     setSelectedElements([]);
     setGuides({ vertical: [], horizontal: [] });
     dragStateRef.current = null;
-  }, [currentPage]);
+    initialHtmlRef.current = htmlContent; // Update initial HTML when page changes
+    console.log('📄 Page changed to:', currentPage, '- Reset initial HTML');
+  }, [currentPage, htmlContent]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -733,12 +737,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         
         console.log('  - Cleaned HTML length:', cleanedHTML.length);
         console.log('  - Original HTML length:', html.length);
-        console.log('  - Calling onUpdate...');
         
-        onUpdate(cleanedHTML);
+        // Only call onUpdate if HTML actually changed
+        if (cleanedHTML !== lastSavedHtmlRef.current) {
+          console.log('  - HTML changed, calling onUpdate...');
+          lastSavedHtmlRef.current = cleanedHTML;
+          onUpdate(cleanedHTML);
+        } else {
+          console.log('  - HTML unchanged, skipping onUpdate');
+        }
         
         console.log('💾 SAVE COMPLETE');
-        console.log('⚠️ NOTE: If iframe reloads, editor-selected classes will be lost');
       }
     }, 300);
   };
@@ -857,7 +866,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       <div className="flex-1 relative">
         <iframe 
           ref={iframeRef} 
-          srcDoc={htmlContent} 
+          srcDoc={initialHtmlRef.current}
+          key={currentPage} 
           className="w-full h-full border-none"
           title="Visual Editor"
         />
