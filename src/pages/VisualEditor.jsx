@@ -46,6 +46,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
 
   // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
+    console.log('🚀 UNDO-FIX-V2 LOADED'); // Marker to verify new version
+    
     const pageChanged = lastPageRef.current !== currentPage;
     const isFirstLoad = !hasLoadedRef.current;
     const contentChanged = lastHtmlContentRef.current !== htmlContent;
@@ -53,6 +55,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     
     console.log('📄 Page/content changed - currentPage:', currentPage);
     console.log('   htmlContent length:', htmlContent?.length);
+    console.log('   lastHtmlContentRef length:', lastHtmlContentRef.current?.length);
     console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad);
     console.log('   contentChanged:', contentChanged, '| isSaving:', isSavingRef.current);
     console.log('   isExternalChange (undo/redo):', isExternalChange);
@@ -61,6 +64,16 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     // Update if: page changed OR first load OR external content change (undo/redo)
     if ((pageChanged || isFirstLoad || isExternalChange) && htmlContent && htmlContent.length > 0) {
       console.log('   ✅ Updating initialHtml (page changed, first load, or undo/redo)');
+      
+      // Log positioned elements in the HTML being restored
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+      const positionedElements = Array.from(tempDiv.querySelectorAll('[style*="position"]'));
+      console.log('   📦 Positioned elements in restored HTML:', positionedElements.length);
+      positionedElements.slice(0, 3).forEach(el => {
+        console.log('     -', el.tagName, 'style:', el.getAttribute('style'));
+      });
+      
       setInitialHtml(htmlContent);
       hasLoadedRef.current = true;
       lastPageRef.current = currentPage;
@@ -75,6 +88,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
     } else {
       console.log('   ℹ️ Skipping - internal save (no reload needed)');
+      console.log('   📝 Updating lastHtmlContentRef to:', htmlContent?.length, 'bytes');
       // CRITICAL: Update lastHtmlContentRef even when skipping, so we track the new content
       lastHtmlContentRef.current = htmlContent;
       isSavingRef.current = false; // Reset flag even if skipping
@@ -1168,6 +1182,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         
         console.log('  - Cleaned HTML length:', cleanedHTML.length);
         console.log('  - Original HTML length:', html.length);
+        
+        // Log a sample of positioned elements to verify styles are saved
+        const tempDiv = doc.createElement('div');
+        tempDiv.innerHTML = cleanedHTML;
+        const positionedElements = Array.from(tempDiv.querySelectorAll('[style*="position"]'));
+        console.log('  - Positioned elements in saved HTML:', positionedElements.length);
+        positionedElements.slice(0, 3).forEach(el => {
+          console.log('    -', el.tagName, 'style:', el.getAttribute('style'));
+        });
         
         // Only call onUpdate if HTML actually changed
         if (cleanedHTML !== lastSavedHtmlRef.current) {
