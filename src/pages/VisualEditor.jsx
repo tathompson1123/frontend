@@ -179,6 +179,38 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           opacity: 0.8 !important;
           cursor: grabbing !important;
         }
+        
+        /* Resize Handles */
+        .resize-handle {
+          position: absolute;
+          background: #8b5cf6;
+          border: 2px solid white;
+          border-radius: 50%;
+          width: 12px;
+          height: 12px;
+          z-index: 10000;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .resize-handle:hover {
+          background: #7c3aed;
+          transform: scale(1.2);
+        }
+        
+        /* Corner handles */
+        .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
+        
+        /* Side handles */
+        .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+        .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+        
+        .resize-handle:hover {
+          transform: scale(1.3);
+        }
       `;
 
       // Disable all links, buttons, and form submissions
@@ -199,6 +231,108 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       doc.querySelectorAll('button').forEach(button => {
         button.addEventListener('click', preventDefaultActions, true);
       });
+
+      // Resize handles management
+      const resizeStateRef = { current: null };
+      
+      const createResizeHandles = (element) => {
+        // Remove any existing handles
+        doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+        
+        if (!element) return;
+        
+        // Make sure element has position set
+        if (!element.style.position || element.style.position === 'static') {
+          const rect = element.getBoundingClientRect();
+          element.style.position = 'absolute';
+          element.style.left = rect.left + 'px';
+          element.style.top = rect.top + 'px';
+        }
+        
+        // Create 8 handles (4 corners + 4 sides)
+        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+        
+        handles.forEach(position => {
+          const handle = doc.createElement('div');
+          handle.className = `resize-handle resize-${position}`;
+          handle.dataset.position = position;
+          
+          // Prevent handle from being selectable
+          handle.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const startX = e.clientX;
+            const startY = e.clientY;
+            const startWidth = element.offsetWidth;
+            const startHeight = element.offsetHeight;
+            const startLeft = parseFloat(element.style.left) || 0;
+            const startTop = parseFloat(element.style.top) || 0;
+            
+            resizeStateRef.current = {
+              element,
+              position,
+              startX,
+              startY,
+              startWidth,
+              startHeight,
+              startLeft,
+              startTop
+            };
+            
+            console.log('🔧 Starting resize:', position);
+          });
+          
+          element.appendChild(handle);
+        });
+      };
+      
+      const handleResizeMove = (e) => {
+        if (!resizeStateRef.current) return;
+        
+        const { element, position, startX, startY, startWidth, startHeight, startLeft, startTop } = resizeStateRef.current;
+        
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        
+        let newWidth = startWidth;
+        let newHeight = startHeight;
+        let newLeft = startLeft;
+        let newTop = startTop;
+        
+        // Calculate new dimensions based on handle position
+        if (position.includes('e')) {
+          newWidth = Math.max(20, startWidth + dx);
+        }
+        if (position.includes('w')) {
+          newWidth = Math.max(20, startWidth - dx);
+          newLeft = startLeft + dx;
+        }
+        if (position.includes('s')) {
+          newHeight = Math.max(20, startHeight + dy);
+        }
+        if (position.includes('n')) {
+          newHeight = Math.max(20, startHeight - dy);
+          newTop = startTop + dy;
+        }
+        
+        // Apply new dimensions
+        element.style.width = newWidth + 'px';
+        element.style.height = newHeight + 'px';
+        element.style.left = newLeft + 'px';
+        element.style.top = newTop + 'px';
+        
+        // Update handle positions
+        createResizeHandles(element);
+      };
+      
+      const handleResizeEnd = () => {
+        if (resizeStateRef.current) {
+          console.log('✅ Resize complete');
+          resizeStateRef.current = null;
+          saveChanges();
+        }
+      };
 
       // Setup event handlers
       const handleMouseDown = (e) => {
@@ -386,6 +520,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       };
 
       const handleMouseMove = (e) => {
+        // Handle resize if active
+        if (resizeStateRef.current) {
+          handleResizeMove(e);
+          return;
+        }
+        
         // Check if we should be moving at all
         const shouldMove = isMouseDownRef.current && dragStateRef.current;
         
@@ -600,6 +740,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       };
 
       const handleMouseUp = (e) => {
+        // Handle resize end
+        if (resizeStateRef.current) {
+          handleResizeEnd();
+          return;
+        }
+        
         console.log('═══════════════════════════════════════');
         console.log('🔵 MOUSEUP EVENT');
         console.log('State at mouseup:');
@@ -665,6 +811,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             doc.querySelectorAll('.editor-selected').forEach(el => {
               el.classList.remove('editor-selected');
             });
+            doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
             setSelectedElements([]);
             dragStateRef.current = null;
             dragStartedRef.current = false;
@@ -681,12 +828,16 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
               console.log('    - Now', newSelected.length, 'elements selected');
               setSelectedElements(newSelected);
+              // Remove all resize handles for multi-select
+              doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
             } else {
               console.log('    - Adding to selection');
               target.classList.add('editor-selected');
               const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
               console.log('    - Now', newSelected.length, 'elements selected');
               setSelectedElements(newSelected);
+              // Remove all resize handles for multi-select
+              doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
             }
           } else {
             // Single select
@@ -705,6 +856,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             
             setSelectedElements([target]);
             loadProps(target);
+            
+            // Create resize handles for selected element
+            createResizeHandles(target);
+            
             console.log('    - Updated React state with 1 element');
           }
         } else if (!dragStateRef.current) {
@@ -790,6 +945,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       doc.addEventListener('mouseover', handleMouseOver);
       doc.addEventListener('mouseout', handleMouseOut);
       doc.addEventListener('dblclick', handleDoubleClick);
+      
+      // Add global listeners for resize that works outside iframe
+      window.addEventListener('mousemove', handleResizeMove);
+      window.addEventListener('mouseup', handleResizeEnd);
 
       console.log('✅ Event listeners attached');
       console.log('   - mousedown:', !!handleMouseDown);
@@ -845,6 +1004,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           doc.removeEventListener('mouseover', handlers.mouseover);
           doc.removeEventListener('mouseout', handlers.mouseout);
           doc.removeEventListener('dblclick', handlers.dblclick);
+          
+          // Remove global resize listeners
+          window.removeEventListener('mousemove', handleResizeMove);
+          window.removeEventListener('mouseup', handleResizeEnd);
         } catch (err) {
           // Ignore cleanup errors
         }
