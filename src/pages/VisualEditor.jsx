@@ -227,27 +227,16 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         if (target.classList.contains('editor-selected')) {
           console.log('✅ PREPARING TO DRAG (element already selected)');
           
-          // CRITICAL FIX: If NOT holding Shift and there are multiple selected,
-          // deselect others and only drag the clicked element
-          const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
+          let elementsToDrag = Array.from(doc.querySelectorAll('.editor-selected'));
           
-          if (!e.shiftKey && currentlySelected.length > 1) {
+          // CRITICAL FIX: If NOT holding Shift and there are multiple selected,
+          // only drag the clicked element (but don't deselect yet - wait for mouseup)
+          if (!e.shiftKey && elementsToDrag.length > 1) {
             console.log('  - Multiple elements selected but Shift not held');
-            console.log('  - Deselecting others, only dragging clicked element');
-            
-            // Deselect all others
-            currentlySelected.forEach(el => {
-              if (el !== target) {
-                el.classList.remove('editor-selected');
-              }
-            });
-            
-            // Update selected elements to just the clicked one
-            setSelectedElements([target]);
+            console.log('  - Will only drag clicked element');
+            elementsToDrag = [target]; // Only drag this one
           }
           
-          // Get the elements we're actually going to drag
-          const elementsToDrag = Array.from(doc.querySelectorAll('.editor-selected'));
           console.log('  - Found', elementsToDrag.length, 'element(s) to drag');
           
           const iframeRect = iframe.getBoundingClientRect();
@@ -487,7 +476,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
               }
             }
             
-            // NEW: Horizontal parallel alignment - snap top edges
+            // NEW: Snap top edges (horizontal alignment)
             const elemTop = newTop;
             const otherTopEdge = otherTop;
             if (Math.abs(elemTop - otherTopEdge) < snapThreshold) {
@@ -501,7 +490,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
               }
             }
             
-            // NEW: Horizontal parallel alignment - snap bottom edges
+            // NEW: Snap bottom edges (horizontal alignment)
             const elemBottom = newTop + firstElement.height;
             const otherBottomEdge = otherTop + otherRect.height;
             if (Math.abs(elemBottom - otherBottomEdge) < snapThreshold) {
@@ -516,7 +505,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             }
           });
           
-          // Limit guides for cleaner UI (allow 2 per direction now)
+          // Allow up to 2 guides per direction
           setGuides({ 
             vertical: detectedGuides.vertical.slice(0, 2),
             horizontal: detectedGuides.horizontal.slice(0, 2) 
