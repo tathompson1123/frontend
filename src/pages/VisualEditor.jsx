@@ -254,6 +254,40 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
           console.log('  - dragStartedRef.current (before):', dragStartedRef.current);
           
+          // CRITICAL FIX: If we don't have elements, we clicked a new element and need to prepare it
+          if (!dragStateRef.current.elements && dragStateRef.current.clickedElement) {
+            console.log('  - 🔧 FIX: Converting click to drag - preparing element...');
+            const clickedEl = dragStateRef.current.clickedElement;
+            
+            // First select it
+            doc.querySelectorAll('.editor-selected').forEach(el => {
+              el.classList.remove('editor-selected');
+            });
+            clickedEl.classList.add('editor-selected');
+            setSelectedElements([clickedEl]);
+            
+            // Then prepare for drag
+            const iframeRect = iframe.getBoundingClientRect();
+            prepareElementForDrag(clickedEl, doc);
+            const rect = clickedEl.getBoundingClientRect();
+            
+            dragStateRef.current = {
+              elements: [{
+                el: clickedEl,
+                startLeft: parseFloat(clickedEl.style.left) || 0,
+                startTop: parseFloat(clickedEl.style.top) || 0,
+                width: rect.width,
+                height: rect.height
+              }],
+              startX: dragStateRef.current.startX,
+              startY: dragStateRef.current.startY,
+              moved: true,
+              iframeRect: iframeRect
+            };
+            
+            console.log('  - ✅ Element prepared, now has', dragStateRef.current.elements.length, 'elements');
+          }
+          
           dragStartedRef.current = true;
           dragStateRef.current.moved = true;
           
@@ -661,20 +695,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       if (iframeRef.current?.contentDocument) {
         const doc = iframeRef.current.contentDocument;
         
-        // Remove all placeholder elements before saving
-        doc.querySelectorAll('.drag-placeholder').forEach(placeholder => {
-          placeholder.remove();
-        });
+        console.log('💾 SAVING CHANGES...');
+        console.log('  - Placeholders before cleanup:', doc.querySelectorAll('.drag-placeholder').length);
+        console.log('  - Elements with hasPlaceholder:', doc.querySelectorAll('[data-has-placeholder]').length);
         
-        // Remove placeholder data attributes
-        doc.querySelectorAll('[data-has-placeholder]').forEach(el => {
-          delete el.dataset.hasPlaceholder;
-          delete el.dataset.placeholderId;
-        });
+        // DON'T remove placeholders - keep them in the document to maintain layout
+        // Just clean them from the saved HTML
         
         const html = doc.documentElement.outerHTML;
         
         const cleanedHTML = html
+          .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '') // Remove placeholder divs
           .replace(/\s*class="([^"]*)"/g, (match, classes) => {
             const cleaned = classes
               .replace(/\s*editor-selected\s*/g, ' ')
@@ -688,6 +719,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           .replace(/\s+class=""\s*/g, ' ')
           .replace(/\s+data-has-placeholder="[^"]*"/g, '')
           .replace(/\s+data-placeholder-id="[^"]*"/g, '');
+        
+        console.log('  - Cleaned HTML length:', cleanedHTML.length);
+        console.log('  - Original HTML length:', html.length);
+        console.log('💾 SAVE COMPLETE');
         
         onUpdate(cleanedHTML);
       }
