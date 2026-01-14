@@ -583,12 +583,34 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const width = rect.width;
       const height = rect.height;
       
+      // Create a placeholder to maintain layout
+      if (!elem.dataset.hasPlaceholder) {
+        const placeholder = doc.createElement('div');
+        placeholder.className = 'drag-placeholder';
+        placeholder.style.width = width + 'px';
+        placeholder.style.height = height + 'px';
+        placeholder.style.margin = computed.margin;
+        placeholder.style.padding = '0';
+        placeholder.style.border = 'none';
+        placeholder.style.visibility = 'hidden';
+        placeholder.style.pointerEvents = 'none';
+        placeholder.style.display = computed.display;
+        
+        // Insert placeholder before the element
+        elem.parentNode.insertBefore(placeholder, elem);
+        elem.dataset.hasPlaceholder = 'true';
+        elem.dataset.placeholderId = 'placeholder-' + Date.now() + '-' + Math.random();
+        placeholder.dataset.placeholderId = elem.dataset.placeholderId;
+      }
+      
+      // Convert to absolute positioning
       elem.style.position = 'absolute';
       elem.style.left = (rect.left - parentRect.left) + 'px';
       elem.style.top = (rect.top - parentRect.top) + 'px';
       elem.style.width = width + 'px';
       elem.style.height = height + 'px';
       elem.style.margin = '0';
+      elem.style.zIndex = '1000';
     }
   };
 
@@ -597,7 +619,20 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     
     updateTimeoutRef.current = setTimeout(() => {
       if (iframeRef.current?.contentDocument) {
-        const html = iframeRef.current.contentDocument.documentElement.outerHTML;
+        const doc = iframeRef.current.contentDocument;
+        
+        // Remove all placeholder elements before saving
+        doc.querySelectorAll('.drag-placeholder').forEach(placeholder => {
+          placeholder.remove();
+        });
+        
+        // Remove placeholder data attributes
+        doc.querySelectorAll('[data-has-placeholder]').forEach(el => {
+          delete el.dataset.hasPlaceholder;
+          delete el.dataset.placeholderId;
+        });
+        
+        const html = doc.documentElement.outerHTML;
         
         const cleanedHTML = html
           .replace(/\s*class="([^"]*)"/g, (match, classes) => {
@@ -605,11 +640,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
               .replace(/\s*editor-selected\s*/g, ' ')
               .replace(/\s*editor-hover\s*/g, ' ')
               .replace(/\s*editor-dragging\s*/g, ' ')
+              .replace(/\s*drag-placeholder\s*/g, ' ')
               .replace(/\s+/g, ' ')
               .trim();
             return cleaned ? ` class="${cleaned}"` : '';
           })
-          .replace(/\s+class=""\s*/g, ' ');
+          .replace(/\s+class=""\s*/g, ' ')
+          .replace(/\s+data-has-placeholder="[^"]*"/g, '')
+          .replace(/\s+data-placeholder-id="[^"]*"/g, '');
         
         onUpdate(cleanedHTML);
       }
