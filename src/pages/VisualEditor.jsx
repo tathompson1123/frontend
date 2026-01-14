@@ -269,6 +269,23 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             const startLeft = parseFloat(element.style.left) || 0;
             const startTop = parseFloat(element.style.top) || 0;
             
+            // Store original font sizes for scaling
+            const originalFontSizes = new Map();
+            const textElements = element.querySelectorAll('*');
+            textElements.forEach(el => {
+              const computedStyle = window.getComputedStyle(el);
+              const fontSize = parseFloat(computedStyle.fontSize);
+              if (fontSize) {
+                originalFontSizes.set(el, fontSize);
+              }
+            });
+            
+            // Also store the element's own font size
+            const elementFontSize = parseFloat(window.getComputedStyle(element).fontSize);
+            if (elementFontSize) {
+              originalFontSizes.set(element, elementFontSize);
+            }
+            
             resizeStateRef.current = {
               element,
               position,
@@ -277,7 +294,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               startWidth,
               startHeight,
               startLeft,
-              startTop
+              startTop,
+              originalFontSizes
             };
             
             console.log('🔧 Starting resize:', position);
@@ -290,7 +308,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       const handleResizeMove = (e) => {
         if (!resizeStateRef.current) return;
         
-        const { element, position, startX, startY, startWidth, startHeight, startLeft, startTop } = resizeStateRef.current;
+        const { element, position, startX, startY, startWidth, startHeight, startLeft, startTop, originalFontSizes } = resizeStateRef.current;
         
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
@@ -316,11 +334,27 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           newTop = startTop + dy;
         }
         
+        // Calculate scale factors
+        const widthScale = newWidth / startWidth;
+        const heightScale = newHeight / startHeight;
+        
+        // Use the average of width and height scale for font sizing
+        // This gives a balanced scaling
+        const fontScale = (widthScale + heightScale) / 2;
+        
         // Apply new dimensions
         element.style.width = newWidth + 'px';
         element.style.height = newHeight + 'px';
         element.style.left = newLeft + 'px';
         element.style.top = newTop + 'px';
+        
+        // Scale all text elements proportionally
+        if (originalFontSizes) {
+          originalFontSizes.forEach((originalSize, el) => {
+            const newSize = originalSize * fontScale;
+            el.style.fontSize = newSize + 'px';
+          });
+        }
         
         // Update handle positions
         createResizeHandles(element);
