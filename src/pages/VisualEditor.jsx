@@ -12,7 +12,7 @@ import {
   Italic
 } from 'lucide-react';
 
-export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
+export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const iframeRef = useRef(null);
