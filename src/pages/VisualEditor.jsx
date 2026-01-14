@@ -47,118 +47,86 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   const hasLoadedRef = useRef(false);
   const lastHtmlContentRef = useRef(null); // Track last HTML content for undo/redo (start null)
 
-  // Update initial HTML only when page changes, not on every htmlContent update
+  // FIX: Improved undo/redo handling - update DOM directly without reload
   useEffect(() => {
-    console.log('🚀 UNDO-FIX-V2 LOADED'); // Marker to verify new version
-    
     const pageChanged = lastPageRef.current !== currentPage;
     const isFirstLoad = !hasLoadedRef.current;
     const contentChanged = lastHtmlContentRef.current !== htmlContent;
     const isExternalChange = contentChanged && !isSavingRef.current;
     
-    console.log('📄 Page/content changed - currentPage:', currentPage);
-    console.log('   htmlContent length:', htmlContent?.length);
-    console.log('   lastHtmlContentRef length:', lastHtmlContentRef.current?.length);
-    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad);
-    console.log('   contentChanged:', contentChanged, '| isSaving:', isSavingRef.current);
-    console.log('   isExternalChange (undo/redo):', isExternalChange);
-    console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
+    console.log('📄 Content update:', { pageChanged, isFirstLoad, isExternalChange });
     
-    // Update if: page changed OR first load OR external content change (undo/redo)
-    if ((pageChanged || isFirstLoad || isExternalChange) && htmlContent && htmlContent.length > 0) {
-      console.log('   ✅ Updating initialHtml (page changed, first load, or undo/redo)');
-      
-      // Log positioned elements in the HTML being restored
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = htmlContent;
-      const positionedElements = Array.from(tempDiv.querySelectorAll('[style*="position"]'));
-      console.log('   📦 Positioned elements in restored HTML:', positionedElements.length);
-      positionedElements.slice(0, 3).forEach(el => {
-        console.log('     -', el.tagName, 'style:', el.getAttribute('style'));
-      });
-      
+    // Full reload only on page change or first load
+    if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
+      console.log('✅ Full reload (page change/first load)');
       setInitialHtml(htmlContent);
-      
-      // CRITICAL: For undo/redo, update DOM directly without full reload
-      if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
-        console.log('   🔄 Applying undo/redo changes directly to DOM');
-        const currentDoc = iframeRef.current.contentDocument;
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = htmlContent;
-        
-        // Find all elements with position styles in both old and new HTML
-        const currentPositioned = Array.from(currentDoc.querySelectorAll('[style*="position"]'));
-        const newPositioned = Array.from(tempDiv.querySelectorAll('[style*="position"]'));
-        
-        console.log('   - Current positioned elements:', currentPositioned.length);
-        console.log('   - New positioned elements:', newPositioned.length);
-        
-        // Helper to get clean class name (without editor classes)
-        const getCleanClass = (el) => {
-          return el.className
-            .replace(/\beditor-selected\b/g, '')
-            .replace(/\beditor-hover\b/g, '')
-            .replace(/\beditor-dragging\b/g, '')
-            .replace(/\s+/g, ' ')
-            .trim();
-        };
-        
-        // Create a map of new elements by their identity
-        const newElementMap = new Map();
-        newPositioned.forEach(newEl => {
-          const cleanClass = newEl.className || '';
-          const textSnippet = newEl.textContent?.substring(0, 30).trim() || '';
-          const identity = `${newEl.tagName}-${cleanClass}-${textSnippet}`;
-          newElementMap.set(identity, {
-            style: newEl.getAttribute('style'),
-            element: newEl
-          });
-        });
-        
-        // Update each current positioned element if we find a match
-        currentPositioned.forEach(currentEl => {
-          const cleanClass = getCleanClass(currentEl);
-          const textSnippet = currentEl.textContent?.substring(0, 30).trim() || '';
-          const identity = `${currentEl.tagName}-${cleanClass}-${textSnippet}`;
-          
-          if (newElementMap.has(identity)) {
-            const { style } = newElementMap.get(identity);
-            console.log('   ✅ Updating', currentEl.tagName, cleanClass || '(no class)', '- matched!');
-            currentEl.setAttribute('style', style);
-            newElementMap.delete(identity); // Mark as processed
-          } else {
-            // This element was positioned in current but not in old - remove position
-            console.log('   ❌ Removing position from', currentEl.tagName, cleanClass || '(no class)', '- not in old state');
-            currentEl.removeAttribute('style');
-          }
-        });
-        
-        // Any remaining in newElementMap means they should be positioned but aren't in current DOM
-        if (newElementMap.size > 0) {
-          console.log('   ⚠️ Warning:', newElementMap.size, 'elements need positioning but not found in current DOM');
-          // This can happen if elements were added/removed - might need full reload for that case
-        }
-      }
-      
       hasLoadedRef.current = true;
       lastPageRef.current = currentPage;
       lastHtmlContentRef.current = htmlContent;
-      isSavingRef.current = false; // Reset flag
+      isSavingRef.current = false;
       
-      // Reset editor state
       setSelectedElements([]);
       setGuides({ vertical: [], horizontal: [] });
+      setShowPropertiesModal(false); // FIX: Close modal on page change
       dragStateRef.current = null;
-    } else if (!htmlContent || htmlContent.length === 0) {
-      console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
-    } else {
-      console.log('   ℹ️ Skipping - internal save (no reload needed)');
-      console.log('   📝 Updating lastHtmlContentRef to:', htmlContent?.length, 'bytes');
-      // CRITICAL: Update lastHtmlContentRef even when skipping, so we track the new content
+    } 
+    // FIX: Direct DOM update for undo/redo - NO iframe reload
+    else if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
+      console.log('🔄 Direct DOM update (undo/redo)');
+      const currentDoc = iframeRef.current.contentDocument;
+      
+      // Parse new HTML
+      const parser = new DOMParser();
+      const newDoc = parser.parseFromString(htmlContent, 'text/html');
+      
+      // Replace body content directly
+      currentDoc.body.innerHTML = newDoc.body.innerHTML;
+      
+      // Re-inject styles (they get wiped with innerHTML)
+      let style = currentDoc.getElementById('editor-styles');
+      if (!style) {
+        style = currentDoc.createElement('style');
+        style.id = 'editor-styles';
+        currentDoc.head.appendChild(style);
+      }
+      
+      style.textContent = `
+        * { box-sizing: border-box; }
+        body { position: relative !important; min-height: 100vh; }
+        .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
+        .editor-selected:active { cursor: grabbing !important; }
+        .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
+        .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
+        .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
+        .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
+        .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
+        .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+        .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
+        .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+        .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+        .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+        .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+      `;
+      
       lastHtmlContentRef.current = htmlContent;
-      isSavingRef.current = false; // Reset flag even if skipping
+      isSavingRef.current = false;
+      
+      // Clear selection state
+      setSelectedElements([]);
+      setShowPropertiesModal(false); // FIX: Close modal on undo/redo
+      
+      console.log('✅ DOM updated without reload');
+    } 
+    else if (!htmlContent || htmlContent.length === 0) {
+      console.log('⚠️ Empty htmlContent');
+    } 
+    else {
+      // Internal save - just update tracking
+      lastHtmlContentRef.current = htmlContent;
+      isSavingRef.current = false;
     }
-  }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
+  }, [currentPage, htmlContent]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -1055,10 +1023,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           target.classList.add('editor-selected');
           setSelectedElements([target]);
           loadProps(target);
+          createResizeHandles(target); // FIX: Add handles on double-click select
         }
         
         // Open properties modal
-        console.log('🖱️ Double-click detected - opening properties modal');
+        console.log('🖱️ Double-click - opening properties');
         setShowPropertiesModal(true);
       };
 
@@ -1297,6 +1266,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     if (!confirm('Delete selected element(s)?')) return;
     selectedElements.forEach(el => el.remove());
     setSelectedElements([]);
+    setShowPropertiesModal(false); // FIX: Close modal when deleting
     saveChanges();
   };
 
