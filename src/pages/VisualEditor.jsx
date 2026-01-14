@@ -259,114 +259,91 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           
           const elemCenterX = newLeft + firstElement.width / 2;
           const elemCenterY = newTop + firstElement.height / 2;
-          const elemRight = newLeft + firstElement.width;
-          const elemBottom = newTop + firstElement.height;
           
-          const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
-            !dragStateRef.current.elements.some(data => data.el === el) &&
-            !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
-            el.offsetParent !== null &&
-            el.getBoundingClientRect().width > 10 &&
-            el.getBoundingClientRect().height > 10
-          );
-          
-          const snapThreshold = 8;
+          const snapThreshold = 10; // Slightly larger threshold for easier snapping
           const detectedGuides = { vertical: [], horizontal: [] };
           
           const iframeRect = dragStateRef.current.iframeRect;
-          const pageWidth = doc.body.scrollWidth;
-          const pageHeight = doc.body.scrollHeight;
-          const pageCenterX = pageWidth / 2;
-          const pageCenterY = pageHeight / 2;
           
-          // SNAP TO PAGE CENTER
-          if (Math.abs(elemCenterX - pageCenterX) < snapThreshold) {
-            newLeft = pageCenterX - firstElement.width / 2;
-            detectedGuides.vertical.push({ x: pageCenterX, type: 'center', label: 'Page Center' });
+          // Find parent section/container
+          const draggingElement = firstElement.el;
+          let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
+          
+          if (!parentSection) {
+            parentSection = doc.body;
           }
           
-          if (Math.abs(elemCenterY - pageCenterY) < snapThreshold) {
-            newTop = pageCenterY - firstElement.height / 2;
-            detectedGuides.horizontal.push({ y: pageCenterY, type: 'center', label: 'Page Center' });
+          // Get parent section dimensions
+          const parentRect = parentSection.getBoundingClientRect();
+          const parentLeft = parentRect.left - iframeRect.left;
+          const parentTop = parentRect.top - iframeRect.top;
+          const parentCenterX = parentLeft + parentRect.width / 2;
+          const parentCenterY = parentTop + parentRect.height / 2;
+          
+          // SNAP TO PARENT SECTION CENTER (Horizontal)
+          if (Math.abs(elemCenterX - parentCenterX) < snapThreshold) {
+            newLeft = parentCenterX - firstElement.width / 2;
+            detectedGuides.vertical.push({ 
+              x: parentCenterX, 
+              type: 'center', 
+              label: 'Section Center' 
+            });
           }
           
-          // SNAP TO OTHER ELEMENTS
-          allElements.forEach(other => {
+          // SNAP TO PARENT SECTION CENTER (Vertical)
+          if (Math.abs(elemCenterY - parentCenterY) < snapThreshold) {
+            newTop = parentCenterY - firstElement.height / 2;
+            detectedGuides.horizontal.push({ 
+              y: parentCenterY, 
+              type: 'center', 
+              label: 'Section Center' 
+            });
+          }
+          
+          // SNAP TO OTHER ELEMENTS (Center to Center only)
+          const siblingElements = Array.from(parentSection.querySelectorAll('*')).filter(el => 
+            !dragStateRef.current.elements.some(data => data.el === el) &&
+            !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE'].includes(el.tagName) &&
+            el.offsetParent !== null &&
+            el.getBoundingClientRect().width > 20 &&
+            el.getBoundingClientRect().height > 20 &&
+            parentSection.contains(el)
+          );
+          
+          siblingElements.forEach(other => {
             const otherRect = other.getBoundingClientRect();
-            const otherLeft = otherRect.left - iframeRect.left;
-            const otherTop = otherRect.top - iframeRect.top;
-            const otherRight = otherLeft + otherRect.width;
-            const otherBottom = otherTop + otherRect.height;
-            const otherCenterX = otherLeft + otherRect.width / 2;
-            const otherCenterY = otherTop + otherRect.height / 2;
+            const otherCenterX = (otherRect.left - iframeRect.left) + otherRect.width / 2;
+            const otherCenterY = (otherRect.top - iframeRect.top) + otherRect.height / 2;
             
-            // Vertical snapping
+            // Snap center to center (horizontal)
             if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
               newLeft = otherCenterX - firstElement.width / 2;
-              detectedGuides.vertical.push({ x: otherCenterX, type: 'center', label: 'Center' });
-            }
-            if (Math.abs(newLeft - otherLeft) < snapThreshold) {
-              newLeft = otherLeft;
-              detectedGuides.vertical.push({ x: otherLeft, type: 'edge', label: 'Left Edge' });
-            }
-            if (Math.abs(newLeft - otherRight) < snapThreshold) {
-              newLeft = otherRight;
-              detectedGuides.vertical.push({ x: otherRight, type: 'edge', label: 'Right Edge' });
-            }
-            if (Math.abs(elemRight - otherLeft) < snapThreshold) {
-              newLeft = otherLeft - firstElement.width;
-              detectedGuides.vertical.push({ x: otherLeft, type: 'edge', label: 'Left Edge' });
-            }
-            if (Math.abs(elemRight - otherRight) < snapThreshold) {
-              newLeft = otherRight - firstElement.width;
-              detectedGuides.vertical.push({ x: otherRight, type: 'edge', label: 'Right Edge' });
+              if (!detectedGuides.vertical.some(g => g.x === otherCenterX)) {
+                detectedGuides.vertical.push({ 
+                  x: otherCenterX, 
+                  type: 'center', 
+                  label: 'Element Center' 
+                });
+              }
             }
             
-            // Horizontal snapping
+            // Snap center to center (vertical)
             if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
               newTop = otherCenterY - firstElement.height / 2;
-              detectedGuides.horizontal.push({ y: otherCenterY, type: 'center', label: 'Center' });
-            }
-            if (Math.abs(newTop - otherTop) < snapThreshold) {
-              newTop = otherTop;
-              detectedGuides.horizontal.push({ y: otherTop, type: 'edge', label: 'Top Edge' });
-            }
-            if (Math.abs(newTop - otherBottom) < snapThreshold) {
-              newTop = otherBottom;
-              detectedGuides.horizontal.push({ y: otherBottom, type: 'edge', label: 'Bottom Edge' });
-            }
-            if (Math.abs(elemBottom - otherTop) < snapThreshold) {
-              newTop = otherTop - firstElement.height;
-              detectedGuides.horizontal.push({ y: otherTop, type: 'edge', label: 'Top Edge' });
-            }
-            if (Math.abs(elemBottom - otherBottom) < snapThreshold) {
-              newTop = otherBottom - firstElement.height;
-              detectedGuides.horizontal.push({ y: otherBottom, type: 'edge', label: 'Bottom Edge' });
+              if (!detectedGuides.horizontal.some(g => g.y === otherCenterY)) {
+                detectedGuides.horizontal.push({ 
+                  y: otherCenterY, 
+                  type: 'center', 
+                  label: 'Element Center' 
+                });
+              }
             }
           });
           
-          // Remove duplicates
-          const uniqueVertical = [];
-          const seenX = new Set();
-          detectedGuides.vertical.forEach(guide => {
-            if (!seenX.has(guide.x)) {
-              seenX.add(guide.x);
-              uniqueVertical.push(guide);
-            }
-          });
-          
-          const uniqueHorizontal = [];
-          const seenY = new Set();
-          detectedGuides.horizontal.forEach(guide => {
-            if (!seenY.has(guide.y)) {
-              seenY.add(guide.y);
-              uniqueHorizontal.push(guide);
-            }
-          });
-          
+          // Limit to 1 guide per direction for cleaner UI
           setGuides({ 
-            vertical: uniqueVertical.slice(0, 3),
-            horizontal: uniqueHorizontal.slice(0, 3) 
+            vertical: detectedGuides.vertical.slice(0, 1),
+            horizontal: detectedGuides.horizontal.slice(0, 1) 
           });
           
           const deltaX = newLeft - firstElement.startLeft;
@@ -595,7 +572,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         }
       }
     };
-  }, [htmlContent]);
+  }, [currentPage]); // ONLY depend on currentPage, NOT htmlContent!
 
   const prepareElementForDrag = (elem, doc) => {
     const computed = window.getComputedStyle(elem);
@@ -708,7 +685,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           title="Visual Editor"
         />
         
-        {/* Snap Guide Lines */}
+        {/* Snap Guide Lines - Only Center Alignment */}
         {guides.vertical.map((guide, i) => (
           <div 
             key={`v-${i}`}
@@ -717,12 +694,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
               left: `${guide.x}px`,
               top: 0,
               bottom: 0,
-              width: '1px',
-              backgroundColor: guide.type === 'center' ? '#ef4444' : '#3b82f6',
-              boxShadow: '0 0 4px rgba(0,0,0,0.3)'
+              width: '2px',
+              backgroundColor: '#ef4444',
+              boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
             }}
           >
-            <div className="absolute top-2 left-2 bg-white px-2 py-1 rounded text-xs font-bold text-gray-700 shadow-lg whitespace-nowrap">
+            <div className="absolute top-4 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
               {guide.label}
             </div>
           </div>
@@ -736,12 +713,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
               top: `${guide.y}px`,
               left: 0,
               right: 0,
-              height: '1px',
-              backgroundColor: guide.type === 'center' ? '#ef4444' : '#3b82f6',
-              boxShadow: '0 0 4px rgba(0,0,0,0.3)'
+              height: '2px',
+              backgroundColor: '#ef4444',
+              boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
             }}
           >
-            <div className="absolute left-2 top-2 bg-white px-2 py-1 rounded text-xs font-bold text-gray-700 shadow-lg whitespace-nowrap">
+            <div className="absolute left-4 top-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
               {guide.label}
             </div>
           </div>
