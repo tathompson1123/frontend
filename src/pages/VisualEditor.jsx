@@ -18,6 +18,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const iframeRef = useRef(null);
   const dragStateRef = useRef(null);
   const updateTimeoutRef = useRef(null);
+  const eventHandlersRef = useRef(null);
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -31,18 +32,31 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     margin: ''
   });
 
+  // Clear selection when page changes
   useEffect(() => {
-    // Clear selection when page changes
     setSelectedElements([]);
     setGuides({ vertical: [], horizontal: [] });
     dragStateRef.current = null;
-    
+  }, [currentPage]);
+
+  useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
     const initEditor = () => {
       const doc = iframe.contentDocument;
       if (!doc) return;
+
+      // Remove old event listeners if they exist
+      if (eventHandlersRef.current) {
+        const { doc: oldDoc, handlers } = eventHandlersRef.current;
+        oldDoc.removeEventListener('mousedown', handlers.mousedown);
+        oldDoc.removeEventListener('mousemove', handlers.mousemove);
+        oldDoc.removeEventListener('mouseup', handlers.mouseup);
+        oldDoc.removeEventListener('mouseover', handlers.mouseover);
+        oldDoc.removeEventListener('mouseout', handlers.mouseout);
+        oldDoc.removeEventListener('dblclick', handlers.dblclick);
+      }
 
       // Inject styles
       let style = doc.getElementById('editor-styles');
@@ -79,7 +93,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       `;
 
       // Disable all links and buttons
-      doc.addEventListener('click', (e) => {
+      const preventClick = (e) => {
         if (e.target.tagName === 'A' || e.target.closest('a')) {
           e.preventDefault();
           e.stopPropagation();
@@ -88,9 +102,325 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           e.preventDefault();
           e.stopPropagation();
         }
-      }, true);
+      };
+      doc.addEventListener('click', preventClick, true);
 
-      setupEventListeners(doc);
+      // Setup event handlers
+      let isMouseDown = false;
+      let dragStarted = false;
+
+      const handleMouseDown = (e) => {
+        const target = e.target;
+        
+        // Ignore structural elements
+        if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          return;
+        }
+
+        e.preventDefault();
+        e.stopPropagation();
+        
+        isMouseDown = true;
+        dragStarted = false;
+
+        // If clicking on already selected element, prepare to drag
+        if (target.classList.contains('editor-selected')) {
+          const iframeRect = iframe.getBoundingClientRect();
+          const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
+          
+          const elementsData = currentlySelected.map(elem => {
+            prepareElementForDrag(elem, doc);
+            const rect = elem.getBoundingClientRect();
+            
+            return {
+              el: elem,
+              startLeft: parseFloat(elem.style.left) || 0,
+              startTop: parseFloat(elem.style.top) || 0,
+              width: rect.width,
+              height: rect.height
+            };
+          });
+          
+          dragStateRef.current = {
+            elements: elementsData,
+            startX: e.clientX,
+            startY: e.clientY,
+            moved: false,
+            iframeRect: iframeRect
+          };
+        } else {
+          // Clicking on new element
+          dragStateRef.current = {
+            clickedElement: target,
+            startX: e.clientX,
+            startY: e.clientY,
+            moved: false
+          };
+        }
+      };
+
+      const handleMouseMove = (e) => {
+        if (!isMouseDown || !dragStateRef.current) return;
+
+        const dx = e.clientX - dragStateRef.current.startX;
+        const dy = e.clientY - dragStateRef.current.startY;
+        
+        // Only start drag if moved more than 5px
+        if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+          dragStarted = true;
+          dragStateRef.current.moved = true;
+          
+          if (dragStateRef.current.elements) {
+            dragStateRef.current.elements.forEach(data => {
+              data.el.classList.add('editor-dragging');
+            });
+          }
+        }
+        
+        // Perform drag with snapping
+        if (dragStarted && dragStateRef.current.elements) {
+          const firstElement = dragStateRef.current.elements[0];
+          
+          let newLeft = firstElement.startLeft + dx;
+          let newTop = firstElement.startTop + dy;
+          
+          const elemCenterX = newLeft + firstElement.width / 2;
+          const elemCenterY = newTop + firstElement.height / 2;
+          const elemRight = newLeft + firstElement.width;
+          const elemBottom = newTop + firstElement.height;
+          
+          const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
+            !dragStateRef.current.elements.some(data => data.el === el) &&
+            !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
+            el.offsetParent !== null &&
+            el.getBoundingClientRect().width > 10 &&
+            el.getBoundingClientRect().height > 10
+          );
+          
+          const snapThreshold = 8;
+          const detectedGuides = { vertical: [], horizontal: [] };
+          
+          const iframeRect = dragStateRef.current.iframeRect;
+          const pageWidth = doc.body.scrollWidth;
+          const pageHeight = doc.body.scrollHeight;
+          const pageCenterX = pageWidth / 2;
+          const pageCenterY = pageHeight / 2;
+          
+          // SNAP TO PAGE CENTER
+          if (Math.abs(elemCenterX - pageCenterX) < snapThreshold) {
+            newLeft = pageCenterX - firstElement.width / 2;
+            detectedGuides.vertical.push({ x: pageCenterX, type: 'center', label: 'Page Center' });
+          }
+          
+          if (Math.abs(elemCenterY - pageCenterY) < snapThreshold) {
+            newTop = pageCenterY - firstElement.height / 2;
+            detectedGuides.horizontal.push({ y: pageCenterY, type: 'center', label: 'Page Center' });
+          }
+          
+          // SNAP TO OTHER ELEMENTS
+          allElements.forEach(other => {
+            const otherRect = other.getBoundingClientRect();
+            const otherLeft = otherRect.left - iframeRect.left;
+            const otherTop = otherRect.top - iframeRect.top;
+            const otherRight = otherLeft + otherRect.width;
+            const otherBottom = otherTop + otherRect.height;
+            const otherCenterX = otherLeft + otherRect.width / 2;
+            const otherCenterY = otherTop + otherRect.height / 2;
+            
+            // Vertical snapping
+            if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
+              newLeft = otherCenterX - firstElement.width / 2;
+              detectedGuides.vertical.push({ x: otherCenterX, type: 'center', label: 'Center' });
+            }
+            if (Math.abs(newLeft - otherLeft) < snapThreshold) {
+              newLeft = otherLeft;
+              detectedGuides.vertical.push({ x: otherLeft, type: 'edge', label: 'Left Edge' });
+            }
+            if (Math.abs(newLeft - otherRight) < snapThreshold) {
+              newLeft = otherRight;
+              detectedGuides.vertical.push({ x: otherRight, type: 'edge', label: 'Right Edge' });
+            }
+            if (Math.abs(elemRight - otherLeft) < snapThreshold) {
+              newLeft = otherLeft - firstElement.width;
+              detectedGuides.vertical.push({ x: otherLeft, type: 'edge', label: 'Left Edge' });
+            }
+            if (Math.abs(elemRight - otherRight) < snapThreshold) {
+              newLeft = otherRight - firstElement.width;
+              detectedGuides.vertical.push({ x: otherRight, type: 'edge', label: 'Right Edge' });
+            }
+            
+            // Horizontal snapping
+            if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
+              newTop = otherCenterY - firstElement.height / 2;
+              detectedGuides.horizontal.push({ y: otherCenterY, type: 'center', label: 'Center' });
+            }
+            if (Math.abs(newTop - otherTop) < snapThreshold) {
+              newTop = otherTop;
+              detectedGuides.horizontal.push({ y: otherTop, type: 'edge', label: 'Top Edge' });
+            }
+            if (Math.abs(newTop - otherBottom) < snapThreshold) {
+              newTop = otherBottom;
+              detectedGuides.horizontal.push({ y: otherBottom, type: 'edge', label: 'Bottom Edge' });
+            }
+            if (Math.abs(elemBottom - otherTop) < snapThreshold) {
+              newTop = otherTop - firstElement.height;
+              detectedGuides.horizontal.push({ y: otherTop, type: 'edge', label: 'Top Edge' });
+            }
+            if (Math.abs(elemBottom - otherBottom) < snapThreshold) {
+              newTop = otherBottom - firstElement.height;
+              detectedGuides.horizontal.push({ y: otherBottom, type: 'edge', label: 'Bottom Edge' });
+            }
+          });
+          
+          // Remove duplicates
+          const uniqueVertical = [];
+          const seenX = new Set();
+          detectedGuides.vertical.forEach(guide => {
+            if (!seenX.has(guide.x)) {
+              seenX.add(guide.x);
+              uniqueVertical.push(guide);
+            }
+          });
+          
+          const uniqueHorizontal = [];
+          const seenY = new Set();
+          detectedGuides.horizontal.forEach(guide => {
+            if (!seenY.has(guide.y)) {
+              seenY.add(guide.y);
+              uniqueHorizontal.push(guide);
+            }
+          });
+          
+          setGuides({ 
+            vertical: uniqueVertical.slice(0, 3),
+            horizontal: uniqueHorizontal.slice(0, 3) 
+          });
+          
+          const deltaX = newLeft - firstElement.startLeft;
+          const deltaY = newTop - firstElement.startTop;
+          
+          dragStateRef.current.elements.forEach(data => {
+            data.el.style.left = (data.startLeft + deltaX) + 'px';
+            data.el.style.top = (data.startTop + deltaY) + 'px';
+          });
+        }
+      };
+
+      const handleMouseUp = (e) => {
+        if (!isMouseDown) return;
+        
+        isMouseDown = false;
+        
+        // If we were dragging, save and cleanup
+        if (dragStarted && dragStateRef.current?.elements) {
+          dragStateRef.current.elements.forEach(data => {
+            data.el.classList.remove('editor-dragging');
+          });
+          
+          setGuides({ vertical: [], horizontal: [] });
+          saveChanges();
+          dragStateRef.current = null;
+          return;
+        }
+        
+        // If we didn't drag, handle selection
+        if (dragStateRef.current && !dragStateRef.current.moved) {
+          const target = dragStateRef.current.clickedElement || e.target;
+          
+          if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+            // Clear selection
+            doc.querySelectorAll('.editor-selected').forEach(el => {
+              el.classList.remove('editor-selected');
+            });
+            setSelectedElements([]);
+            dragStateRef.current = null;
+            return;
+          }
+          
+          // Multi-select with shift
+          if (e.shiftKey) {
+            if (target.classList.contains('editor-selected')) {
+              target.classList.remove('editor-selected');
+              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+              setSelectedElements(newSelected);
+            } else {
+              target.classList.add('editor-selected');
+              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+              setSelectedElements(newSelected);
+            }
+          } else {
+            // Single select
+            doc.querySelectorAll('.editor-selected').forEach(el => {
+              el.classList.remove('editor-selected');
+            });
+            target.classList.add('editor-selected');
+            setSelectedElements([target]);
+            loadProps(target);
+          }
+        }
+        
+        dragStateRef.current = null;
+      };
+
+      const handleMouseOver = (e) => {
+        if (isMouseDown || dragStarted) return;
+        
+        const target = e.target;
+        if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          target.classList.add('editor-hover');
+        }
+      };
+
+      const handleMouseOut = (e) => {
+        e.target.classList.remove('editor-hover');
+      };
+
+      const handleDoubleClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const target = e.target;
+        
+        if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(target.tagName)) {
+          target.contentEditable = 'true';
+          target.focus();
+          
+          const range = doc.createRange();
+          range.selectNodeContents(target);
+          const sel = doc.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          
+          const handleBlur = () => {
+            target.contentEditable = 'false';
+            target.removeEventListener('blur', handleBlur);
+            saveChanges();
+          };
+          
+          target.addEventListener('blur', handleBlur);
+        }
+      };
+
+      // Attach event listeners
+      doc.addEventListener('mousedown', handleMouseDown);
+      doc.addEventListener('mousemove', handleMouseMove);
+      doc.addEventListener('mouseup', handleMouseUp);
+      doc.addEventListener('mouseover', handleMouseOver);
+      doc.addEventListener('mouseout', handleMouseOut);
+      doc.addEventListener('dblclick', handleDoubleClick);
+
+      // Store handlers for cleanup
+      eventHandlersRef.current = {
+        doc,
+        handlers: {
+          mousedown: handleMouseDown,
+          mousemove: handleMouseMove,
+          mouseup: handleMouseUp,
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut,
+          dblclick: handleDoubleClick
+        }
+      };
     };
 
     if (iframe.contentDocument?.readyState === 'complete') {
@@ -99,395 +429,34 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       iframe.onload = initEditor;
     }
 
-  }, [htmlContent, currentPage]);
-
-  const setupEventListeners = (doc) => {
-    let isMouseDown = false;
-    let dragStarted = false;
-
-    const handleMouseDown = (e) => {
-      const target = e.target;
-      
-      // Ignore structural elements
-      if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-        return;
-      }
-
-      // Prevent default ONLY for our drag operation
-      e.preventDefault();
-      e.stopPropagation();
-      
-      isMouseDown = true;
-      dragStarted = false;
-
-      // If clicking on already selected element, prepare to drag
-      if (target.classList.contains('editor-selected')) {
-        const iframeRect = iframeRef.current.getBoundingClientRect();
-        
-        // Get currently selected elements from DOM
-        const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
-        
-        // Convert all selected elements to absolutely positioned
-        const elementsData = currentlySelected.map(elem => {
-          prepareElementForDrag(elem, doc);
-          
-          const rect = elem.getBoundingClientRect();
-          
-          return {
-            el: elem,
-            startLeft: parseFloat(elem.style.left) || 0,
-            startTop: parseFloat(elem.style.top) || 0,
-            width: rect.width,
-            height: rect.height
-          };
-        });
-        
-        dragStateRef.current = {
-          elements: elementsData,
-          startX: e.clientX,
-          startY: e.clientY,
-          moved: false,
-          iframeRect: iframeRect
-        };
-      } else {
-        // Clicking on new element - will select on mouseup
-        dragStateRef.current = {
-          clickedElement: target,
-          startX: e.clientX,
-          startY: e.clientY,
-          moved: false
-        };
-      }
-    };
-
-    const handleMouseMove = (e) => {
-      if (!isMouseDown || !dragStateRef.current) return;
-
-      const dx = e.clientX - dragStateRef.current.startX;
-      const dy = e.clientY - dragStateRef.current.startY;
-      
-      // Only start drag if moved more than 5px
-      if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-        dragStarted = true;
-        dragStateRef.current.moved = true;
-        
-        // Add dragging class
-        if (dragStateRef.current.elements) {
-          dragStateRef.current.elements.forEach(data => {
-            data.el.classList.add('editor-dragging');
-          });
+    return () => {
+      // Cleanup on unmount
+      if (eventHandlersRef.current) {
+        const { doc, handlers } = eventHandlersRef.current;
+        try {
+          doc.removeEventListener('mousedown', handlers.mousedown);
+          doc.removeEventListener('mousemove', handlers.mousemove);
+          doc.removeEventListener('mouseup', handlers.mouseup);
+          doc.removeEventListener('mouseover', handlers.mouseover);
+          doc.removeEventListener('mouseout', handlers.mouseout);
+          doc.removeEventListener('dblclick', handlers.dblclick);
+        } catch (err) {
+          // Ignore cleanup errors
         }
       }
-      
-      // Perform drag with snapping
-      if (dragStarted && dragStateRef.current.elements) {
-        const firstElement = dragStateRef.current.elements[0];
-        
-        // Calculate new position
-        let newLeft = firstElement.startLeft + dx;
-        let newTop = firstElement.startTop + dy;
-        
-        // Calculate element bounds for snapping
-        const elemCenterX = newLeft + firstElement.width / 2;
-        const elemCenterY = newTop + firstElement.height / 2;
-        const elemRight = newLeft + firstElement.width;
-        const elemBottom = newTop + firstElement.height;
-        
-        // Get all other elements for snap guides
-        const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
-          !dragStateRef.current.elements.some(data => data.el === el) &&
-          !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
-          el.offsetParent !== null &&
-          el.getBoundingClientRect().width > 10 &&
-          el.getBoundingClientRect().height > 10
-        );
-        
-        const snapThreshold = 8; // pixels
-        const detectedGuides = { vertical: [], horizontal: [] };
-        
-        // Page center guides
-        const iframeRect = dragStateRef.current.iframeRect;
-        const pageWidth = doc.body.scrollWidth;
-        const pageHeight = doc.body.scrollHeight;
-        const pageCenterX = pageWidth / 2;
-        const pageCenterY = pageHeight / 2;
-        
-        // SNAP TO PAGE CENTER
-        if (Math.abs(elemCenterX - pageCenterX) < snapThreshold) {
-          newLeft = pageCenterX - firstElement.width / 2;
-          detectedGuides.vertical.push({ 
-            x: pageCenterX, 
-            type: 'center',
-            label: 'Page Center'
-          });
-        }
-        
-        if (Math.abs(elemCenterY - pageCenterY) < snapThreshold) {
-          newTop = pageCenterY - firstElement.height / 2;
-          detectedGuides.horizontal.push({ 
-            y: pageCenterY, 
-            type: 'center',
-            label: 'Page Center'
-          });
-        }
-        
-        // SNAP TO OTHER ELEMENTS
-        allElements.forEach(other => {
-          const otherRect = other.getBoundingClientRect();
-          const otherLeft = otherRect.left - iframeRect.left;
-          const otherTop = otherRect.top - iframeRect.top;
-          const otherRight = otherLeft + otherRect.width;
-          const otherBottom = otherTop + otherRect.height;
-          const otherCenterX = otherLeft + otherRect.width / 2;
-          const otherCenterY = otherTop + otherRect.height / 2;
-          
-          // Vertical snapping (left-to-right)
-          
-          // Center to center
-          if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
-            newLeft = otherCenterX - firstElement.width / 2;
-            detectedGuides.vertical.push({ 
-              x: otherCenterX, 
-              type: 'center',
-              label: 'Center'
-            });
-          }
-          
-          // Left to left
-          if (Math.abs(newLeft - otherLeft) < snapThreshold) {
-            newLeft = otherLeft;
-            detectedGuides.vertical.push({ 
-              x: otherLeft, 
-              type: 'edge',
-              label: 'Left Edge'
-            });
-          }
-          
-          // Left to right
-          if (Math.abs(newLeft - otherRight) < snapThreshold) {
-            newLeft = otherRight;
-            detectedGuides.vertical.push({ 
-              x: otherRight, 
-              type: 'edge',
-              label: 'Right Edge'
-            });
-          }
-          
-          // Right to left
-          if (Math.abs(elemRight - otherLeft) < snapThreshold) {
-            newLeft = otherLeft - firstElement.width;
-            detectedGuides.vertical.push({ 
-              x: otherLeft, 
-              type: 'edge',
-              label: 'Left Edge'
-            });
-          }
-          
-          // Right to right
-          if (Math.abs(elemRight - otherRight) < snapThreshold) {
-            newLeft = otherRight - firstElement.width;
-            detectedGuides.vertical.push({ 
-              x: otherRight, 
-              type: 'edge',
-              label: 'Right Edge'
-            });
-          }
-          
-          // Horizontal snapping (top-to-bottom)
-          
-          // Center to center
-          if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
-            newTop = otherCenterY - firstElement.height / 2;
-            detectedGuides.horizontal.push({ 
-              y: otherCenterY, 
-              type: 'center',
-              label: 'Center'
-            });
-          }
-          
-          // Top to top
-          if (Math.abs(newTop - otherTop) < snapThreshold) {
-            newTop = otherTop;
-            detectedGuides.horizontal.push({ 
-              y: otherTop, 
-              type: 'edge',
-              label: 'Top Edge'
-            });
-          }
-          
-          // Top to bottom
-          if (Math.abs(newTop - otherBottom) < snapThreshold) {
-            newTop = otherBottom;
-            detectedGuides.horizontal.push({ 
-              y: otherBottom, 
-              type: 'edge',
-              label: 'Bottom Edge'
-            });
-          }
-          
-          // Bottom to top
-          if (Math.abs(elemBottom - otherTop) < snapThreshold) {
-            newTop = otherTop - firstElement.height;
-            detectedGuides.horizontal.push({ 
-              y: otherTop, 
-              type: 'edge',
-              label: 'Top Edge'
-            });
-          }
-          
-          // Bottom to bottom
-          if (Math.abs(elemBottom - otherBottom) < snapThreshold) {
-            newTop = otherBottom - firstElement.height;
-            detectedGuides.horizontal.push({ 
-              y: otherBottom, 
-              type: 'edge',
-              label: 'Bottom Edge'
-            });
-          }
-        });
-        
-        // Remove duplicate guides
-        const uniqueVertical = [];
-        const seenX = new Set();
-        detectedGuides.vertical.forEach(guide => {
-          if (!seenX.has(guide.x)) {
-            seenX.add(guide.x);
-            uniqueVertical.push(guide);
-          }
-        });
-        
-        const uniqueHorizontal = [];
-        const seenY = new Set();
-        detectedGuides.horizontal.forEach(guide => {
-          if (!seenY.has(guide.y)) {
-            seenY.add(guide.y);
-            uniqueHorizontal.push(guide);
-          }
-        });
-        
-        setGuides({ 
-          vertical: uniqueVertical.slice(0, 3), // Limit to 3 guides
-          horizontal: uniqueHorizontal.slice(0, 3) 
-        });
-        
-        // Apply position to all selected elements
-        const deltaX = newLeft - firstElement.startLeft;
-        const deltaY = newTop - firstElement.startTop;
-        
-        dragStateRef.current.elements.forEach(data => {
-          data.el.style.left = (data.startLeft + deltaX) + 'px';
-          data.el.style.top = (data.startTop + deltaY) + 'px';
-        });
-      }
     };
-
-    const handleMouseUp = (e) => {
-      if (!isMouseDown) return;
-      
-      isMouseDown = false;
-      
-      // If we were dragging, save and cleanup
-      if (dragStarted && dragStateRef.current?.elements) {
-        dragStateRef.current.elements.forEach(data => {
-          data.el.classList.remove('editor-dragging');
-        });
-        
-        setGuides({ vertical: [], horizontal: [] });
-        saveChanges();
-        dragStateRef.current = null;
-        return;
-      }
-      
-      // If we didn't drag, handle selection
-      if (dragStateRef.current && !dragStateRef.current.moved) {
-        const target = dragStateRef.current.clickedElement || e.target;
-        
-        if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-          clearSelection(doc);
-          dragStateRef.current = null;
-          return;
-        }
-        
-        // Multi-select with shift
-        if (e.shiftKey) {
-          if (target.classList.contains('editor-selected')) {
-            target.classList.remove('editor-selected');
-            setSelectedElements(prev => prev.filter(el => el !== target));
-          } else {
-            target.classList.add('editor-selected');
-            setSelectedElements(prev => [...prev, target]);
-          }
-        } else {
-          // Single select
-          clearSelection(doc);
-          target.classList.add('editor-selected');
-          setSelectedElements([target]);
-          loadProps(target);
-        }
-      }
-      
-      dragStateRef.current = null;
-    };
-
-    const handleMouseOver = (e) => {
-      if (isMouseDown || dragStarted) return;
-      
-      const target = e.target;
-      if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-        target.classList.add('editor-hover');
-      }
-    };
-
-    const handleMouseOut = (e) => {
-      e.target.classList.remove('editor-hover');
-    };
-
-    const handleDoubleClick = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      const target = e.target;
-      
-      if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(target.tagName)) {
-        target.contentEditable = 'true';
-        target.focus();
-        
-        const range = doc.createRange();
-        range.selectNodeContents(target);
-        const sel = doc.getSelection();
-        sel.removeAllRanges();
-        sel.addRange(range);
-        
-        target.addEventListener('blur', function handleBlur() {
-          target.contentEditable = 'false';
-          target.removeEventListener('blur', handleBlur);
-          saveChanges();
-        }, { once: true });
-      }
-    };
-
-    // Attach event listeners
-    doc.addEventListener('mousedown', handleMouseDown);
-    doc.addEventListener('mousemove', handleMouseMove);
-    doc.addEventListener('mouseup', handleMouseUp);
-    doc.addEventListener('mouseover', handleMouseOver);
-    doc.addEventListener('mouseout', handleMouseOut);
-    doc.addEventListener('dblclick', handleDoubleClick);
-  };
+  }, [htmlContent]);
 
   const prepareElementForDrag = (elem, doc) => {
-    // If element is not positioned, convert it
     const computed = window.getComputedStyle(elem);
     
     if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
       const rect = elem.getBoundingClientRect();
       const parentRect = elem.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
       
-      // Store original dimensions
       const width = rect.width;
       const height = rect.height;
       
-      // Convert to absolute positioning
       elem.style.position = 'absolute';
       elem.style.left = (rect.left - parentRect.left) + 'px';
       elem.style.top = (rect.top - parentRect.top) + 'px';
@@ -497,13 +466,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     }
   };
 
-  const clearSelection = (doc) => {
-    doc.querySelectorAll('.editor-selected').forEach(el => {
-      el.classList.remove('editor-selected');
-    });
-    setSelectedElements([]);
-  };
-
   const saveChanges = () => {
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     
@@ -511,7 +473,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       if (iframeRef.current?.contentDocument) {
         const html = iframeRef.current.contentDocument.documentElement.outerHTML;
         
-        // Clean up editor classes
         const cleanedHTML = html
           .replace(/\s*class="([^"]*)"/g, (match, classes) => {
             const cleaned = classes
@@ -565,7 +526,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const clone = el.cloneNode(true);
       clone.classList.remove('editor-selected', 'editor-hover', 'editor-dragging');
       
-      // Offset the duplicate
       if (clone.style.position === 'absolute') {
         clone.style.left = (parseFloat(clone.style.left || 0) + 20) + 'px';
         clone.style.top = (parseFloat(clone.style.top || 0) + 20) + 'px';
