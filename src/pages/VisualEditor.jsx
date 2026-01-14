@@ -12,7 +12,7 @@ import {
   Italic
 } from 'lucide-react';
 
-export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
+export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const iframeRef = useRef(null);
@@ -475,47 +475,51 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           const snapThreshold = 10; // Slightly larger threshold for easier snapping
           const detectedGuides = { vertical: [], horizontal: [] };
           
-          // Calculate the center of the VIEWPORT (visible page area)
-          const iframeRect = dragStateRef.current.iframeRect;
-          const viewportCenterX = iframeRect.width / 2;
-          const viewportCenterY = iframeRect.height / 2;
+          // Calculate the center of the DOCUMENT BODY (not iframe viewport which changes with sidebar)
+          const doc = iframeRef.current.contentDocument;
+          const body = doc.body;
+          const bodyRect = body.getBoundingClientRect();
+          
+          // Use body width for consistent centering regardless of sidebar
+          const bodyCenterX = bodyRect.width / 2;
+          const bodyCenterY = bodyRect.height / 2;
           
           // CRITICAL: Elements are positioned relative to their offsetParent, not viewport
-          // Get the offsetParent's position to convert element coords to viewport coords
+          // Get the offsetParent's position to convert element coords to body coords
           const draggingElement = firstElement.el;
-          const offsetParent = draggingElement.offsetParent || doc.body;
+          const offsetParent = draggingElement.offsetParent || body;
           const parentRect = offsetParent.getBoundingClientRect();
-          const parentOffsetX = parentRect.left;
-          const parentOffsetY = parentRect.top;
+          const parentOffsetX = parentRect.left - bodyRect.left;
+          const parentOffsetY = parentRect.top - bodyRect.top;
           
-          // Convert element center to viewport coordinates
-          const elemViewportCenterX = newLeft + parentOffsetX + firstElement.width / 2;
-          const elemViewportCenterY = newTop + parentOffsetY + firstElement.height / 2;
+          // Convert element center to body coordinates
+          const elemBodyCenterX = newLeft + parentOffsetX + firstElement.width / 2;
+          const elemBodyCenterY = newTop + parentOffsetY + firstElement.height / 2;
           
           if (Math.random() < 0.1) {
             console.log('📐 Snap calculations:');
-            console.log('  - elemViewportCenterX:', elemViewportCenterX, 'viewportCenterX:', viewportCenterX);
-            console.log('  - parentOffsetX:', parentOffsetX, 'newLeft:', newLeft);
-            console.log('  - Difference:', Math.abs(elemViewportCenterX - viewportCenterX));
+            console.log('  - elemBodyCenterX:', elemBodyCenterX, 'bodyCenterX:', bodyCenterX);
+            console.log('  - bodyWidth:', bodyRect.width, 'parentOffsetX:', parentOffsetX);
+            console.log('  - Difference:', Math.abs(elemBodyCenterX - bodyCenterX));
           }
           
-          // SNAP TO PAGE CENTER (Horizontal)
-          if (Math.abs(elemViewportCenterX - viewportCenterX) < snapThreshold) {
-            // Convert viewport center back to parent-relative coordinates
-            newLeft = viewportCenterX - parentOffsetX - firstElement.width / 2;
+          // SNAP TO BODY CENTER (Horizontal) - consistent regardless of sidebar
+          if (Math.abs(elemBodyCenterX - bodyCenterX) < snapThreshold) {
+            // Convert body center back to parent-relative coordinates
+            newLeft = bodyCenterX - parentOffsetX - firstElement.width / 2;
             detectedGuides.vertical.push({ 
-              x: viewportCenterX, 
+              x: bodyCenterX + bodyRect.left, // Convert to viewport coords for rendering
               type: 'center', 
               label: 'Page Center' 
             });
           }
           
-          // SNAP TO PAGE CENTER (Vertical)
-          if (Math.abs(elemViewportCenterY - viewportCenterY) < snapThreshold) {
-            // Convert viewport center back to parent-relative coordinates
-            newTop = viewportCenterY - parentOffsetY - firstElement.height / 2;
+          // SNAP TO BODY CENTER (Vertical)
+          if (Math.abs(elemBodyCenterY - bodyCenterY) < snapThreshold) {
+            // Convert body center back to parent-relative coordinates
+            newTop = bodyCenterY - parentOffsetY - firstElement.height / 2;
             detectedGuides.horizontal.push({ 
-              y: viewportCenterY, 
+              y: bodyCenterY + bodyRect.top, // Convert to viewport coords for rendering
               type: 'center', 
               label: 'Page Center' 
             });
@@ -1060,12 +1064,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
         {/* Undo/Redo Buttons */}
         <button
-  onClick={onUndo}
-  disabled={!canUndo}
-  className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
-    canUndo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-  }`}
-  title="Undo"
+          onClick={() => {
+            const doc = iframeRef.current?.contentDocument;
+            if (doc) {
+              // Implement undo via browser history if needed
+              console.log('Undo clicked');
+            }
+          }}
+          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
+          title="Undo"
         >
           <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
