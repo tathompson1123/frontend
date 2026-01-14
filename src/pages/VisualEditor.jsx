@@ -92,18 +92,24 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         }
       `;
 
-      // Disable all links and buttons
-      const preventClick = (e) => {
-        if (e.target.tagName === 'A' || e.target.closest('a')) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
-        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-          e.preventDefault();
-          e.stopPropagation();
-        }
+      // Disable all links, buttons, and form submissions
+      const preventDefaultActions = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
       };
-      doc.addEventListener('click', preventClick, true);
+      
+      doc.addEventListener('click', preventDefaultActions, true);
+      doc.addEventListener('submit', preventDefaultActions, true);
+      
+      // Also prevent navigation on links
+      doc.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', preventDefaultActions, true);
+      });
+      
+      doc.querySelectorAll('button').forEach(button => {
+        button.addEventListener('click', preventDefaultActions, true);
+      });
 
       // Setup event handlers
       let isMouseDown = false;
@@ -112,11 +118,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const handleMouseDown = (e) => {
         const target = e.target;
         
+        console.log('MouseDown on:', target.tagName, target.className);
+        
         // Ignore structural elements
         if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          console.log('Ignoring structural element');
           return;
         }
 
+        // ALWAYS prevent default for all clicks in editor mode
         e.preventDefault();
         e.stopPropagation();
         
@@ -125,6 +135,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
         // If clicking on already selected element, prepare to drag
         if (target.classList.contains('editor-selected')) {
+          console.log('Clicking on selected element - preparing drag');
           const iframeRect = iframe.getBoundingClientRect();
           const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
           
@@ -150,6 +161,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           };
         } else {
           // Clicking on new element
+          console.log('Clicking on new element - will select');
           dragStateRef.current = {
             clickedElement: target,
             startX: e.clientX,
@@ -307,12 +319,18 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       };
 
       const handleMouseUp = (e) => {
-        if (!isMouseDown) return;
+        if (!isMouseDown) {
+          console.log('MouseUp but isMouseDown is false');
+          return;
+        }
+        
+        console.log('MouseUp - dragStarted:', dragStarted, 'moved:', dragStateRef.current?.moved);
         
         isMouseDown = false;
         
         // If we were dragging, save and cleanup
         if (dragStarted && dragStateRef.current?.elements) {
+          console.log('Finishing drag');
           dragStateRef.current.elements.forEach(data => {
             data.el.classList.remove('editor-dragging');
           });
@@ -327,7 +345,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         if (dragStateRef.current && !dragStateRef.current.moved) {
           const target = dragStateRef.current.clickedElement || e.target;
           
+          console.log('Selecting element:', target.tagName);
+          
           if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+            console.log('Clearing selection - clicked on structural element');
             // Clear selection
             doc.querySelectorAll('.editor-selected').forEach(el => {
               el.classList.remove('editor-selected');
@@ -339,6 +360,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           
           // Multi-select with shift
           if (e.shiftKey) {
+            console.log('Multi-select with shift');
             if (target.classList.contains('editor-selected')) {
               target.classList.remove('editor-selected');
               const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
@@ -350,10 +372,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             }
           } else {
             // Single select
+            console.log('Single select');
             doc.querySelectorAll('.editor-selected').forEach(el => {
               el.classList.remove('editor-selected');
             });
             target.classList.add('editor-selected');
+            console.log('Added editor-selected class to:', target.tagName);
             setSelectedElements([target]);
             loadProps(target);
           }
