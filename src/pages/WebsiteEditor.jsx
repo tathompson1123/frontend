@@ -1,582 +1,995 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { 
-  ArrowLeft, 
-  Sparkles, 
-  Save,
-  Send,
-  Loader2,
-  Monitor,
-  Smartphone,
-  X,
-  Undo2,
-  Redo2
+  Move, 
+  Type, 
+  Palette, 
+  Trash2,
+  Copy,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Bold,
+  Italic
 } from 'lucide-react';
-import VisualEditor from './VisualEditor';
 
-export default function WebsiteEditor() {
-  const navigate = useNavigate();
-  const [allPages, setAllPages] = useState({});
-  const [currentPage, setCurrentPage] = useState('index.html');
-  const [isSaving, setIsSaving] = useState(false);
-  const [devicePreview, setDevicePreview] = useState('desktop');
-  const [isAIChatOpen, setIsAIChatOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  
-  // AI Chat state
-  const [messages, setMessages] = useState([]);
-  const [inputMessage, setInputMessage] = useState('');
-  const [isAIThinking, setIsAIThinking] = useState(false);
-  
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
+  const [selectedElements, setSelectedElements] = useState([]);
+  const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
+  const iframeRef = useRef(null);
+  const dragStateRef = useRef(null);
+  const updateTimeoutRef = useRef(null);
+  const eventHandlersRef = useRef(null);
+  const isMouseDownRef = useRef(false); // Use ref instead of local variable
+  const dragStartedRef = useRef(false); // Use ref instead of local variable
+
+  const [elementProps, setElementProps] = useState({
+    width: '',
+    height: '',
+    fontSize: '',
+    color: '',
+    backgroundColor: '',
+    fontWeight: '',
+    textAlign: '',
+    padding: '',
+    margin: ''
+  });
+
+  // Clear selection when page changes
+  useEffect(() => {
+    setSelectedElements([]);
+    setGuides({ vertical: [], horizontal: [] });
+    dragStateRef.current = null;
+  }, [currentPage]);
 
   useEffect(() => {
-    const handleKeyboard = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        handleUndo();
+    const iframe = iframeRef.current;
+    if (!iframe) {
+      console.log('❌ No iframe ref');
+      return;
+    }
+
+    console.log('🔄 Setting up editor for page:', currentPage);
+
+    const initEditor = () => {
+      const doc = iframe.contentDocument;
+      if (!doc) {
+        console.log('❌ No contentDocument');
+        return;
       }
       
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
-        handleRedo();
+      if (!doc.body) {
+        console.log('❌ No body yet, waiting...');
+        setTimeout(initEditor, 100);
+        return;
       }
+      
+      // CRITICAL: Wait for actual content, not just empty body
+      if (!doc.body.children || doc.body.children.length === 0) {
+        console.log('⏳ Body is empty, waiting for content...');
+        setTimeout(initEditor, 100);
+        return;
+      }
+
+      console.log('✅ Initializing editor on body with', doc.body.children.length, 'children');
+
+      // Remove old event listeners if they exist
+      if (eventHandlersRef.current) {
+        console.log('🧹 Cleaning up old handlers');
+        const { doc: oldDoc, handlers } = eventHandlersRef.current;
+        try {
+          oldDoc.removeEventListener('mousedown', handlers.mousedown);
+          oldDoc.removeEventListener('mousemove', handlers.mousemove);
+          oldDoc.removeEventListener('mouseup', handlers.mouseup);
+          oldDoc.removeEventListener('mouseover', handlers.mouseover);
+          oldDoc.removeEventListener('mouseout', handlers.mouseout);
+          oldDoc.removeEventListener('dblclick', handlers.dblclick);
+        } catch (e) {
+          console.log('Cleanup error (ok):', e.message);
+        }
+      }
+
+      // Inject styles
+      let style = doc.getElementById('editor-styles');
+      if (!style) {
+        style = doc.createElement('style');
+        style.id = 'editor-styles';
+        doc.head.appendChild(style);
+      }
+      
+      style.textContent = `
+        * { 
+          box-sizing: border-box;
+        }
+        body { 
+          position: relative !important;
+          min-height: 100vh;
+        }
+        .editor-selected { 
+          outline: 3px solid #8b5cf6 !important; 
+          outline-offset: 2px !important;
+          cursor: grab !important;
+        }
+        .editor-selected:active {
+          cursor: grabbing !important;
+        }
+        .editor-hover { 
+          outline: 2px dashed #3b82f6 !important; 
+          outline-offset: 2px !important;
+        }
+        .editor-dragging {
+          opacity: 0.8 !important;
+          cursor: grabbing !important;
+        }
+      `;
+
+      // Disable all links, buttons, and form submissions
+      const preventDefaultActions = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        return false;
+      };
+      
+      doc.addEventListener('click', preventDefaultActions, true);
+      doc.addEventListener('submit', preventDefaultActions, true);
+      
+      // Also prevent navigation on links
+      doc.querySelectorAll('a').forEach(link => {
+        link.addEventListener('click', preventDefaultActions, true);
+      });
+      
+      doc.querySelectorAll('button').forEach(button => {
+        button.addEventListener('click', preventDefaultActions, true);
+      });
+
+      // Setup event handlers
+      const handleMouseDown = (e) => {
+        const target = e.target;
+        
+        console.log('═══════════════════════════════════════');
+        console.log('🟢 MOUSEDOWN EVENT');
+        console.log('Target:', target.tagName, target.className);
+        console.log('State BEFORE:');
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
+        console.log('  - dragStateRef.current:', dragStateRef.current);
+        console.log('  - Has editor-selected class:', target.classList.contains('editor-selected'));
+        console.log('  - Currently selected elements:', doc.querySelectorAll('.editor-selected').length);
+        console.log('  - Event handlers attached:', !!eventHandlersRef.current);
+        
+        // Ignore structural elements
+        if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          console.log('❌ IGNORING - Structural element');
+          console.log('═══════════════════════════════════════');
+          return;
+        }
+
+        // ALWAYS prevent default for all clicks in editor mode
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('⚙️ Setting state variables...');
+        isMouseDownRef.current = true;
+        dragStartedRef.current = false;
+        
+        console.log('State AFTER setting refs:');
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
+        console.log('  - Refs are working:', isMouseDownRef.current === true);
+
+        // If clicking on already selected element, prepare to drag
+        if (target.classList.contains('editor-selected')) {
+          console.log('✅ PREPARING TO DRAG (element already selected)');
+          const iframeRect = iframe.getBoundingClientRect();
+          const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
+          console.log('  - Found', currentlySelected.length, 'selected elements');
+          console.log('  - iframeRect:', iframeRect);
+          
+          const elementsData = currentlySelected.map(elem => {
+            prepareElementForDrag(elem, doc);
+            const rect = elem.getBoundingClientRect();
+            
+            return {
+              el: elem,
+              startLeft: parseFloat(elem.style.left) || 0,
+              startTop: parseFloat(elem.style.top) || 0,
+              width: rect.width,
+              height: rect.height
+            };
+          });
+          
+          dragStateRef.current = {
+            elements: elementsData,
+            startX: e.clientX,
+            startY: e.clientY,
+            moved: false,
+            iframeRect: iframeRect
+          };
+          
+          console.log('  - Created dragStateRef with', elementsData.length, 'elements');
+          console.log('  - Start position:', e.clientX, e.clientY);
+          console.log('  - dragStateRef.current is set:', !!dragStateRef.current);
+        } else {
+          // Clicking on new element
+          console.log('✅ PREPARING TO SELECT (new element)');
+          dragStateRef.current = {
+            clickedElement: target,
+            startX: e.clientX,
+            startY: e.clientY,
+            moved: false
+          };
+          console.log('  - Stored clickedElement for selection on mouseup');
+        }
+        
+        console.log('Final state check:');
+        console.log('  - dragStateRef.current:', dragStateRef.current);
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
+        console.log('═══════════════════════════════════════');
+      };
+
+      const handleMouseMove = (e) => {
+        // Check if we should be moving at all
+        const shouldMove = isMouseDownRef.current && dragStateRef.current;
+        
+        if (!shouldMove) {
+          // Only log occasionally to avoid spam
+          if (isMouseDownRef.current && !dragStateRef.current) {
+            console.log('⚠️ MOUSEMOVE - isMouseDown true but no dragStateRef!');
+            console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+            console.log('  - dragStateRef.current:', dragStateRef.current);
+            console.log('  - This should never happen!');
+          }
+          return;
+        }
+
+        const dx = e.clientX - dragStateRef.current.startX;
+        const dy = e.clientY - dragStateRef.current.startY;
+        
+        // Only start drag if moved more than 5px
+        if (!dragStartedRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+          console.log('───────────────────────────────────────');
+          console.log('🔄 STARTING DRAG (moved >5px)');
+          console.log('  - dx:', dx, 'dy:', dy);
+          console.log('  - dragStateRef.current.elements:', dragStateRef.current.elements?.length);
+          console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+          console.log('  - dragStartedRef.current (before):', dragStartedRef.current);
+          
+          dragStartedRef.current = true;
+          dragStateRef.current.moved = true;
+          
+          console.log('  - dragStartedRef.current (after):', dragStartedRef.current);
+          console.log('  - dragStateRef.current.moved:', dragStateRef.current.moved);
+          
+          if (dragStateRef.current.elements) {
+            dragStateRef.current.elements.forEach(data => {
+              data.el.classList.add('editor-dragging');
+            });
+            console.log('  - Added editor-dragging class to', dragStateRef.current.elements.length, 'elements');
+          } else {
+            console.log('  - ⚠️ NO ELEMENTS TO DRAG!');
+          }
+          console.log('───────────────────────────────────────');
+        }
+        
+        // Perform drag with snapping (only log when actually dragging)
+        if (dragStartedRef.current && dragStateRef.current.elements) {
+          const firstElement = dragStateRef.current.elements[0];
+          
+          let newLeft = firstElement.startLeft + dx;
+          let newTop = firstElement.startTop + dy;
+          
+          const elemCenterX = newLeft + firstElement.width / 2;
+          const elemCenterY = newTop + firstElement.height / 2;
+          
+          const snapThreshold = 10; // Slightly larger threshold for easier snapping
+          const detectedGuides = { vertical: [], horizontal: [] };
+          
+          const iframeRect = dragStateRef.current.iframeRect;
+          
+          // Find parent section/container
+          const draggingElement = firstElement.el;
+          let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
+          
+          if (!parentSection) {
+            parentSection = doc.body;
+          }
+          
+          // Get parent section dimensions
+          const parentRect = parentSection.getBoundingClientRect();
+          const parentLeft = parentRect.left - iframeRect.left;
+          const parentTop = parentRect.top - iframeRect.top;
+          const parentCenterX = parentLeft + parentRect.width / 2;
+          const parentCenterY = parentTop + parentRect.height / 2;
+          
+          // SNAP TO PARENT SECTION CENTER (Horizontal)
+          if (Math.abs(elemCenterX - parentCenterX) < snapThreshold) {
+            newLeft = parentCenterX - firstElement.width / 2;
+            detectedGuides.vertical.push({ 
+              x: parentCenterX, 
+              type: 'center', 
+              label: 'Section Center' 
+            });
+          }
+          
+          // SNAP TO PARENT SECTION CENTER (Vertical)
+          if (Math.abs(elemCenterY - parentCenterY) < snapThreshold) {
+            newTop = parentCenterY - firstElement.height / 2;
+            detectedGuides.horizontal.push({ 
+              y: parentCenterY, 
+              type: 'center', 
+              label: 'Section Center' 
+            });
+          }
+          
+          // SNAP TO OTHER ELEMENTS (Center to Center only)
+          const siblingElements = Array.from(parentSection.querySelectorAll('*')).filter(el => 
+            !dragStateRef.current.elements.some(data => data.el === el) &&
+            !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE'].includes(el.tagName) &&
+            el.offsetParent !== null &&
+            el.getBoundingClientRect().width > 20 &&
+            el.getBoundingClientRect().height > 20 &&
+            parentSection.contains(el)
+          );
+          
+          siblingElements.forEach(other => {
+            const otherRect = other.getBoundingClientRect();
+            const otherCenterX = (otherRect.left - iframeRect.left) + otherRect.width / 2;
+            const otherCenterY = (otherRect.top - iframeRect.top) + otherRect.height / 2;
+            
+            // Snap center to center (horizontal)
+            if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
+              newLeft = otherCenterX - firstElement.width / 2;
+              if (!detectedGuides.vertical.some(g => g.x === otherCenterX)) {
+                detectedGuides.vertical.push({ 
+                  x: otherCenterX, 
+                  type: 'center', 
+                  label: 'Element Center' 
+                });
+              }
+            }
+            
+            // Snap center to center (vertical)
+            if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
+              newTop = otherCenterY - firstElement.height / 2;
+              if (!detectedGuides.horizontal.some(g => g.y === otherCenterY)) {
+                detectedGuides.horizontal.push({ 
+                  y: otherCenterY, 
+                  type: 'center', 
+                  label: 'Element Center' 
+                });
+              }
+            }
+          });
+          
+          // Limit to 1 guide per direction for cleaner UI
+          setGuides({ 
+            vertical: detectedGuides.vertical.slice(0, 1),
+            horizontal: detectedGuides.horizontal.slice(0, 1) 
+          });
+          
+          const deltaX = newLeft - firstElement.startLeft;
+          const deltaY = newTop - firstElement.startTop;
+          
+          dragStateRef.current.elements.forEach(data => {
+            data.el.style.left = (data.startLeft + deltaX) + 'px';
+            data.el.style.top = (data.startTop + deltaY) + 'px';
+          });
+        }
+      };
+
+      const handleMouseUp = (e) => {
+        console.log('═══════════════════════════════════════');
+        console.log('🔵 MOUSEUP EVENT');
+        console.log('State at mouseup:');
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
+        console.log('  - dragStateRef.current:', dragStateRef.current);
+        console.log('  - dragStateRef.current?.moved:', dragStateRef.current?.moved);
+        console.log('  - Event handlers still attached:', !!eventHandlersRef.current);
+        
+        if (!isMouseDownRef.current) {
+          console.log('❌ ABORT - isMouseDown is false (event already handled or never started)');
+          console.log('   This might indicate handlers were removed or refs were reset');
+          console.log('═══════════════════════════════════════');
+          return;
+        }
+        
+        console.log('⚙️ Setting isMouseDownRef.current = false');
+        isMouseDownRef.current = false;
+        console.log('   Confirmed: isMouseDownRef.current =', isMouseDownRef.current);
+        
+        // If we were dragging, save and cleanup
+        if (dragStartedRef.current && dragStateRef.current?.elements) {
+          console.log('✅ FINISHING DRAG');
+          console.log('  - Removing editor-dragging class from', dragStateRef.current.elements.length, 'elements');
+          
+          dragStateRef.current.elements.forEach(data => {
+            data.el.classList.remove('editor-dragging');
+            console.log('    - Cleaned up:', data.el.tagName, 'position:', data.el.style.position);
+          });
+          
+          setGuides({ vertical: [], horizontal: [] });
+          
+          console.log('  - Calling saveChanges()...');
+          saveChanges();
+          
+          console.log('  - Resetting drag state...');
+          dragStateRef.current = null;
+          dragStartedRef.current = false;
+          
+          console.log('✅ DRAG COMPLETE - All state reset');
+          console.log('Post-drag state:');
+          console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+          console.log('  - dragStartedRef.current:', dragStartedRef.current);
+          console.log('  - dragStateRef.current:', dragStateRef.current);
+          console.log('  - Event handlers ref:', !!eventHandlersRef.current);
+          console.log('  - Doc still accessible:', !!doc);
+          console.log('═══════════════════════════════════════');
+          
+          // CRITICAL: Test if handlers are still working
+          console.log('🧪 TESTING: Click again to verify handlers are still attached');
+          return;
+        }
+        
+        // If we didn't drag, handle selection
+        if (dragStateRef.current && !dragStateRef.current.moved) {
+          console.log('✅ HANDLING SELECTION (no drag occurred)');
+          const target = dragStateRef.current.clickedElement || e.target;
+          
+          console.log('  - Target to select:', target.tagName, target.className);
+          
+          if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+            console.log('  - Clearing selection (structural element)');
+            doc.querySelectorAll('.editor-selected').forEach(el => {
+              el.classList.remove('editor-selected');
+            });
+            setSelectedElements([]);
+            dragStateRef.current = null;
+            dragStartedRef.current = false;
+            console.log('═══════════════════════════════════════');
+            return;
+          }
+          
+          // Multi-select with shift
+          if (e.shiftKey) {
+            console.log('  - MULTI-SELECT MODE (Shift held)');
+            if (target.classList.contains('editor-selected')) {
+              console.log('    - Deselecting element');
+              target.classList.remove('editor-selected');
+              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+              console.log('    - Now', newSelected.length, 'elements selected');
+              setSelectedElements(newSelected);
+            } else {
+              console.log('    - Adding to selection');
+              target.classList.add('editor-selected');
+              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+              console.log('    - Now', newSelected.length, 'elements selected');
+              setSelectedElements(newSelected);
+            }
+          } else {
+            // Single select
+            console.log('  - SINGLE SELECT MODE');
+            const previouslySelected = doc.querySelectorAll('.editor-selected');
+            console.log('    - Clearing', previouslySelected.length, 'previously selected elements');
+            
+            previouslySelected.forEach(el => {
+              el.classList.remove('editor-selected');
+              console.log('      - Removed from:', el.tagName);
+            });
+            
+            target.classList.add('editor-selected');
+            console.log('    - ✅ Added editor-selected to:', target.tagName);
+            console.log('    - Class list now:', target.className);
+            
+            setSelectedElements([target]);
+            loadProps(target);
+            console.log('    - Updated React state with 1 element');
+          }
+        } else if (!dragStateRef.current) {
+          console.log('⚠️ No dragStateRef - this shouldn\'t happen');
+        } else if (dragStateRef.current.moved) {
+          console.log('⚠️ dragStateRef.moved is true but dragStarted is false - inconsistent state');
+        }
+        
+        console.log('⚙️ Final cleanup...');
+        dragStateRef.current = null;
+        dragStartedRef.current = false;
+        
+        console.log('✅ SELECTION/MOUSEUP COMPLETE - State reset');
+        console.log('Final state check:');
+        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
+        console.log('  - dragStartedRef.current:', dragStartedRef.current);
+        console.log('  - dragStateRef.current:', dragStateRef.current);
+        console.log('  - Elements with .editor-selected:', doc.querySelectorAll('.editor-selected').length);
+        console.log('  - Event handlers still there:', !!eventHandlersRef.current);
+        console.log('═══════════════════════════════════════');
+      };
+
+      const handleMouseOver = (e) => {
+        if (isMouseDownRef.current || dragStartedRef.current) return;
+        
+        const target = e.target;
+        if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          target.classList.add('editor-hover');
+        }
+      };
+
+      const handleMouseOut = (e) => {
+        e.target.classList.remove('editor-hover');
+      };
+
+      const handleDoubleClick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const target = e.target;
+        
+        if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(target.tagName)) {
+          target.contentEditable = 'true';
+          target.focus();
+          
+          const range = doc.createRange();
+          range.selectNodeContents(target);
+          const sel = doc.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          
+          const handleBlur = () => {
+            target.contentEditable = 'false';
+            target.removeEventListener('blur', handleBlur);
+            saveChanges();
+          };
+          
+          target.addEventListener('blur', handleBlur);
+        }
+      };
+
+      // Attach event listeners
+      doc.addEventListener('mousedown', handleMouseDown);
+      doc.addEventListener('mousemove', handleMouseMove);
+      doc.addEventListener('mouseup', handleMouseUp);
+      doc.addEventListener('mouseover', handleMouseOver);
+      doc.addEventListener('mouseout', handleMouseOut);
+      doc.addEventListener('dblclick', handleDoubleClick);
+
+      console.log('✅ Event listeners attached');
+      console.log('   - mousedown:', !!handleMouseDown);
+      console.log('   - mousemove:', !!handleMouseMove);
+      console.log('   - mouseup:', !!handleMouseUp);
+
+      // Store handlers for cleanup
+      eventHandlersRef.current = {
+        doc,
+        handlers: {
+          mousedown: handleMouseDown,
+          mousemove: handleMouseMove,
+          mouseup: handleMouseUp,
+          mouseover: handleMouseOver,
+          mouseout: handleMouseOut,
+          dblclick: handleDoubleClick
+        }
+      };
+      
+      // Test that events work
+      console.log('🧪 Testing event system...');
+      doc.body.addEventListener('click', () => console.log('✅ Click event works!'), { once: true });
     };
 
-    window.addEventListener('keydown', handleKeyboard);
-    return () => window.removeEventListener('keydown', handleKeyboard);
-  }, [historyIndex, history]);
-  
-  useEffect(() => {
-    fetchWebsite();
-  }, []);
-
-  const fetchWebsite = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/website`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      const data = await response.json();
+    // Try multiple initialization strategies
+    if (iframe.contentDocument?.readyState === 'complete') {
+      console.log('📄 Document already complete');
+      initEditor();
+    } else {
+      console.log('⏳ Waiting for iframe load...');
+      iframe.onload = () => {
+        console.log('✅ Iframe loaded');
+        initEditor();
+      };
       
-      if (data.website) {
-        let pages;
-        if (data.website.pages) {
-          pages = data.website.pages;
-          setAllPages(pages);
-          setCurrentPage('index.html');
-        } else {
-          pages = { 'index.html': data.website.html_content };
-          setAllPages(pages);
-          setCurrentPage('index.html');
+      // Backup: try after a short delay
+      setTimeout(() => {
+        if (!eventHandlersRef.current) {
+          console.log('⚠️ Handlers not attached, retrying...');
+          initEditor();
         }
-        
-        setHistory([pages]);
-        setHistoryIndex(0);
-        
-        setMessages([{
-          role: 'assistant',
-          content: "Hi! I'm your AI website editor. Tell me what you'd like to change!\n\nExamples:\n• \"Change the hero text\"\n• \"Make the button blue\"\n• \"Add a services section\""
-        }]);
-      }
-    } catch (error) {
-      console.error('Error fetching website:', error);
+      }, 500);
     }
-  };
 
-  const handleSendMessage = async () => {
-    if (!inputMessage.trim() || isAIThinking) return;
+    return () => {
+      // Cleanup on unmount
+      if (eventHandlersRef.current) {
+        const { doc, handlers } = eventHandlersRef.current;
+        try {
+          doc.removeEventListener('mousedown', handlers.mousedown);
+          doc.removeEventListener('mousemove', handlers.mousemove);
+          doc.removeEventListener('mouseup', handlers.mouseup);
+          doc.removeEventListener('mouseover', handlers.mouseover);
+          doc.removeEventListener('mouseout', handlers.mouseout);
+          doc.removeEventListener('dblclick', handlers.dblclick);
+        } catch (err) {
+          // Ignore cleanup errors
+        }
+      }
+    };
+  }, [currentPage]); // ONLY depend on currentPage, NOT htmlContent!
 
-    const userMessage = inputMessage.trim();
-    setInputMessage('');
+  const prepareElementForDrag = (elem, doc) => {
+    const computed = window.getComputedStyle(elem);
     
-    setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-    setIsAIThinking(true);
-
-    try {
-      const token = localStorage.getItem('token');
+    if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
+      const rect = elem.getBoundingClientRect();
+      const parentRect = elem.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
       
-      const response = await fetch(`${apiUrl}/api/website/ai-edit`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          currentHTML: allPages[currentPage],
-          userRequest: userMessage
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        setAllPages(prev => ({
-          ...prev,
-          [currentPage]: data.updatedHTML
-        }));
+      const width = rect.width;
+      const height = rect.height;
+      
+      // Create a placeholder to maintain layout
+      if (!elem.dataset.hasPlaceholder) {
+        const placeholder = doc.createElement('div');
+        placeholder.className = 'drag-placeholder';
+        placeholder.style.width = width + 'px';
+        placeholder.style.height = height + 'px';
+        placeholder.style.margin = computed.margin;
+        placeholder.style.padding = '0';
+        placeholder.style.border = 'none';
+        placeholder.style.visibility = 'hidden';
+        placeholder.style.pointerEvents = 'none';
+        placeholder.style.display = computed.display;
         
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: data.message || "I've made the changes! Check the preview."
-        }]);
-      } else {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          content: "Sorry, I couldn't make that change. Try rephrasing?"
-        }]);
+        // Insert placeholder before the element
+        elem.parentNode.insertBefore(placeholder, elem);
+        elem.dataset.hasPlaceholder = 'true';
+        elem.dataset.placeholderId = 'placeholder-' + Date.now() + '-' + Math.random();
+        placeholder.dataset.placeholderId = elem.dataset.placeholderId;
       }
-    } catch (error) {
-      console.error('AI edit error:', error);
-      setMessages(prev => [...prev, {
-        role: 'assistant',
-        content: "Oops! Something went wrong. Please try again."
-      }]);
-    } finally {
-      setIsAIThinking(false);
-    }
-  };
-
-const handleVisualUpdate = (updatedHTML) => {
-  console.log('=== HANDLE VISUAL UPDATE ===');
-  console.log('Current allPages:', allPages);
-  console.log('Current page:', currentPage);
-  console.log('Updated HTML length:', updatedHTML?.length);
-  
-  const newPages = {
-    ...allPages,
-    [currentPage]: updatedHTML
-  };
-  
-  console.log('New pages object:', newPages);
-  console.log('New pages keys:', Object.keys(newPages));
-  
-  setAllPages(newPages);
-  
-  const newHistory = history.slice(0, historyIndex + 1);
-  newHistory.push(newPages);
-  setHistory(newHistory);
-  setHistoryIndex(newHistory.length - 1);
-  
-  console.log('=== UPDATE COMPLETE ===');
-};
-  
-  const handleUndo = () => {
-    if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setAllPages(history[historyIndex - 1]);
-    }
-  };
-
-  const handleRedo = () => {
-    if (historyIndex < history.length - 1) {
-      setHistoryIndex(historyIndex + 1);
-      setAllPages(history[historyIndex + 1]);
-    }
-  };
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`${apiUrl}/api/website`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          htmlContent: allPages['index.html'],
-          pages: allPages
-        })
-      });
       
-      navigate('/dashboard?tab=website');
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('Failed to save website');
-      setIsSaving(false);
+      // Convert to absolute positioning
+      elem.style.position = 'absolute';
+      elem.style.left = (rect.left - parentRect.left) + 'px';
+      elem.style.top = (rect.top - parentRect.top) + 'px';
+      elem.style.width = width + 'px';
+      elem.style.height = height + 'px';
+      elem.style.margin = '0';
+      elem.style.zIndex = '1000';
     }
   };
 
-  const getPageDisplayName = (filename) => {
-    return filename
-      .replace('.html', '')
-      .replace('-', ' ')
-      .split(' ')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+  const saveChanges = () => {
+    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    
+    updateTimeoutRef.current = setTimeout(() => {
+      if (iframeRef.current?.contentDocument) {
+        const doc = iframeRef.current.contentDocument;
+        
+        // Remove all placeholder elements before saving
+        doc.querySelectorAll('.drag-placeholder').forEach(placeholder => {
+          placeholder.remove();
+        });
+        
+        // Remove placeholder data attributes
+        doc.querySelectorAll('[data-has-placeholder]').forEach(el => {
+          delete el.dataset.hasPlaceholder;
+          delete el.dataset.placeholderId;
+        });
+        
+        const html = doc.documentElement.outerHTML;
+        
+        const cleanedHTML = html
+          .replace(/\s*class="([^"]*)"/g, (match, classes) => {
+            const cleaned = classes
+              .replace(/\s*editor-selected\s*/g, ' ')
+              .replace(/\s*editor-hover\s*/g, ' ')
+              .replace(/\s*editor-dragging\s*/g, ' ')
+              .replace(/\s*drag-placeholder\s*/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            return cleaned ? ` class="${cleaned}"` : '';
+          })
+          .replace(/\s+class=""\s*/g, ' ')
+          .replace(/\s+data-has-placeholder="[^"]*"/g, '')
+          .replace(/\s+data-placeholder-id="[^"]*"/g, '');
+        
+        onUpdate(cleanedHTML);
+      }
+    }, 300);
+  };
+
+  const loadProps = (el) => {
+    const s = window.getComputedStyle(el);
+    setElementProps({
+      width: el.style.width || s.width,
+      height: el.style.height || s.height,
+      fontSize: s.fontSize,
+      color: rgbToHex(s.color),
+      backgroundColor: rgbToHex(s.backgroundColor),
+      fontWeight: s.fontWeight,
+      textAlign: s.textAlign,
+      padding: s.padding,
+      margin: s.margin
+    });
+  };
+
+  const updateProp = (prop, val) => {
+    selectedElements.forEach(el => el.style[prop] = val);
+    setElementProps(p => ({ ...p, [prop]: val }));
+    saveChanges();
+  };
+
+  const deleteEl = () => {
+    if (!confirm('Delete selected element(s)?')) return;
+    selectedElements.forEach(el => el.remove());
+    setSelectedElements([]);
+    saveChanges();
+  };
+
+  const duplicate = () => {
+    const doc = iframeRef.current?.contentDocument;
+    if (!doc) return;
+    
+    selectedElements.forEach(el => {
+      const clone = el.cloneNode(true);
+      clone.classList.remove('editor-selected', 'editor-hover', 'editor-dragging');
+      
+      if (clone.style.position === 'absolute') {
+        clone.style.left = (parseFloat(clone.style.left || 0) + 20) + 'px';
+        clone.style.top = (parseFloat(clone.style.top || 0) + 20) + 'px';
+      }
+      
+      el.parentNode.insertBefore(clone, el.nextSibling);
+    });
+    saveChanges();
+  };
+
+  const rgbToHex = (rgb) => {
+    if (!rgb || rgb === 'rgba(0, 0, 0, 0)' || rgb === 'transparent') return '#ffffff';
+    const m = rgb.match(/\d+/g);
+    if (!m) return '#000000';
+    return '#' + m.slice(0,3).map(x => ('0' + parseInt(x).toString(16)).slice(-2)).join('');
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-     {/* Header */}
-<header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-  <div className="flex items-center gap-6 flex-1 overflow-x-auto">
-    <button
-      type="button"
-      onClick={() => navigate('/dashboard?tab=website')}
-      className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition flex-shrink-0"
-    >
-      <ArrowLeft className="w-5 h-5" />
-      <span className="font-medium hidden md:inline">Back</span>
-    </button>
-    
-    <div className="h-6 w-px bg-gray-300 hidden md:block" />
-    
-    {/* Desktop - Full Controls */}
-    <div className="hidden lg:flex items-center gap-4 flex-1">
-      <h1 className="text-lg font-bold text-gray-900">Editing:</h1>
-      
-      {/* Page Tabs */}
-      <div className="flex gap-2">
-        {Object.keys(allPages).map((pageName) => (
-          <button
-            key={pageName}
-            onClick={() => setCurrentPage(pageName)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              currentPage === pageName
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {getPageDisplayName(pageName)}
+    <div className="w-full h-full flex relative">
+      {/* Top Navigation Bar */}
+      <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
+        {/* Undo/Redo Buttons */}
+        <button
+          onClick={() => {
+            const doc = iframeRef.current?.contentDocument;
+            if (doc) {
+              // Implement undo via browser history if needed
+              console.log('Undo clicked');
+            }
+          }}
+          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
+          title="Undo"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+        </button>
+        
+        <button
+          onClick={() => {
+            const doc = iframeRef.current?.contentDocument;
+            if (doc) {
+              console.log('Redo clicked');
+            }
+          }}
+          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
+          title="Redo"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+          </svg>
+        </button>
+
+        {/* Info Icon with Tooltip */}
+        <div className="relative group">
+          <button className="p-2 bg-purple-600 text-white rounded-lg shadow-lg hover:shadow-xl transition">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </button>
+          
+          {/* Tooltip */}
+          <div className="absolute left-0 top-12 w-80 bg-purple-600 text-white px-4 py-3 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-50">
+            <div className="text-sm font-medium space-y-1">
+              <p>💡 <strong>Click</strong> to select</p>
+              <p>🖱️ <strong>Drag</strong> to move (auto-snap)</p>
+              <p>✏️ <strong>Double-click</strong> to edit text</p>
+              <p>⌨️ <strong>Shift+Click</strong> for multi-select</p>
+            </div>
+            {/* Arrow */}
+            <div className="absolute -top-2 left-4 w-4 h-4 bg-purple-600 transform rotate-45"></div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex-1 relative">
+        <iframe 
+          ref={iframeRef} 
+          srcDoc={htmlContent} 
+          className="w-full h-full border-none"
+          title="Visual Editor"
+        />
+        
+        {/* Snap Guide Lines - Only Center Alignment */}
+        {guides.vertical.map((guide, i) => (
+          <div 
+            key={`v-${i}`}
+            className="absolute pointer-events-none z-50"
+            style={{ 
+              left: `${guide.x}px`,
+              top: 0,
+              bottom: 0,
+              width: '2px',
+              backgroundColor: '#ef4444',
+              boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
+            }}
+          >
+            <div className="absolute top-4 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
+              {guide.label}
+            </div>
+          </div>
+        ))}
+        
+        {guides.horizontal.map((guide, i) => (
+          <div 
+            key={`h-${i}`}
+            className="absolute pointer-events-none z-50"
+            style={{ 
+              top: `${guide.y}px`,
+              left: 0,
+              right: 0,
+              height: '2px',
+              backgroundColor: '#ef4444',
+              boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
+            }}
+          >
+            <div className="absolute left-4 top-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
+              {guide.label}
+            </div>
+          </div>
         ))}
       </div>
-      
-      {/* Device Preview Toggle */}
-      <div className="h-6 w-px bg-gray-300" />
-      <div className="flex gap-2">
-        <button 
-          type="button" 
-          onClick={() => setDevicePreview('desktop')} 
-          className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-            devicePreview === 'desktop' 
-              ? 'bg-purple-600 text-white' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Monitor className="w-4 h-4" />
-          <span>Desktop</span>
-        </button>
-        <button 
-          type="button" 
-          onClick={() => setDevicePreview('mobile')} 
-          className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-            devicePreview === 'mobile' 
-              ? 'bg-purple-600 text-white' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Smartphone className="w-4 h-4" />
-          <span>Mobile</span>
-        </button>
-      </div>
-    </div>
 
-    {/* Mobile - Compact Logo + Menu */}
-    <div className="flex lg:hidden items-center gap-4 flex-1">
-      <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
-      
-      <button
-        type="button"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="ml-auto p-2 hover:bg-gray-100 rounded-lg"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-    </div>
-  </div>
-
-  <button
-    type="button"
-    onClick={handleSave}
-    disabled={isSaving}
-    className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50 flex-shrink-0 ml-4"
-  >
-    {isSaving ? (
-      <Loader2 className="w-4 h-4 animate-spin" />
-    ) : (
-      <Save className="w-4 h-4" />
-    )}
-    <span className="hidden md:inline">Save Changes</span>
-  </button>
-</header>
-
-      {/* Mobile Dropdown Menu */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-gray-200 p-4 space-y-4 z-10">
-          <div>
-            <label className="text-xs font-semibold text-gray-600 mb-2 block">PAGE</label>
-            <div className="flex flex-wrap gap-2">
-              {Object.keys(allPages).map((pageName) => (
-                <button
-                  key={pageName}
-                  onClick={() => {
-                    setCurrentPage(pageName);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                    currentPage === pageName
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700'
-                  }`}
-                >
-                  {getPageDisplayName(pageName)}
-                </button>
-              ))}
+      {selectedElements.length > 0 && (
+        <div className="w-72 bg-white border-l overflow-y-auto flex-shrink-0">
+          <div className="p-3 border-b bg-purple-50 flex justify-between items-center">
+            <span className="font-bold text-sm">
+              {selectedElements.length === 1 ? `${selectedElements[0].tagName}` : `${selectedElements.length} Selected`}
+            </span>
+            <div className="flex gap-1">
+              <button 
+                onClick={duplicate} 
+                className="p-1.5 hover:bg-white rounded transition" 
+                title="Duplicate"
+              >
+                <Copy className="w-4 h-4" />
+              </button>
+              <button 
+                onClick={deleteEl} 
+                className="p-1.5 hover:bg-white rounded transition" 
+                title="Delete"
+              >
+                <Trash2 className="w-4 h-4 text-red-600" />
+              </button>
             </div>
           </div>
 
-          <div>
-            <label className="text-xs font-semibold text-gray-600 mb-2 block">PREVIEW</label>
+          <div className="p-3 space-y-3">
+            <div>
+              <label className="text-xs font-bold block mb-1">Width</label>
+              <input 
+                type="text" 
+                value={elementProps.width} 
+                onChange={(e) => updateProp('width', e.target.value)} 
+                className="w-full px-2 py-1 border rounded text-sm" 
+                placeholder="auto" 
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold block mb-1">Height</label>
+              <input 
+                type="text" 
+                value={elementProps.height} 
+                onChange={(e) => updateProp('height', e.target.value)} 
+                className="w-full px-2 py-1 border rounded text-sm" 
+                placeholder="auto" 
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold block mb-1">Font Size</label>
+              <input 
+                type="text" 
+                value={elementProps.fontSize} 
+                onChange={(e) => updateProp('fontSize', e.target.value)} 
+                className="w-full px-2 py-1 border rounded text-sm" 
+              />
+            </div>
+            
             <div className="flex gap-2">
               <button 
-                type="button" 
-                onClick={() => setDevicePreview('desktop')} 
-                className={`flex-1 px-3 py-2 rounded text-sm flex items-center justify-center gap-2 ${
-                  devicePreview === 'desktop' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-100 text-gray-600'
-                }`}
+                onClick={() => updateProp('fontWeight', elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'normal' : 'bold')} 
+                className={`flex-1 p-2 border rounded transition ${elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
               >
-                <Monitor className="w-4 h-4" />
-                <span>Desktop</span>
+                <Bold className="w-4 h-4 mx-auto" />
               </button>
               <button 
-                type="button" 
-                onClick={() => setDevicePreview('mobile')} 
-                className={`flex-1 px-3 py-2 rounded text-sm flex items-center justify-center gap-2 ${
-                  devicePreview === 'mobile' 
-                    ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-100 text-gray-600'
-                }`}
+                onClick={() => updateProp('fontStyle', elementProps.fontStyle === 'italic' ? 'normal' : 'italic')} 
+                className="flex-1 p-2 border rounded hover:bg-gray-50 transition"
               >
-                <Smartphone className="w-4 h-4" />
-                <span>Mobile</span>
+                <Italic className="w-4 h-4 mx-auto" />
               </button>
+            </div>
+
+            <div className="flex gap-2">
+              <button 
+                onClick={() => updateProp('textAlign', 'left')} 
+                className={`flex-1 p-2 border rounded transition ${elementProps.textAlign === 'left' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
+              >
+                <AlignLeft className="w-4 h-4 mx-auto" />
+              </button>
+              <button 
+                onClick={() => updateProp('textAlign', 'center')} 
+                className={`flex-1 p-2 border rounded transition ${elementProps.textAlign === 'center' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
+              >
+                <AlignCenter className="w-4 h-4 mx-auto" />
+              </button>
+              <button 
+                onClick={() => updateProp('textAlign', 'right')} 
+                className={`flex-1 p-2 border rounded transition ${elementProps.textAlign === 'right' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
+              >
+                <AlignRight className="w-4 h-4 mx-auto" />
+              </button>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold block mb-1">Text Color</label>
+              <input 
+                type="color" 
+                value={elementProps.color} 
+                onChange={(e) => updateProp('color', e.target.value)} 
+                className="w-full h-10 cursor-pointer rounded" 
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold block mb-1">Background Color</label>
+              <input 
+                type="color" 
+                value={elementProps.backgroundColor} 
+                onChange={(e) => updateProp('backgroundColor', e.target.value)} 
+                className="w-full h-10 cursor-pointer rounded" 
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold block mb-1">Padding</label>
+              <input 
+                type="text" 
+                value={elementProps.padding} 
+                onChange={(e) => updateProp('padding', e.target.value)} 
+                className="w-full px-2 py-1 border rounded text-sm" 
+                placeholder="0px" 
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-bold block mb-1">Margin</label>
+              <input 
+                type="text" 
+                value={elementProps.margin} 
+                onChange={(e) => updateProp('margin', e.target.value)} 
+                className="w-full px-2 py-1 border rounded text-sm" 
+                placeholder="0px" 
+              />
             </div>
           </div>
         </div>
       )}
-     
-      {/* Main Content */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200">
-        
-        {/* Undo/Redo Buttons */}
-        <div className="absolute top-4 left-4 z-30 flex gap-2">
-          <button
-            onClick={handleUndo}
-            disabled={historyIndex <= 0}
-            className="p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Undo (Ctrl+Z)"
-          >
-            <Undo2 className="w-5 h-5 text-gray-700" />
-          </button>
-          <button
-            onClick={handleRedo}
-            disabled={historyIndex >= history.length - 1}
-            className="p-3 bg-white rounded-lg shadow-lg hover:shadow-xl transition disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Redo (Ctrl+Y)"
-          >
-            <Redo2 className="w-5 h-5 text-gray-700" />
-          </button>
-        </div>
-        
-        {/* Centered Preview */}
-        <div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ 
-          width: devicePreview === 'desktop' ? '100%' : '375px',
-          height: devicePreview === 'desktop' ? '100%' : '667px'
-        }}>
-          {devicePreview === 'desktop' ? (
-            <VisualEditor 
-              htmlContent={allPages[currentPage]}
-              onUpdate={handleVisualUpdate}
-              currentPage={currentPage}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-              <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-                <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
-                    <span>9:41</span>
-                    <div className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                      </svg>
-                      <span>100%</span>
-                    </div>
-                  </div>
-                  <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
-                    <iframe
-                      key={currentPage + '-mobile'}
-                      srcDoc={allPages[currentPage]}
-                      title={`${currentPage} Mobile Preview`}
-                      className="border-none"
-                      style={{ 
-                        width: '375px',
-                        height: '100%',
-                        minHeight: '100%'
-                      }}
-                      ref={(iframe) => {
-                        if (iframe && iframe.contentWindow) {
-                          iframe.onload = () => {
-                            try {
-                              const iframeDoc = iframe.contentWindow.document;
-                              
-                              let viewport = iframeDoc.querySelector('meta[name="viewport"]');
-                              if (!viewport) {
-                                viewport = iframeDoc.createElement('meta');
-                                viewport.name = 'viewport';
-                                iframeDoc.head.appendChild(viewport);
-                              }
-                              viewport.content = 'width=375, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no';
-                              
-                              const style = iframeDoc.createElement('style');
-                              style.textContent = `
-                                html {
-                                  width: 375px !important;
-                                  overflow-x: hidden !important;
-                                }
-                                body {
-                                  width: 375px !important;
-                                  min-width: 375px !important;
-                                  max-width: 375px !important;
-                                  overflow-x: hidden !important;
-                                  margin: 0 !important;
-                                  padding: 0 !important;
-                                }
-                                * {
-                                  max-width: 375px !important;
-                                  box-sizing: border-box !important;
-                                }
-                                img {
-                                  max-width: 100% !important;
-                                  height: auto !important;
-                                }
-                              `;
-                              iframeDoc.head.appendChild(style);
-                              
-                              iframeDoc.addEventListener('click', (e) => {
-                                const link = e.target.closest('a');
-                                if (link) {
-                                  const href = link.getAttribute('href');
-                                  
-                                  if (href && href.startsWith('#')) {
-                                    return;
-                                  }
-                                  
-                                  if (href && href.endsWith('.html') && allPages[href]) {
-                                    e.preventDefault();
-                                    setCurrentPage(href);
-                                    return;
-                                  }
-                                  
-                                  e.preventDefault();
-                                }
-                              }, true);
-                            } catch (err) {
-                              console.log('Could not access iframe:', err);
-                            }
-                          };
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* AI Chat Widget */}
-        {!isAIChatOpen ? (
-          <button
-            onClick={() => setIsAIChatOpen(true)}
-            className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-110 transition-all z-50 flex items-center gap-2"
-          >
-            <Sparkles className="w-6 h-6" />
-            <span className="font-semibold">AI Assistant</span>
-          </button>
-        ) : (
-          <div className="fixed bottom-8 right-8 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
-            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-2xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-600" />
-                <h3 className="font-bold text-gray-900">AI Assistant</h3>
-              </div>
-              <button
-                onClick={() => setIsAIChatOpen(false)}
-                className="p-1 hover:bg-white rounded-full transition"
-              >
-                <X className="w-5 h-5 text-gray-600" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-3">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  <div
-                    className={`max-w-[85%] rounded-lg px-3 py-2 ${
-                      message.role === 'user'
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
-                  >
-                    <p className="text-xs whitespace-pre-wrap">{message.content}</p>
-                  </div>
-                </div>
-              ))}
-
-              {isAIThinking && (
-                <div className="flex justify-start">
-                  <div className="bg-gray-100 rounded-lg px-3 py-2 flex items-center gap-2">
-                    <Loader2 className="w-3 h-3 animate-spin text-purple-600" />
-                    <p className="text-xs text-gray-600">AI is thinking...</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="p-3 border-t border-gray-200 rounded-b-2xl">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                  placeholder="Ask AI to make changes..."
-                  className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
-                  disabled={isAIThinking}
-                />
-                <button
-                  type="button"
-                  onClick={handleSendMessage}
-                  disabled={!inputMessage.trim() || isAIThinking}
-                  className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
-              <p className="text-xs text-gray-500 mt-2">
-                💡 Try: "Make the button blue"
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
