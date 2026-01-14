@@ -94,7 +94,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       iframe.onload = initEditor;
     }
 
-  }, [htmlContent]);
+  }, [htmlContent, currentPage]);
 
   const setupEventListeners = (doc) => {
     let isMouseDown = false;
@@ -119,8 +119,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       if (target.classList.contains('editor-selected')) {
         const iframeRect = iframeRef.current.getBoundingClientRect();
         
+        // Get currently selected elements from DOM
+        const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
+        
         // Convert all selected elements to absolutely positioned
-        const elementsData = selectedElements.map(elem => {
+        const elementsData = currentlySelected.map(elem => {
           prepareElementForDrag(elem, doc);
           
           const rect = elem.getBoundingClientRect();
