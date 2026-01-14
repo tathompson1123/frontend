@@ -144,33 +144,51 @@ export default function WebsiteEditor() {
   };
 
   const handleVisualUpdate = (updatedHTML) => {
-    console.log('=== HANDLE VISUAL UPDATE ===');
-    console.log('Current allPages:', allPages);
-    console.log('Current page:', currentPage);
-    console.log('Updated HTML length:', updatedHTML?.length);
+    console.log('═══════════════════════════════════');
+    console.log('📝 HANDLE VISUAL UPDATE');
+    console.log('  - Current historyIndex:', historyIndex);
+    console.log('  - Current history length:', history.length);
+    console.log('  - Current page:', currentPage);
+    console.log('  - Updated HTML length:', updatedHTML?.length);
     
     const newPages = {
       ...allPages,
       [currentPage]: updatedHTML
     };
     
-    console.log('New pages object:', newPages);
-    console.log('New pages keys:', Object.keys(newPages));
-    
     setAllPages(newPages);
     
+    // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newPages);
+    
+    console.log('  - New history length:', newHistory.length);
+    console.log('  - New historyIndex will be:', newHistory.length - 1);
+    
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     
-    console.log('=== UPDATE COMPLETE ===');
+    console.log('✅ UPDATE COMPLETE - History updated');
+    console.log('═══════════════════════════════════');
   };
   
   const handleUndo = () => {
+    console.log('🔙 UNDO CLICKED');
+    console.log('  - Current historyIndex:', historyIndex);
+    console.log('  - History length:', history.length);
+    console.log('  - Can undo?:', historyIndex > 0);
+    
     if (historyIndex > 0) {
-      setHistoryIndex(historyIndex - 1);
-      setAllPages(history[historyIndex - 1]);
+      const newIndex = historyIndex - 1;
+      console.log('  - Going to index:', newIndex);
+      console.log('  - Restoring pages:', history[newIndex]);
+      
+      setHistoryIndex(newIndex);
+      setAllPages(history[newIndex]);
+      
+      console.log('  ✅ Undo complete');
+    } else {
+      console.log('  ❌ Cannot undo - at beginning of history');
     }
   };
 
