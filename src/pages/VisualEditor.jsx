@@ -1060,15 +1060,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
         {/* Undo/Redo Buttons */}
         <button
-          onClick={() => {
-            const doc = iframeRef.current?.contentDocument;
-            if (doc) {
-              // Implement undo via browser history if needed
-              console.log('Undo clicked');
-            }
-          }}
-          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
-          title="Undo"
+  onClick={onUndo}
+  disabled={!canUndo}
+  className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
+    canUndo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+  }`}
+  title="Undo"
         >
           <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
