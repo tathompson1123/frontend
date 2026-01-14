@@ -202,7 +202,93 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
       // Setup event handlers
       const handleMouseDown = (e) => {
-        const target = e.target;
+        let target = e.target;
+        
+        // CRITICAL: Find the right element to select/drag
+        // Skip up to a meaningful draggable element
+        const findDraggableElement = (el) => {
+          // Don't allow dragging these elements
+          const nonDraggable = ['HTML', 'BODY', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'];
+          
+          // Don't allow dragging background/hero sections
+          const isBackground = el.classList?.contains('hero') || 
+                               el.classList?.contains('background') ||
+                               el.classList?.contains('bg-') ||
+                               el.tagName === 'SECTION' ||
+                               el.tagName === 'HEADER' ||
+                               el.tagName === 'FOOTER' ||
+                               el.tagName === 'MAIN';
+          
+          if (nonDraggable.includes(el.tagName) || isBackground) {
+            return null;
+          }
+          
+          // If clicking on text inside an element, find the parent container
+          // But stop at sections/headers/etc
+          if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'EM' || 
+              el.tagName === 'B' || el.tagName === 'I' || el.tagName === 'U') {
+            const parent = el.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
+            if (parent && !parent.classList?.contains('hero') && 
+                !parent.classList?.contains('background') && 
+                !parent.classList?.contains('bg-') &&
+                parent.tagName !== 'SECTION' &&
+                parent.tagName !== 'HEADER' &&
+                parent.tagName !== 'FOOTER') {
+              return parent;
+            }
+          }
+          
+          // For container divs, check if they have draggable children
+          // If a div only contains other divs/sections, it's not draggable
+          if (el.tagName === 'DIV') {
+            const children = Array.from(el.children);
+            
+            // Check if it's a pure container (only has structural elements)
+            const onlyStructural = children.every(child => 
+              ['DIV', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE', 'NAV', 'UL', 'OL'].includes(child.tagName)
+            );
+            
+            // Also check if it's a wrapper with no direct text content or images
+            const hasDirectText = Array.from(el.childNodes).some(node => 
+              node.nodeType === 3 && node.textContent.trim().length > 0
+            );
+            
+            const hasImages = el.querySelectorAll('img').length > 0;
+            const hasButtons = el.querySelectorAll('button, a.btn, a.button').length > 0;
+            
+            // If it's a container with only structural elements and no direct text/images/buttons, don't allow dragging
+            if (onlyStructural && children.length > 0 && !hasDirectText && !hasImages && !hasButtons) {
+              console.log('  ⚠️ Skipping container div with only structural children');
+              return null;
+            }
+            
+            // Also skip very large containers (likely layout containers)
+            const rect = el.getBoundingClientRect();
+            const windowWidth = el.ownerDocument.defaultView.innerWidth;
+            if (rect.width > windowWidth * 0.7 && children.length > 2) {
+              console.log('  ⚠️ Skipping large layout container (width:', rect.width, ')');
+              return null;
+            }
+            
+            // Skip nearly empty containers (less than 10 chars of text)
+            const textContent = el.textContent?.trim() || '';
+            if (textContent.length < 10 && children.length > 1) {
+              console.log('  ⚠️ Skipping nearly empty container (text length:', textContent.length, ')');
+              return null;
+            }
+          }
+          
+          return el;
+        };
+        
+        const draggableTarget = findDraggableElement(target);
+        
+        if (!draggableTarget) {
+          console.log('⚠️ Clicked non-draggable element:', target.tagName, target.className);
+          return;
+        }
+        
+        target = draggableTarget;
         
         console.log('═══════════════════════════════════════');
         console.log('🟢 MOUSEDOWN EVENT');
@@ -631,10 +717,27 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const handleMouseOver = (e) => {
         if (isMouseDownRef.current || dragStartedRef.current) return;
         
-        const target = e.target;
-        if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-          target.classList.add('editor-hover');
+        let target = e.target;
+        
+        // Use same logic as mousedown to find draggable element
+        const nonDraggable = ['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 
+                              'SECTION', 'HEADER', 'FOOTER', 'MAIN'];
+        
+        if (nonDraggable.includes(target.tagName)) return;
+        
+        // Skip background classes
+        const isBackground = target.classList?.contains('hero') || 
+                           target.classList?.contains('background') ||
+                           target.classList?.contains('bg-');
+        if (isBackground) return;
+        
+        // For text elements, hover the parent
+        if (['SPAN', 'STRONG', 'EM', 'B', 'I', 'U'].includes(target.tagName)) {
+          const parent = target.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
+          if (parent) target = parent;
         }
+        
+        target.classList.add('editor-hover');
       };
 
       const handleMouseOut = (e) => {
