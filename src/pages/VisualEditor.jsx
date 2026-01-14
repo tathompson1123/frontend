@@ -1187,28 +1187,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
           <div className="p-3 space-y-3">
             <div>
-              <label className="text-xs font-bold block mb-1">Width</label>
-              <input 
-                type="text" 
-                value={elementProps.width} 
-                onChange={(e) => updateProp('width', e.target.value)} 
-                className="w-full px-2 py-1 border rounded text-sm" 
-                placeholder="auto" 
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold block mb-1">Height</label>
-              <input 
-                type="text" 
-                value={elementProps.height} 
-                onChange={(e) => updateProp('height', e.target.value)} 
-                className="w-full px-2 py-1 border rounded text-sm" 
-                placeholder="auto" 
-              />
-            </div>
-
-            <div>
               <label className="text-xs font-bold block mb-1">Font Size</label>
               <input 
                 type="text" 
@@ -1271,28 +1249,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
                 value={elementProps.backgroundColor} 
                 onChange={(e) => updateProp('backgroundColor', e.target.value)} 
                 className="w-full h-10 cursor-pointer rounded" 
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold block mb-1">Padding</label>
-              <input 
-                type="text" 
-                value={elementProps.padding} 
-                onChange={(e) => updateProp('padding', e.target.value)} 
-                className="w-full px-2 py-1 border rounded text-sm" 
-                placeholder="0px" 
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold block mb-1">Margin</label>
-              <input 
-                type="text" 
-                value={elementProps.margin} 
-                onChange={(e) => updateProp('margin', e.target.value)} 
-                className="w-full px-2 py-1 border rounded text-sm" 
-                placeholder="0px" 
               />
             </div>
           </div>
