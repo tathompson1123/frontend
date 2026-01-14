@@ -75,6 +75,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
     } else {
       console.log('   ℹ️ Skipping - internal save (no reload needed)');
+      // CRITICAL: Update lastHtmlContentRef even when skipping, so we track the new content
+      lastHtmlContentRef.current = htmlContent;
       isSavingRef.current = false; // Reset flag even if skipping
     }
   }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
