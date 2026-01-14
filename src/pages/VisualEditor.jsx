@@ -43,7 +43,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     dragStateRef.current = null;
     initialHtmlRef.current = htmlContent; // Update initial HTML when page changes
     console.log('📄 Page changed to:', currentPage, '- Reset initial HTML');
-  }, [currentPage, htmlContent]);
+  }, [currentPage]); // ONLY currentPage, NOT htmlContent!
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -316,6 +316,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           let newLeft = firstElement.startLeft + dx;
           let newTop = firstElement.startTop + dy;
           
+          // Log every 10th mousemove to avoid spam
+          if (Math.random() < 0.1) {
+            console.log('🖱️ Dragging:');
+            console.log('  - dx:', dx, 'dy:', dy);
+            console.log('  - startLeft:', firstElement.startLeft, 'startTop:', firstElement.startTop);
+            console.log('  - newLeft:', newLeft, 'newTop:', newTop);
+            console.log('  - Current style.left:', firstElement.el.style.left, 'style.top:', firstElement.el.style.top);
+          }
+          
           const elemCenterX = newLeft + firstElement.width / 2;
           const elemCenterY = newTop + firstElement.height / 2;
           
@@ -408,9 +417,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const deltaX = newLeft - firstElement.startLeft;
           const deltaY = newTop - firstElement.startTop;
           
-          dragStateRef.current.elements.forEach(data => {
-            data.el.style.left = (data.startLeft + deltaX) + 'px';
-            data.el.style.top = (data.startTop + deltaY) + 'px';
+          dragStateRef.current.elements.forEach((data, index) => {
+            const finalLeft = data.startLeft + deltaX;
+            const finalTop = data.startTop + deltaY;
+            data.el.style.left = finalLeft + 'px';
+            data.el.style.top = finalTop + 'px';
+            
+            if (index === 0 && Math.random() < 0.1) {
+              console.log('  - Applied: left=' + finalLeft + 'px, top=' + finalTop + 'px');
+            }
           });
         }
       };
@@ -654,12 +669,23 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const prepareElementForDrag = (elem, doc) => {
     const computed = window.getComputedStyle(elem);
     
+    console.log('🔧 prepareElementForDrag called:');
+    console.log('  - Element:', elem.tagName, elem.className);
+    console.log('  - Current position:', computed.position);
+    console.log('  - Has placeholder already:', !!elem.dataset.hasPlaceholder);
+    
     if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
       const rect = elem.getBoundingClientRect();
       const parentRect = elem.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
       
       const width = rect.width;
       const height = rect.height;
+      const calculatedLeft = rect.left - parentRect.left;
+      const calculatedTop = rect.top - parentRect.top;
+      
+      console.log('  - Rect:', {left: rect.left, top: rect.top, width, height});
+      console.log('  - Parent rect:', {left: parentRect.left, top: parentRect.top});
+      console.log('  - Calculated position:', {left: calculatedLeft, top: calculatedTop});
       
       // Create a placeholder to maintain layout
       if (!elem.dataset.hasPlaceholder) {
@@ -679,16 +705,24 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         elem.dataset.hasPlaceholder = 'true';
         elem.dataset.placeholderId = 'placeholder-' + Date.now() + '-' + Math.random();
         placeholder.dataset.placeholderId = elem.dataset.placeholderId;
+        
+        console.log('  - ✅ Created placeholder');
+      } else {
+        console.log('  - ℹ️ Placeholder already exists');
       }
       
       // Convert to absolute positioning
       elem.style.position = 'absolute';
-      elem.style.left = (rect.left - parentRect.left) + 'px';
-      elem.style.top = (rect.top - parentRect.top) + 'px';
+      elem.style.left = calculatedLeft + 'px';
+      elem.style.top = calculatedTop + 'px';
       elem.style.width = width + 'px';
       elem.style.height = height + 'px';
       elem.style.margin = '0';
       elem.style.zIndex = '1000';
+      
+      console.log('  - ✅ Set position to: left=' + elem.style.left + ', top=' + elem.style.top);
+    } else {
+      console.log('  - ℹ️ Already absolute/fixed, skipping');
     }
   };
 
