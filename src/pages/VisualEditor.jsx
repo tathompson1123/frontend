@@ -14,9 +14,8 @@ import {
 
 export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [selectedElements, setSelectedElements] = useState([]);
-  const [editingText, setEditingText] = useState(null);
   const iframeRef = useRef(null);
-  const dragDataRef = useRef(null);
+  const dragStateRef = useRef(null);
   const updateTimeoutRef = useRef(null);
 
   const [elementProps, setElementProps] = useState({
@@ -35,211 +34,294 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     const iframe = iframeRef.current;
     if (!iframe) return;
 
-    iframe.onload = () => {
+    const initEditor = () => {
       const doc = iframe.contentDocument;
       if (!doc) return;
 
-      const style = doc.createElement('style');
+      // Inject styles
+      let style = doc.getElementById('editor-styles');
+      if (!style) {
+        style = doc.createElement('style');
+        style.id = 'editor-styles';
+        doc.head.appendChild(style);
+      }
+      
       style.textContent = `
-        * { box-sizing: border-box; }
-        body { position: relative; min-height: 100vh; }
-        .selected { 
+        * { 
+          box-sizing: border-box;
+        }
+        body { 
+          position: relative !important;
+          min-height: 100vh;
+        }
+        .editor-selected { 
           outline: 3px solid #8b5cf6 !important; 
-          outline-offset: 2px;
+          outline-offset: 2px !important;
+          cursor: grab !important;
         }
-        .hover { 
+        .editor-selected:active {
+          cursor: grabbing !important;
+        }
+        .editor-hover { 
           outline: 2px dashed #3b82f6 !important; 
-          outline-offset: 2px; 
+          outline-offset: 2px !important;
         }
-        .dragging {
-          opacity: 0.7 !important;
+        .editor-dragging {
+          opacity: 0.8 !important;
           cursor: grabbing !important;
         }
       `;
-      doc.head.appendChild(style);
 
-      // Prevent default link/button behavior
-      doc.querySelectorAll('a, button').forEach(el => {
-        el.onclick = e => e.preventDefault();
-      });
-
-      let isDragging = false;
-      let clickedElement = null;
-
-      // MOUSEDOWN - Start potential drag
-      doc.onmousedown = (e) => {
-        const el = e.target;
-        
-        // Ignore structural elements
-        if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
-          return;
-        }
-
-        clickedElement = el;
-        isDragging = false;
-
-        // If element is ALREADY selected, prepare for drag
-        if (el.classList.contains('selected')) {
+      // Disable all links and buttons
+      doc.addEventListener('click', (e) => {
+        if (e.target.tagName === 'A' || e.target.closest('a')) {
           e.preventDefault();
+          e.stopPropagation();
+        }
+        if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }, true);
+
+      setupEventListeners(doc);
+    };
+
+    if (iframe.contentDocument?.readyState === 'complete') {
+      initEditor();
+    } else {
+      iframe.onload = initEditor;
+    }
+
+  }, [htmlContent]);
+
+  const setupEventListeners = (doc) => {
+    let isMouseDown = false;
+    let dragStarted = false;
+
+    const handleMouseDown = (e) => {
+      const target = e.target;
+      
+      // Ignore structural elements
+      if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+        return;
+      }
+
+      // Prevent default ONLY for our drag operation
+      e.preventDefault();
+      e.stopPropagation();
+      
+      isMouseDown = true;
+      dragStarted = false;
+
+      // If clicking on already selected element, prepare to drag
+      if (target.classList.contains('editor-selected')) {
+        const iframeRect = iframeRef.current.getBoundingClientRect();
+        
+        // Convert all selected elements to absolutely positioned
+        const elementsData = selectedElements.map(elem => {
+          prepareElementForDrag(elem, doc);
           
-          const iframeRect = iframe.getBoundingClientRect();
-          
-          // Get all selected elements positions
-          const elementsData = selectedElements.map(elem => {
-            // Make sure element is positioned
-            if (!elem.style.position || elem.style.position === 'static') {
-              const rect = elem.getBoundingClientRect();
-              const parentRect = elem.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
-              
-              elem.style.position = 'absolute';
-              elem.style.left = (rect.left - parentRect.left) + 'px';
-              elem.style.top = (rect.top - parentRect.top) + 'px';
-              elem.style.width = rect.width + 'px';
-            }
-            
-            return {
-              el: elem,
-              startLeft: parseFloat(elem.style.left) || 0,
-              startTop: parseFloat(elem.style.top) || 0
-            };
-          });
-          
-          dragDataRef.current = {
-            elements: elementsData,
-            startMouseX: e.clientX,
-            startMouseY: e.clientY,
-            hasMoved: false
+          return {
+            el: elem,
+            startLeft: parseFloat(elem.style.left) || 0,
+            startTop: parseFloat(elem.style.top) || 0
           };
-        }
-      };
+        });
+        
+        dragStateRef.current = {
+          elements: elementsData,
+          startX: e.clientX,
+          startY: e.clientY,
+          moved: false
+        };
+      } else {
+        // Clicking on new element - will select on mouseup
+        dragStateRef.current = {
+          clickedElement: target,
+          startX: e.clientX,
+          startY: e.clientY,
+          moved: false
+        };
+      }
+    };
 
-      // MOUSEMOVE - Perform drag
-      doc.onmousemove = (e) => {
-        if (!dragDataRef.current) return;
-        
-        const dx = e.clientX - dragDataRef.current.startMouseX;
-        const dy = e.clientY - dragDataRef.current.startMouseY;
-        
-        // Threshold to start drag
-        if (!dragDataRef.current.hasMoved && (Math.abs(dx) > 3 || Math.abs(dy) > 3)) {
-          dragDataRef.current.hasMoved = true;
-          isDragging = true;
-          dragDataRef.current.elements.forEach(data => {
-            data.el.classList.add('dragging');
-          });
-        }
-        
-        if (dragDataRef.current.hasMoved) {
-          dragDataRef.current.elements.forEach(data => {
-            data.el.style.left = (data.startLeft + dx) + 'px';
-            data.el.style.top = (data.startTop + dy) + 'px';
-          });
-        }
-      };
+    const handleMouseMove = (e) => {
+      if (!isMouseDown || !dragStateRef.current) return;
 
-      // MOUSEUP - Select or finish drag
-      doc.onmouseup = (e) => {
-        const el = e.target;
+      const dx = e.clientX - dragStateRef.current.startX;
+      const dy = e.clientY - dragStateRef.current.startY;
+      
+      // Only start drag if moved more than 5px
+      if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        dragStarted = true;
+        dragStateRef.current.moved = true;
         
-        // If we were dragging, save and stop
-        if (isDragging) {
-          dragDataRef.current.elements.forEach(data => {
-            data.el.classList.remove('dragging');
+        // Add dragging class
+        if (dragStateRef.current.elements) {
+          dragStateRef.current.elements.forEach(data => {
+            data.el.classList.add('editor-dragging');
           });
-          notifyUpdateDebounced();
-          dragDataRef.current = null;
-          isDragging = false;
-          clickedElement = null;
-          return;
         }
+      }
+      
+      // Perform drag
+      if (dragStarted && dragStateRef.current.elements) {
+        dragStateRef.current.elements.forEach(data => {
+          const newLeft = data.startLeft + dx;
+          const newTop = data.startTop + dy;
+          
+          data.el.style.left = newLeft + 'px';
+          data.el.style.top = newTop + 'px';
+        });
+      }
+    };
+
+    const handleMouseUp = (e) => {
+      if (!isMouseDown) return;
+      
+      isMouseDown = false;
+      
+      // If we were dragging, save and cleanup
+      if (dragStarted && dragStateRef.current?.elements) {
+        dragStateRef.current.elements.forEach(data => {
+          data.el.classList.remove('editor-dragging');
+        });
         
-        // If we had dragData but didn't move, it was just a click on selected element
-        if (dragDataRef.current && !dragDataRef.current.hasMoved) {
-          dragDataRef.current = null;
-          clickedElement = null;
-          return;
-        }
+        saveChanges();
+        dragStateRef.current = null;
+        return;
+      }
+      
+      // If we didn't drag, handle selection
+      if (dragStateRef.current && !dragStateRef.current.moved) {
+        const target = dragStateRef.current.clickedElement || e.target;
         
-        // Otherwise, handle selection
-        if (['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(el.tagName)) {
-          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-          setSelectedElements([]);
+        if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          clearSelection(doc);
+          dragStateRef.current = null;
           return;
         }
         
         // Multi-select with shift
         if (e.shiftKey) {
-          if (el.classList.contains('selected')) {
-            el.classList.remove('selected');
-            setSelectedElements(prev => prev.filter(elem => elem !== el));
+          if (target.classList.contains('editor-selected')) {
+            target.classList.remove('editor-selected');
+            setSelectedElements(prev => prev.filter(el => el !== target));
           } else {
-            el.classList.add('selected');
-            setSelectedElements(prev => [...prev, el]);
+            target.classList.add('editor-selected');
+            setSelectedElements(prev => [...prev, target]);
           }
         } else {
           // Single select
-          doc.querySelectorAll('.selected').forEach(sel => sel.classList.remove('selected'));
-          el.classList.add('selected');
-          setSelectedElements([el]);
-          loadProps(el);
+          clearSelection(doc);
+          target.classList.add('editor-selected');
+          setSelectedElements([target]);
+          loadProps(target);
         }
-        
-        clickedElement = null;
-      };
-
-      // Double-click to edit text
-      doc.ondblclick = (e) => {
-        e.preventDefault();
-        const el = e.target;
-        
-        if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(el.tagName)) {
-          el.contentEditable = 'true';
-          el.focus();
-          
-          const range = doc.createRange();
-          range.selectNodeContents(el);
-          const sel = doc.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-          
-          setEditingText(el);
-          
-          el.onblur = () => {
-            el.contentEditable = 'false';
-            setEditingText(null);
-            notifyUpdateDebounced();
-          };
-        }
-      };
-
-      // Hover effects
-      doc.onmouseover = (e) => {
-        if (!isDragging && !['BODY', 'HTML', 'MAIN', 'HEADER', 'FOOTER', 'SECTION', 'NAV'].includes(e.target.tagName)) {
-          e.target.classList.add('hover');
-        }
-      };
+      }
       
-      doc.onmouseout = (e) => {
-        e.target.classList.remove('hover');
-      };
+      dragStateRef.current = null;
     };
-  }, [htmlContent, selectedElements]);
 
-  const notifyUpdateDebounced = () => {
+    const handleMouseOver = (e) => {
+      if (isMouseDown || dragStarted) return;
+      
+      const target = e.target;
+      if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+        target.classList.add('editor-hover');
+      }
+    };
+
+    const handleMouseOut = (e) => {
+      e.target.classList.remove('editor-hover');
+    };
+
+    const handleDoubleClick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const target = e.target;
+      
+      if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(target.tagName)) {
+        target.contentEditable = 'true';
+        target.focus();
+        
+        const range = doc.createRange();
+        range.selectNodeContents(target);
+        const sel = doc.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        
+        target.addEventListener('blur', function handleBlur() {
+          target.contentEditable = 'false';
+          target.removeEventListener('blur', handleBlur);
+          saveChanges();
+        }, { once: true });
+      }
+    };
+
+    // Attach event listeners
+    doc.addEventListener('mousedown', handleMouseDown);
+    doc.addEventListener('mousemove', handleMouseMove);
+    doc.addEventListener('mouseup', handleMouseUp);
+    doc.addEventListener('mouseover', handleMouseOver);
+    doc.addEventListener('mouseout', handleMouseOut);
+    doc.addEventListener('dblclick', handleDoubleClick);
+  };
+
+  const prepareElementForDrag = (elem, doc) => {
+    // If element is not positioned, convert it
+    const computed = window.getComputedStyle(elem);
+    
+    if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
+      const rect = elem.getBoundingClientRect();
+      const parentRect = elem.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
+      
+      // Store original dimensions
+      const width = rect.width;
+      const height = rect.height;
+      
+      // Convert to absolute positioning
+      elem.style.position = 'absolute';
+      elem.style.left = (rect.left - parentRect.left) + 'px';
+      elem.style.top = (rect.top - parentRect.top) + 'px';
+      elem.style.width = width + 'px';
+      elem.style.height = height + 'px';
+      elem.style.margin = '0';
+    }
+  };
+
+  const clearSelection = (doc) => {
+    doc.querySelectorAll('.editor-selected').forEach(el => {
+      el.classList.remove('editor-selected');
+    });
+    setSelectedElements([]);
+  };
+
+  const saveChanges = () => {
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+    
     updateTimeoutRef.current = setTimeout(() => {
       if (iframeRef.current?.contentDocument) {
         const html = iframeRef.current.contentDocument.documentElement.outerHTML;
+        
         // Clean up editor classes
         const cleanedHTML = html
-          .replace(/class="([^"]*)selected([^"]*)"/g, (match, before, after) => {
-            const cleaned = (before + after).replace(/\s+hover/g, '').replace(/\s+dragging/g, '').replace(/\s+/g, ' ').trim();
-            return cleaned ? `class="${cleaned}"` : '';
+          .replace(/\s*class="([^"]*)"/g, (match, classes) => {
+            const cleaned = classes
+              .replace(/\s*editor-selected\s*/g, ' ')
+              .replace(/\s*editor-hover\s*/g, ' ')
+              .replace(/\s*editor-dragging\s*/g, ' ')
+              .replace(/\s+/g, ' ')
+              .trim();
+            return cleaned ? ` class="${cleaned}"` : '';
           })
           .replace(/\s+class=""\s*/g, ' ');
+        
         onUpdate(cleanedHTML);
       }
-    }, 500);
+    }, 300);
   };
 
   const loadProps = (el) => {
@@ -260,14 +342,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const updateProp = (prop, val) => {
     selectedElements.forEach(el => el.style[prop] = val);
     setElementProps(p => ({ ...p, [prop]: val }));
-    notifyUpdateDebounced();
+    saveChanges();
   };
 
   const deleteEl = () => {
     if (!confirm('Delete selected element(s)?')) return;
     selectedElements.forEach(el => el.remove());
     setSelectedElements([]);
-    notifyUpdateDebounced();
+    saveChanges();
   };
 
   const duplicate = () => {
@@ -276,17 +358,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     
     selectedElements.forEach(el => {
       const clone = el.cloneNode(true);
-      clone.classList.remove('selected', 'hover', 'dragging');
+      clone.classList.remove('editor-selected', 'editor-hover', 'editor-dragging');
       
       // Offset the duplicate
       if (clone.style.position === 'absolute') {
-        clone.style.left = (parseFloat(clone.style.left) + 20) + 'px';
-        clone.style.top = (parseFloat(clone.style.top) + 20) + 'px';
+        clone.style.left = (parseFloat(clone.style.left || 0) + 20) + 'px';
+        clone.style.top = (parseFloat(clone.style.top || 0) + 20) + 'px';
       }
       
       el.parentNode.insertBefore(clone, el.nextSibling);
     });
-    notifyUpdateDebounced();
+    saveChanges();
   };
 
   const rgbToHex = (rgb) => {
@@ -298,6 +380,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
   return (
     <div className="w-full h-full flex relative">
+      {/* Help Banner */}
+      <div className="absolute top-4 left-4 z-50 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
+        💡 Click to select • Drag to move • Double-click to edit text • Shift+Click for multi-select
+      </div>
+
       <div className="flex-1 relative">
         <iframe 
           ref={iframeRef} 
@@ -311,7 +398,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         <div className="w-72 bg-white border-l overflow-y-auto flex-shrink-0">
           <div className="p-3 border-b bg-purple-50 flex justify-between items-center">
             <span className="font-bold text-sm">
-              {selectedElements.length === 1 ? 'Properties' : `${selectedElements.length} Selected`}
+              {selectedElements.length === 1 ? `${selectedElements[0].tagName}` : `${selectedElements.length} Selected`}
             </span>
             <div className="flex gap-1">
               <button 
