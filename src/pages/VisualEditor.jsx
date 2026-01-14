@@ -16,6 +16,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   const [selectedElements, setSelectedElements] = useState([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const [reloadKey, setReloadKey] = useState(0); // Key to force iframe reload on undo/redo
+  const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const iframeRef = useRef(null);
   const dragStateRef = useRef(null);
   const updateTimeoutRef = useRef(null);
@@ -1022,24 +1023,24 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         
         const target = e.target;
         
-        if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(target.tagName)) {
-          target.contentEditable = 'true';
-          target.focus();
-          
-          const range = doc.createRange();
-          range.selectNodeContents(target);
-          const sel = doc.getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
-          
-          const handleBlur = () => {
-            target.contentEditable = 'false';
-            target.removeEventListener('blur', handleBlur);
-            saveChanges();
-          };
-          
-          target.addEventListener('blur', handleBlur);
+        // Don't open modal for structural elements
+        if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          return;
         }
+        
+        // Select the element if not already selected
+        if (!target.classList.contains('editor-selected')) {
+          doc.querySelectorAll('.editor-selected').forEach(el => {
+            el.classList.remove('editor-selected');
+          });
+          target.classList.add('editor-selected');
+          setSelectedElements([target]);
+          loadProps(target);
+        }
+        
+        // Open properties modal
+        console.log('🖱️ Double-click detected - opening properties modal');
+        setShowPropertiesModal(true);
       };
 
       // Attach event listeners
@@ -1407,95 +1408,123 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         ))}
       </div>
 
-      {selectedElements.length > 0 && (
-        <div className="w-72 bg-white border-l overflow-y-auto flex-shrink-0">
-          <div className="p-3 border-b bg-purple-50 flex justify-between items-center">
-            <span className="font-bold text-sm">
-              {selectedElements.length === 1 ? `${selectedElements[0].tagName}` : `${selectedElements.length} Selected`}
-            </span>
-            <div className="flex gap-1">
+      {/* Properties Modal - Shows on double-click */}
+      {showPropertiesModal && selectedElements.length > 0 && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden">
+            {/* Header */}
+            <div className="p-4 border-b bg-gradient-to-r from-purple-600 to-blue-600 flex justify-between items-center">
+              <div className="text-white">
+                <h3 className="font-bold text-lg">
+                  {selectedElements.length === 1 ? `Edit ${selectedElements[0].tagName}` : `Edit ${selectedElements.length} Elements`}
+                </h3>
+                <p className="text-sm opacity-90">Double-click any element to edit its properties</p>
+              </div>
+              <button 
+                onClick={() => setShowPropertiesModal(false)} 
+                className="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4 overflow-y-auto max-h-[calc(80vh-180px)]">
+              {/* Font Size */}
+              <div>
+                <label className="text-sm font-semibold block mb-2 text-gray-700">Font Size</label>
+                <input 
+                  type="text" 
+                  value={elementProps.fontSize} 
+                  onChange={(e) => updateProp('fontSize', e.target.value)} 
+                  placeholder="16px"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" 
+                />
+              </div>
+              
+              {/* Text Styling */}
+              <div>
+                <label className="text-sm font-semibold block mb-2 text-gray-700">Text Style</label>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => updateProp('fontWeight', elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'normal' : 'bold')} 
+                    className={`flex-1 p-3 border-2 rounded-lg transition ${elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <Bold className="w-5 h-5 mx-auto" />
+                  </button>
+                  <button 
+                    onClick={() => updateProp('fontStyle', elementProps.fontStyle === 'italic' ? 'normal' : 'italic')} 
+                    className={`flex-1 p-3 border-2 rounded-lg transition ${elementProps.fontStyle === 'italic' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <Italic className="w-5 h-5 mx-auto" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Text Alignment */}
+              <div>
+                <label className="text-sm font-semibold block mb-2 text-gray-700">Text Alignment</label>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => updateProp('textAlign', 'left')} 
+                    className={`flex-1 p-3 border-2 rounded-lg transition ${elementProps.textAlign === 'left' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <AlignLeft className="w-5 h-5 mx-auto" />
+                  </button>
+                  <button 
+                    onClick={() => updateProp('textAlign', 'center')} 
+                    className={`flex-1 p-3 border-2 rounded-lg transition ${elementProps.textAlign === 'center' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <AlignCenter className="w-5 h-5 mx-auto" />
+                  </button>
+                  <button 
+                    onClick={() => updateProp('textAlign', 'right')} 
+                    className={`flex-1 p-3 border-2 rounded-lg transition ${elementProps.textAlign === 'right' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    <AlignRight className="w-5 h-5 mx-auto" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Colors */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold block mb-2 text-gray-700">Text Color</label>
+                  <input 
+                    type="color" 
+                    value={elementProps.color} 
+                    onChange={(e) => updateProp('color', e.target.value)} 
+                    className="w-full h-12 cursor-pointer rounded-lg border-2 border-gray-200" 
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-semibold block mb-2 text-gray-700">Background</label>
+                  <input 
+                    type="color" 
+                    value={elementProps.backgroundColor} 
+                    onChange={(e) => updateProp('backgroundColor', e.target.value)} 
+                    className="w-full h-12 cursor-pointer rounded-lg border-2 border-gray-200" 
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-4 border-t bg-gray-50 flex gap-3">
               <button 
                 onClick={duplicate} 
-                className="p-1.5 hover:bg-white rounded transition" 
-                title="Duplicate"
+                className="flex-1 px-4 py-3 bg-white border-2 border-gray-300 rounded-lg font-semibold hover:bg-gray-100 transition flex items-center justify-center gap-2"
               >
                 <Copy className="w-4 h-4" />
+                Duplicate
               </button>
               <button 
                 onClick={deleteEl} 
-                className="p-1.5 hover:bg-white rounded transition" 
-                title="Delete"
+                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition flex items-center justify-center gap-2"
               >
-                <Trash2 className="w-4 h-4 text-red-600" />
+                <Trash2 className="w-4 h-4" />
+                Delete
               </button>
-            </div>
-          </div>
-
-          <div className="p-3 space-y-3">
-            <div>
-              <label className="text-xs font-bold block mb-1">Font Size</label>
-              <input 
-                type="text" 
-                value={elementProps.fontSize} 
-                onChange={(e) => updateProp('fontSize', e.target.value)} 
-                className="w-full px-2 py-1 border rounded text-sm" 
-              />
-            </div>
-            
-            <div className="flex gap-2">
-              <button 
-                onClick={() => updateProp('fontWeight', elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'normal' : 'bold')} 
-                className={`flex-1 p-2 border rounded transition ${elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
-              >
-                <Bold className="w-4 h-4 mx-auto" />
-              </button>
-              <button 
-                onClick={() => updateProp('fontStyle', elementProps.fontStyle === 'italic' ? 'normal' : 'italic')} 
-                className="flex-1 p-2 border rounded hover:bg-gray-50 transition"
-              >
-                <Italic className="w-4 h-4 mx-auto" />
-              </button>
-            </div>
-
-            <div className="flex gap-2">
-              <button 
-                onClick={() => updateProp('textAlign', 'left')} 
-                className={`flex-1 p-2 border rounded transition ${elementProps.textAlign === 'left' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
-              >
-                <AlignLeft className="w-4 h-4 mx-auto" />
-              </button>
-              <button 
-                onClick={() => updateProp('textAlign', 'center')} 
-                className={`flex-1 p-2 border rounded transition ${elementProps.textAlign === 'center' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
-              >
-                <AlignCenter className="w-4 h-4 mx-auto" />
-              </button>
-              <button 
-                onClick={() => updateProp('textAlign', 'right')} 
-                className={`flex-1 p-2 border rounded transition ${elementProps.textAlign === 'right' ? 'bg-purple-100' : 'hover:bg-gray-50'}`}
-              >
-                <AlignRight className="w-4 h-4 mx-auto" />
-              </button>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold block mb-1">Text Color</label>
-              <input 
-                type="color" 
-                value={elementProps.color} 
-                onChange={(e) => updateProp('color', e.target.value)} 
-                className="w-full h-10 cursor-pointer rounded" 
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-bold block mb-1">Background Color</label>
-              <input 
-                type="color" 
-                value={elementProps.backgroundColor} 
-                onChange={(e) => updateProp('backgroundColor', e.target.value)} 
-                className="w-full h-10 cursor-pointer rounded" 
-              />
             </div>
           </div>
         </div>
