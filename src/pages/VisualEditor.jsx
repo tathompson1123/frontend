@@ -699,6 +699,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         console.log('  - Placeholders before cleanup:', doc.querySelectorAll('.drag-placeholder').length);
         console.log('  - Elements with hasPlaceholder:', doc.querySelectorAll('[data-has-placeholder]').length);
         
+        // Store which elements are selected before save
+        const selectedElementsData = Array.from(doc.querySelectorAll('.editor-selected')).map(el => {
+          return {
+            tagName: el.tagName,
+            className: el.className,
+            id: el.id,
+            textContent: el.textContent?.substring(0, 50) // First 50 chars for identification
+          };
+        });
+        console.log('  - Selected elements before save:', selectedElementsData.length);
+        
         // DON'T remove placeholders - keep them in the document to maintain layout
         // Just clean them from the saved HTML
         
@@ -722,9 +733,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         
         console.log('  - Cleaned HTML length:', cleanedHTML.length);
         console.log('  - Original HTML length:', html.length);
-        console.log('💾 SAVE COMPLETE');
+        console.log('  - Calling onUpdate...');
         
         onUpdate(cleanedHTML);
+        
+        console.log('💾 SAVE COMPLETE');
+        console.log('⚠️ NOTE: If iframe reloads, editor-selected classes will be lost');
       }
     }, 300);
   };
