@@ -232,7 +232,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     </div>
                   </div>
                   <div className="overflow-hidden">
-                   iframe srcDoc={currentWebsite} title="Website Preview" className="w-full h-[450px] bg-white border-0 pointer-events-none" sandbox="" />
+                   <iframe srcDoc={currentWebsite} title="Website Preview" className="w-full h-[450px] bg-white border-0 pointer-events-none" sandbox="" />
                   </div>
                 </div>
               ) : (
