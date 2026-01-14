@@ -22,7 +22,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const isMouseDownRef = useRef(false); // Use ref instead of local variable
   const dragStartedRef = useRef(false); // Use ref instead of local variable
   const lastSavedHtmlRef = useRef(''); // Track last saved HTML to prevent reload loops
-  const isEditingRef = useRef(false); // Track if currently editing text
   
   // CRITICAL: Initialize with htmlContent, but handle undefined case
   const [initialHtml, setInitialHtml] = useState(htmlContent || '<html><body><h1>Loading...</h1></body></html>');
@@ -39,35 +38,23 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     margin: ''
   });
 
-  // Track the last page to detect actual page changes
-  const lastPageRef = useRef(currentPage);
-  const hasLoadedRef = useRef(false);
-
   // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
-    const pageChanged = lastPageRef.current !== currentPage;
-    const isFirstLoad = !hasLoadedRef.current;
-    
     console.log('📄 Page/content changed - currentPage:', currentPage);
     console.log('   htmlContent length:', htmlContent?.length);
-    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad);
     console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
     
-    // Only update if page changed OR first load with valid content
-    if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
-      console.log('   ✅ Updating initialHtml (page changed or first load)');
+    // Only update if we have valid htmlContent
+    if (htmlContent && htmlContent.length > 0) {
+      console.log('   ✅ Updating initialHtml with new content');
       setInitialHtml(htmlContent);
-      hasLoadedRef.current = true;
-      lastPageRef.current = currentPage;
       
       // Reset editor state
       setSelectedElements([]);
       setGuides({ vertical: [], horizontal: [] });
       dragStateRef.current = null;
-    } else if (!htmlContent || htmlContent.length === 0) {
-      console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
     } else {
-      console.log('   ℹ️ Skipping - same page content update (no reload)');
+      console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
     }
   }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
 
@@ -203,94 +190,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
       // Setup event handlers
       const handleMouseDown = (e) => {
-        // Don't allow dragging if we're editing text
-        if (isEditingRef.current) {
-          console.log('⚠️ Ignoring mousedown - text editing in progress');
-          return;
-        }
-        
-        let target = e.target;
-        
-        // CRITICAL: Find the right element to select/drag
-        // Skip up to a meaningful draggable element
-        const findDraggableElement = (el) => {
-          // Don't allow dragging these elements
-          const nonDraggable = ['HTML', 'BODY', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'];
-          
-          // Don't allow dragging background/hero sections
-          const isBackground = el.classList?.contains('hero') || 
-                               el.classList?.contains('background') ||
-                               el.classList?.contains('bg-') ||
-                               el.tagName === 'SECTION' ||
-                               el.tagName === 'HEADER' ||
-                               el.tagName === 'FOOTER' ||
-                               el.tagName === 'MAIN';
-          
-          if (nonDraggable.includes(el.tagName) || isBackground) {
-            return null;
-          }
-          
-          // If clicking on text inside an element, find the parent container
-          // But stop at sections/headers/etc
-          if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'EM' || 
-              el.tagName === 'B' || el.tagName === 'I' || el.tagName === 'U') {
-            const parent = el.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
-            if (parent && !isBackground) {
-              return parent;
-            }
-          }
-          
-          // For container divs, check if they have draggable children
-          // If a div only contains other divs/sections, it's not draggable
-          if (el.tagName === 'DIV') {
-            const children = Array.from(el.children);
-            
-            // Check if it's a pure container (only has structural elements)
-            const onlyStructural = children.every(child => 
-              ['DIV', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE', 'NAV', 'UL', 'OL'].includes(child.tagName)
-            );
-            
-            // Also check if it's a wrapper with no direct text content or images
-            const hasDirectText = Array.from(el.childNodes).some(node => 
-              node.nodeType === 3 && node.textContent.trim().length > 0
-            );
-            
-            const hasImages = el.querySelectorAll('img').length > 0;
-            const hasButtons = el.querySelectorAll('button, a.btn, a.button').length > 0;
-            
-            // If it's a container with only structural elements and no direct text/images/buttons, don't allow dragging
-            if (onlyStructural && children.length > 0 && !hasDirectText && !hasImages && !hasButtons) {
-              console.log('  ⚠️ Skipping container div with only structural children');
-              return null;
-            }
-            
-            // Also skip very large containers (likely layout containers)
-            const rect = el.getBoundingClientRect();
-            const windowWidth = el.ownerDocument.defaultView.innerWidth;
-            if (rect.width > windowWidth * 0.7 && children.length > 2) {
-              console.log('  ⚠️ Skipping large layout container (width:', rect.width, ')');
-              return null;
-            }
-            
-            // Skip nearly empty containers (less than 10 chars of text)
-            const textContent = el.textContent?.trim() || '';
-            if (textContent.length < 10 && children.length > 1) {
-              console.log('  ⚠️ Skipping nearly empty container (text length:', textContent.length, ')');
-              return null;
-            }
-          }
-          
-          return el;
-        };
-        
-        const draggableTarget = findDraggableElement(target);
-        
-        if (!draggableTarget) {
-          console.log('⚠️ Clicked non-draggable element:', target.tagName, target.className);
-          return;
-        }
-        
-        target = draggableTarget;
+        const target = e.target;
         
         console.log('═══════════════════════════════════════');
         console.log('🟢 MOUSEDOWN EVENT');
@@ -389,11 +289,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           return;
         }
 
-        // Get doc and iframe references
-        const iframe = iframeRef.current;
-        const doc = iframe.contentDocument;
-        if (!doc) return;
-
         const dx = e.clientX - dragStateRef.current.startX;
         const dy = e.clientY - dragStateRef.current.startY;
         
@@ -480,64 +375,52 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const snapThreshold = 10; // Slightly larger threshold for easier snapping
           const detectedGuides = { vertical: [], horizontal: [] };
           
-          // Calculate the center of the DOCUMENT BODY (not iframe viewport which changes with sidebar)
-          const body = doc.body;
-          const bodyRect = body.getBoundingClientRect();
-          
-          // Use body width for consistent centering regardless of sidebar
-          const bodyCenterX = bodyRect.width / 2;
-          const bodyCenterY = bodyRect.height / 2;
-          
-          // CRITICAL: Elements are positioned relative to their offsetParent, not viewport
-          // Get the offsetParent's position to convert element coords to body coords
+          // Find parent section/container
           const draggingElement = firstElement.el;
-          const offsetParent = draggingElement.offsetParent || body;
-          const parentRect = offsetParent.getBoundingClientRect();
-          const parentOffsetX = parentRect.left - bodyRect.left;
-          const parentOffsetY = parentRect.top - bodyRect.top;
-          
-          // Convert element center to body coordinates
-          const elemBodyCenterX = newLeft + parentOffsetX + firstElement.width / 2;
-          const elemBodyCenterY = newTop + parentOffsetY + firstElement.height / 2;
-          
-          if (Math.random() < 0.1) {
-            console.log('📐 Snap calculations:');
-            console.log('  - elemBodyCenterX:', elemBodyCenterX, 'bodyCenterX:', bodyCenterX);
-            console.log('  - bodyWidth:', bodyRect.width, 'parentOffsetX:', parentOffsetX);
-            console.log('  - Difference:', Math.abs(elemBodyCenterX - bodyCenterX));
-          }
-          
-          // SNAP TO BODY CENTER (Horizontal) - consistent regardless of sidebar
-          if (Math.abs(elemBodyCenterX - bodyCenterX) < snapThreshold) {
-            // Convert body center back to parent-relative coordinates
-            newLeft = bodyCenterX - parentOffsetX - firstElement.width / 2;
-            detectedGuides.vertical.push({ 
-              x: bodyCenterX + bodyRect.left, // Convert to viewport coords for rendering
-              type: 'center', 
-              label: 'Page Center' 
-            });
-          }
-          
-          // SNAP TO BODY CENTER (Vertical)
-          if (Math.abs(elemBodyCenterY - bodyCenterY) < snapThreshold) {
-            // Convert body center back to parent-relative coordinates
-            newTop = bodyCenterY - parentOffsetY - firstElement.height / 2;
-            detectedGuides.horizontal.push({ 
-              y: bodyCenterY + bodyRect.top, // Convert to viewport coords for rendering
-              type: 'center', 
-              label: 'Page Center' 
-            });
-          }
-          
-          // Get document scroll for element-to-element snapping
-          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
-          
-          // Find parent section/container for sibling element detection (reuse draggingElement from above)
           let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
           
           if (!parentSection) {
             parentSection = doc.body;
+          }
+          
+          // Get parent section dimensions in DOCUMENT coordinates
+          const parentRect = parentSection.getBoundingClientRect();
+          const iframeRect = dragStateRef.current.iframeRect;
+          
+          // Convert to document coordinates by accounting for scroll
+          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+          
+          const parentLeft = parentRect.left - iframeRect.left + scrollLeft;
+          const parentTop = parentRect.top - iframeRect.top + scrollTop;
+          const parentCenterX = parentLeft + parentRect.width / 2;
+          const parentCenterY = parentTop + parentRect.height / 2;
+          
+          if (Math.random() < 0.1) {
+            console.log('📐 Snap calculations:');
+            console.log('  - elemCenterX:', elemCenterX, 'parentCenterX:', parentCenterX);
+            console.log('  - Difference:', Math.abs(elemCenterX - parentCenterX));
+            console.log('  - Scroll:', scrollLeft, scrollTop);
+          }
+          
+          // SNAP TO PARENT SECTION CENTER (Horizontal)
+          if (Math.abs(elemCenterX - parentCenterX) < snapThreshold) {
+            newLeft = parentCenterX - firstElement.width / 2;
+            detectedGuides.vertical.push({ 
+              x: parentCenterX, 
+              type: 'center', 
+              label: 'Section Center' 
+            });
+          }
+          
+          // SNAP TO PARENT SECTION CENTER (Vertical)
+          if (Math.abs(elemCenterY - parentCenterY) < snapThreshold) {
+            newTop = parentCenterY - firstElement.height / 2;
+            detectedGuides.horizontal.push({ 
+              y: parentCenterY, 
+              type: 'center', 
+              label: 'Section Center' 
+            });
           }
           
           // SNAP TO OTHER ELEMENTS (Center to Center only) - also in document coordinates
@@ -736,27 +619,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const handleMouseOver = (e) => {
         if (isMouseDownRef.current || dragStartedRef.current) return;
         
-        let target = e.target;
-        
-        // Use same logic as mousedown to find draggable element
-        const nonDraggable = ['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 
-                              'SECTION', 'HEADER', 'FOOTER', 'MAIN'];
-        
-        if (nonDraggable.includes(target.tagName)) return;
-        
-        // Skip background classes
-        const isBackground = target.classList?.contains('hero') || 
-                           target.classList?.contains('background') ||
-                           target.classList?.contains('bg-');
-        if (isBackground) return;
-        
-        // For text elements, hover the parent
-        if (['SPAN', 'STRONG', 'EM', 'B', 'I', 'U'].includes(target.tagName)) {
-          const parent = target.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
-          if (parent) target = parent;
+        const target = e.target;
+        if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+          target.classList.add('editor-hover');
         }
-        
-        target.classList.add('editor-hover');
       };
 
       const handleMouseOut = (e) => {
@@ -767,31 +633,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         e.preventDefault();
         e.stopPropagation();
         
-        let target = e.target;
-        
-        // Use the same smart targeting as mousedown to find the right element
-        if (['SPAN', 'STRONG', 'EM', 'B', 'I', 'U'].includes(target.tagName)) {
-          const parent = target.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
-          if (parent) target = parent;
-        }
+        const target = e.target;
         
         if (['H1','H2','H3','H4','H5','H6','P','SPAN','A','BUTTON','DIV','LI'].includes(target.tagName)) {
-          console.log('✏️ Starting text edit mode');
-          
-          // Set editing flag to block dragging
-          isEditingRef.current = true;
-          
-          // Remove hover and selected classes temporarily
-          target.classList.remove('editor-hover');
-          const wasSelected = target.classList.contains('editor-selected');
-          target.classList.remove('editor-selected');
-          
-          // Make editable
           target.contentEditable = 'true';
-          target.style.cursor = 'text';
           target.focus();
           
-          // Select all text
           const range = doc.createRange();
           range.selectNodeContents(target);
           const sel = doc.getSelection();
@@ -799,19 +646,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           sel.addRange(range);
           
           const handleBlur = () => {
-            console.log('✏️ Ending text edit mode');
             target.contentEditable = 'false';
-            target.style.cursor = '';
             target.removeEventListener('blur', handleBlur);
-            
-            // Restore selected state if it was selected
-            if (wasSelected) {
-              target.classList.add('editor-selected');
-            }
-            
-            // Re-enable dragging
-            isEditingRef.current = false;
-            
             saveChanges();
           };
           
