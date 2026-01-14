@@ -38,23 +38,35 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     margin: ''
   });
 
+  // Track the last page to detect actual page changes
+  const lastPageRef = useRef(currentPage);
+  const hasLoadedRef = useRef(false);
+
   // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
+    const pageChanged = lastPageRef.current !== currentPage;
+    const isFirstLoad = !hasLoadedRef.current;
+    
     console.log('📄 Page/content changed - currentPage:', currentPage);
     console.log('   htmlContent length:', htmlContent?.length);
+    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad);
     console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
     
-    // Only update if we have valid htmlContent
-    if (htmlContent && htmlContent.length > 0) {
-      console.log('   ✅ Updating initialHtml with new content');
+    // Only update if page changed OR first load with valid content
+    if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
+      console.log('   ✅ Updating initialHtml (page changed or first load)');
       setInitialHtml(htmlContent);
+      hasLoadedRef.current = true;
+      lastPageRef.current = currentPage;
       
       // Reset editor state
       setSelectedElements([]);
       setGuides({ vertical: [], horizontal: [] });
       dragStateRef.current = null;
-    } else {
+    } else if (!htmlContent || htmlContent.length === 0) {
       console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
+    } else {
+      console.log('   ℹ️ Skipping - same page content update (no reload)');
     }
   }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
 
