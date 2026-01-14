@@ -15,6 +15,7 @@ import {
 export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
+  const [reloadKey, setReloadKey] = useState(0); // Key to force iframe reload on undo/redo
   const iframeRef = useRef(null);
   const dragStateRef = useRef(null);
   const updateTimeoutRef = useRef(null);
@@ -75,6 +76,13 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       });
       
       setInitialHtml(htmlContent);
+      
+      // CRITICAL: Force iframe reload on external changes (undo/redo)
+      if (isExternalChange) {
+        console.log('   🔄 Forcing iframe reload (incrementing key)');
+        setReloadKey(prev => prev + 1);
+      }
+      
       hasLoadedRef.current = true;
       lastPageRef.current = currentPage;
       lastHtmlContentRef.current = htmlContent;
@@ -1317,7 +1325,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         <iframe 
           ref={iframeRef} 
           srcDoc={initialHtml}
-          key={currentPage} 
+          key={`${currentPage}-${reloadKey}`}
           className="w-full h-full border-none"
           title="Visual Editor"
         />
