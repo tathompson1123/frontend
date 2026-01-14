@@ -10,7 +10,8 @@ import {
   Smartphone,
   X,
   Undo2,
-  Redo2
+  Redo2,
+  Check
 } from 'lucide-react';
 import VisualEditor from './VisualEditor';
 
@@ -19,6 +20,7 @@ export default function WebsiteEditor() {
   const [allPages, setAllPages] = useState({});
   const [currentPage, setCurrentPage] = useState('index.html');
   const [isSaving, setIsSaving] = useState(false);
+  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
   const [devicePreview, setDevicePreview] = useState('desktop');
   const [isAIChatOpen, setIsAIChatOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -141,29 +143,29 @@ export default function WebsiteEditor() {
     }
   };
 
-const handleVisualUpdate = (updatedHTML) => {
-  console.log('=== HANDLE VISUAL UPDATE ===');
-  console.log('Current allPages:', allPages);
-  console.log('Current page:', currentPage);
-  console.log('Updated HTML length:', updatedHTML?.length);
-  
-  const newPages = {
-    ...allPages,
-    [currentPage]: updatedHTML
+  const handleVisualUpdate = (updatedHTML) => {
+    console.log('=== HANDLE VISUAL UPDATE ===');
+    console.log('Current allPages:', allPages);
+    console.log('Current page:', currentPage);
+    console.log('Updated HTML length:', updatedHTML?.length);
+    
+    const newPages = {
+      ...allPages,
+      [currentPage]: updatedHTML
+    };
+    
+    console.log('New pages object:', newPages);
+    console.log('New pages keys:', Object.keys(newPages));
+    
+    setAllPages(newPages);
+    
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(newPages);
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+    
+    console.log('=== UPDATE COMPLETE ===');
   };
-  
-  console.log('New pages object:', newPages);
-  console.log('New pages keys:', Object.keys(newPages));
-  
-  setAllPages(newPages);
-  
-  const newHistory = history.slice(0, historyIndex + 1);
-  newHistory.push(newPages);
-  setHistory(newHistory);
-  setHistoryIndex(newHistory.length - 1);
-  
-  console.log('=== UPDATE COMPLETE ===');
-};
   
   const handleUndo = () => {
     if (historyIndex > 0) {
@@ -195,11 +197,19 @@ const handleVisualUpdate = (updatedHTML) => {
         })
       });
       
-      navigate('/dashboard?tab=website');
+      // Show success toast
+      setShowSaveSuccess(true);
+      
+      // Wait 1.5 seconds to show the success message, then navigate
+      setTimeout(() => {
+        navigate('/dashboard?tab=website');
+      }, 1500);
+      
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save website');
       setIsSaving(false);
+      setShowSaveSuccess(false);
     }
   };
 
@@ -214,6 +224,21 @@ const handleVisualUpdate = (updatedHTML) => {
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">
+      {/* Success Toast Notification */}
+      {showSaveSuccess && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-2xl flex items-center gap-3">
+            <div className="bg-white rounded-full p-1">
+              <Check className="w-5 h-5 text-green-500" />
+            </div>
+            <div>
+              <p className="font-semibold">Changes Saved Successfully!</p>
+              <p className="text-sm text-green-100">Returning to dashboard...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
      {/* Header */}
 <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
   <div className="flex items-center gap-6 flex-1 overflow-x-auto">
@@ -302,11 +327,16 @@ const handleVisualUpdate = (updatedHTML) => {
     className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50 flex-shrink-0 ml-4"
   >
     {isSaving ? (
-      <Loader2 className="w-4 h-4 animate-spin" />
+      <>
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span className="hidden md:inline">Saving...</span>
+      </>
     ) : (
-      <Save className="w-4 h-4" />
+      <>
+        <Save className="w-4 h-4" />
+        <span className="hidden md:inline">Save Changes</span>
+      </>
     )}
-    <span className="hidden md:inline">Save Changes</span>
   </button>
 </header>
 
@@ -378,14 +408,14 @@ const handleVisualUpdate = (updatedHTML) => {
   {devicePreview === 'desktop' ? (
     allPages[currentPage] ? (
       <VisualEditor 
-  htmlContent={allPages[currentPage]}
-  onUpdate={handleVisualUpdate}
-  currentPage={currentPage}
-  onUndo={handleUndo}
-  onRedo={handleRedo}
-  canUndo={historyIndex > 0}
-  canRedo={historyIndex < history.length - 1}
-/>
+        htmlContent={allPages[currentPage]}
+        onUpdate={handleVisualUpdate}
+        currentPage={currentPage}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+      />
     ) : (
       <div className="flex items-center justify-center h-full">
         <div className="text-gray-500">Loading page content...</div>
