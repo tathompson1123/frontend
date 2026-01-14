@@ -22,7 +22,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const isMouseDownRef = useRef(false); // Use ref instead of local variable
   const dragStartedRef = useRef(false); // Use ref instead of local variable
   const lastSavedHtmlRef = useRef(''); // Track last saved HTML to prevent reload loops
-  const initialHtmlRef = useRef(htmlContent); // Store initial HTML
+  
+  // CRITICAL: Initialize with htmlContent immediately, not in useEffect
+  const [initialHtml, setInitialHtml] = useState(htmlContent);
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -36,14 +38,19 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     margin: ''
   });
 
-  // Clear selection when page changes
+  // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
+    console.log('📄 Page changed to:', currentPage, '- Reset initial HTML');
+    console.log('   htmlContent length:', htmlContent?.length);
+    console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
+    
     setSelectedElements([]);
     setGuides({ vertical: [], horizontal: [] });
     dragStateRef.current = null;
-    initialHtmlRef.current = htmlContent; // Update initial HTML when page changes
-    console.log('📄 Page changed to:', currentPage, '- Reset initial HTML');
-  }, [currentPage]); // ONLY currentPage, NOT htmlContent!
+    
+    // Only update if currentPage actually changed or if this is the first load
+    setInitialHtml(htmlContent);
+  }, [currentPage]); // ONLY currentPage - htmlContent changes won't trigger this
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -53,6 +60,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     }
 
     console.log('🔄 Setting up editor for page:', currentPage);
+    
+    let retryCount = 0;
+    const maxRetries = 20; // Max 2 seconds of retrying
 
     const initEditor = () => {
       const doc = iframe.contentDocument;
@@ -63,18 +73,45 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       
       if (!doc.body) {
         console.log('❌ No body yet, waiting...');
-        setTimeout(initEditor, 100);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(initEditor, 100);
+        } else {
+          console.error('❌ TIMEOUT: Body never loaded after', maxRetries, 'retries');
+        }
         return;
       }
       
       // CRITICAL: Wait for actual content, not just empty body
-      if (!doc.body.children || doc.body.children.length === 0) {
-        console.log('⏳ Body is empty, waiting for content...');
-        setTimeout(initEditor, 100);
-        return;
+      // Check multiple times because content might load progressively
+      const bodyHasContent = doc.body.children && doc.body.children.length > 0;
+      const bodyHasText = doc.body.textContent && doc.body.textContent.trim().length > 0;
+      
+      if (!bodyHasContent && !bodyHasText) {
+        console.log('⏳ Body is empty (retry', retryCount + 1, '/', maxRetries, ')');
+        console.log('   - children:', doc.body.children?.length);
+        console.log('   - text length:', doc.body.textContent?.length);
+        
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(initEditor, 100);
+        } else {
+          console.warn('⚠️ Body still empty after', maxRetries, 'retries - initializing anyway');
+          console.log('   This might mean the srcDoc content is empty or invalid');
+          console.log('   htmlContent length:', htmlContent?.length);
+          console.log('   initialHtml length:', initialHtml?.length);
+          // Continue with initialization anyway
+        }
+        
+        if (retryCount >= maxRetries) {
+          // Force continue after max retries
+        } else {
+          return;
+        }
       }
 
       console.log('✅ Initializing editor on body with', doc.body.children.length, 'children');
+      console.log('   Body text length:', doc.body.textContent?.length);
 
       // Remove old event listeners if they exist
       if (eventHandlersRef.current) {
@@ -915,7 +952,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       <div className="flex-1 relative">
         <iframe 
           ref={iframeRef} 
-          srcDoc={initialHtmlRef.current}
+          srcDoc={initialHtml}
           key={currentPage} 
           className="w-full h-full border-none"
           title="Visual Editor"
