@@ -9,7 +9,8 @@ import {
   AlignCenter,
   AlignRight,
   Bold,
-  Italic
+  Italic,
+  X
 } from 'lucide-react';
 
 export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
