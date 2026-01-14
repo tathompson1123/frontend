@@ -14,6 +14,7 @@ import {
 
 export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const [selectedElements, setSelectedElements] = useState([]);
+  const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const iframeRef = useRef(null);
   const dragStateRef = useRef(null);
   const updateTimeoutRef = useRef(null);
@@ -122,10 +123,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         const elementsData = selectedElements.map(elem => {
           prepareElementForDrag(elem, doc);
           
+          const rect = elem.getBoundingClientRect();
+          
           return {
             el: elem,
             startLeft: parseFloat(elem.style.left) || 0,
-            startTop: parseFloat(elem.style.top) || 0
+            startTop: parseFloat(elem.style.top) || 0,
+            width: rect.width,
+            height: rect.height
           };
         });
         
@@ -133,7 +138,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           elements: elementsData,
           startX: e.clientX,
           startY: e.clientY,
-          moved: false
+          moved: false,
+          iframeRect: iframeRect
         };
       } else {
         // Clicking on new element - will select on mouseup
@@ -165,14 +171,204 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         }
       }
       
-      // Perform drag
+      // Perform drag with snapping
       if (dragStarted && dragStateRef.current.elements) {
-        dragStateRef.current.elements.forEach(data => {
-          const newLeft = data.startLeft + dx;
-          const newTop = data.startTop + dy;
+        const firstElement = dragStateRef.current.elements[0];
+        
+        // Calculate new position
+        let newLeft = firstElement.startLeft + dx;
+        let newTop = firstElement.startTop + dy;
+        
+        // Calculate element bounds for snapping
+        const elemCenterX = newLeft + firstElement.width / 2;
+        const elemCenterY = newTop + firstElement.height / 2;
+        const elemRight = newLeft + firstElement.width;
+        const elemBottom = newTop + firstElement.height;
+        
+        // Get all other elements for snap guides
+        const allElements = Array.from(doc.querySelectorAll('*')).filter(el => 
+          !dragStateRef.current.elements.some(data => data.el === el) &&
+          !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(el.tagName) &&
+          el.offsetParent !== null &&
+          el.getBoundingClientRect().width > 10 &&
+          el.getBoundingClientRect().height > 10
+        );
+        
+        const snapThreshold = 8; // pixels
+        const detectedGuides = { vertical: [], horizontal: [] };
+        
+        // Page center guides
+        const iframeRect = dragStateRef.current.iframeRect;
+        const pageWidth = doc.body.scrollWidth;
+        const pageHeight = doc.body.scrollHeight;
+        const pageCenterX = pageWidth / 2;
+        const pageCenterY = pageHeight / 2;
+        
+        // SNAP TO PAGE CENTER
+        if (Math.abs(elemCenterX - pageCenterX) < snapThreshold) {
+          newLeft = pageCenterX - firstElement.width / 2;
+          detectedGuides.vertical.push({ 
+            x: pageCenterX, 
+            type: 'center',
+            label: 'Page Center'
+          });
+        }
+        
+        if (Math.abs(elemCenterY - pageCenterY) < snapThreshold) {
+          newTop = pageCenterY - firstElement.height / 2;
+          detectedGuides.horizontal.push({ 
+            y: pageCenterY, 
+            type: 'center',
+            label: 'Page Center'
+          });
+        }
+        
+        // SNAP TO OTHER ELEMENTS
+        allElements.forEach(other => {
+          const otherRect = other.getBoundingClientRect();
+          const otherLeft = otherRect.left - iframeRect.left;
+          const otherTop = otherRect.top - iframeRect.top;
+          const otherRight = otherLeft + otherRect.width;
+          const otherBottom = otherTop + otherRect.height;
+          const otherCenterX = otherLeft + otherRect.width / 2;
+          const otherCenterY = otherTop + otherRect.height / 2;
           
-          data.el.style.left = newLeft + 'px';
-          data.el.style.top = newTop + 'px';
+          // Vertical snapping (left-to-right)
+          
+          // Center to center
+          if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
+            newLeft = otherCenterX - firstElement.width / 2;
+            detectedGuides.vertical.push({ 
+              x: otherCenterX, 
+              type: 'center',
+              label: 'Center'
+            });
+          }
+          
+          // Left to left
+          if (Math.abs(newLeft - otherLeft) < snapThreshold) {
+            newLeft = otherLeft;
+            detectedGuides.vertical.push({ 
+              x: otherLeft, 
+              type: 'edge',
+              label: 'Left Edge'
+            });
+          }
+          
+          // Left to right
+          if (Math.abs(newLeft - otherRight) < snapThreshold) {
+            newLeft = otherRight;
+            detectedGuides.vertical.push({ 
+              x: otherRight, 
+              type: 'edge',
+              label: 'Right Edge'
+            });
+          }
+          
+          // Right to left
+          if (Math.abs(elemRight - otherLeft) < snapThreshold) {
+            newLeft = otherLeft - firstElement.width;
+            detectedGuides.vertical.push({ 
+              x: otherLeft, 
+              type: 'edge',
+              label: 'Left Edge'
+            });
+          }
+          
+          // Right to right
+          if (Math.abs(elemRight - otherRight) < snapThreshold) {
+            newLeft = otherRight - firstElement.width;
+            detectedGuides.vertical.push({ 
+              x: otherRight, 
+              type: 'edge',
+              label: 'Right Edge'
+            });
+          }
+          
+          // Horizontal snapping (top-to-bottom)
+          
+          // Center to center
+          if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
+            newTop = otherCenterY - firstElement.height / 2;
+            detectedGuides.horizontal.push({ 
+              y: otherCenterY, 
+              type: 'center',
+              label: 'Center'
+            });
+          }
+          
+          // Top to top
+          if (Math.abs(newTop - otherTop) < snapThreshold) {
+            newTop = otherTop;
+            detectedGuides.horizontal.push({ 
+              y: otherTop, 
+              type: 'edge',
+              label: 'Top Edge'
+            });
+          }
+          
+          // Top to bottom
+          if (Math.abs(newTop - otherBottom) < snapThreshold) {
+            newTop = otherBottom;
+            detectedGuides.horizontal.push({ 
+              y: otherBottom, 
+              type: 'edge',
+              label: 'Bottom Edge'
+            });
+          }
+          
+          // Bottom to top
+          if (Math.abs(elemBottom - otherTop) < snapThreshold) {
+            newTop = otherTop - firstElement.height;
+            detectedGuides.horizontal.push({ 
+              y: otherTop, 
+              type: 'edge',
+              label: 'Top Edge'
+            });
+          }
+          
+          // Bottom to bottom
+          if (Math.abs(elemBottom - otherBottom) < snapThreshold) {
+            newTop = otherBottom - firstElement.height;
+            detectedGuides.horizontal.push({ 
+              y: otherBottom, 
+              type: 'edge',
+              label: 'Bottom Edge'
+            });
+          }
+        });
+        
+        // Remove duplicate guides
+        const uniqueVertical = [];
+        const seenX = new Set();
+        detectedGuides.vertical.forEach(guide => {
+          if (!seenX.has(guide.x)) {
+            seenX.add(guide.x);
+            uniqueVertical.push(guide);
+          }
+        });
+        
+        const uniqueHorizontal = [];
+        const seenY = new Set();
+        detectedGuides.horizontal.forEach(guide => {
+          if (!seenY.has(guide.y)) {
+            seenY.add(guide.y);
+            uniqueHorizontal.push(guide);
+          }
+        });
+        
+        setGuides({ 
+          vertical: uniqueVertical.slice(0, 3), // Limit to 3 guides
+          horizontal: uniqueHorizontal.slice(0, 3) 
+        });
+        
+        // Apply position to all selected elements
+        const deltaX = newLeft - firstElement.startLeft;
+        const deltaY = newTop - firstElement.startTop;
+        
+        dragStateRef.current.elements.forEach(data => {
+          data.el.style.left = (data.startLeft + deltaX) + 'px';
+          data.el.style.top = (data.startTop + deltaY) + 'px';
         });
       }
     };
@@ -188,6 +384,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           data.el.classList.remove('editor-dragging');
         });
         
+        setGuides({ vertical: [], horizontal: [] });
         saveChanges();
         dragStateRef.current = null;
         return;
@@ -382,7 +579,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     <div className="w-full h-full flex relative">
       {/* Help Banner */}
       <div className="absolute top-4 left-4 z-50 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
-        💡 Click to select • Drag to move • Double-click to edit text • Shift+Click for multi-select
+        💡 Click to select • Drag to move (auto-snap) • Double-click to edit • Shift+Click for multi-select
       </div>
 
       <div className="flex-1 relative">
@@ -392,6 +589,45 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           className="w-full h-full border-none"
           title="Visual Editor"
         />
+        
+        {/* Snap Guide Lines */}
+        {guides.vertical.map((guide, i) => (
+          <div 
+            key={`v-${i}`}
+            className="absolute pointer-events-none z-50"
+            style={{ 
+              left: `${guide.x}px`,
+              top: 0,
+              bottom: 0,
+              width: '1px',
+              backgroundColor: guide.type === 'center' ? '#ef4444' : '#3b82f6',
+              boxShadow: '0 0 4px rgba(0,0,0,0.3)'
+            }}
+          >
+            <div className="absolute top-2 left-2 bg-white px-2 py-1 rounded text-xs font-bold text-gray-700 shadow-lg whitespace-nowrap">
+              {guide.label}
+            </div>
+          </div>
+        ))}
+        
+        {guides.horizontal.map((guide, i) => (
+          <div 
+            key={`h-${i}`}
+            className="absolute pointer-events-none z-50"
+            style={{ 
+              top: `${guide.y}px`,
+              left: 0,
+              right: 0,
+              height: '1px',
+              backgroundColor: guide.type === 'center' ? '#ef4444' : '#3b82f6',
+              boxShadow: '0 0 4px rgba(0,0,0,0.3)'
+            }}
+          >
+            <div className="absolute left-2 top-2 bg-white px-2 py-1 rounded text-xs font-bold text-gray-700 shadow-lg whitespace-nowrap">
+              {guide.label}
+            </div>
+          </div>
+        ))}
       </div>
 
       {selectedElements.length > 0 && (
