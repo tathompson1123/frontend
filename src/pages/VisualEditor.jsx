@@ -1080,7 +1080,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         }
       }
     };
-  }, [currentPage]); // ONLY depend on currentPage, NOT htmlContent!
+  }, [currentPage, reloadKey]); // Depend on currentPage AND reloadKey to reinit after undo
 
   const prepareElementForDrag = (elem, doc) => {
     const computed = window.getComputedStyle(elem);
