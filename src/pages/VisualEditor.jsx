@@ -81,36 +81,42 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
         console.log('   🔄 Applying undo/redo changes directly to DOM');
         const currentDoc = iframeRef.current.contentDocument;
-        const newDoc = tempDiv;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
         
         // Find all elements with position styles in both old and new HTML
         const currentPositioned = Array.from(currentDoc.querySelectorAll('[style*="position"]'));
-        const newPositioned = Array.from(newDoc.querySelectorAll('[style*="position"]'));
+        const newPositioned = Array.from(tempDiv.querySelectorAll('[style*="position"]'));
         
         console.log('   - Current positioned elements:', currentPositioned.length);
         console.log('   - New positioned elements:', newPositioned.length);
         
-        // Update each positioned element's style
-        currentPositioned.forEach((currentEl, index) => {
-          if (newPositioned[index]) {
-            const newStyle = newPositioned[index].getAttribute('style');
-            console.log('   - Updating', currentEl.tagName, 'style to:', newStyle);
+        // Create a map of new elements by their identity (tag + class + text snippet)
+        const newElementMap = new Map();
+        newPositioned.forEach(newEl => {
+          const identity = `${newEl.tagName}-${newEl.className}-${newEl.textContent?.substring(0, 50)}`;
+          newElementMap.set(identity, newEl.getAttribute('style'));
+        });
+        
+        // Update each current positioned element if we find a match
+        currentPositioned.forEach(currentEl => {
+          const identity = `${currentEl.tagName}-${currentEl.className}-${currentEl.textContent?.substring(0, 50)}`;
+          
+          if (newElementMap.has(identity)) {
+            const newStyle = newElementMap.get(identity);
+            console.log('   ✅ Updating', currentEl.tagName, currentEl.className, 'to old position');
             currentEl.setAttribute('style', newStyle);
+            newElementMap.delete(identity); // Mark as processed
+          } else {
+            // This element was positioned in current but not in old - remove position
+            console.log('   ❌ Removing position from', currentEl.tagName, currentEl.className);
+            currentEl.removeAttribute('style');
           }
         });
         
-        // If new HTML has fewer positioned elements, reset the extras
-        if (currentPositioned.length > newPositioned.length) {
-          for (let i = newPositioned.length; i < currentPositioned.length; i++) {
-            console.log('   - Removing position from extra element:', currentPositioned[i].tagName);
-            currentPositioned[i].removeAttribute('style');
-          }
-        }
-        
-        // If new HTML has more positioned elements, we need to apply those styles
-        if (newPositioned.length > currentPositioned.length) {
-          console.log('   ⚠️ New HTML has more positioned elements - may need full reload');
-          // For now, just update what we can
+        // Any remaining in newElementMap means they need to be positioned but aren't currently
+        if (newElementMap.size > 0) {
+          console.log('   ⚠️ Warning:', newElementMap.size, 'elements need positioning but not found in current DOM');
         }
       }
       
