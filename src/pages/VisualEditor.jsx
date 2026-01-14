@@ -237,14 +237,27 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           // If a div only contains other divs/sections, it's not draggable
           if (el.tagName === 'DIV') {
             const children = Array.from(el.children);
-            const hasOnlyContainers = children.every(child => 
-              child.tagName === 'DIV' || child.tagName === 'SECTION' || 
-              child.tagName === 'HEADER' || child.tagName === 'FOOTER'
+            
+            // Check if it's a pure container (only has structural elements)
+            const onlyStructural = children.every(child => 
+              ['DIV', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE', 'NAV'].includes(child.tagName)
             );
             
-            // If it's a container with only containers, don't allow dragging
-            if (hasOnlyContainers && children.length > 0) {
+            // Also check if it's a wrapper with no direct text content
+            const hasDirectText = Array.from(el.childNodes).some(node => 
+              node.nodeType === 3 && node.textContent.trim().length > 0
+            );
+            
+            // If it's a container with only structural elements and no direct text, don't allow dragging
+            if (onlyStructural && children.length > 0 && !hasDirectText) {
               console.log('  ⚠️ Skipping container div with only structural children');
+              return null;
+            }
+            
+            // Also skip very large containers (likely layout containers)
+            const rect = el.getBoundingClientRect();
+            if (rect.width > window.innerWidth * 0.8 && children.length > 3) {
+              console.log('  ⚠️ Skipping large layout container');
               return null;
             }
           }
@@ -444,52 +457,51 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const snapThreshold = 10; // Slightly larger threshold for easier snapping
           const detectedGuides = { vertical: [], horizontal: [] };
           
-          // Find parent section/container
+          // Calculate the center of the VIEWPORT (visible page area)
+          const iframeRect = dragStateRef.current.iframeRect;
+          const viewportCenterX = iframeRect.width / 2;
+          const viewportCenterY = iframeRect.height / 2;
+          
+          // Convert element position to viewport coordinates for comparison
+          const elemViewportCenterX = newLeft + firstElement.width / 2;
+          const elemViewportCenterY = newTop + firstElement.height / 2;
+          
+          if (Math.random() < 0.1) {
+            console.log('📐 Snap calculations:');
+            console.log('  - elemViewportCenterX:', elemViewportCenterX, 'viewportCenterX:', viewportCenterX);
+            console.log('  - Difference:', Math.abs(elemViewportCenterX - viewportCenterX));
+          }
+          
+          // SNAP TO PAGE CENTER (Horizontal)
+          if (Math.abs(elemViewportCenterX - viewportCenterX) < snapThreshold) {
+            newLeft = viewportCenterX - firstElement.width / 2;
+            detectedGuides.vertical.push({ 
+              x: viewportCenterX, 
+              type: 'center', 
+              label: 'Page Center' 
+            });
+          }
+          
+          // SNAP TO PAGE CENTER (Vertical)
+          if (Math.abs(elemViewportCenterY - viewportCenterY) < snapThreshold) {
+            newTop = viewportCenterY - firstElement.height / 2;
+            detectedGuides.horizontal.push({ 
+              y: viewportCenterY, 
+              type: 'center', 
+              label: 'Page Center' 
+            });
+          }
+          
+          // Get document scroll for element-to-element snapping
+          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+          
+          // Find parent section/container for sibling element detection
           const draggingElement = firstElement.el;
           let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
           
           if (!parentSection) {
             parentSection = doc.body;
-          }
-          
-          // Get parent section dimensions in DOCUMENT coordinates
-          const parentRect = parentSection.getBoundingClientRect();
-          const iframeRect = dragStateRef.current.iframeRect;
-          
-          // Convert to document coordinates by accounting for scroll
-          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
-          
-          const parentLeft = parentRect.left - iframeRect.left + scrollLeft;
-          const parentTop = parentRect.top - iframeRect.top + scrollTop;
-          const parentCenterX = parentLeft + parentRect.width / 2;
-          const parentCenterY = parentTop + parentRect.height / 2;
-          
-          if (Math.random() < 0.1) {
-            console.log('📐 Snap calculations:');
-            console.log('  - elemCenterX:', elemCenterX, 'parentCenterX:', parentCenterX);
-            console.log('  - Difference:', Math.abs(elemCenterX - parentCenterX));
-            console.log('  - Scroll:', scrollLeft, scrollTop);
-          }
-          
-          // SNAP TO PARENT SECTION CENTER (Horizontal)
-          if (Math.abs(elemCenterX - parentCenterX) < snapThreshold) {
-            newLeft = parentCenterX - firstElement.width / 2;
-            detectedGuides.vertical.push({ 
-              x: parentCenterX, 
-              type: 'center', 
-              label: 'Section Center' 
-            });
-          }
-          
-          // SNAP TO PARENT SECTION CENTER (Vertical)
-          if (Math.abs(elemCenterY - parentCenterY) < snapThreshold) {
-            newTop = parentCenterY - firstElement.height / 2;
-            detectedGuides.horizontal.push({ 
-              y: parentCenterY, 
-              type: 'center', 
-              label: 'Section Center' 
-            });
           }
           
           // SNAP TO OTHER ELEMENTS (Center to Center only) - also in document coordinates
