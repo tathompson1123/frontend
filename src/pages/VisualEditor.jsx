@@ -389,6 +389,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           return;
         }
 
+        // Get doc and iframe references
+        const iframe = iframeRef.current;
+        const doc = iframe.contentDocument;
+        if (!doc) return;
+
         const dx = e.clientX - dragStateRef.current.startX;
         const dy = e.clientY - dragStateRef.current.startY;
         
@@ -476,7 +481,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const detectedGuides = { vertical: [], horizontal: [] };
           
           // Calculate the center of the DOCUMENT BODY (not iframe viewport which changes with sidebar)
-          const doc = iframeRef.current.contentDocument;
           const body = doc.body;
           const bodyRect = body.getBoundingClientRect();
           
