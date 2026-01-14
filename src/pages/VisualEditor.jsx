@@ -32,6 +32,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   });
 
   useEffect(() => {
+    // Clear selection when page changes
+    setSelectedElements([]);
+    setGuides({ vertical: [], horizontal: [] });
+    dragStateRef.current = null;
+    
     const iframe = iframeRef.current;
     if (!iframe) return;
 
