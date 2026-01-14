@@ -709,9 +709,60 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
   return (
     <div className="w-full h-full flex relative">
-      {/* Help Banner */}
-      <div className="absolute top-4 left-4 z-50 bg-purple-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm font-medium">
-        💡 Click to select • Drag to move (auto-snap) • Double-click to edit • Shift+Click for multi-select
+      {/* Top Navigation Bar */}
+      <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
+        {/* Undo/Redo Buttons */}
+        <button
+          onClick={() => {
+            const doc = iframeRef.current?.contentDocument;
+            if (doc) {
+              // Implement undo via browser history if needed
+              console.log('Undo clicked');
+            }
+          }}
+          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
+          title="Undo"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+        </button>
+        
+        <button
+          onClick={() => {
+            const doc = iframeRef.current?.contentDocument;
+            if (doc) {
+              console.log('Redo clicked');
+            }
+          }}
+          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
+          title="Redo"
+        >
+          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
+          </svg>
+        </button>
+
+        {/* Info Icon with Tooltip */}
+        <div className="relative group">
+          <button className="p-2 bg-purple-600 text-white rounded-lg shadow-lg hover:shadow-xl transition">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+          
+          {/* Tooltip */}
+          <div className="absolute left-0 top-12 w-80 bg-purple-600 text-white px-4 py-3 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-50">
+            <div className="text-sm font-medium space-y-1">
+              <p>💡 <strong>Click</strong> to select</p>
+              <p>🖱️ <strong>Drag</strong> to move (auto-snap)</p>
+              <p>✏️ <strong>Double-click</strong> to edit text</p>
+              <p>⌨️ <strong>Shift+Click</strong> for multi-select</p>
+            </div>
+            {/* Arrow */}
+            <div className="absolute -top-2 left-4 w-4 h-4 bg-purple-600 transform rotate-45"></div>
+          </div>
+        </div>
       </div>
 
       <div className="flex-1 relative">
