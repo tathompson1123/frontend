@@ -77,10 +77,41 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       
       setInitialHtml(htmlContent);
       
-      // CRITICAL: Only force reload for undo/redo (not first load)
-      if (isExternalChange && !isFirstLoad) {
-        console.log('   🔄 Forcing iframe reload for undo/redo (incrementing key)');
-        setReloadKey(prev => prev + 1);
+      // CRITICAL: For undo/redo, update DOM directly without full reload
+      if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
+        console.log('   🔄 Applying undo/redo changes directly to DOM');
+        const currentDoc = iframeRef.current.contentDocument;
+        const newDoc = tempDiv;
+        
+        // Find all elements with position styles in both old and new HTML
+        const currentPositioned = Array.from(currentDoc.querySelectorAll('[style*="position"]'));
+        const newPositioned = Array.from(newDoc.querySelectorAll('[style*="position"]'));
+        
+        console.log('   - Current positioned elements:', currentPositioned.length);
+        console.log('   - New positioned elements:', newPositioned.length);
+        
+        // Update each positioned element's style
+        currentPositioned.forEach((currentEl, index) => {
+          if (newPositioned[index]) {
+            const newStyle = newPositioned[index].getAttribute('style');
+            console.log('   - Updating', currentEl.tagName, 'style to:', newStyle);
+            currentEl.setAttribute('style', newStyle);
+          }
+        });
+        
+        // If new HTML has fewer positioned elements, reset the extras
+        if (currentPositioned.length > newPositioned.length) {
+          for (let i = newPositioned.length; i < currentPositioned.length; i++) {
+            console.log('   - Removing position from extra element:', currentPositioned[i].tagName);
+            currentPositioned[i].removeAttribute('style');
+          }
+        }
+        
+        // If new HTML has more positioned elements, we need to apply those styles
+        if (newPositioned.length > currentPositioned.length) {
+          console.log('   ⚠️ New HTML has more positioned elements - may need full reload');
+          // For now, just update what we can
+        }
       }
       
       hasLoadedRef.current = true;
