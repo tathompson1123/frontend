@@ -12,7 +12,7 @@ import {
   Italic
 } from 'lucide-react';
 
-export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
+export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const iframeRef = useRef(null);
@@ -262,6 +262,19 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
               return null;
             }
             
+            // CRITICAL FIX: Skip layout containers (like feature grid containers)
+            // These are typically 3-column grids or flex containers
+            const computedStyle = el.ownerDocument.defaultView.getComputedStyle(el);
+            const isGrid = computedStyle.display?.includes('grid') || 
+                          el.classList?.toString().includes('grid') ||
+                          computedStyle.display === 'flex' ||
+                          el.classList?.toString().includes('flex');
+            
+            if (isGrid && children.length >= 3) {
+              console.log('  ⚠️ Skipping grid/flex layout container (children:', children.length, ')');
+              return null;
+            }
+            
             // Also skip very large containers (likely layout containers)
             const rect = el.getBoundingClientRect();
             const windowWidth = el.ownerDocument.defaultView.innerWidth;
@@ -473,52 +486,52 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const snapThreshold = 10; // Slightly larger threshold for easier snapping
           const detectedGuides = { vertical: [], horizontal: [] };
           
-          // Find parent section/container
+          // Get scroll position
+          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+          
+          // CRITICAL FIX: Use BODY dimensions for center snap, not parent section
+          const bodyRect = doc.body.getBoundingClientRect();
+          const iframeRect = dragStateRef.current.iframeRect;
+          
+          // Body center in document coordinates
+          const bodyCenterX = bodyRect.width / 2;
+          const bodyCenterY = bodyRect.height / 2;
+          
+          if (Math.random() < 0.1) {
+            console.log('📐 Snap calculations:');
+            console.log('  - elemCenterX:', elemCenterX, 'bodyCenterX:', bodyCenterX);
+            console.log('  - bodyWidth:', bodyRect.width);
+            console.log('  - Difference:', Math.abs(elemCenterX - bodyCenterX));
+            console.log('  - Scroll:', scrollLeft, scrollTop);
+          }
+          
+          // SNAP TO BODY CENTER (Horizontal)
+          if (Math.abs(elemCenterX - bodyCenterX) < snapThreshold) {
+            newLeft = bodyCenterX - firstElement.width / 2;
+            detectedGuides.vertical.push({ 
+              x: bodyCenterX + iframeRect.left, // Convert to viewport coords for guide rendering
+              type: 'center', 
+              label: 'Page Center' 
+            });
+          }
+          
+          // SNAP TO BODY CENTER (Vertical) - less commonly used but available
+          if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
+            newTop = bodyCenterY - firstElement.height / 2;
+            detectedGuides.horizontal.push({ 
+              y: bodyCenterY + iframeRect.top, // Convert to viewport coords for guide rendering
+              type: 'center', 
+              label: 'Page Center' 
+            });
+          }
+          
+          // Find parent section for element-to-element snapping
           const draggingElement = firstElement.el;
           let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
           
           if (!parentSection) {
             parentSection = doc.body;
-          }
-          
-          // Get parent section dimensions in DOCUMENT coordinates
-          const parentRect = parentSection.getBoundingClientRect();
-          const iframeRect = dragStateRef.current.iframeRect;
-          
-          // Convert to document coordinates by accounting for scroll
-          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
-          
-          const parentLeft = parentRect.left - iframeRect.left + scrollLeft;
-          const parentTop = parentRect.top - iframeRect.top + scrollTop;
-          const parentCenterX = parentLeft + parentRect.width / 2;
-          const parentCenterY = parentTop + parentRect.height / 2;
-          
-          if (Math.random() < 0.1) {
-            console.log('📐 Snap calculations:');
-            console.log('  - elemCenterX:', elemCenterX, 'parentCenterX:', parentCenterX);
-            console.log('  - Difference:', Math.abs(elemCenterX - parentCenterX));
-            console.log('  - Scroll:', scrollLeft, scrollTop);
-          }
-          
-          // SNAP TO PARENT SECTION CENTER (Horizontal)
-          if (Math.abs(elemCenterX - parentCenterX) < snapThreshold) {
-            newLeft = parentCenterX - firstElement.width / 2;
-            detectedGuides.vertical.push({ 
-              x: parentCenterX, 
-              type: 'center', 
-              label: 'Section Center' 
-            });
-          }
-          
-          // SNAP TO PARENT SECTION CENTER (Vertical)
-          if (Math.abs(elemCenterY - parentCenterY) < snapThreshold) {
-            newTop = parentCenterY - firstElement.height / 2;
-            detectedGuides.horizontal.push({ 
-              y: parentCenterY, 
-              type: 'center', 
-              label: 'Section Center' 
-            });
           }
           
           // SNAP TO OTHER ELEMENTS (Center to Center only) - also in document coordinates
@@ -533,7 +546,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           
           siblingElements.forEach(other => {
             const otherRect = other.getBoundingClientRect();
-            // Convert to document coordinates
+            // Element positions in document coordinates
             const otherLeft = otherRect.left - iframeRect.left + scrollLeft;
             const otherTop = otherRect.top - iframeRect.top + scrollTop;
             const otherCenterX = otherLeft + otherRect.width / 2;
@@ -542,9 +555,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             // Snap center to center (horizontal)
             if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
               newLeft = otherCenterX - firstElement.width / 2;
-              if (!detectedGuides.vertical.some(g => g.x === otherCenterX)) {
+              if (!detectedGuides.vertical.some(g => Math.abs(g.x - (otherCenterX + iframeRect.left)) < 1)) {
                 detectedGuides.vertical.push({ 
-                  x: otherCenterX, 
+                  x: otherCenterX + iframeRect.left, // Convert to viewport coords for rendering
                   type: 'center', 
                   label: 'Element Center' 
                 });
@@ -554,9 +567,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             // Snap center to center (vertical)
             if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
               newTop = otherCenterY - firstElement.height / 2;
-              if (!detectedGuides.horizontal.some(g => g.y === otherCenterY)) {
+              if (!detectedGuides.horizontal.some(g => Math.abs(g.y - (otherCenterY + iframeRect.top)) < 1)) {
                 detectedGuides.horizontal.push({ 
-                  y: otherCenterY, 
+                  y: otherCenterY + iframeRect.top, // Convert to viewport coords for rendering
                   type: 'center', 
                   label: 'Element Center' 
                 });
@@ -1018,32 +1031,27 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
         {/* Undo/Redo Buttons */}
         <button
-          onClick={() => {
-            const doc = iframeRef.current?.contentDocument;
-            if (doc) {
-              // Implement undo via browser history if needed
-              console.log('Undo clicked');
-            }
-          }}
-          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
+          onClick={onUndo}
+          disabled={!canUndo}
+          className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
+            canUndo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
           title="Undo"
         >
-          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
           </svg>
         </button>
         
         <button
-          onClick={() => {
-            const doc = iframeRef.current?.contentDocument;
-            if (doc) {
-              console.log('Redo clicked');
-            }
-          }}
-          className="p-2 bg-white rounded-lg shadow-lg hover:shadow-xl transition"
+          onClick={onRedo}
+          disabled={!canRedo}
+          className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
+            canRedo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+          }`}
           title="Redo"
         >
-          <svg className="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
           </svg>
         </button>
