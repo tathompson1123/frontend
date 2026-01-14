@@ -41,21 +41,42 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!iframe) return;
+    if (!iframe) {
+      console.log('❌ No iframe ref');
+      return;
+    }
+
+    console.log('🔄 Setting up editor for page:', currentPage);
 
     const initEditor = () => {
       const doc = iframe.contentDocument;
-      if (!doc) return;
+      if (!doc) {
+        console.log('❌ No contentDocument');
+        return;
+      }
+      
+      if (!doc.body) {
+        console.log('❌ No body yet, waiting...');
+        setTimeout(initEditor, 100);
+        return;
+      }
+
+      console.log('✅ Initializing editor on:', doc.body);
 
       // Remove old event listeners if they exist
       if (eventHandlersRef.current) {
+        console.log('🧹 Cleaning up old handlers');
         const { doc: oldDoc, handlers } = eventHandlersRef.current;
-        oldDoc.removeEventListener('mousedown', handlers.mousedown);
-        oldDoc.removeEventListener('mousemove', handlers.mousemove);
-        oldDoc.removeEventListener('mouseup', handlers.mouseup);
-        oldDoc.removeEventListener('mouseover', handlers.mouseover);
-        oldDoc.removeEventListener('mouseout', handlers.mouseout);
-        oldDoc.removeEventListener('dblclick', handlers.dblclick);
+        try {
+          oldDoc.removeEventListener('mousedown', handlers.mousedown);
+          oldDoc.removeEventListener('mousemove', handlers.mousemove);
+          oldDoc.removeEventListener('mouseup', handlers.mouseup);
+          oldDoc.removeEventListener('mouseover', handlers.mouseover);
+          oldDoc.removeEventListener('mouseout', handlers.mouseout);
+          oldDoc.removeEventListener('dblclick', handlers.dblclick);
+        } catch (e) {
+          console.log('Cleanup error (ok):', e.message);
+        }
       }
 
       // Inject styles
@@ -433,6 +454,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       doc.addEventListener('mouseout', handleMouseOut);
       doc.addEventListener('dblclick', handleDoubleClick);
 
+      console.log('✅ Event listeners attached');
+      console.log('   - mousedown:', !!handleMouseDown);
+      console.log('   - mousemove:', !!handleMouseMove);
+      console.log('   - mouseup:', !!handleMouseUp);
+
       // Store handlers for cleanup
       eventHandlersRef.current = {
         doc,
@@ -445,12 +471,30 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           dblclick: handleDoubleClick
         }
       };
+      
+      // Test that events work
+      console.log('🧪 Testing event system...');
+      doc.body.addEventListener('click', () => console.log('✅ Click event works!'), { once: true });
     };
 
+    // Try multiple initialization strategies
     if (iframe.contentDocument?.readyState === 'complete') {
+      console.log('📄 Document already complete');
       initEditor();
     } else {
-      iframe.onload = initEditor;
+      console.log('⏳ Waiting for iframe load...');
+      iframe.onload = () => {
+        console.log('✅ Iframe loaded');
+        initEditor();
+      };
+      
+      // Backup: try after a short delay
+      setTimeout(() => {
+        if (!eventHandlersRef.current) {
+          console.log('⚠️ Handlers not attached, retrying...');
+          initEditor();
+        }
+      }, 500);
     }
 
     return () => {
