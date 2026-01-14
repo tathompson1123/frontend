@@ -41,23 +41,26 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   // Track the last page to detect actual page changes
   const lastPageRef = useRef(currentPage);
   const hasLoadedRef = useRef(false);
+  const lastHtmlContentRef = useRef(htmlContent); // Track last HTML content for undo/redo
 
   // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
     const pageChanged = lastPageRef.current !== currentPage;
     const isFirstLoad = !hasLoadedRef.current;
+    const contentChanged = lastHtmlContentRef.current !== htmlContent;
     
     console.log('📄 Page/content changed - currentPage:', currentPage);
     console.log('   htmlContent length:', htmlContent?.length);
-    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad);
+    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad, '| contentChanged:', contentChanged);
     console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
     
-    // Only update if page changed OR first load with valid content
-    if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
-      console.log('   ✅ Updating initialHtml (page changed or first load)');
+    // Update if: page changed OR first load OR content actually changed (for undo/redo)
+    if ((pageChanged || isFirstLoad || contentChanged) && htmlContent && htmlContent.length > 0) {
+      console.log('   ✅ Updating initialHtml (page changed, first load, or content changed)');
       setInitialHtml(htmlContent);
       hasLoadedRef.current = true;
       lastPageRef.current = currentPage;
+      lastHtmlContentRef.current = htmlContent;
       
       // Reset editor state
       setSelectedElements([]);
@@ -66,7 +69,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     } else if (!htmlContent || htmlContent.length === 0) {
       console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
     } else {
-      console.log('   ℹ️ Skipping - same page content update (no reload)');
+      console.log('   ℹ️ Skipping - identical content (no changes)');
     }
   }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
 
@@ -1138,12 +1141,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         
         const cleanedHTML = html
           .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '') // Remove placeholder divs
+          .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '') // Remove resize handles
           .replace(/\s*class="([^"]*)"/g, (match, classes) => {
             const cleaned = classes
               .replace(/\s*editor-selected\s*/g, ' ')
               .replace(/\s*editor-hover\s*/g, ' ')
               .replace(/\s*editor-dragging\s*/g, ' ')
               .replace(/\s*drag-placeholder\s*/g, ' ')
+              .replace(/\s*resize-handle\s*/g, ' ')
+              .replace(/\s*resize-[nesw]{1,2}\s*/g, ' ')
               .replace(/\s+/g, ' ')
               .trim();
             return cleaned ? ` class="${cleaned}"` : '';
@@ -1159,6 +1165,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         if (cleanedHTML !== lastSavedHtmlRef.current) {
           console.log('  - HTML changed, calling onUpdate...');
           lastSavedHtmlRef.current = cleanedHTML;
+          lastHtmlContentRef.current = cleanedHTML; // Update this too to prevent reload
           onUpdate(cleanedHTML);
         } else {
           console.log('  - HTML unchanged, skipping onUpdate');
