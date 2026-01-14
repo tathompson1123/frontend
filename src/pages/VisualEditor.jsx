@@ -38,23 +38,35 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
     margin: ''
   });
 
+  // Track the last page to detect actual page changes
+  const lastPageRef = useRef(currentPage);
+  const hasLoadedRef = useRef(false);
+
   // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
+    const pageChanged = lastPageRef.current !== currentPage;
+    const isFirstLoad = !hasLoadedRef.current;
+    
     console.log('📄 Page/content changed - currentPage:', currentPage);
     console.log('   htmlContent length:', htmlContent?.length);
+    console.log('   pageChanged:', pageChanged, '| isFirstLoad:', isFirstLoad);
     console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
     
-    // Only update if we have valid htmlContent
-    if (htmlContent && htmlContent.length > 0) {
-      console.log('   ✅ Updating initialHtml with new content');
+    // Only update if page changed OR first load with valid content
+    if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
+      console.log('   ✅ Updating initialHtml (page changed or first load)');
       setInitialHtml(htmlContent);
+      hasLoadedRef.current = true;
+      lastPageRef.current = currentPage;
       
       // Reset editor state
       setSelectedElements([]);
       setGuides({ vertical: [], horizontal: [] });
       dragStateRef.current = null;
-    } else {
+    } else if (!htmlContent || htmlContent.length === 0) {
       console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
+    } else {
+      console.log('   ℹ️ Skipping - same page content update (no reload)');
     }
   }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
 
@@ -226,23 +238,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         // If clicking on already selected element, prepare to drag
         if (target.classList.contains('editor-selected')) {
           console.log('✅ PREPARING TO DRAG (element already selected)');
-          
-          let elementsToDrag = Array.from(doc.querySelectorAll('.editor-selected'));
-          
-          // CRITICAL FIX: If NOT holding Shift and there are multiple selected,
-          // only drag the clicked element (but don't deselect yet - wait for mouseup)
-          if (!e.shiftKey && elementsToDrag.length > 1) {
-            console.log('  - Multiple elements selected but Shift not held');
-            console.log('  - Will only drag clicked element');
-            elementsToDrag = [target]; // Only drag this one
-          }
-          
-          console.log('  - Found', elementsToDrag.length, 'element(s) to drag');
-          
           const iframeRect = iframe.getBoundingClientRect();
+          const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
+          console.log('  - Found', currentlySelected.length, 'selected elements');
           console.log('  - iframeRect:', iframeRect);
           
-          const elementsData = elementsToDrag.map(elem => {
+          const elementsData = currentlySelected.map(elem => {
             prepareElementForDrag(elem, doc);
             const rect = elem.getBoundingClientRect();
             
@@ -475,40 +476,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
                 });
               }
             }
-            
-            // NEW: Snap top edges (horizontal alignment)
-            const elemTop = newTop;
-            const otherTopEdge = otherTop;
-            if (Math.abs(elemTop - otherTopEdge) < snapThreshold) {
-              newTop = otherTopEdge;
-              if (!detectedGuides.horizontal.some(g => g.y === otherTopEdge)) {
-                detectedGuides.horizontal.push({ 
-                  y: otherTopEdge, 
-                  type: 'edge', 
-                  label: 'Top Aligned' 
-                });
-              }
-            }
-            
-            // NEW: Snap bottom edges (horizontal alignment)
-            const elemBottom = newTop + firstElement.height;
-            const otherBottomEdge = otherTop + otherRect.height;
-            if (Math.abs(elemBottom - otherBottomEdge) < snapThreshold) {
-              newTop = otherBottomEdge - firstElement.height;
-              if (!detectedGuides.horizontal.some(g => g.y === otherBottomEdge)) {
-                detectedGuides.horizontal.push({ 
-                  y: otherBottomEdge, 
-                  type: 'edge', 
-                  label: 'Bottom Aligned' 
-                });
-              }
-            }
           });
           
-          // Allow up to 2 guides per direction
+          // Limit to 1 guide per direction for cleaner UI
           setGuides({ 
-            vertical: detectedGuides.vertical.slice(0, 2),
-            horizontal: detectedGuides.horizontal.slice(0, 2) 
+            vertical: detectedGuides.vertical.slice(0, 1),
+            horizontal: detectedGuides.horizontal.slice(0, 1) 
           });
           
           const deltaX = newLeft - firstElement.startLeft;
