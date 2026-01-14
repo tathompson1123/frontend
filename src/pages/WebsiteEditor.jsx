@@ -370,18 +370,24 @@ const handleVisualUpdate = (updatedHTML) => {
       {/* Main Content */}
       <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200">
         
-        {/* Centered Preview */}
-        <div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ 
-          width: devicePreview === 'desktop' ? '100%' : '375px',
-          height: devicePreview === 'desktop' ? '100%' : '667px'
-        }}>
-          {devicePreview === 'desktop' ? (
-            <VisualEditor 
-              htmlContent={allPages[currentPage]}
-              onUpdate={handleVisualUpdate}
-              currentPage={currentPage}
-            />
-          ) : (
+       {/* Centered Preview */}
+<div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ 
+  width: devicePreview === 'desktop' ? '100%' : '375px',
+  height: devicePreview === 'desktop' ? '100%' : '667px'
+}}>
+  {devicePreview === 'desktop' ? (
+    allPages[currentPage] ? (
+      <VisualEditor 
+        htmlContent={allPages[currentPage]}
+        onUpdate={handleVisualUpdate}
+        currentPage={currentPage}
+      />
+    ) : (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading page content...</div>
+      </div>
+    )
+  ) : (
             <div className="w-full h-full flex items-center justify-center bg-gray-100">
               <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
                 <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
