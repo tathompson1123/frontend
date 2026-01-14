@@ -93,32 +93,50 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         console.log('   - Current positioned elements:', currentPositioned.length);
         console.log('   - New positioned elements:', newPositioned.length);
         
-        // Create a map of new elements by their identity (tag + class + text snippet)
+        // Helper to get clean class name (without editor classes)
+        const getCleanClass = (el) => {
+          return el.className
+            .replace(/\beditor-selected\b/g, '')
+            .replace(/\beditor-hover\b/g, '')
+            .replace(/\beditor-dragging\b/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+        };
+        
+        // Create a map of new elements by their identity
         const newElementMap = new Map();
         newPositioned.forEach(newEl => {
-          const identity = `${newEl.tagName}-${newEl.className}-${newEl.textContent?.substring(0, 50)}`;
-          newElementMap.set(identity, newEl.getAttribute('style'));
+          const cleanClass = newEl.className || '';
+          const textSnippet = newEl.textContent?.substring(0, 30).trim() || '';
+          const identity = `${newEl.tagName}-${cleanClass}-${textSnippet}`;
+          newElementMap.set(identity, {
+            style: newEl.getAttribute('style'),
+            element: newEl
+          });
         });
         
         // Update each current positioned element if we find a match
         currentPositioned.forEach(currentEl => {
-          const identity = `${currentEl.tagName}-${currentEl.className}-${currentEl.textContent?.substring(0, 50)}`;
+          const cleanClass = getCleanClass(currentEl);
+          const textSnippet = currentEl.textContent?.substring(0, 30).trim() || '';
+          const identity = `${currentEl.tagName}-${cleanClass}-${textSnippet}`;
           
           if (newElementMap.has(identity)) {
-            const newStyle = newElementMap.get(identity);
-            console.log('   ✅ Updating', currentEl.tagName, currentEl.className, 'to old position');
-            currentEl.setAttribute('style', newStyle);
+            const { style } = newElementMap.get(identity);
+            console.log('   ✅ Updating', currentEl.tagName, cleanClass || '(no class)', '- matched!');
+            currentEl.setAttribute('style', style);
             newElementMap.delete(identity); // Mark as processed
           } else {
             // This element was positioned in current but not in old - remove position
-            console.log('   ❌ Removing position from', currentEl.tagName, currentEl.className);
+            console.log('   ❌ Removing position from', currentEl.tagName, cleanClass || '(no class)', '- not in old state');
             currentEl.removeAttribute('style');
           }
         });
         
-        // Any remaining in newElementMap means they need to be positioned but aren't currently
+        // Any remaining in newElementMap means they should be positioned but aren't in current DOM
         if (newElementMap.size > 0) {
           console.log('   ⚠️ Warning:', newElementMap.size, 'elements need positioning but not found in current DOM');
+          // This can happen if elements were added/removed - might need full reload for that case
         }
       }
       
