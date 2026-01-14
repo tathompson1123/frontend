@@ -23,8 +23,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const dragStartedRef = useRef(false); // Use ref instead of local variable
   const lastSavedHtmlRef = useRef(''); // Track last saved HTML to prevent reload loops
   
-  // CRITICAL: Initialize with htmlContent immediately, not in useEffect
-  const [initialHtml, setInitialHtml] = useState(htmlContent);
+  // CRITICAL: Initialize with htmlContent, but handle undefined case
+  const [initialHtml, setInitialHtml] = useState(htmlContent || '<html><body><h1>Loading...</h1></body></html>');
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -40,17 +40,23 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
   // Update initial HTML only when page changes, not on every htmlContent update
   useEffect(() => {
-    console.log('📄 Page changed to:', currentPage, '- Reset initial HTML');
+    console.log('📄 Page/content changed - currentPage:', currentPage);
     console.log('   htmlContent length:', htmlContent?.length);
     console.log('   htmlContent preview:', htmlContent?.substring(0, 200));
     
-    setSelectedElements([]);
-    setGuides({ vertical: [], horizontal: [] });
-    dragStateRef.current = null;
-    
-    // Only update if currentPage actually changed or if this is the first load
-    setInitialHtml(htmlContent);
-  }, [currentPage]); // ONLY currentPage - htmlContent changes won't trigger this
+    // Only update if we have valid htmlContent
+    if (htmlContent && htmlContent.length > 0) {
+      console.log('   ✅ Updating initialHtml with new content');
+      setInitialHtml(htmlContent);
+      
+      // Reset editor state
+      setSelectedElements([]);
+      setGuides({ vertical: [], horizontal: [] });
+      dragStateRef.current = null;
+    } else {
+      console.log('   ⚠️ htmlContent is empty or undefined, waiting...');
+    }
+  }, [currentPage, htmlContent]); // Watch BOTH to catch when content loads
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -220,12 +226,34 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         // If clicking on already selected element, prepare to drag
         if (target.classList.contains('editor-selected')) {
           console.log('✅ PREPARING TO DRAG (element already selected)');
-          const iframeRect = iframe.getBoundingClientRect();
+          
+          // CRITICAL FIX: If NOT holding Shift and there are multiple selected,
+          // deselect others and only drag the clicked element
           const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
-          console.log('  - Found', currentlySelected.length, 'selected elements');
+          
+          if (!e.shiftKey && currentlySelected.length > 1) {
+            console.log('  - Multiple elements selected but Shift not held');
+            console.log('  - Deselecting others, only dragging clicked element');
+            
+            // Deselect all others
+            currentlySelected.forEach(el => {
+              if (el !== target) {
+                el.classList.remove('editor-selected');
+              }
+            });
+            
+            // Update selected elements to just the clicked one
+            setSelectedElements([target]);
+          }
+          
+          // Get the elements we're actually going to drag
+          const elementsToDrag = Array.from(doc.querySelectorAll('.editor-selected'));
+          console.log('  - Found', elementsToDrag.length, 'element(s) to drag');
+          
+          const iframeRect = iframe.getBoundingClientRect();
           console.log('  - iframeRect:', iframeRect);
           
-          const elementsData = currentlySelected.map(elem => {
+          const elementsData = elementsToDrag.map(elem => {
             prepareElementForDrag(elem, doc);
             const rect = elem.getBoundingClientRect();
             
@@ -458,12 +486,40 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
                 });
               }
             }
+            
+            // NEW: Horizontal parallel alignment - snap top edges
+            const elemTop = newTop;
+            const otherTopEdge = otherTop;
+            if (Math.abs(elemTop - otherTopEdge) < snapThreshold) {
+              newTop = otherTopEdge;
+              if (!detectedGuides.horizontal.some(g => g.y === otherTopEdge)) {
+                detectedGuides.horizontal.push({ 
+                  y: otherTopEdge, 
+                  type: 'edge', 
+                  label: 'Top Aligned' 
+                });
+              }
+            }
+            
+            // NEW: Horizontal parallel alignment - snap bottom edges
+            const elemBottom = newTop + firstElement.height;
+            const otherBottomEdge = otherTop + otherRect.height;
+            if (Math.abs(elemBottom - otherBottomEdge) < snapThreshold) {
+              newTop = otherBottomEdge - firstElement.height;
+              if (!detectedGuides.horizontal.some(g => g.y === otherBottomEdge)) {
+                detectedGuides.horizontal.push({ 
+                  y: otherBottomEdge, 
+                  type: 'edge', 
+                  label: 'Bottom Aligned' 
+                });
+              }
+            }
           });
           
-          // Limit to 1 guide per direction for cleaner UI
+          // Limit guides for cleaner UI (allow 2 per direction now)
           setGuides({ 
-            vertical: detectedGuides.vertical.slice(0, 1),
-            horizontal: detectedGuides.horizontal.slice(0, 1) 
+            vertical: detectedGuides.vertical.slice(0, 2),
+            horizontal: detectedGuides.horizontal.slice(0, 2) 
           });
           
           const deltaX = newLeft - firstElement.startLeft;
