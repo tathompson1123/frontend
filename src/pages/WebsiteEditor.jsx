@@ -378,10 +378,14 @@ const handleVisualUpdate = (updatedHTML) => {
   {devicePreview === 'desktop' ? (
     allPages[currentPage] ? (
       <VisualEditor 
-        htmlContent={allPages[currentPage]}
-        onUpdate={handleVisualUpdate}
-        currentPage={currentPage}
-      />
+  htmlContent={allPages[currentPage]}
+  onUpdate={handleVisualUpdate}
+  currentPage={currentPage}
+  onUndo={handleUndo}
+  onRedo={handleRedo}
+  canUndo={historyIndex > 0}
+  canRedo={historyIndex < history.length - 1}
+/>
     ) : (
       <div className="flex items-center justify-center h-full">
         <div className="text-gray-500">Loading page content...</div>
