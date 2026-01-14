@@ -202,7 +202,64 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
 
       // Setup event handlers
       const handleMouseDown = (e) => {
-        const target = e.target;
+        let target = e.target;
+        
+        // CRITICAL: Find the right element to select/drag
+        // Skip up to a meaningful draggable element
+        const findDraggableElement = (el) => {
+          // Don't allow dragging these elements
+          const nonDraggable = ['HTML', 'BODY', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'];
+          
+          // Don't allow dragging background/hero sections
+          const isBackground = el.classList?.contains('hero') || 
+                               el.classList?.contains('background') ||
+                               el.classList?.contains('bg-') ||
+                               el.tagName === 'SECTION' ||
+                               el.tagName === 'HEADER' ||
+                               el.tagName === 'FOOTER' ||
+                               el.tagName === 'MAIN';
+          
+          if (nonDraggable.includes(el.tagName) || isBackground) {
+            return null;
+          }
+          
+          // If clicking on text inside an element, find the parent container
+          // But stop at sections/headers/etc
+          if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'EM' || 
+              el.tagName === 'B' || el.tagName === 'I' || el.tagName === 'U') {
+            const parent = el.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
+            if (parent && !isBackground) {
+              return parent;
+            }
+          }
+          
+          // For container divs, check if they have draggable children
+          // If a div only contains other divs/sections, it's not draggable
+          if (el.tagName === 'DIV') {
+            const children = Array.from(el.children);
+            const hasOnlyContainers = children.every(child => 
+              child.tagName === 'DIV' || child.tagName === 'SECTION' || 
+              child.tagName === 'HEADER' || child.tagName === 'FOOTER'
+            );
+            
+            // If it's a container with only containers, don't allow dragging
+            if (hasOnlyContainers && children.length > 0) {
+              console.log('  ⚠️ Skipping container div with only structural children');
+              return null;
+            }
+          }
+          
+          return el;
+        };
+        
+        const draggableTarget = findDraggableElement(target);
+        
+        if (!draggableTarget) {
+          console.log('⚠️ Clicked non-draggable element:', target.tagName, target.className);
+          return;
+        }
+        
+        target = draggableTarget;
         
         console.log('═══════════════════════════════════════');
         console.log('🟢 MOUSEDOWN EVENT');
@@ -631,10 +688,27 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       const handleMouseOver = (e) => {
         if (isMouseDownRef.current || dragStartedRef.current) return;
         
-        const target = e.target;
-        if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-          target.classList.add('editor-hover');
+        let target = e.target;
+        
+        // Use same logic as mousedown to find draggable element
+        const nonDraggable = ['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 
+                              'SECTION', 'HEADER', 'FOOTER', 'MAIN'];
+        
+        if (nonDraggable.includes(target.tagName)) return;
+        
+        // Skip background classes
+        const isBackground = target.classList?.contains('hero') || 
+                           target.classList?.contains('background') ||
+                           target.classList?.contains('bg-');
+        if (isBackground) return;
+        
+        // For text elements, hover the parent
+        if (['SPAN', 'STRONG', 'EM', 'B', 'I', 'U'].includes(target.tagName)) {
+          const parent = target.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
+          if (parent) target = parent;
         }
+        
+        target.classList.add('editor-hover');
       };
 
       const handleMouseOut = (e) => {
