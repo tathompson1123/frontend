@@ -19,6 +19,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   const dragStateRef = useRef(null);
   const updateTimeoutRef = useRef(null);
   const eventHandlersRef = useRef(null);
+  const isMouseDownRef = useRef(false); // Use ref instead of local variable
+  const dragStartedRef = useRef(false); // Use ref instead of local variable
 
   const [elementProps, setElementProps] = useState({
     width: '',
@@ -140,9 +142,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       });
 
       // Setup event handlers
-      let isMouseDown = false;
-      let dragStarted = false;
-
       const handleMouseDown = (e) => {
         const target = e.target;
         
@@ -150,8 +149,8 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         console.log('🟢 MOUSEDOWN EVENT');
         console.log('Target:', target.tagName, target.className);
         console.log('State BEFORE:');
-        console.log('  - isMouseDown:', isMouseDown);
-        console.log('  - dragStarted:', dragStarted);
+        console.log('  - isMouseDown:', isMouseDownRef.current);
+        console.log('  - dragStarted:', dragStartedRef.current);
         console.log('  - dragStateRef.current:', dragStateRef.current);
         console.log('  - Has editor-selected class:', target.classList.contains('editor-selected'));
         console.log('  - Currently selected elements:', doc.querySelectorAll('.editor-selected').length);
@@ -167,12 +166,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         e.preventDefault();
         e.stopPropagation();
         
-        isMouseDown = true;
-        dragStarted = false;
+        isMouseDownRef.current = true;
+        dragStartedRef.current = false;
         
         console.log('State AFTER setting isMouseDown = true:');
-        console.log('  - isMouseDown:', isMouseDown);
-        console.log('  - dragStarted:', dragStarted);
+        console.log('  - isMouseDown:', isMouseDownRef.current);
+        console.log('  - dragStarted:', dragStartedRef.current);
 
         // If clicking on already selected element, prepare to drag
         if (target.classList.contains('editor-selected')) {
@@ -220,9 +219,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       };
 
       const handleMouseMove = (e) => {
-        if (!isMouseDown || !dragStateRef.current) {
+        if (!isMouseDownRef.current || !dragStateRef.current) {
           // Too noisy, only log if we expected to be dragging
-          if (isMouseDown && !dragStateRef.current) {
+          if (isMouseDownRef.current && !dragStateRef.current) {
             console.log('⚠️ MOUSEMOVE - isMouseDown true but no dragStateRef');
           }
           return;
@@ -232,13 +231,13 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         const dy = e.clientY - dragStateRef.current.startY;
         
         // Only start drag if moved more than 5px
-        if (!dragStarted && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+        if (!dragStartedRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
           console.log('───────────────────────────────────────');
           console.log('🔄 STARTING DRAG (moved >5px)');
           console.log('  - dx:', dx, 'dy:', dy);
           console.log('  - dragStateRef.current.elements:', dragStateRef.current.elements?.length);
           
-          dragStarted = true;
+          dragStartedRef.current = true;
           dragStateRef.current.moved = true;
           
           if (dragStateRef.current.elements) {
@@ -251,7 +250,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         }
         
         // Perform drag with snapping (only log when actually dragging)
-        if (dragStarted && dragStateRef.current.elements) {
+        if (dragStartedRef.current && dragStateRef.current.elements) {
           const firstElement = dragStateRef.current.elements[0];
           
           let newLeft = firstElement.startLeft + dx;
@@ -360,22 +359,22 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         console.log('═══════════════════════════════════════');
         console.log('🔵 MOUSEUP EVENT');
         console.log('State at mouseup:');
-        console.log('  - isMouseDown:', isMouseDown);
-        console.log('  - dragStarted:', dragStarted);
+        console.log('  - isMouseDown:', isMouseDownRef.current);
+        console.log('  - dragStarted:', dragStartedRef.current);
         console.log('  - dragStateRef.current:', dragStateRef.current);
         console.log('  - dragStateRef.current?.moved:', dragStateRef.current?.moved);
         
-        if (!isMouseDown) {
+        if (!isMouseDownRef.current) {
           console.log('❌ ABORT - isMouseDown is false (event already handled or never started)');
           console.log('═══════════════════════════════════════');
           return;
         }
         
-        isMouseDown = false;
+        isMouseDownRef.current = false;
         console.log('Set isMouseDown = false');
         
         // If we were dragging, save and cleanup
-        if (dragStarted && dragStateRef.current?.elements) {
+        if (dragStartedRef.current && dragStateRef.current?.elements) {
           console.log('✅ FINISHING DRAG');
           console.log('  - Removing editor-dragging class from', dragStateRef.current.elements.length, 'elements');
           
@@ -387,7 +386,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           setGuides({ vertical: [], horizontal: [] });
           saveChanges();
           dragStateRef.current = null;
-          dragStarted = false;
+          dragStartedRef.current = false;
           
           console.log('✅ DRAG COMPLETE - All state reset');
           console.log('═══════════════════════════════════════');
@@ -408,7 +407,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
             });
             setSelectedElements([]);
             dragStateRef.current = null;
-            dragStarted = false;
+            dragStartedRef.current = false;
             console.log('═══════════════════════════════════════');
             return;
           }
@@ -455,19 +454,19 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
         }
         
         dragStateRef.current = null;
-        dragStarted = false;
+        dragStartedRef.current = false;
         
         console.log('✅ SELECTION COMPLETE - State reset');
         console.log('Final state:');
-        console.log('  - isMouseDown:', isMouseDown);
-        console.log('  - dragStarted:', dragStarted);
+        console.log('  - isMouseDown:', isMouseDownRef.current);
+        console.log('  - dragStarted:', dragStartedRef.current);
         console.log('  - dragStateRef.current:', dragStateRef.current);
         console.log('  - Elements with .editor-selected:', doc.querySelectorAll('.editor-selected').length);
         console.log('═══════════════════════════════════════');
       };
 
       const handleMouseOver = (e) => {
-        if (isMouseDown || dragStarted) return;
+        if (isMouseDownRef.current || dragStartedRef.current) return;
         
         const target = e.target;
         if (!['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
