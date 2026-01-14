@@ -529,8 +529,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
           const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
           const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
           
-          // Find parent section/container for sibling element detection
-          const draggingElement = firstElement.el;
+          // Find parent section/container for sibling element detection (reuse draggingElement from above)
           let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
           
           if (!parentSection) {
