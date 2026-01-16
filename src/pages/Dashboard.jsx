@@ -202,18 +202,40 @@ export default function Dashboard() {
         <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const isLuxuryItem = item.id === 'ai-agents' || item.id === 'google-business';
+            const isActive = currentView === item.id;
+            
             return (
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                  currentView === item.id
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                    : 'text-gray-700 hover:bg-gray-100'
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
+                  isActive
+                    ? isLuxuryItem
+                      ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-xl shadow-amber-500/50'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : isLuxuryItem
+                      ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md'
+                      : 'text-gray-700 hover:bg-gray-100'
                 }`}
               >
-                <Icon className="w-5 h-5 flex-shrink-0" />
-                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+                {isLuxuryItem && !isActive && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                  </span>
+                )}
+                <Icon className={`w-5 h-5 flex-shrink-0 ${isLuxuryItem && !isActive ? 'text-amber-600' : ''}`} />
+                {sidebarOpen && (
+                  <span className={`font-medium ${isLuxuryItem && !isActive ? 'font-bold' : ''}`}>
+                    {item.label}
+                  </span>
+                )}
+                {isLuxuryItem && sidebarOpen && !isActive && (
+                  <span className="ml-auto text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">
+                    PRO
+                  </span>
+                )}
               </button>
             );
           })}
