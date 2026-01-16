@@ -24,8 +24,6 @@ import BookingCalendar from '../components/dashboard/BookingCalendar';
 import CustomersLeads from '../components/dashboard/CustomersLeads';
 import AIAgents from '../components/dashboard/AIAgents';
 import GoogleBusiness from '../components/dashboard/GoogleBusiness';
-import Services from '../components/dashboard/Services';
-import Team from '../components/dashboard/Team';
 import BusinessInformation from '../components/dashboard/BusinessInformation';
 import Analytics from '../components/dashboard/Analytics';
 import Billing from '../components/dashboard/Billing';
@@ -112,11 +110,11 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-  // Redirect to billing if no plan selected
-  if (user && !user.plan && currentView !== 'billing') {
-    setCurrentView('billing');
-  }
-}, [user, currentView]);
+    // Redirect to billing if no plan selected
+    if (user && !user.plan && currentView !== 'billing') {
+      setCurrentView('billing');
+    }
+  }, [user, currentView]);
 
   // Fetch initial data on mount
   useEffect(() => {
@@ -175,9 +173,7 @@ export default function Dashboard() {
     { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
-    { id: 'services', icon: Briefcase, label: 'Services' },
-    { id: 'team', icon: Users, label: 'Team' },
-    { id: 'hours', icon: Clock, label: 'Business Information' },
+    { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
     { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
@@ -295,32 +291,17 @@ export default function Dashboard() {
             />
           )}
 
-          {currentView === 'services' && (
-            <Services
-              services={services}
-              setServices={setServices}
-              fetchServices={fetchServices}
-              apiUrl={apiUrl}
-              user={user}
-              authFetch={authFetch}
-            />
-          )}
-
-          {currentView === 'team' && (
-            <Team
-              employees={employees}
-              setEmployees={setEmployees}
-              fetchEmployees={fetchEmployees}
-              apiUrl={apiUrl}
-              user={user}
-              authFetch={authFetch}
-            />
-          )}
-
-          {currentView === 'hours' && (
+          {/* Consolidated Business Settings - includes Business Info, Services, and Team */}
+          {currentView === 'business-settings' && (
             <BusinessInformation
               businessHours={businessHours}
               setBusinessHours={setBusinessHours}
+              services={services}
+              setServices={setServices}
+              fetchServices={fetchServices}
+              employees={employees}
+              setEmployees={setEmployees}
+              fetchEmployees={fetchEmployees}
               apiUrl={apiUrl}
               user={user}
               authFetch={authFetch}
