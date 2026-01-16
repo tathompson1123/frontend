@@ -12,35 +12,54 @@ import {
   Trash2,
   Filter,
   Download,
-  Upload
+  Upload,
+  FolderOpen,
+  Edit2,
+  MoreVertical
 } from 'lucide-react';
 
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
   const [activeTab, setActiveTab] = useState('leads');
-  const [leads, setLeads] = useState([]);
+  const [leadTables, setLeadTables] = useState([
+    { id: 'default', name: 'All Leads', leads: [] }
+  ]);
+  const [activeLeadTable, setActiveLeadTable] = useState('default');
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingCell, setEditingCell] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddTableModal, setShowAddTableModal] = useState(false);
+  const [showTableMenu, setShowTableMenu] = useState(null);
+  const [newTableName, setNewTableName] = useState('');
+  const [editingTableName, setEditingTableName] = useState(null);
   const [newRecord, setNewRecord] = useState({});
 
-  // Add these functions after your existing state declarations
+  // Get current leads from active table
+  const getCurrentLeads = () => {
+    const table = leadTables.find(t => t.id === activeLeadTable);
+    return table ? table.leads : [];
+  };
+
+  // Update leads in active table
+  const setCurrentLeads = (leads) => {
+    setLeadTables(leadTables.map(table => 
+      table.id === activeLeadTable ? { ...table, leads } : table
+    ));
+  };
 
   const exportToCSV = () => {
-    const data = activeTab === 'leads' ? leads : customers;
+    const data = activeTab === 'leads' ? getCurrentLeads() : customers;
     if (data.length === 0) {
       alert('No data to export');
       return;
     }
 
-    // Get column headers
     const headers = activeTab === 'leads' 
       ? ['ID', 'Name', 'Status', 'Phone', 'Email', 'Source', 'Notes']
       : ['ID', 'Name', 'Phone', 'Email', 'Service Booked', 'Service Date', 'Left Review', 'Notes'];
 
-    // Convert data to CSV format
     const csvRows = [];
     csvRows.push(headers.join(','));
 
@@ -68,13 +87,15 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       csvRows.push(values.join(','));
     });
 
-    // Create blob and download
     const csvContent = csvRows.join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${activeTab}_${new Date().toISOString().split('T')[0]}.csv`;
+    const tableName = activeTab === 'leads' 
+      ? leadTables.find(t => t.id === activeLeadTable)?.name || 'leads'
+      : 'customers';
+    a.download = `${tableName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -96,13 +117,11 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           return;
         }
 
-        // Skip header row
         const dataRows = rows.slice(1);
         let successCount = 0;
         let errorCount = 0;
 
         for (const row of dataRows) {
-          // Simple CSV parsing (handles quoted fields)
           const values = row.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g).map(val => 
             val.replace(/^"|"$/g, '').trim()
           );
@@ -119,7 +138,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   phone: phone || '',
                   email: email || '',
                   source: source || 'manual',
-                  notes: notes || ''
+                  notes: notes || '',
+                  table_id: activeLeadTable
                 })
               });
 
@@ -163,7 +183,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
         alert(`Import complete!\nSuccess: ${successCount}\nErrors: ${errorCount}`);
         
-        // Refresh data
         if (activeTab === 'leads') {
           fetchLeads();
         } else {
@@ -177,12 +196,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     };
 
     reader.readAsText(file);
-    // Reset input so same file can be uploaded again
     event.target.value = '';
   };
-
-  // Rest of your existing functions remain the same...
-  // (fetchLeads, fetchCustomers, updateLeadField, etc.)
 
   useEffect(() => {
     fetchLeads();
@@ -196,8 +211,51 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       if (response.ok) {
         const data = await response.json();
         const fetchedLeads = data.leads || [];
+        
         if (fetchedLeads.length === 0) {
-          setLeads([
+          // Demo data
+          setLeadTables([
+            {
+              id: 'default',
+              name: 'All Leads',
+              leads: [
+                {
+                  id: 'demo-1',
+                  name: 'John Smith',
+                  status: 'new',
+                  phone: '+1234567890',
+                  email: 'john.smith@example.com',
+                  source: 'lead_form',
+                  notes: 'Interested in ceramic coating'
+                }
+              ]
+            }
+          ]);
+        } else {
+          // Group leads by table_id
+          const tableMap = new Map();
+          fetchedLeads.forEach(lead => {
+            const tableId = lead.table_id || 'default';
+            if (!tableMap.has(tableId)) {
+              tableMap.set(tableId, {
+                id: tableId,
+                name: lead.table_name || 'All Leads',
+                leads: []
+              });
+            }
+            tableMap.get(tableId).leads.push(lead);
+          });
+          
+          setLeadTables(Array.from(tableMap.values()));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+      setLeadTables([
+        {
+          id: 'default',
+          name: 'All Leads',
+          leads: [
             {
               id: 'demo-1',
               name: 'John Smith',
@@ -205,24 +263,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               phone: '+1234567890',
               email: 'john.smith@example.com',
               source: 'lead_form',
-              notes: 'Interested in HVAC installation'
+              notes: 'Interested in ceramic coating'
             }
-          ]);
-        } else {
-          setLeads(fetchedLeads);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching leads:', error);
-      setLeads([
-        {
-          id: 'demo-1',
-          name: 'John Smith',
-          status: 'new',
-          phone: '+1234567890',
-          email: 'john.smith@example.com',
-          source: 'lead_form',
-          notes: 'Interested in HVAC installation'
+          ]
         }
       ]);
     } finally {
@@ -243,7 +286,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               name: 'Jane Doe',
               phone: '+1987654321',
               email: 'jane.doe@example.com',
-              last_service: 'HVAC Maintenance',
+              last_service: 'Paint Correction',
               last_service_date: '2024-01-15',
               left_review: 'Y',
               notes: 'Great customer, always on time'
@@ -261,13 +304,52 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           name: 'Jane Doe',
           phone: '+1987654321',
           email: 'jane.doe@example.com',
-          last_service: 'HVAC Maintenance',
+          last_service: 'Paint Correction',
           last_service_date: '2024-01-15',
           left_review: 'Y',
           notes: 'Great customer, always on time'
         }
       ]);
     }
+  };
+
+  const createLeadTable = () => {
+    if (!newTableName.trim()) return;
+    
+    const newTable = {
+      id: `table-${Date.now()}`,
+      name: newTableName.trim(),
+      leads: []
+    };
+    
+    setLeadTables([...leadTables, newTable]);
+    setActiveLeadTable(newTable.id);
+    setNewTableName('');
+    setShowAddTableModal(false);
+  };
+
+  const renameLeadTable = (tableId, newName) => {
+    if (!newName.trim()) return;
+    
+    setLeadTables(leadTables.map(table => 
+      table.id === tableId ? { ...table, name: newName.trim() } : table
+    ));
+    setEditingTableName(null);
+  };
+
+  const deleteLeadTable = (tableId) => {
+    if (tableId === 'default') {
+      alert('Cannot delete the default table');
+      return;
+    }
+    
+    if (!confirm('Delete this lead table? All leads in it will be deleted.')) return;
+    
+    setLeadTables(leadTables.filter(table => table.id !== tableId));
+    if (activeLeadTable === tableId) {
+      setActiveLeadTable('default');
+    }
+    setShowTableMenu(null);
   };
 
   const updateLeadField = async (leadId, field, value) => {
@@ -277,7 +359,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         body: JSON.stringify({ [field]: value })
       });
       if (response.ok) {
-        setLeads(leads.map(l => l.id === leadId ? { ...l, [field]: value } : l));
+        const currentLeads = getCurrentLeads();
+        setCurrentLeads(currentLeads.map(l => l.id === leadId ? { ...l, [field]: value } : l));
       }
     } catch (error) {
       console.error('Error updating lead:', error);
@@ -322,8 +405,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
   const addRecord = async () => {
     try {
-      console.log('Adding record:', { activeTab, newRecord });
-
       if (activeTab === 'leads') {
         const response = await authFetch(`${apiUrl}/api/leads`, {
           method: 'POST',
@@ -333,16 +414,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             phone: newRecord.phone || '',
             status: newRecord.status || 'new',
             source: newRecord.source || 'manual',
-            notes: newRecord.notes || ''
+            notes: newRecord.notes || '',
+            table_id: activeLeadTable
           })
         });
 
-        console.log('Response status:', response.status);
         const data = await response.json();
-        console.log('Response data:', data);
 
         if (response.ok) {
-          setLeads([...leads.filter(l => !String(l.id).startsWith('demo')), data.lead]);
+          const currentLeads = getCurrentLeads();
+          setCurrentLeads([...currentLeads.filter(l => !String(l.id).startsWith('demo')), data.lead]);
           setShowAddModal(false);
           setNewRecord({});
           alert('Lead added successfully!');
@@ -363,9 +444,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           })
         });
 
-        console.log('Response status:', response.status);
         const data = await response.json();
-        console.log('Response data:', data);
 
         if (response.ok) {
           setCustomers([...customers.filter(c => !String(c.id).startsWith('demo')), data.customer]);
@@ -390,7 +469,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     if (!confirm('Delete this lead?')) return;
     try {
       const response = await authFetch(`${apiUrl}/api/leads/${leadId}`, { method: 'DELETE' });
-      if (response.ok) setLeads(leads.filter(l => l.id !== leadId));
+      if (response.ok) {
+        const currentLeads = getCurrentLeads();
+        setCurrentLeads(currentLeads.filter(l => l.id !== leadId));
+      }
     } catch (error) {
       console.error('Error deleting lead:', error);
     }
@@ -410,7 +492,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
-  const filteredLeads = leads.filter(lead =>
+  const currentLeads = getCurrentLeads();
+  const filteredLeads = currentLeads.filter(lead =>
     lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     lead.phone?.includes(searchTerm) ||
@@ -424,10 +507,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   );
 
   const leadStats = {
-    total: leads.length,
-    new: leads.filter(l => l.status === 'new').length,
-    contacted: leads.filter(l => l.status === 'contacted_email' || l.status === 'contacted_sms').length,
-    converted: leads.filter(l => l.status === 'converted').length,
+    total: currentLeads.length,
+    new: currentLeads.filter(l => l.status === 'new').length,
+    contacted: currentLeads.filter(l => l.status === 'contacted_email' || l.status === 'contacted_sms').length,
+    converted: currentLeads.filter(l => l.status === 'converted').length,
   };
 
   const customerStats = {
@@ -475,7 +558,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             >
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4" />
-                Leads ({leadStats.total})
+                Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})
               </div>
               {activeTab === 'leads' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
@@ -491,6 +574,95 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             </button>
           </div>
         </div>
+
+        {/* Lead Tables Tabs (only show when on leads tab) */}
+        {activeTab === 'leads' && (
+          <div className="border-b border-gray-200 bg-white px-6">
+            <div className="flex items-center gap-2 overflow-x-auto py-2">
+              {leadTables.map((table) => (
+                <div key={table.id} className="relative group">
+                  <button
+                    onClick={() => setActiveLeadTable(table.id)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                      activeLeadTable === table.id
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <FolderOpen className="w-4 h-4" />
+                      {editingTableName === table.id ? (
+                        <input
+                          type="text"
+                          defaultValue={table.name}
+                          onBlur={(e) => renameLeadTable(table.id, e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') renameLeadTable(table.id, e.target.value);
+                            if (e.key === 'Escape') setEditingTableName(null);
+                          }}
+                          className="px-2 py-1 border border-blue-500 rounded text-sm w-40"
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <>
+                          {table.name}
+                          <span className="text-xs opacity-60">({table.leads.length})</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                  
+                  {/* Table Menu */}
+                  {activeLeadTable === table.id && table.id !== 'default' && (
+                    <div className="absolute right-0 top-1/2 -translate-y-1/2">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowTableMenu(showTableMenu === table.id ? null : table.id);
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <MoreVertical className="w-4 h-4" />
+                      </button>
+                      
+                      {showTableMenu === table.id && (
+                        <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg py-1 z-10 w-40">
+                          <button
+                            onClick={() => {
+                              setEditingTableName(table.id);
+                              setShowTableMenu(null);
+                            }}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 flex items-center gap-2"
+                          >
+                            <Edit2 className="w-4 h-4" />
+                            Rename
+                          </button>
+                          <button
+                            onClick={() => deleteLeadTable(table.id)}
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-red-50 text-red-600 flex items-center gap-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+              
+              {/* Add Table Button */}
+              <button
+                onClick={() => setShowAddTableModal(true)}
+                className="px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-600 hover:border-blue-500 hover:text-blue-600 transition-all whitespace-nowrap flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                New Table
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Table */}
@@ -514,7 +686,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             </button>
           </div>
           <div className="flex items-center gap-2">
-            {/* Export Button */}
             <button 
               onClick={exportToCSV}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -523,7 +694,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               Export CSV
             </button>
             
-            {/* Import Button */}
             <label className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
               <Upload className="w-4 h-4" />
               Import CSV
@@ -535,10 +705,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               />
             </label>
 
-            {/* Add Button */}
             <button 
               onClick={() => {
-                console.log('Add button clicked, activeTab:', activeTab);
                 setShowAddModal(true);
                 setNewRecord({});
               }}
@@ -590,13 +758,66 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
       </div>
 
-      {/* Add Record Modal - Keep your existing modal code */}
+      {/* Add Table Modal */}
+      {showAddTableModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAddTableModal(false)}>
+          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Create New Lead Table</h2>
+              <button onClick={() => setShowAddTableModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Table Name *</label>
+                <input
+                  type="text"
+                  value={newTableName}
+                  onChange={(e) => setNewTableName(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="e.g., Ceramic Coating Leads"
+                  onKeyDown={(e) => e.key === 'Enter' && createLeadTable()}
+                  autoFocus
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => {
+                    setShowAddTableModal(false);
+                    setNewTableName('');
+                  }}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={createLeadTable}
+                  disabled={!newTableName.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Create Table
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Record Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setShowAddModal(false)}>
           <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-gray-900">
                 Add New {activeTab === 'leads' ? 'Lead' : 'Customer'}
+                {activeTab === 'leads' && (
+                  <span className="text-sm font-normal text-gray-500 ml-2">
+                    to {leadTables.find(t => t.id === activeLeadTable)?.name}
+                  </span>
+                )}
               </h2>
               <button
                 onClick={() => {
@@ -612,7 +833,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <div className="space-y-4">
               {activeTab === 'leads' ? (
                 <>
-                  {/* Lead Form */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                     <input
@@ -683,7 +903,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 </>
               ) : (
                 <>
-                  {/* Customer Form */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                     <input
@@ -721,7 +940,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                       value={newRecord.last_service || ''}
                       onChange={(e) => setNewRecord({ ...newRecord, last_service: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="HVAC Maintenance"
+                      placeholder="Paint Correction"
                     />
                   </div>
                   <div>
@@ -757,7 +976,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 </>
               )}
 
-              {/* Modal Footer */}
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200">
                 <button
                   onClick={() => {
@@ -769,10 +987,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   Cancel
                 </button>
                 <button
-                  onClick={() => {
-                    console.log('Save button clicked');
-                    addRecord();
-                  }}
+                  onClick={addRecord}
                   disabled={!newRecord.name}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
@@ -787,14 +1002,14 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   );
 }
 
-// Keep your existing LeadsTable, CustomersTable, and helper functions unchanged
+// Keep existing table components
 function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead }) {
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
-        <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">No leads yet</h3>
-        <p className="text-gray-600">Start adding leads to see them here</p>
+        <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No leads in this table</h3>
+        <p className="text-gray-600">Add your first lead to get started</p>
       </div>
     );
   }
