@@ -6,6 +6,8 @@ import {
   Search,
   Sparkles,
   Save,
+  MessageCircle,
+  Send,
   X,
   GripVertical,
   Plus,
@@ -23,6 +25,11 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [leadTables, setLeadTables] = useState([
     { id: 'default', name: 'All Leads', leads: [] }
   ]);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [smsConversation, setSmsConversation] = useState([]);
+  const [showSmsModal, setShowSmsModal] = useState(false);
+  const [newSmsMessage, setNewSmsMessage] = useState('');
+  const [sendingSms, setSendingSms] = useState(false);
   const [activeLeadTable, setActiveLeadTable] = useState('default');
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,27 +43,27 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [editingTableName, setEditingTableName] = useState(null);
   const [newRecord, setNewRecord] = useState({});
 
-  // Get current leads from active table
-  const getCurrentLeads = () => {
+  // Get current  from active table
+  const getCurrent = () => {
     const table = leadTables.find(t => t.id === activeLeadTable);
-    return table ? table.leads : [];
+    return table ? table. : [];
   };
 
-  // Update leads in active table
-  const setCurrentLeads = (leads) => {
+  // Update  in active table
+  const setCurrent = () => {
     setLeadTables(leadTables.map(table => 
-      table.id === activeLeadTable ? { ...table, leads } : table
+      table.id === activeLeadTable ? { ...table,  } : table
     ));
   };
 
   const exportToCSV = () => {
-    const data = activeTab === 'leads' ? getCurrentLeads() : customers;
+    const data = activeTab === '' ? getCurrent() : customers;
     if (data.length === 0) {
       alert('No data to export');
       return;
     }
 
-    const headers = activeTab === 'leads' 
+    const headers = activeTab === '' 
       ? ['ID', 'Name', 'Status', 'Phone', 'Email', 'Source', 'Notes']
       : ['ID', 'Name', 'Phone', 'Email', 'Service Booked', 'Service Date', 'Left Review', 'Notes'];
 
@@ -64,7 +71,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     csvRows.push(headers.join(','));
 
     data.forEach(record => {
-      const values = activeTab === 'leads'
+      const values = activeTab === ''
         ? [
             record.id,
             `"${record.name || ''}"`,
@@ -92,8 +99,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const tableName = activeTab === 'leads' 
-      ? leadTables.find(t => t.id === activeLeadTable)?.name || 'leads'
+    const tableName = activeTab === '' 
+      ? leadTables.find(t => t.id === activeLeadTable)?.name || ''
       : 'customers';
     a.download = `${tableName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
@@ -126,11 +133,11 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             val.replace(/^"|"$/g, '').trim()
           );
 
-          if (activeTab === 'leads') {
+          if (activeTab === '') {
             const [id, name, status, phone, email, source, notes] = values;
             
             try {
-              const response = await authFetch(`${apiUrl}/api/leads`, {
+              const response = await authFetch(`${apiUrl}/api/`, {
                 method: 'POST',
                 body: JSON.stringify({
                   name: name || '',
@@ -310,6 +317,39 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           notes: 'Great customer, always on time'
         }
       ]);
+    }
+  };
+
+  const loadSmsConversation = async (leadId) => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/leads/${leadId}/sms-conversation`);
+      const data = await response.json();
+      setSmsConversation(data.messages || []);
+    } catch (error) {
+      console.error('Error loading SMS conversation:', error);
+    }
+  };
+
+  const sendManualSms = async () => {
+    if (!newSmsMessage.trim() || !selectedLead) return;
+    
+    setSendingSms(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/leads/${selectedLead.id}/send-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: newSmsMessage })
+      });
+      
+      if (response.ok) {
+        setNewSmsMessage('');
+        await loadSmsConversation(selectedLead.id);
+      }
+    } catch (error) {
+      console.error('Error sending SMS:', error);
+      alert('Failed to send SMS');
+    } finally {
+      setSendingSms(false);
     }
   };
 
@@ -998,6 +1038,98 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           </div>
         </div>
       )}
+{showSmsModal && selectedLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-t-2xl">
+              <div>
+                <h2 className="text-2xl font-bold">SMS Conversation</h2>
+                <p className="text-green-100 mt-1">{selectedLead.name} • {selectedLead.phone}</p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowSmsModal(false);
+                  setSelectedLead(null);
+                  setSmsConversation([]);
+                }}
+                className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+              {smsConversation.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500">No SMS messages yet</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {smsConversation.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`flex ${msg.direction === 'outgoing' ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-[75%] rounded-lg p-3 ${
+                          msg.direction === 'outgoing'
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-600 text-white'
+                            : 'bg-white text-gray-900 shadow-sm'
+                        }`}
+                      >
+                        <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                        <p
+                          className={`text-xs mt-2 ${
+                            msg.direction === 'outgoing' ? 'text-green-100' : 'text-gray-500'
+                          }`}
+                        >
+                          {new Date(msg.created_at).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Input */}
+            <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newSmsMessage}
+                  onChange={(e) => setNewSmsMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && sendManualSms()}
+                  placeholder="Type your message..."
+                  maxLength="320"
+                  className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-green-500 focus:outline-none"
+                />
+                <button
+                  onClick={sendManualSms}
+                  disabled={sendingSms || !newSmsMessage.trim()}
+                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {sendingSms ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4" />
+                      Send
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">{newSmsMessage.length} / 320 characters</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1031,57 +1163,73 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200">
-        {leads.map((lead, idx) => (
-          <tr key={lead.id} className="hover:bg-gray-50">
-            <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
-            {columns.map((col) => (
-              <td key={col.key} className="px-4 py-3 text-sm">
-                {editingCell?.id === lead.id && editingCell?.field === col.key ? (
-                  <div className="flex items-center gap-2">
-                    {col.type === 'select' ? (
-                      <select value={editValue} onChange={(e) => setEditValue(e.target.value)} className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm" autoFocus>
-                        <option value="">Select...</option>
-                        {col.options.map(opt => <option key={opt} value={opt}>{formatLabel(opt)}</option>)}
-                      </select>
-                    ) : (
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
-                      />
-                    )}
-                    <button onClick={saveCellEdit} className="p-1 text-green-600 hover:bg-green-50 rounded"><Save className="w-4 h-4" /></button>
-                    <button onClick={cancelCellEdit} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4" /></button>
-                  </div>
-                ) : (
-                  <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key])} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
-                    {col.key === 'status' ? (
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
-                    ) : col.key === 'source' ? (
-                      <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
-                    ) : col.key === 'email' ? (
-                      <a href={`mailto:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
-                    ) : col.key === 'phone' ? (
-                      <a href={`tel:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
-                    ) : (
-                      lead[col.key] || <span className="text-gray-400">-</span>
-                    )}
-                  </div>
-                )}
-              </td>
-            ))}
-            <td className="px-4 py-3">
-              <button onClick={() => deleteLead(lead.id)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
+       {leads.map((lead, idx) => (
+  <tr key={lead.id} className="hover:bg-gray-50">
+    <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
+    {columns.map((col) => (
+      <td key={col.key} className="px-4 py-3 text-sm">
+        {editingCell?.id === lead.id && editingCell?.field === col.key ? (
+          <div className="flex items-center gap-2">
+            {col.type === 'select' ? (
+              <select value={editValue} onChange={(e) => setEditValue(e.target.value)} className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm" autoFocus>
+                <option value="">Select...</option>
+                {col.options.map(opt => <option key={opt} value={opt}>{formatLabel(opt)}</option>)}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
+                autoFocus
+                onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
+              />
+            )}
+            <button onClick={saveCellEdit} className="p-1 text-green-600 hover:bg-green-50 rounded"><Save className="w-4 h-4" /></button>
+            <button onClick={cancelCellEdit} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4" /></button>
+          </div>
+        ) : (
+          <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key])} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
+            {col.key === 'status' ? (
+              <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+            ) : col.key === 'source' ? (
+              <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+            ) : col.key === 'email' ? (
+              <a href={`mailto:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
+            ) : col.key === 'phone' ? (
+              <a href={`tel:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
+            ) : (
+              lead[col.key] || <span className="text-gray-400">-</span>
+            )}
+          </div>
+        )}
+      </td>
+    ))}
+    <td className="px-4 py-3">
+      <div className="flex items-center gap-2">
+        {/* ⬇️ ADD SMS BUTTON HERE ⬇️ */}
+        {lead.phone && (
+          <button
+            onClick={() => {
+              setSelectedLead(lead);
+              loadSmsConversation(lead.id);
+              setShowSmsModal(true);
+            }}
+            className="p-1 text-green-600 hover:bg-green-50 rounded"
+            title="View SMS Conversation"
+          >
+            <MessageCircle className="w-4 h-4" />
+          </button>
+        )}
+        {/* ⬆️ END SMS BUTTON ⬆️ */}
+        
+        <button onClick={() => deleteLead(lead.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </td>
+  </tr>
+))}
 
 function CustomersTable({ customers, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteCustomer }) {
   if (customers.length === 0) {
