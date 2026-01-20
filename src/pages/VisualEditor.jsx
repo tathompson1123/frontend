@@ -16,7 +16,7 @@ import {
 export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
   console.log('🔵 VisualEditor rendered');
   const selectedElementsRef = useRef([]);
-const [, forceUpdate] = useState({});
+  const [, forceUpdate] = useState({});
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const [reloadKey, setReloadKey] = useState(0);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
@@ -47,9 +47,6 @@ const [, forceUpdate] = useState({});
   const hasLoadedRef = useRef(false);
   const lastHtmlContentRef = useRef(null);
 
-  // [Rest of the useEffect hooks remain the same until the event handlers...]
-  // ... [Keep all your existing useEffect code] ...
-
   useEffect(() => {
     const pageChanged = lastPageRef.current !== currentPage;
     const isFirstLoad = !hasLoadedRef.current;
@@ -57,12 +54,12 @@ const [, forceUpdate] = useState({});
     const isExternalChange = contentChanged && !isSavingRef.current;
 
     console.log('📄 Content update effect triggered:', { 
-    pageChanged, 
-    isFirstLoad, 
-    contentChanged,
-    isExternalChange,
-    isSaving: isSavingRef.current 
-  });
+      pageChanged, 
+      isFirstLoad, 
+      contentChanged,
+      isExternalChange,
+      isSaving: isSavingRef.current 
+    });
     
     if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
       setInitialHtml(htmlContent);
@@ -71,7 +68,7 @@ const [, forceUpdate] = useState({});
       lastHtmlContentRef.current = htmlContent;
       isSavingRef.current = false;
       
-      setSelectedElements([]);
+      selectedElementsRef.current = [];
       setGuides({ vertical: [], horizontal: [] });
       setShowPropertiesModal(false);
       dragStateRef.current = null;
@@ -112,7 +109,7 @@ const [, forceUpdate] = useState({});
       lastHtmlContentRef.current = htmlContent;
       isSavingRef.current = false;
       
-      setSelectedElements([]);
+      selectedElementsRef.current = [];
       setShowPropertiesModal(false);
     } 
     else if (!htmlContent || htmlContent.length === 0) {
@@ -125,29 +122,29 @@ const [, forceUpdate] = useState({});
   }, [currentPage, htmlContent]);
 
   useEffect(() => {
-  const iframe = iframeRef.current;
-  if (!iframe?.contentDocument) return;
-  const doc = iframe.contentDocument;
-  
-  // Monitor for ANY element removal
-  const observer = new MutationObserver((mutations) => {
-    mutations.forEach((mutation) => {
-      mutation.removedNodes.forEach((node) => {
-        if (node.nodeType === 1) { // Element node
-          console.log('🗑️ ELEMENT REMOVED:', node.tagName, node.className);
-          console.log('Stack trace:', new Error().stack);
-        }
+    const iframe = iframeRef.current;
+    if (!iframe?.contentDocument) return;
+    const doc = iframe.contentDocument;
+    
+    // Monitor for ANY element removal
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.removedNodes.forEach((node) => {
+          if (node.nodeType === 1) { // Element node
+            console.log('🗑️ ELEMENT REMOVED:', node.tagName, node.className);
+            console.log('Stack trace:', new Error().stack);
+          }
+        });
       });
     });
-  });
-  
-  observer.observe(doc.body, {
-    childList: true,
-    subtree: true
-  });
-  
-  return () => observer.disconnect();
-}, [currentPage]);
+    
+    observer.observe(doc.body, {
+      childList: true,
+      subtree: true
+    });
+    
+    return () => observer.disconnect();
+  }, [currentPage]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -258,7 +255,7 @@ const [, forceUpdate] = useState({});
           const handle = doc.createElement('div');
           handle.className = `resize-handle resize-${position}`;
           handle.dataset.position = position;
-          handle.dataset.isResizeHandle = 'true'; // CRITICAL FIX: Mark as resize handle
+          handle.dataset.isResizeHandle = 'true';
           
           handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
@@ -297,8 +294,6 @@ const [, forceUpdate] = useState({});
               startTop,
               originalFontSizes
             };
-            
-            console.log('🔧 Starting resize:', position);
           });
           
           element.appendChild(handle);
@@ -354,7 +349,6 @@ const [, forceUpdate] = useState({});
       
       const handleResizeEnd = () => {
         if (resizeStateRef.current) {
-          console.log('✅ Resize complete');
           resizeStateRef.current = null;
           saveChanges();
         }
@@ -455,7 +449,7 @@ const [, forceUpdate] = useState({});
         console.log('🟢 MOUSEDOWN - About to select element');
         if (e.target.dataset.isResizeHandle === 'true') {
           console.log('🔧 Clicked resize handle - skipping selection logic');
-          return; // Let the resize handle's own mousedown handler take over
+          return;
         }
 
         let target = e.target;
@@ -532,7 +526,7 @@ const [, forceUpdate] = useState({});
               el.classList.remove('editor-selected');
             });
             clickedEl.classList.add('editor-selected');
-            setSelectedElements([clickedEl]);
+            selectedElementsRef.current = [clickedEl];
             
             const iframeRect = iframe.getBoundingClientRect();
             prepareElementForDrag(clickedEl, doc);
@@ -665,85 +659,86 @@ const [, forceUpdate] = useState({});
         }
       };
 
-     const handleMouseUp = (e) => {
-  if (resizeStateRef.current) {
-    handleResizeEnd();
-    return;
-  }
-  
-  if (!isMouseDownRef.current) {
-    return;
-  }
-  
-  isMouseDownRef.current = false;
-  
-  // ⬇️ ONLY save if we actually dragged ⬇️
-  if (dragStartedRef.current && dragStateRef.current?.elements) {
-    dragStateRef.current.elements.forEach(data => {
-      data.el.classList.remove('editor-dragging');
-    });
-    
-    setGuides({ vertical: [], horizontal: [] });
-    
-    // CRITICAL FIX: Only save if we actually moved something
-    if (dragStateRef.current.moved) {
-      console.log('💾 Saving after drag');
-      saveChanges();
-    } else {
-      console.log('⏭️ No movement detected, skipping save');
-    }
-    
-    dragStateRef.current = null;
-    dragStartedRef.current = false;
-    return;
-  }
-  
-  // If we didn't drag, handle selection (NO SAVE!)
-  if (dragStateRef.current && !dragStateRef.current.moved) {
-    console.log('✅ Selection only - NOT saving'); // ← Add this log
-    const target = dragStateRef.current.clickedElement || e.target;
-    
-    if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-      doc.querySelectorAll('.editor-selected').forEach(el => {
-        el.classList.remove('editor-selected');
-      });
-      doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
-      setSelectedElements([]);
-      dragStateRef.current = null;
-      dragStartedRef.current = false;
-      return;
-    }
-    
-    if (e.shiftKey) {
-      if (target.classList.contains('editor-selected')) {
-        target.classList.remove('editor-selected');
-        const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
-        setSelectedElements(newSelected);
-        doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
-      } else {
-        target.classList.add('editor-selected');
-        const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
-        setSelectedElements(newSelected);
-        doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
-      }
-    } else {
-      const previouslySelected = doc.querySelectorAll('.editor-selected');
-      
-      previouslySelected.forEach(el => {
-        el.classList.remove('editor-selected');
-      });
-      
-      target.classList.add('editor-selected');
-      setSelectedElements([target]);
-      loadProps(target);
-      createResizeHandles(target);
-    }
-  }
-  
-  dragStateRef.current = null;
-  dragStartedRef.current = false;
-  // NO SAVE HERE! ← This is the key fix
-};
+      const handleMouseUp = (e) => {
+        if (resizeStateRef.current) {
+          handleResizeEnd();
+          return;
+        }
+        
+        if (!isMouseDownRef.current) {
+          return;
+        }
+        
+        isMouseDownRef.current = false;
+        
+        if (dragStartedRef.current && dragStateRef.current?.elements) {
+          dragStateRef.current.elements.forEach(data => {
+            data.el.classList.remove('editor-dragging');
+          });
+          
+          setGuides({ vertical: [], horizontal: [] });
+          
+          if (dragStateRef.current.moved) {
+            console.log('💾 Saving after drag');
+            saveChanges();
+          } else {
+            console.log('⏭️ No movement detected, skipping save');
+          }
+          
+          dragStateRef.current = null;
+          dragStartedRef.current = false;
+          return;
+        }
+        
+        if (dragStateRef.current && !dragStateRef.current.moved) {
+          console.log('✅ Selection only - NOT saving');
+          const target = dragStateRef.current.clickedElement || e.target;
+          
+          if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+            doc.querySelectorAll('.editor-selected').forEach(el => {
+              el.classList.remove('editor-selected');
+            });
+            doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+            selectedElementsRef.current = [];
+            forceUpdate({});
+            dragStateRef.current = null;
+            dragStartedRef.current = false;
+            return;
+          }
+          
+          if (e.shiftKey) {
+            if (target.classList.contains('editor-selected')) {
+              target.classList.remove('editor-selected');
+              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+              selectedElementsRef.current = newSelected;
+              doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+              forceUpdate({});
+            } else {
+              target.classList.add('editor-selected');
+              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+              selectedElementsRef.current = newSelected;
+              doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+              forceUpdate({});
+            }
+          } else {
+            const previouslySelected = doc.querySelectorAll('.editor-selected');
+            
+            previouslySelected.forEach(el => {
+              el.classList.remove('editor-selected');
+            });
+            
+            target.classList.add('editor-selected');
+            selectedElementsRef.current = [target];
+            loadProps(target);
+            createResizeHandles(target);
+            forceUpdate({});
+          }
+        }
+        
+        dragStateRef.current = null;
+        dragStartedRef.current = false;
+      };
+
       const handleMouseOver = (e) => {
         if (isMouseDownRef.current || dragStartedRef.current) return;
         
@@ -786,12 +781,13 @@ const [, forceUpdate] = useState({});
             el.classList.remove('editor-selected');
           });
           target.classList.add('editor-selected');
-          setSelectedElements([target]);
+          selectedElementsRef.current = [target];
           loadProps(target);
           createResizeHandles(target);
         }
         
         setShowPropertiesModal(true);
+        forceUpdate({});
       };
 
       // Attach event listeners
@@ -921,17 +917,16 @@ const [, forceUpdate] = useState({});
           .replace(/\s+class=""\s*/g, ' ')
           .replace(/\s+data-has-placeholder="[^"]*"/g, '')
           .replace(/\s+data-placeholder-id="[^"]*"/g, '')
-          .replace(/\s+data-is-resize-handle="[^"]*"/g, ''); // CRITICAL FIX: Remove resize handle markers
+          .replace(/\s+data-is-resize-handle="[^"]*"/g, '');
         
         if (cleanedHTML !== lastSavedHtmlRef.current) {
-        console.log('💾 Saving changes - HTML actually changed');
-        lastSavedHtmlRef.current = cleanedHTML;
-        isSavingRef.current = true;
-        onUpdate(cleanedHTML);
-      } else {
-        console.log('⏭️ Skipping save - HTML unchanged');
-      }
-        
+          console.log('💾 Saving changes - HTML actually changed');
+          lastSavedHtmlRef.current = cleanedHTML;
+          isSavingRef.current = true;
+          onUpdate(cleanedHTML);
+        } else {
+          console.log('⏭️ Skipping save - HTML unchanged');
+        }
       }
     }, 300);
   };
@@ -952,25 +947,15 @@ const [, forceUpdate] = useState({});
   };
 
   const updateProp = (prop, val) => {
-    selectedElements.forEach(el => el.style[prop] = val);
+    selectedElementsRef.current.forEach(el => el.style[prop] = val);
     setElementProps(p => ({ ...p, [prop]: val }));
     saveChanges();
   };
 
   const deleteEl = () => {
-    // DIAGNOSTIC LOGGING - Find what's calling delete
-    console.log('🚨 DELETE FUNCTION CALLED!');
-    console.log('  Stack trace:', new Error().stack);
-    console.log('  Selected elements:', selectedElements.length);
-    console.log('  showPropertiesModal:', showPropertiesModal);
-    
-    // TEMPORARY: Block deletion for debugging
-    alert('Delete was called! Check console for details.');
-    return; // ← Remove this line once you identify the issue
-    
     if (!confirm('Delete selected element(s)?')) return;
-    selectedElements.forEach(el => el.remove());
-    setSelectedElements([]);
+    selectedElementsRef.current.forEach(el => el.remove());
+    selectedElementsRef.current = [];
     setShowPropertiesModal(false);
     saveChanges();
   };
@@ -979,11 +964,10 @@ const [, forceUpdate] = useState({});
     const doc = iframeRef.current?.contentDocument;
     if (!doc) return;
     
-    selectedElements.forEach(el => {
+    selectedElementsRef.current.forEach(el => {
       const clone = el.cloneNode(true);
       clone.classList.remove('editor-selected', 'editor-hover', 'editor-dragging');
       
-      // CRITICAL FIX: Remove resize handles from clone
       clone.querySelectorAll('.resize-handle').forEach(h => h.remove());
       delete clone.dataset.isResizeHandle;
       
@@ -1006,7 +990,6 @@ const [, forceUpdate] = useState({});
 
   return (
     <div className="w-full h-full flex relative">
-      {/* Top Navigation Bar */}
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
         <button
           onClick={onUndo}
@@ -1062,7 +1045,6 @@ const [, forceUpdate] = useState({});
           title="Visual Editor"
         />
         
-        {/* Snap Guide Lines */}
         {guides.vertical.map((guide, i) => (
           <div 
             key={`v-${i}`}
@@ -1102,8 +1084,7 @@ const [, forceUpdate] = useState({});
         ))}
       </div>
 
-      {/* Properties Popup */}
-      {showPropertiesModal && selectedElements.length > 0 && (
+      {showPropertiesModal && selectedElementsRef.current.length > 0 && (
         <div 
           className="fixed bg-white rounded-xl shadow-2xl border-2 border-purple-500 w-80 z-50"
           style={{
@@ -1114,7 +1095,7 @@ const [, forceUpdate] = useState({});
           <div className="p-3 border-b bg-gradient-to-r from-purple-600 to-blue-600 flex justify-between items-center rounded-t-xl">
             <div className="text-white">
               <h3 className="font-semibold text-sm">
-                {selectedElements.length === 1 ? `Edit ${selectedElements[0].tagName}` : `${selectedElements.length} Elements`}
+                {selectedElementsRef.current.length === 1 ? `Edit ${selectedElementsRef.current[0].tagName}` : `${selectedElementsRef.current.length} Elements`}
               </h3>
             </div>
             <button 
