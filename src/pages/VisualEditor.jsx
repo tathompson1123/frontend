@@ -931,12 +931,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     saveChanges();
   };
 
-  const updateProp = (prop, val) => {
-    selectedElements.forEach(el => el.style[prop] = val);
-    setElementProps(p => ({ ...p, [prop]: val }));
-    saveChanges();
-  };
-
   const deleteEl = () => {
     // DIAGNOSTIC LOGGING - Find what's calling delete
     console.log('🚨 DELETE FUNCTION CALLED!');
