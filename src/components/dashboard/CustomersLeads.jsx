@@ -1230,6 +1230,10 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
     </td>
   </tr>
 ))}
+        </tbody>
+    </table>
+  );
+} 
 
 function CustomersTable({ customers, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteCustomer }) {
   if (customers.length === 0) {
