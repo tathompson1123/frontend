@@ -911,10 +911,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           .replace(/\s+data-is-resize-handle="[^"]*"/g, ''); // CRITICAL FIX: Remove resize handle markers
         
         if (cleanedHTML !== lastSavedHtmlRef.current) {
-          lastSavedHtmlRef.current = cleanedHTML;
-          isSavingRef.current = true;
-          onUpdate(cleanedHTML);
-        }
+        console.log('💾 Saving changes - HTML actually changed');
+        lastSavedHtmlRef.current = cleanedHTML;
+        isSavingRef.current = true;
+        onUpdate(cleanedHTML);
+      } else {
+        console.log('⏭️ Skipping save - HTML unchanged');
+      }
+        
       }
     }, 300);
   };
