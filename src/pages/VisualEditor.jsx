@@ -892,9 +892,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   };
 
   const saveChanges = () => {
+    console.log('🔴 saveChanges() CALLED - Stack:', new Error().stack);
     if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
     
     updateTimeoutRef.current = setTimeout(() => {
+      console.log('⏰ saveChanges timeout fired');
       if (iframeRef.current?.contentDocument) {
         const doc = iframeRef.current.contentDocument;
         
