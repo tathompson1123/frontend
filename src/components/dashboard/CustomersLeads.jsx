@@ -44,20 +44,20 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [newRecord, setNewRecord] = useState({});
 
   // Get current  from active table
-  const getCurrent = () => {
-    const table = leadTables.find(t => t.id === activeLeadTable);
-    return table ? table. : [];
-  };
+ const getCurrentLeads = () => {
+  const table = leadTables.find(t => t.id === activeLeadTable);
+  return table ? table.leads : [];
+};
 
-  // Update  in active table
-  const setCurrent = () => {
-    setLeadTables(leadTables.map(table => 
-      table.id === activeLeadTable ? { ...table,  } : table
-    ));
-  };
+// Update leads in active table
+const setCurrentLeads = (leads) => {
+  setLeadTables(leadTables.map(table => 
+    table.id === activeLeadTable ? { ...table, leads } : table
+  ));
+};
 
   const exportToCSV = () => {
-    const data = activeTab === '' ? getCurrent() : customers;
+  const data = activeTab === 'leads' ? getCurrentLeads() : customers;
     if (data.length === 0) {
       alert('No data to export');
       return;
