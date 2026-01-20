@@ -54,6 +54,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     const isFirstLoad = !hasLoadedRef.current;
     const contentChanged = lastHtmlContentRef.current !== htmlContent;
     const isExternalChange = contentChanged && !isSavingRef.current;
+
+    console.log('📄 Content update effect triggered:', { 
+    pageChanged, 
+    isFirstLoad, 
+    contentChanged,
+    isExternalChange,
+    isSaving: isSavingRef.current 
+  });
     
     if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
       setInitialHtml(htmlContent);
