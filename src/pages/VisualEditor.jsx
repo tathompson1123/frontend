@@ -451,7 +451,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
 
       // Setup event handlers
       const handleMouseDown = (e) => {
-        // CRITICAL FIX: Check if clicking on a resize handle
+        console.log('🟢 MOUSEDOWN - About to select element');
         if (e.target.dataset.isResizeHandle === 'true') {
           console.log('🔧 Clicked resize handle - skipping selection logic');
           return; // Let the resize handle's own mousedown handler take over
