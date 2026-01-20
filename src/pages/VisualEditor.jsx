@@ -664,75 +664,85 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         }
       };
 
-      const handleMouseUp = (e) => {
-        if (resizeStateRef.current) {
-          handleResizeEnd();
-          return;
-        }
-        
-        if (!isMouseDownRef.current) {
-          return;
-        }
-        
-        isMouseDownRef.current = false;
-        
-        if (dragStartedRef.current && dragStateRef.current?.elements) {
-          dragStateRef.current.elements.forEach(data => {
-            data.el.classList.remove('editor-dragging');
-          });
-          
-          setGuides({ vertical: [], horizontal: [] });
-          saveChanges();
-          
-          dragStateRef.current = null;
-          dragStartedRef.current = false;
-          return;
-        }
-        
-        if (dragStateRef.current && !dragStateRef.current.moved) {
-          const target = dragStateRef.current.clickedElement || e.target;
-          
-          if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-            doc.querySelectorAll('.editor-selected').forEach(el => {
-              el.classList.remove('editor-selected');
-            });
-            doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
-            setSelectedElements([]);
-            dragStateRef.current = null;
-            dragStartedRef.current = false;
-            return;
-          }
-          
-          if (e.shiftKey) {
-            if (target.classList.contains('editor-selected')) {
-              target.classList.remove('editor-selected');
-              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
-              setSelectedElements(newSelected);
-              doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
-            } else {
-              target.classList.add('editor-selected');
-              const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
-              setSelectedElements(newSelected);
-              doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
-            }
-          } else {
-            const previouslySelected = doc.querySelectorAll('.editor-selected');
-            
-            previouslySelected.forEach(el => {
-              el.classList.remove('editor-selected');
-            });
-            
-            target.classList.add('editor-selected');
-            setSelectedElements([target]);
-            loadProps(target);
-            createResizeHandles(target);
-          }
-        }
-        
-        dragStateRef.current = null;
-        dragStartedRef.current = false;
-      };
-
+     const handleMouseUp = (e) => {
+  if (resizeStateRef.current) {
+    handleResizeEnd();
+    return;
+  }
+  
+  if (!isMouseDownRef.current) {
+    return;
+  }
+  
+  isMouseDownRef.current = false;
+  
+  // ⬇️ ONLY save if we actually dragged ⬇️
+  if (dragStartedRef.current && dragStateRef.current?.elements) {
+    dragStateRef.current.elements.forEach(data => {
+      data.el.classList.remove('editor-dragging');
+    });
+    
+    setGuides({ vertical: [], horizontal: [] });
+    
+    // CRITICAL FIX: Only save if we actually moved something
+    if (dragStateRef.current.moved) {
+      console.log('💾 Saving after drag');
+      saveChanges();
+    } else {
+      console.log('⏭️ No movement detected, skipping save');
+    }
+    
+    dragStateRef.current = null;
+    dragStartedRef.current = false;
+    return;
+  }
+  
+  // If we didn't drag, handle selection (NO SAVE!)
+  if (dragStateRef.current && !dragStateRef.current.moved) {
+    console.log('✅ Selection only - NOT saving'); // ← Add this log
+    const target = dragStateRef.current.clickedElement || e.target;
+    
+    if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
+      doc.querySelectorAll('.editor-selected').forEach(el => {
+        el.classList.remove('editor-selected');
+      });
+      doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+      setSelectedElements([]);
+      dragStateRef.current = null;
+      dragStartedRef.current = false;
+      return;
+    }
+    
+    if (e.shiftKey) {
+      if (target.classList.contains('editor-selected')) {
+        target.classList.remove('editor-selected');
+        const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+        setSelectedElements(newSelected);
+        doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+      } else {
+        target.classList.add('editor-selected');
+        const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
+        setSelectedElements(newSelected);
+        doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+      }
+    } else {
+      const previouslySelected = doc.querySelectorAll('.editor-selected');
+      
+      previouslySelected.forEach(el => {
+        el.classList.remove('editor-selected');
+      });
+      
+      target.classList.add('editor-selected');
+      setSelectedElements([target]);
+      loadProps(target);
+      createResizeHandles(target);
+    }
+  }
+  
+  dragStateRef.current = null;
+  dragStartedRef.current = false;
+  // NO SAVE HERE! ← This is the key fix
+};
       const handleMouseOver = (e) => {
         if (isMouseDownRef.current || dragStartedRef.current) return;
         
