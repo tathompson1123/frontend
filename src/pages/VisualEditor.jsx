@@ -153,6 +153,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     if (!iframe) return;
 
     console.log('🔄 Setting up editor for page:', currentPage);
+    if (eventHandlersRef.current?.currentPage === currentPage) {
+    console.log('⏭️ Editor already set up for this page, skipping');
+    return;
+  }
     
     let retryCount = 0;
     const maxRetries = 20;
