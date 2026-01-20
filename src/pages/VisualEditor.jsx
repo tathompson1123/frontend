@@ -114,7 +114,30 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     }
   }, [currentPage, htmlContent]);
 
-  // [Keep your existing main useEffect with all the event handlers, BUT with this fix:]
+  useEffect(() => {
+  const iframe = iframeRef.current;
+  if (!iframe?.contentDocument) return;
+  const doc = iframe.contentDocument;
+  
+  // Monitor for ANY element removal
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      mutation.removedNodes.forEach((node) => {
+        if (node.nodeType === 1) { // Element node
+          console.log('🗑️ ELEMENT REMOVED:', node.tagName, node.className);
+          console.log('Stack trace:', new Error().stack);
+        }
+      });
+    });
+  });
+  
+  observer.observe(doc.body, {
+    childList: true,
+    subtree: true
+  });
+  
+  return () => observer.disconnect();
+}, [currentPage]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -908,7 +931,23 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     saveChanges();
   };
 
+  const updateProp = (prop, val) => {
+    selectedElements.forEach(el => el.style[prop] = val);
+    setElementProps(p => ({ ...p, [prop]: val }));
+    saveChanges();
+  };
+
   const deleteEl = () => {
+    // DIAGNOSTIC LOGGING - Find what's calling delete
+    console.log('🚨 DELETE FUNCTION CALLED!');
+    console.log('  Stack trace:', new Error().stack);
+    console.log('  Selected elements:', selectedElements.length);
+    console.log('  showPropertiesModal:', showPropertiesModal);
+    
+    // TEMPORARY: Block deletion for debugging
+    alert('Delete was called! Check console for details.');
+    return; // ← Remove this line once you identify the issue
+    
     if (!confirm('Delete selected element(s)?')) return;
     selectedElements.forEach(el => el.remove());
     setSelectedElements([]);
