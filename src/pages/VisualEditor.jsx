@@ -48,78 +48,80 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   const lastHtmlContentRef = useRef(null);
 
   useEffect(() => {
-    const pageChanged = lastPageRef.current !== currentPage;
-    const isFirstLoad = !hasLoadedRef.current;
-    const contentChanged = lastHtmlContentRef.current !== htmlContent;
-    const isExternalChange = contentChanged && !isSavingRef.current;
+  const pageChanged = lastPageRef.current !== currentPage;
+  const isFirstLoad = !hasLoadedRef.current;
+  const contentChanged = lastHtmlContentRef.current !== htmlContent;
+  const isExternalChange = contentChanged && !isSavingRef.current;
 
-    console.log('📄 Content update effect triggered:', { 
-      pageChanged, 
-      isFirstLoad, 
-      contentChanged,
-      isExternalChange,
-      isSaving: isSavingRef.current 
-    });
+  console.log('📄 Content update effect triggered:', { 
+    pageChanged, 
+    isFirstLoad, 
+    contentChanged,
+    isExternalChange,
+    isSaving: isSavingRef.current 
+  });
+  
+  if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
+    setInitialHtml(htmlContent);
+    hasLoadedRef.current = true;
+    lastPageRef.current = currentPage;
+    lastHtmlContentRef.current = htmlContent;
+    isSavingRef.current = false;
     
-    if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
-      setInitialHtml(htmlContent);
-      hasLoadedRef.current = true;
-      lastPageRef.current = currentPage;
-      lastHtmlContentRef.current = htmlContent;
-      isSavingRef.current = false;
-      
-      selectedElementsRef.current = [];
-      setGuides({ vertical: [], horizontal: [] });
-      setShowPropertiesModal(false);
-      dragStateRef.current = null;
-    } 
-    else if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
-      const currentDoc = iframeRef.current.contentDocument;
-      const parser = new DOMParser();
-      const newDoc = parser.parseFromString(htmlContent, 'text/html');
-      
-      currentDoc.body.innerHTML = newDoc.body.innerHTML;
-      
-      let style = currentDoc.getElementById('editor-styles');
-      if (!style) {
-        style = currentDoc.createElement('style');
-        style.id = 'editor-styles';
-        currentDoc.head.appendChild(style);
-      }
-      
-      style.textContent = `
-        * { box-sizing: border-box; }
-        body { position: relative !important; min-height: 100vh; }
-        .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
-        .editor-selected:active { cursor: grabbing !important; }
-        .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
-        .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
-        .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
-        .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
-        .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
-        .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
-        .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
-        .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
-        .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
-      `;
-      
-      lastHtmlContentRef.current = htmlContent;
-      isSavingRef.current = false;
-      
-      selectedElementsRef.current = [];
-      setShowPropertiesModal(false);
-    } 
-    else if (!htmlContent || htmlContent.length === 0) {
-      // Empty content
-    } 
-    else {
-      lastHtmlContentRef.current = htmlContent;
-      isSavingRef.current = false;
+    selectedElementsRef.current = [];
+    setGuides({ vertical: [], horizontal: [] });
+    setShowPropertiesModal(false);
+    dragStateRef.current = null;
+  } 
+  else if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
+    console.log('⚠️ EXTERNAL CHANGE DETECTED - Reloading iframe content');  // ADD THIS LOG
+    const currentDoc = iframeRef.current.contentDocument;
+    const parser = new DOMParser();
+    const newDoc = parser.parseFromString(htmlContent, 'text/html');
+    
+    currentDoc.body.innerHTML = newDoc.body.innerHTML;
+    
+    let style = currentDoc.getElementById('editor-styles');
+    if (!style) {
+      style = currentDoc.createElement('style');
+      style.id = 'editor-styles';
+      currentDoc.head.appendChild(style);
     }
-  }, [currentPage, htmlContent]);
+    
+    style.textContent = `
+      * { box-sizing: border-box; }
+      body { position: relative !important; min-height: 100vh; }
+      .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
+      .editor-selected:active { cursor: grabbing !important; }
+      .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
+      .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
+      .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+      .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
+      .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
+      .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
+      .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+      .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
+      .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+      .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+      .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+      .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+    `;
+    
+    lastHtmlContentRef.current = htmlContent;
+    isSavingRef.current = false;
+    
+    selectedElementsRef.current = [];
+    setShowPropertiesModal(false);
+  } 
+  else if (!htmlContent || htmlContent.length === 0) {
+    // Empty content
+  } 
+  else {
+    console.log('✅ Content same as last saved - skipping reload');  // ADD THIS LOG
+    lastHtmlContentRef.current = htmlContent;
+    // DON'T reset isSavingRef here! Let saveChanges handle it
+  }
+}, [currentPage, htmlContent]);
 
   useEffect(() => {
     const iframe = iframeRef.current;
@@ -889,48 +891,55 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   };
 
   const saveChanges = () => {
-    console.log('🔴 saveChanges() CALLED - Stack:', new Error().stack);
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    
-    updateTimeoutRef.current = setTimeout(() => {
-      console.log('⏰ saveChanges timeout fired');
-      if (iframeRef.current?.contentDocument) {
-        const doc = iframeRef.current.contentDocument;
+  console.log('🔴 saveChanges() CALLED - Stack:', new Error().stack);
+  if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+  
+  updateTimeoutRef.current = setTimeout(() => {
+    console.log('⏰ saveChanges timeout fired');
+    if (iframeRef.current?.contentDocument) {
+      const doc = iframeRef.current.contentDocument;
+      
+      const html = doc.documentElement.outerHTML;
+      
+      const cleanedHTML = html
+        .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
+        .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
+        .replace(/\s*class="([^"]*)"/g, (match, classes) => {
+          const cleaned = classes
+            .replace(/\s*editor-selected\s*/g, ' ')
+            .replace(/\s*editor-hover\s*/g, ' ')
+            .replace(/\s*editor-dragging\s*/g, ' ')
+            .replace(/\s*drag-placeholder\s*/g, ' ')
+            .replace(/\s*resize-handle\s*/g, ' ')
+            .replace(/\s*resize-[nesw]{1,2}\s*/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          return cleaned ? ` class="${cleaned}"` : '';
+        })
+        .replace(/\s+class=""\s*/g, ' ')
+        .replace(/\s+data-has-placeholder="[^"]*"/g, '')
+        .replace(/\s+data-placeholder-id="[^"]*"/g, '')
+        .replace(/\s+data-is-resize-handle="[^"]*"/g, '');
+      
+      if (cleanedHTML !== lastSavedHtmlRef.current) {
+        console.log('💾 Saving changes - HTML actually changed');
+        lastSavedHtmlRef.current = cleanedHTML;
+        lastHtmlContentRef.current = cleanedHTML;  // ADD THIS LINE
+        isSavingRef.current = true;
+        onUpdate(cleanedHTML);
         
-        const html = doc.documentElement.outerHTML;
-        
-        const cleanedHTML = html
-          .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
-          .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
-          .replace(/\s*class="([^"]*)"/g, (match, classes) => {
-            const cleaned = classes
-              .replace(/\s*editor-selected\s*/g, ' ')
-              .replace(/\s*editor-hover\s*/g, ' ')
-              .replace(/\s*editor-dragging\s*/g, ' ')
-              .replace(/\s*drag-placeholder\s*/g, ' ')
-              .replace(/\s*resize-handle\s*/g, ' ')
-              .replace(/\s*resize-[nesw]{1,2}\s*/g, ' ')
-              .replace(/\s+/g, ' ')
-              .trim();
-            return cleaned ? ` class="${cleaned}"` : '';
-          })
-          .replace(/\s+class=""\s*/g, ' ')
-          .replace(/\s+data-has-placeholder="[^"]*"/g, '')
-          .replace(/\s+data-placeholder-id="[^"]*"/g, '')
-          .replace(/\s+data-is-resize-handle="[^"]*"/g, '');
-        
-        if (cleanedHTML !== lastSavedHtmlRef.current) {
-          console.log('💾 Saving changes - HTML actually changed');
-          lastSavedHtmlRef.current = cleanedHTML;
-          isSavingRef.current = true;
-          onUpdate(cleanedHTML);
-        } else {
-          console.log('⏭️ Skipping save - HTML unchanged');
-        }
+        // Reset isSavingRef after parent has had time to process
+        setTimeout(() => {
+          isSavingRef.current = false;
+          console.log('✅ Save flag reset');
+        }, 100);
+      } else {
+        console.log('⏭️ Skipping save - HTML unchanged');
       }
-    }, 300);
-  };
-
+    }
+  }, 300);
+};
+  
   const loadProps = (el) => {
     const s = window.getComputedStyle(el);
     setElementProps({
