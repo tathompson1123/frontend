@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
+  console.log('🔵 VisualEditor rendered');
   const [selectedElements, setSelectedElements] = useState([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const [reloadKey, setReloadKey] = useState(0);
