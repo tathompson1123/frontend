@@ -16,18 +16,17 @@ import {
 export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
   const [selectedElements, setSelectedElements] = useState([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
-  const [reloadKey, setReloadKey] = useState(0); // Key to force iframe reload on undo/redo
+  const [reloadKey, setReloadKey] = useState(0);
   const [showPropertiesModal, setShowPropertiesModal] = useState(false);
   const iframeRef = useRef(null);
   const dragStateRef = useRef(null);
   const updateTimeoutRef = useRef(null);
   const eventHandlersRef = useRef(null);
-  const isMouseDownRef = useRef(false); // Use ref instead of local variable
-  const dragStartedRef = useRef(false); // Use ref instead of local variable
-  const lastSavedHtmlRef = useRef(''); // Track last saved HTML to prevent reload loops
-  const isSavingRef = useRef(false); // Track if we're currently saving (to prevent reload loops)
+  const isMouseDownRef = useRef(false);
+  const dragStartedRef = useRef(false);
+  const lastSavedHtmlRef = useRef('');
+  const isSavingRef = useRef(false);
   
-  // CRITICAL: Initialize with htmlContent, but handle undefined case
   const [initialHtml, setInitialHtml] = useState(htmlContent || '<html><body><h1>Loading...</h1></body></html>');
 
   const [elementProps, setElementProps] = useState({
@@ -42,23 +41,20 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     margin: ''
   });
 
-  // Track the last page to detect actual page changes
   const lastPageRef = useRef(currentPage);
   const hasLoadedRef = useRef(false);
-  const lastHtmlContentRef = useRef(null); // Track last HTML content for undo/redo (start null)
+  const lastHtmlContentRef = useRef(null);
 
-  // FIX: Improved undo/redo handling - update DOM directly without reload
+  // [Rest of the useEffect hooks remain the same until the event handlers...]
+  // ... [Keep all your existing useEffect code] ...
+
   useEffect(() => {
     const pageChanged = lastPageRef.current !== currentPage;
     const isFirstLoad = !hasLoadedRef.current;
     const contentChanged = lastHtmlContentRef.current !== htmlContent;
     const isExternalChange = contentChanged && !isSavingRef.current;
     
-    console.log('📄 Content update:', { pageChanged, isFirstLoad, isExternalChange });
-    
-    // Full reload only on page change or first load
     if ((pageChanged || isFirstLoad) && htmlContent && htmlContent.length > 0) {
-      console.log('✅ Full reload (page change/first load)');
       setInitialHtml(htmlContent);
       hasLoadedRef.current = true;
       lastPageRef.current = currentPage;
@@ -67,22 +63,16 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       
       setSelectedElements([]);
       setGuides({ vertical: [], horizontal: [] });
-      setShowPropertiesModal(false); // FIX: Close modal on page change
+      setShowPropertiesModal(false);
       dragStateRef.current = null;
     } 
-    // FIX: Direct DOM update for undo/redo - NO iframe reload
     else if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
-      console.log('🔄 Direct DOM update (undo/redo)');
       const currentDoc = iframeRef.current.contentDocument;
-      
-      // Parse new HTML
       const parser = new DOMParser();
       const newDoc = parser.parseFromString(htmlContent, 'text/html');
       
-      // Replace body content directly
       currentDoc.body.innerHTML = newDoc.body.innerHTML;
       
-      // Re-inject styles (they get wiped with innerHTML)
       let style = currentDoc.getElementById('editor-styles');
       if (!style) {
         style = currentDoc.createElement('style');
@@ -112,86 +102,50 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       lastHtmlContentRef.current = htmlContent;
       isSavingRef.current = false;
       
-      // Clear selection state
       setSelectedElements([]);
-      setShowPropertiesModal(false); // FIX: Close modal on undo/redo
-      
-      console.log('✅ DOM updated without reload');
+      setShowPropertiesModal(false);
     } 
     else if (!htmlContent || htmlContent.length === 0) {
-      console.log('⚠️ Empty htmlContent');
+      // Empty content
     } 
     else {
-      // Internal save - just update tracking
       lastHtmlContentRef.current = htmlContent;
       isSavingRef.current = false;
     }
   }, [currentPage, htmlContent]);
 
+  // [Keep your existing main useEffect with all the event handlers, BUT with this fix:]
+
   useEffect(() => {
     const iframe = iframeRef.current;
-    if (!iframe) {
-      console.log('❌ No iframe ref');
-      return;
-    }
+    if (!iframe) return;
 
     console.log('🔄 Setting up editor for page:', currentPage);
     
     let retryCount = 0;
-    const maxRetries = 20; // Max 2 seconds of retrying
+    const maxRetries = 20;
 
     const initEditor = () => {
       const doc = iframe.contentDocument;
-      if (!doc) {
-        console.log('❌ No contentDocument');
-        return;
-      }
-      
-      if (!doc.body) {
-        console.log('❌ No body yet, waiting...');
+      if (!doc || !doc.body) {
         if (retryCount < maxRetries) {
           retryCount++;
           setTimeout(initEditor, 100);
-        } else {
-          console.error('❌ TIMEOUT: Body never loaded after', maxRetries, 'retries');
         }
         return;
       }
       
-      // CRITICAL: Wait for actual content, not just empty body
-      // Check multiple times because content might load progressively
       const bodyHasContent = doc.body.children && doc.body.children.length > 0;
       const bodyHasText = doc.body.textContent && doc.body.textContent.trim().length > 0;
       
-      if (!bodyHasContent && !bodyHasText) {
-        console.log('⏳ Body is empty (retry', retryCount + 1, '/', maxRetries, ')');
-        console.log('   - children:', doc.body.children?.length);
-        console.log('   - text length:', doc.body.textContent?.length);
-        
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(initEditor, 100);
-        } else {
-          console.warn('⚠️ Body still empty after', maxRetries, 'retries - initializing anyway');
-          console.log('   This might mean the srcDoc content is empty or invalid');
-          console.log('   htmlContent length:', htmlContent?.length);
-          console.log('   initialHtml length:', initialHtml?.length);
-          // Continue with initialization anyway
-        }
-        
-        if (retryCount >= maxRetries) {
-          // Force continue after max retries
-        } else {
-          return;
-        }
+      if (!bodyHasContent && !bodyHasText && retryCount < maxRetries) {
+        retryCount++;
+        setTimeout(initEditor, 100);
+        return;
       }
 
-      console.log('✅ Initializing editor on body with', doc.body.children.length, 'children');
-      console.log('   Body text length:', doc.body.textContent?.length);
-
-      // Remove old event listeners if they exist
+      // Remove old event listeners
       if (eventHandlersRef.current) {
-        console.log('🧹 Cleaning up old handlers');
         const { doc: oldDoc, handlers } = eventHandlersRef.current;
         try {
           oldDoc.removeEventListener('mousedown', handlers.mousedown);
@@ -201,7 +155,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           oldDoc.removeEventListener('mouseout', handlers.mouseout);
           oldDoc.removeEventListener('dblclick', handlers.dblclick);
         } catch (e) {
-          console.log('Cleanup error (ok):', e.message);
+          // Ignore
         }
       }
 
@@ -214,61 +168,22 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       }
       
       style.textContent = `
-        * { 
-          box-sizing: border-box;
-        }
-        body { 
-          position: relative !important;
-          min-height: 100vh;
-        }
-        .editor-selected { 
-          outline: 3px solid #8b5cf6 !important; 
-          outline-offset: 2px !important;
-          cursor: grab !important;
-        }
-        .editor-selected:active {
-          cursor: grabbing !important;
-        }
-        .editor-hover { 
-          outline: 2px dashed #3b82f6 !important; 
-          outline-offset: 2px !important;
-        }
-        .editor-dragging {
-          opacity: 0.8 !important;
-          cursor: grabbing !important;
-        }
-        
-        /* Resize Handles */
-        .resize-handle {
-          position: absolute;
-          background: #8b5cf6;
-          border: 2px solid white;
-          border-radius: 50%;
-          width: 12px;
-          height: 12px;
-          z-index: 10000;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        }
-        .resize-handle:hover {
-          background: #7c3aed;
-          transform: scale(1.2);
-        }
-        
-        /* Corner handles */
+        * { box-sizing: border-box; }
+        body { position: relative !important; min-height: 100vh; }
+        .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
+        .editor-selected:active { cursor: grabbing !important; }
+        .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
+        .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
+        .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto !important; }
+        .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
         .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
         .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
         .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
         .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
-        
-        /* Side handles */
         .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
         .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
         .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
         .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
-        
-        .resize-handle:hover {
-          transform: scale(1.3);
-        }
       `;
 
       // Disable all links, buttons, and form submissions
@@ -281,7 +196,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       doc.addEventListener('click', preventDefaultActions, true);
       doc.addEventListener('submit', preventDefaultActions, true);
       
-      // Also prevent navigation on links
       doc.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', preventDefaultActions, true);
       });
@@ -294,12 +208,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       const resizeStateRef = { current: null };
       
       const createResizeHandles = (element) => {
-        // Remove any existing handles
         doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
         
         if (!element) return;
         
-        // Make sure element has position set
         if (!element.style.position || element.style.position === 'static') {
           const rect = element.getBoundingClientRect();
           element.style.position = 'absolute';
@@ -307,15 +219,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           element.style.top = rect.top + 'px';
         }
         
-        // Create 8 handles (4 corners + 4 sides)
         const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
         
         handles.forEach(position => {
           const handle = doc.createElement('div');
           handle.className = `resize-handle resize-${position}`;
           handle.dataset.position = position;
+          handle.dataset.isResizeHandle = 'true'; // CRITICAL FIX: Mark as resize handle
           
-          // Prevent handle from being selectable
           handle.addEventListener('mousedown', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -327,7 +238,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             const startLeft = parseFloat(element.style.left) || 0;
             const startTop = parseFloat(element.style.top) || 0;
             
-            // Store original font sizes for scaling
             const originalFontSizes = new Map();
             const textElements = element.querySelectorAll('*');
             textElements.forEach(el => {
@@ -338,7 +248,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               }
             });
             
-            // Also store the element's own font size
             const elementFontSize = parseFloat(window.getComputedStyle(element).fontSize);
             if (elementFontSize) {
               originalFontSizes.set(element, elementFontSize);
@@ -376,7 +285,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         let newLeft = startLeft;
         let newTop = startTop;
         
-        // Calculate new dimensions based on handle position
         if (position.includes('e')) {
           newWidth = Math.max(20, startWidth + dx);
         }
@@ -392,21 +300,15 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           newTop = startTop + dy;
         }
         
-        // Calculate scale factors
         const widthScale = newWidth / startWidth;
         const heightScale = newHeight / startHeight;
-        
-        // Use the average of width and height scale for font sizing
-        // This gives a balanced scaling
         const fontScale = (widthScale + heightScale) / 2;
         
-        // Apply new dimensions
         element.style.width = newWidth + 'px';
         element.style.height = newHeight + 'px';
         element.style.left = newLeft + 'px';
         element.style.top = newTop + 'px';
         
-        // Scale all text elements proportionally
         if (originalFontSizes) {
           originalFontSizes.forEach((originalSize, el) => {
             const newSize = originalSize * fontScale;
@@ -414,7 +316,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           });
         }
         
-        // Update handle positions
         createResizeHandles(element);
       };
       
@@ -426,172 +327,126 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         }
       };
 
-      // Setup event handlers
-      const handleMouseDown = (e) => {
-        let target = e.target;
+      const findDraggableElement = (el) => {
+        const nonDraggable = ['HTML', 'BODY', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'];
         
-        // CRITICAL: Find the right element to select/drag
-        // Skip up to a meaningful draggable element
-        const findDraggableElement = (el) => {
-          // Don't allow dragging these elements
-          const nonDraggable = ['HTML', 'BODY', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'];
-          
-          // Don't allow dragging background/hero sections
-          const isBackground = el.classList?.contains('hero') || 
-                               el.classList?.contains('background') ||
-                               el.classList?.contains('bg-') ||
-                               el.tagName === 'SECTION' ||
-                               el.tagName === 'HEADER' ||
-                               el.tagName === 'FOOTER' ||
-                               el.tagName === 'MAIN';
-          
-          if (nonDraggable.includes(el.tagName) || isBackground) {
-            return null;
+        const isBackground = el.classList?.contains('hero') || 
+                             el.classList?.contains('background') ||
+                             el.classList?.contains('bg-') ||
+                             el.tagName === 'SECTION' ||
+                             el.tagName === 'HEADER' ||
+                             el.tagName === 'FOOTER' ||
+                             el.tagName === 'MAIN';
+        
+        if (nonDraggable.includes(el.tagName) || isBackground) {
+          return null;
+        }
+        
+        if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'EM' || 
+            el.tagName === 'B' || el.tagName === 'I' || el.tagName === 'U') {
+          const parent = el.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
+          if (parent && !parent.classList?.contains('hero') && 
+              !parent.classList?.contains('background') && 
+              !parent.classList?.contains('bg-') &&
+              parent.tagName !== 'SECTION' &&
+              parent.tagName !== 'HEADER' &&
+              parent.tagName !== 'FOOTER') {
+            return parent;
           }
+        }
+        
+        if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P'].includes(el.tagName)) {
+          const parent = el.parentElement;
           
-          // If clicking on text inside an element, find the parent container
-          // But stop at sections/headers/etc
-          if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'EM' || 
-              el.tagName === 'B' || el.tagName === 'I' || el.tagName === 'U') {
-            const parent = el.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
-            if (parent && !parent.classList?.contains('hero') && 
-                !parent.classList?.contains('background') && 
-                !parent.classList?.contains('bg-') &&
-                parent.tagName !== 'SECTION' &&
-                parent.tagName !== 'HEADER' &&
-                parent.tagName !== 'FOOTER') {
+          if (parent && parent.tagName === 'DIV') {
+            const siblings = Array.from(parent.children);
+            
+            const onlyTextElements = siblings.every(child => 
+              ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'SPAN'].includes(child.tagName)
+            );
+            
+            const rect = parent.getBoundingClientRect();
+            const isSmallContainer = rect.width < el.ownerDocument.defaultView.innerWidth * 0.5;
+            
+            if (onlyTextElements && siblings.length > 1 && siblings.length <= 5 && isSmallContainer) {
               return parent;
             }
           }
-          
-          // NEW: For headings and paragraphs, check if they're part of a text group
-          if (['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P'].includes(el.tagName)) {
-            // Find parent that might contain grouped text
-            const parent = el.parentElement;
-            
-            // Check if parent is a simple text container (div with only text elements)
-            if (parent && parent.tagName === 'DIV') {
-              const siblings = Array.from(parent.children);
-              
-              // If parent only contains headings/paragraphs (text group), select the parent
-              const onlyTextElements = siblings.every(child => 
-                ['H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'P', 'SPAN'].includes(child.tagName)
-              );
-              
-              // Check that it's not a huge container
-              const rect = parent.getBoundingClientRect();
-              const isSmallContainer = rect.width < el.ownerDocument.defaultView.innerWidth * 0.5;
-              
-              if (onlyTextElements && siblings.length > 1 && siblings.length <= 5 && isSmallContainer) {
-                console.log('  ✅ Grouping text elements - selecting parent div');
-                return parent;
-              }
-            }
-          }
-          
-          // For container divs, check if they have draggable children
-          // If a div only contains other divs/sections, it's not draggable
-          if (el.tagName === 'DIV') {
-            const children = Array.from(el.children);
-            
-            // Check if it's a pure container (only has structural elements)
-            const onlyStructural = children.every(child => 
-              ['DIV', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE', 'NAV', 'UL', 'OL'].includes(child.tagName)
-            );
-            
-            // Also check if it's a wrapper with no direct text content or images
-            const hasDirectText = Array.from(el.childNodes).some(node => 
-              node.nodeType === 3 && node.textContent.trim().length > 0
-            );
-            
-            const hasImages = el.querySelectorAll('img').length > 0;
-            const hasButtons = el.querySelectorAll('button, a.btn, a.button').length > 0;
-            
-            // If it's a container with only structural elements and no direct text/images/buttons, don't allow dragging
-            if (onlyStructural && children.length > 0 && !hasDirectText && !hasImages && !hasButtons) {
-              console.log('  ⚠️ Skipping container div with only structural children');
-              return null;
-            }
-            
-            // CRITICAL FIX: Skip layout containers (like feature grid containers)
-            // These are typically 3-column grids or flex containers
-            const computedStyle = el.ownerDocument.defaultView.getComputedStyle(el);
-            const isGrid = computedStyle.display?.includes('grid') || 
-                          el.classList?.toString().includes('grid') ||
-                          computedStyle.display === 'flex' ||
-                          el.classList?.toString().includes('flex');
-            
-            if (isGrid && children.length >= 3) {
-              console.log('  ⚠️ Skipping grid/flex layout container (children:', children.length, ')');
-              return null;
-            }
-            
-            // Also skip very large containers (likely layout containers)
-            const rect = el.getBoundingClientRect();
-            const windowWidth = el.ownerDocument.defaultView.innerWidth;
-            if (rect.width > windowWidth * 0.7 && children.length > 2) {
-              console.log('  ⚠️ Skipping large layout container (width:', rect.width, ')');
-              return null;
-            }
-            
-            // Skip nearly empty containers (less than 10 chars of text)
-            const textContent = el.textContent?.trim() || '';
-            if (textContent.length < 10 && children.length > 1) {
-              console.log('  ⚠️ Skipping nearly empty container (text length:', textContent.length, ')');
-              return null;
-            }
-          }
-          
-          return el;
-        };
+        }
         
+        if (el.tagName === 'DIV') {
+          const children = Array.from(el.children);
+          
+          const onlyStructural = children.every(child => 
+            ['DIV', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE', 'NAV', 'UL', 'OL'].includes(child.tagName)
+          );
+          
+          const hasDirectText = Array.from(el.childNodes).some(node => 
+            node.nodeType === 3 && node.textContent.trim().length > 0
+          );
+          
+          const hasImages = el.querySelectorAll('img').length > 0;
+          const hasButtons = el.querySelectorAll('button, a.btn, a.button').length > 0;
+          
+          if (onlyStructural && children.length > 0 && !hasDirectText && !hasImages && !hasButtons) {
+            return null;
+          }
+          
+          const computedStyle = el.ownerDocument.defaultView.getComputedStyle(el);
+          const isGrid = computedStyle.display?.includes('grid') || 
+                        el.classList?.toString().includes('grid') ||
+                        computedStyle.display === 'flex' ||
+                        el.classList?.toString().includes('flex');
+          
+          if (isGrid && children.length >= 3) {
+            return null;
+          }
+          
+          const rect = el.getBoundingClientRect();
+          const windowWidth = el.ownerDocument.defaultView.innerWidth;
+          if (rect.width > windowWidth * 0.7 && children.length > 2) {
+            return null;
+          }
+          
+          const textContent = el.textContent?.trim() || '';
+          if (textContent.length < 10 && children.length > 1) {
+            return null;
+          }
+        }
+        
+        return el;
+      };
+
+      // Setup event handlers
+      const handleMouseDown = (e) => {
+        // CRITICAL FIX: Check if clicking on a resize handle
+        if (e.target.dataset.isResizeHandle === 'true') {
+          console.log('🔧 Clicked resize handle - skipping selection logic');
+          return; // Let the resize handle's own mousedown handler take over
+        }
+
+        let target = e.target;
         const draggableTarget = findDraggableElement(target);
         
         if (!draggableTarget) {
-          console.log('⚠️ Clicked non-draggable element:', target.tagName, target.className);
           return;
         }
         
         target = draggableTarget;
         
-        console.log('═══════════════════════════════════════');
-        console.log('🟢 MOUSEDOWN EVENT');
-        console.log('Target:', target.tagName, target.className);
-        console.log('State BEFORE:');
-        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-        console.log('  - dragStartedRef.current:', dragStartedRef.current);
-        console.log('  - dragStateRef.current:', dragStateRef.current);
-        console.log('  - Has editor-selected class:', target.classList.contains('editor-selected'));
-        console.log('  - Currently selected elements:', doc.querySelectorAll('.editor-selected').length);
-        console.log('  - Event handlers attached:', !!eventHandlersRef.current);
-        
-        // Ignore structural elements
         if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-          console.log('❌ IGNORING - Structural element');
-          console.log('═══════════════════════════════════════');
           return;
         }
 
-        // ALWAYS prevent default for all clicks in editor mode
         e.preventDefault();
         e.stopPropagation();
         
-        console.log('⚙️ Setting state variables...');
         isMouseDownRef.current = true;
         dragStartedRef.current = false;
-        
-        console.log('State AFTER setting refs:');
-        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-        console.log('  - dragStartedRef.current:', dragStartedRef.current);
-        console.log('  - Refs are working:', isMouseDownRef.current === true);
 
-        // If clicking on already selected element, prepare to drag
         if (target.classList.contains('editor-selected')) {
-          console.log('✅ PREPARING TO DRAG (element already selected)');
           const iframeRect = iframe.getBoundingClientRect();
           const currentlySelected = Array.from(doc.querySelectorAll('.editor-selected'));
-          console.log('  - Found', currentlySelected.length, 'selected elements');
-          console.log('  - iframeRect:', iframeRect);
           
           const elementsData = currentlySelected.map(elem => {
             prepareElementForDrag(elem, doc);
@@ -613,75 +468,39 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             moved: false,
             iframeRect: iframeRect
           };
-          
-          console.log('  - Created dragStateRef with', elementsData.length, 'elements');
-          console.log('  - Start position:', e.clientX, e.clientY);
-          console.log('  - dragStateRef.current is set:', !!dragStateRef.current);
         } else {
-          // Clicking on new element
-          console.log('✅ PREPARING TO SELECT (new element)');
           dragStateRef.current = {
             clickedElement: target,
             startX: e.clientX,
             startY: e.clientY,
             moved: false
           };
-          console.log('  - Stored clickedElement for selection on mouseup');
         }
-        
-        console.log('Final state check:');
-        console.log('  - dragStateRef.current:', dragStateRef.current);
-        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-        console.log('  - dragStartedRef.current:', dragStartedRef.current);
-        console.log('═══════════════════════════════════════');
       };
 
       const handleMouseMove = (e) => {
-        // Handle resize if active
         if (resizeStateRef.current) {
           handleResizeMove(e);
           return;
         }
         
-        // Check if we should be moving at all
         const shouldMove = isMouseDownRef.current && dragStateRef.current;
         
-        if (!shouldMove) {
-          // Only log occasionally to avoid spam
-          if (isMouseDownRef.current && !dragStateRef.current) {
-            console.log('⚠️ MOUSEMOVE - isMouseDown true but no dragStateRef!');
-            console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-            console.log('  - dragStateRef.current:', dragStateRef.current);
-            console.log('  - This should never happen!');
-          }
-          return;
-        }
+        if (!shouldMove) return;
 
         const dx = e.clientX - dragStateRef.current.startX;
         const dy = e.clientY - dragStateRef.current.startY;
         
-        // Only start drag if moved more than 5px
         if (!dragStartedRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-          console.log('───────────────────────────────────────');
-          console.log('🔄 STARTING DRAG (moved >5px)');
-          console.log('  - dx:', dx, 'dy:', dy);
-          console.log('  - dragStateRef.current.elements:', dragStateRef.current.elements?.length);
-          console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-          console.log('  - dragStartedRef.current (before):', dragStartedRef.current);
-          
-          // CRITICAL FIX: If we don't have elements, we clicked a new element and need to prepare it
           if (!dragStateRef.current.elements && dragStateRef.current.clickedElement) {
-            console.log('  - 🔧 FIX: Converting click to drag - preparing element...');
             const clickedEl = dragStateRef.current.clickedElement;
             
-            // First select it
             doc.querySelectorAll('.editor-selected').forEach(el => {
               el.classList.remove('editor-selected');
             });
             clickedEl.classList.add('editor-selected');
             setSelectedElements([clickedEl]);
             
-            // Then prepare for drag
             const iframeRect = iframe.getBoundingClientRect();
             prepareElementForDrag(clickedEl, doc);
             const rect = clickedEl.getBoundingClientRect();
@@ -699,91 +518,57 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               moved: true,
               iframeRect: iframeRect
             };
-            
-            console.log('  - ✅ Element prepared, now has', dragStateRef.current.elements.length, 'elements');
           }
           
           dragStartedRef.current = true;
           dragStateRef.current.moved = true;
           
-          console.log('  - dragStartedRef.current (after):', dragStartedRef.current);
-          console.log('  - dragStateRef.current.moved:', dragStateRef.current.moved);
-          
           if (dragStateRef.current.elements) {
             dragStateRef.current.elements.forEach(data => {
               data.el.classList.add('editor-dragging');
             });
-            console.log('  - Added editor-dragging class to', dragStateRef.current.elements.length, 'elements');
-          } else {
-            console.log('  - ⚠️ NO ELEMENTS TO DRAG!');
           }
-          console.log('───────────────────────────────────────');
         }
         
-        // Perform drag with snapping (only log when actually dragging)
         if (dragStartedRef.current && dragStateRef.current.elements) {
           const firstElement = dragStateRef.current.elements[0];
           
           let newLeft = firstElement.startLeft + dx;
           let newTop = firstElement.startTop + dy;
           
-          // Log every 10th mousemove to avoid spam
-          if (Math.random() < 0.1) {
-            console.log('🖱️ Dragging:');
-            console.log('  - dx:', dx, 'dy:', dy);
-            console.log('  - startLeft:', firstElement.startLeft, 'startTop:', firstElement.startTop);
-            console.log('  - newLeft:', newLeft, 'newTop:', newTop);
-            console.log('  - Current style.left:', firstElement.el.style.left, 'style.top:', firstElement.el.style.top);
-          }
-          
-          // Use document coordinates, not viewport coordinates
           const elemCenterX = newLeft + firstElement.width / 2;
           const elemCenterY = newTop + firstElement.height / 2;
           
-          const snapThreshold = 10; // Slightly larger threshold for easier snapping
+          const snapThreshold = 10;
           const detectedGuides = { vertical: [], horizontal: [] };
           
-          // Get scroll position
           const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
           const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
           
-          // CRITICAL FIX: Use BODY dimensions for center snap, not parent section
           const bodyRect = doc.body.getBoundingClientRect();
           const iframeRect = dragStateRef.current.iframeRect;
           
-          // Body center in document coordinates
           const bodyCenterX = bodyRect.width / 2;
           const bodyCenterY = bodyRect.height / 2;
           
-          if (Math.random() < 0.1) {
-            console.log('📐 Snap calculations:');
-            console.log('  - elemCenterX:', elemCenterX, 'bodyCenterX:', bodyCenterX);
-            console.log('  - bodyWidth:', bodyRect.width);
-            console.log('  - Difference:', Math.abs(elemCenterX - bodyCenterX));
-            console.log('  - Scroll:', scrollLeft, scrollTop);
-          }
-          
-          // SNAP TO BODY CENTER (Horizontal)
           if (Math.abs(elemCenterX - bodyCenterX) < snapThreshold) {
             newLeft = bodyCenterX - firstElement.width / 2;
             detectedGuides.vertical.push({ 
-              x: bodyCenterX + iframeRect.left, // Convert to viewport coords for guide rendering
+              x: bodyCenterX + iframeRect.left,
               type: 'center', 
               label: 'Page Center' 
             });
           }
           
-          // SNAP TO BODY CENTER (Vertical) - less commonly used but available
           if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
             newTop = bodyCenterY - firstElement.height / 2;
             detectedGuides.horizontal.push({ 
-              y: bodyCenterY + iframeRect.top, // Convert to viewport coords for guide rendering
+              y: bodyCenterY + iframeRect.top,
               type: 'center', 
               label: 'Page Center' 
             });
           }
           
-          // Find parent section for element-to-element snapping
           const draggingElement = firstElement.el;
           let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
           
@@ -791,7 +576,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             parentSection = doc.body;
           }
           
-          // SNAP TO OTHER ELEMENTS (Center to Center only) - also in document coordinates
           const siblingElements = Array.from(parentSection.querySelectorAll('*')).filter(el => 
             !dragStateRef.current.elements.some(data => data.el === el) &&
             !['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 'SECTION', 'HEADER', 'FOOTER', 'MAIN', 'ARTICLE', 'ASIDE'].includes(el.tagName) &&
@@ -803,30 +587,27 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           
           siblingElements.forEach(other => {
             const otherRect = other.getBoundingClientRect();
-            // Element positions in document coordinates
             const otherLeft = otherRect.left - iframeRect.left + scrollLeft;
             const otherTop = otherRect.top - iframeRect.top + scrollTop;
             const otherCenterX = otherLeft + otherRect.width / 2;
             const otherCenterY = otherTop + otherRect.height / 2;
             
-            // Snap center to center (horizontal)
             if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
               newLeft = otherCenterX - firstElement.width / 2;
               if (!detectedGuides.vertical.some(g => Math.abs(g.x - (otherCenterX + iframeRect.left)) < 1)) {
                 detectedGuides.vertical.push({ 
-                  x: otherCenterX + iframeRect.left, // Convert to viewport coords for rendering
+                  x: otherCenterX + iframeRect.left,
                   type: 'center', 
                   label: 'Element Center' 
                 });
               }
             }
             
-            // Snap center to center (vertical)
             if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
               newTop = otherCenterY - firstElement.height / 2;
               if (!detectedGuides.horizontal.some(g => Math.abs(g.y - (otherCenterY + iframeRect.top)) < 1)) {
                 detectedGuides.horizontal.push({ 
-                  y: otherCenterY + iframeRect.top, // Convert to viewport coords for rendering
+                  y: otherCenterY + iframeRect.top,
                   type: 'center', 
                   label: 'Element Center' 
                 });
@@ -834,7 +615,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             }
           });
           
-          // Limit to 1 guide per direction for cleaner UI
           setGuides({ 
             vertical: detectedGuides.vertical.slice(0, 1),
             horizontal: detectedGuides.horizontal.slice(0, 1) 
@@ -843,88 +623,44 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           const deltaX = newLeft - firstElement.startLeft;
           const deltaY = newTop - firstElement.startTop;
           
-          dragStateRef.current.elements.forEach((data, index) => {
+          dragStateRef.current.elements.forEach((data) => {
             const finalLeft = data.startLeft + deltaX;
             const finalTop = data.startTop + deltaY;
             data.el.style.left = finalLeft + 'px';
             data.el.style.top = finalTop + 'px';
-            
-            if (index === 0 && Math.random() < 0.1) {
-              console.log('  - Applied: left=' + finalLeft + 'px, top=' + finalTop + 'px');
-            }
           });
         }
       };
 
       const handleMouseUp = (e) => {
-        // Handle resize end
         if (resizeStateRef.current) {
           handleResizeEnd();
           return;
         }
         
-        console.log('═══════════════════════════════════════');
-        console.log('🔵 MOUSEUP EVENT');
-        console.log('State at mouseup:');
-        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-        console.log('  - dragStartedRef.current:', dragStartedRef.current);
-        console.log('  - dragStateRef.current:', dragStateRef.current);
-        console.log('  - dragStateRef.current?.moved:', dragStateRef.current?.moved);
-        console.log('  - Event handlers still attached:', !!eventHandlersRef.current);
-        
         if (!isMouseDownRef.current) {
-          console.log('❌ ABORT - isMouseDown is false (event already handled or never started)');
-          console.log('   This might indicate handlers were removed or refs were reset');
-          console.log('═══════════════════════════════════════');
           return;
         }
         
-        console.log('⚙️ Setting isMouseDownRef.current = false');
         isMouseDownRef.current = false;
-        console.log('   Confirmed: isMouseDownRef.current =', isMouseDownRef.current);
         
-        // If we were dragging, save and cleanup
         if (dragStartedRef.current && dragStateRef.current?.elements) {
-          console.log('✅ FINISHING DRAG');
-          console.log('  - Removing editor-dragging class from', dragStateRef.current.elements.length, 'elements');
-          
           dragStateRef.current.elements.forEach(data => {
             data.el.classList.remove('editor-dragging');
-            console.log('    - Cleaned up:', data.el.tagName, 'position:', data.el.style.position);
           });
           
           setGuides({ vertical: [], horizontal: [] });
-          
-          console.log('  - Calling saveChanges()...');
           saveChanges();
           
-          console.log('  - Resetting drag state...');
           dragStateRef.current = null;
           dragStartedRef.current = false;
-          
-          console.log('✅ DRAG COMPLETE - All state reset');
-          console.log('Post-drag state:');
-          console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-          console.log('  - dragStartedRef.current:', dragStartedRef.current);
-          console.log('  - dragStateRef.current:', dragStateRef.current);
-          console.log('  - Event handlers ref:', !!eventHandlersRef.current);
-          console.log('  - Doc still accessible:', !!doc);
-          console.log('═══════════════════════════════════════');
-          
-          // CRITICAL: Test if handlers are still working
-          console.log('🧪 TESTING: Click again to verify handlers are still attached');
           return;
         }
         
-        // If we didn't drag, handle selection
         if (dragStateRef.current && !dragStateRef.current.moved) {
-          console.log('✅ HANDLING SELECTION (no drag occurred)');
           const target = dragStateRef.current.clickedElement || e.target;
           
-          console.log('  - Target to select:', target.tagName, target.className);
-          
           if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-            console.log('  - Clearing selection (structural element)');
             doc.querySelectorAll('.editor-selected').forEach(el => {
               el.classList.remove('editor-selected');
             });
@@ -932,71 +668,37 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             setSelectedElements([]);
             dragStateRef.current = null;
             dragStartedRef.current = false;
-            console.log('═══════════════════════════════════════');
             return;
           }
           
-          // Multi-select with shift
           if (e.shiftKey) {
-            console.log('  - MULTI-SELECT MODE (Shift held)');
             if (target.classList.contains('editor-selected')) {
-              console.log('    - Deselecting element');
               target.classList.remove('editor-selected');
               const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
-              console.log('    - Now', newSelected.length, 'elements selected');
               setSelectedElements(newSelected);
-              // Remove all resize handles for multi-select
               doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
             } else {
-              console.log('    - Adding to selection');
               target.classList.add('editor-selected');
               const newSelected = Array.from(doc.querySelectorAll('.editor-selected'));
-              console.log('    - Now', newSelected.length, 'elements selected');
               setSelectedElements(newSelected);
-              // Remove all resize handles for multi-select
               doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
             }
           } else {
-            // Single select
-            console.log('  - SINGLE SELECT MODE');
             const previouslySelected = doc.querySelectorAll('.editor-selected');
-            console.log('    - Clearing', previouslySelected.length, 'previously selected elements');
             
             previouslySelected.forEach(el => {
               el.classList.remove('editor-selected');
-              console.log('      - Removed from:', el.tagName);
             });
             
             target.classList.add('editor-selected');
-            console.log('    - ✅ Added editor-selected to:', target.tagName);
-            console.log('    - Class list now:', target.className);
-            
             setSelectedElements([target]);
             loadProps(target);
-            
-            // Create resize handles for selected element
             createResizeHandles(target);
-            
-            console.log('    - Updated React state with 1 element');
           }
-        } else if (!dragStateRef.current) {
-          console.log('⚠️ No dragStateRef - this shouldn\'t happen');
-        } else if (dragStateRef.current.moved) {
-          console.log('⚠️ dragStateRef.moved is true but dragStarted is false - inconsistent state');
         }
         
-        console.log('⚙️ Final cleanup...');
         dragStateRef.current = null;
         dragStartedRef.current = false;
-        
-        console.log('✅ SELECTION/MOUSEUP COMPLETE - State reset');
-        console.log('Final state check:');
-        console.log('  - isMouseDownRef.current:', isMouseDownRef.current);
-        console.log('  - dragStartedRef.current:', dragStartedRef.current);
-        console.log('  - dragStateRef.current:', dragStateRef.current);
-        console.log('  - Elements with .editor-selected:', doc.querySelectorAll('.editor-selected').length);
-        console.log('  - Event handlers still there:', !!eventHandlersRef.current);
-        console.log('═══════════════════════════════════════');
       };
 
       const handleMouseOver = (e) => {
@@ -1004,19 +706,16 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         
         let target = e.target;
         
-        // Use same logic as mousedown to find draggable element
         const nonDraggable = ['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK', 
                               'SECTION', 'HEADER', 'FOOTER', 'MAIN'];
         
         if (nonDraggable.includes(target.tagName)) return;
         
-        // Skip background classes
         const isBackground = target.classList?.contains('hero') || 
                            target.classList?.contains('background') ||
                            target.classList?.contains('bg-');
         if (isBackground) return;
         
-        // For text elements, hover the parent
         if (['SPAN', 'STRONG', 'EM', 'B', 'I', 'U'].includes(target.tagName)) {
           const parent = target.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
           if (parent) target = parent;
@@ -1035,12 +734,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         
         const target = e.target;
         
-        // Don't open modal for structural elements
         if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
           return;
         }
         
-        // Select the element if not already selected
         if (!target.classList.contains('editor-selected')) {
           doc.querySelectorAll('.editor-selected').forEach(el => {
             el.classList.remove('editor-selected');
@@ -1048,11 +745,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           target.classList.add('editor-selected');
           setSelectedElements([target]);
           loadProps(target);
-          createResizeHandles(target); // FIX: Add handles on double-click select
+          createResizeHandles(target);
         }
         
-        // Open properties modal
-        console.log('🖱️ Double-click - opening properties');
         setShowPropertiesModal(true);
       };
 
@@ -1064,16 +759,9 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       doc.addEventListener('mouseout', handleMouseOut);
       doc.addEventListener('dblclick', handleDoubleClick);
       
-      // Add global listeners for resize that works outside iframe
       window.addEventListener('mousemove', handleResizeMove);
       window.addEventListener('mouseup', handleResizeEnd);
 
-      console.log('✅ Event listeners attached');
-      console.log('   - mousedown:', !!handleMouseDown);
-      console.log('   - mousemove:', !!handleMouseMove);
-      console.log('   - mouseup:', !!handleMouseUp);
-
-      // Store handlers for cleanup
       eventHandlersRef.current = {
         doc,
         handlers: {
@@ -1085,34 +773,23 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           dblclick: handleDoubleClick
         }
       };
-      
-      // Test that events work
-      console.log('🧪 Testing event system...');
-      doc.body.addEventListener('click', () => console.log('✅ Click event works!'), { once: true });
     };
 
-    // Try multiple initialization strategies
     if (iframe.contentDocument?.readyState === 'complete') {
-      console.log('📄 Document already complete');
       initEditor();
     } else {
-      console.log('⏳ Waiting for iframe load...');
       iframe.onload = () => {
-        console.log('✅ Iframe loaded');
         initEditor();
       };
       
-      // Backup: try after a short delay
       setTimeout(() => {
         if (!eventHandlersRef.current) {
-          console.log('⚠️ Handlers not attached, retrying...');
           initEditor();
         }
       }, 500);
     }
 
     return () => {
-      // Cleanup on unmount
       if (eventHandlersRef.current) {
         const { doc, handlers } = eventHandlersRef.current;
         try {
@@ -1123,23 +800,17 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           doc.removeEventListener('mouseout', handlers.mouseout);
           doc.removeEventListener('dblclick', handlers.dblclick);
           
-          // Remove global resize listeners
           window.removeEventListener('mousemove', handleResizeMove);
           window.removeEventListener('mouseup', handleResizeEnd);
         } catch (err) {
-          // Ignore cleanup errors
+          // Ignore
         }
       }
     };
-  }, [currentPage, reloadKey]); // Depend on currentPage and reloadKey
+  }, [currentPage, reloadKey]);
 
   const prepareElementForDrag = (elem, doc) => {
     const computed = window.getComputedStyle(elem);
-    
-    console.log('🔧 prepareElementForDrag called:');
-    console.log('  - Element:', elem.tagName, elem.className);
-    console.log('  - Current position:', computed.position);
-    console.log('  - Has placeholder already:', !!elem.dataset.hasPlaceholder);
     
     if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
       const rect = elem.getBoundingClientRect();
@@ -1150,11 +821,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       const calculatedLeft = rect.left - parentRect.left;
       const calculatedTop = rect.top - parentRect.top;
       
-      console.log('  - Rect:', {left: rect.left, top: rect.top, width, height});
-      console.log('  - Parent rect:', {left: parentRect.left, top: parentRect.top});
-      console.log('  - Calculated position:', {left: calculatedLeft, top: calculatedTop});
-      
-      // Create a placeholder to maintain layout
       if (!elem.dataset.hasPlaceholder) {
         const placeholder = doc.createElement('div');
         placeholder.className = 'drag-placeholder';
@@ -1167,18 +833,12 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         placeholder.style.pointerEvents = 'none';
         placeholder.style.display = computed.display;
         
-        // Insert placeholder before the element
         elem.parentNode.insertBefore(placeholder, elem);
         elem.dataset.hasPlaceholder = 'true';
         elem.dataset.placeholderId = 'placeholder-' + Date.now() + '-' + Math.random();
         placeholder.dataset.placeholderId = elem.dataset.placeholderId;
-        
-        console.log('  - ✅ Created placeholder');
-      } else {
-        console.log('  - ℹ️ Placeholder already exists');
       }
       
-      // Convert to absolute positioning
       elem.style.position = 'absolute';
       elem.style.left = calculatedLeft + 'px';
       elem.style.top = calculatedTop + 'px';
@@ -1186,10 +846,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       elem.style.height = height + 'px';
       elem.style.margin = '0';
       elem.style.zIndex = '1000';
-      
-      console.log('  - ✅ Set position to: left=' + elem.style.left + ', top=' + elem.style.top);
-    } else {
-      console.log('  - ℹ️ Already absolute/fixed, skipping');
     }
   };
 
@@ -1200,29 +856,11 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       if (iframeRef.current?.contentDocument) {
         const doc = iframeRef.current.contentDocument;
         
-        console.log('💾 SAVING CHANGES...');
-        console.log('  - Placeholders before cleanup:', doc.querySelectorAll('.drag-placeholder').length);
-        console.log('  - Elements with hasPlaceholder:', doc.querySelectorAll('[data-has-placeholder]').length);
-        
-        // Store which elements are selected before save
-        const selectedElementsData = Array.from(doc.querySelectorAll('.editor-selected')).map(el => {
-          return {
-            tagName: el.tagName,
-            className: el.className,
-            id: el.id,
-            textContent: el.textContent?.substring(0, 50) // First 50 chars for identification
-          };
-        });
-        console.log('  - Selected elements before save:', selectedElementsData.length);
-        
-        // DON'T remove placeholders - keep them in the document to maintain layout
-        // Just clean them from the saved HTML
-        
         const html = doc.documentElement.outerHTML;
         
         const cleanedHTML = html
-          .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '') // Remove placeholder divs
-          .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '') // Remove resize handles
+          .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
+          .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
           .replace(/\s*class="([^"]*)"/g, (match, classes) => {
             const cleaned = classes
               .replace(/\s*editor-selected\s*/g, ' ')
@@ -1237,31 +875,14 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           })
           .replace(/\s+class=""\s*/g, ' ')
           .replace(/\s+data-has-placeholder="[^"]*"/g, '')
-          .replace(/\s+data-placeholder-id="[^"]*"/g, '');
+          .replace(/\s+data-placeholder-id="[^"]*"/g, '')
+          .replace(/\s+data-is-resize-handle="[^"]*"/g, ''); // CRITICAL FIX: Remove resize handle markers
         
-        console.log('  - Cleaned HTML length:', cleanedHTML.length);
-        console.log('  - Original HTML length:', html.length);
-        
-        // Log a sample of positioned elements to verify styles are saved
-        const tempDiv = doc.createElement('div');
-        tempDiv.innerHTML = cleanedHTML;
-        const positionedElements = Array.from(tempDiv.querySelectorAll('[style*="position"]'));
-        console.log('  - Positioned elements in saved HTML:', positionedElements.length);
-        positionedElements.slice(0, 3).forEach(el => {
-          console.log('    -', el.tagName, 'style:', el.getAttribute('style'));
-        });
-        
-        // Only call onUpdate if HTML actually changed
         if (cleanedHTML !== lastSavedHtmlRef.current) {
-          console.log('  - HTML changed, calling onUpdate...');
           lastSavedHtmlRef.current = cleanedHTML;
-          isSavingRef.current = true; // Mark as internal save
+          isSavingRef.current = true;
           onUpdate(cleanedHTML);
-        } else {
-          console.log('  - HTML unchanged, skipping onUpdate');
         }
-        
-        console.log('💾 SAVE COMPLETE');
       }
     }, 300);
   };
@@ -1291,7 +912,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     if (!confirm('Delete selected element(s)?')) return;
     selectedElements.forEach(el => el.remove());
     setSelectedElements([]);
-    setShowPropertiesModal(false); // FIX: Close modal when deleting
+    setShowPropertiesModal(false);
     saveChanges();
   };
 
@@ -1302,6 +923,10 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     selectedElements.forEach(el => {
       const clone = el.cloneNode(true);
       clone.classList.remove('editor-selected', 'editor-hover', 'editor-dragging');
+      
+      // CRITICAL FIX: Remove resize handles from clone
+      clone.querySelectorAll('.resize-handle').forEach(h => h.remove());
+      delete clone.dataset.isResizeHandle;
       
       if (clone.style.position === 'absolute') {
         clone.style.left = (parseFloat(clone.style.left || 0) + 20) + 'px';
@@ -1324,7 +949,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
     <div className="w-full h-full flex relative">
       {/* Top Navigation Bar */}
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
-        {/* Undo/Redo Buttons */}
         <button
           onClick={onUndo}
           disabled={!canUndo}
@@ -1351,7 +975,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           </svg>
         </button>
 
-        {/* Info Icon with Tooltip */}
         <div className="relative group">
           <button className="p-2 bg-purple-600 text-white rounded-lg shadow-lg hover:shadow-xl transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1359,7 +982,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             </svg>
           </button>
           
-          {/* Tooltip */}
           <div className="absolute left-0 top-12 w-80 bg-purple-600 text-white px-4 py-3 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-50">
             <div className="text-sm font-medium space-y-1">
               <p>💡 <strong>Click</strong> to select</p>
@@ -1367,7 +989,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               <p>✏️ <strong>Double-click</strong> to edit text</p>
               <p>⌨️ <strong>Shift+Click</strong> for multi-select</p>
             </div>
-            {/* Arrow */}
             <div className="absolute -top-2 left-4 w-4 h-4 bg-purple-600 transform rotate-45"></div>
           </div>
         </div>
@@ -1382,7 +1003,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
           title="Visual Editor"
         />
         
-        {/* Snap Guide Lines - Only Center Alignment */}
+        {/* Snap Guide Lines */}
         {guides.vertical.map((guide, i) => (
           <div 
             key={`v-${i}`}
@@ -1422,7 +1043,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         ))}
       </div>
 
-      {/* Properties Popup - Small floating box near element */}
+      {/* Properties Popup */}
       {showPropertiesModal && selectedElements.length > 0 && (
         <div 
           className="fixed bg-white rounded-xl shadow-2xl border-2 border-purple-500 w-80 z-50"
@@ -1431,7 +1052,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             left: '20px'
           }}
         >
-          {/* Header */}
           <div className="p-3 border-b bg-gradient-to-r from-purple-600 to-blue-600 flex justify-between items-center rounded-t-xl">
             <div className="text-white">
               <h3 className="font-semibold text-sm">
@@ -1446,9 +1066,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
             </button>
           </div>
 
-          {/* Content */}
           <div className="p-4 space-y-3 max-h-[calc(100vh-200px)] overflow-y-auto">
-            {/* Font Size */}
             <div>
               <label className="text-xs font-semibold block mb-1.5 text-gray-700">Font Size</label>
               <input 
@@ -1460,7 +1078,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               />
             </div>
             
-            {/* Text Styling */}
             <div>
               <label className="text-xs font-semibold block mb-1.5 text-gray-700">Text Style</label>
               <div className="flex gap-2">
@@ -1481,7 +1098,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               </div>
             </div>
 
-            {/* Text Alignment */}
             <div>
               <label className="text-xs font-semibold block mb-1.5 text-gray-700">Alignment</label>
               <div className="flex gap-2">
@@ -1509,7 +1125,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               </div>
             </div>
 
-            {/* Colors */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-semibold block mb-1.5 text-gray-700">Text Color</label>
@@ -1531,7 +1146,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
               </div>
             </div>
 
-            {/* Actions */}
             <div className="flex gap-2 pt-2 border-t">
               <button 
                 onClick={duplicate} 
