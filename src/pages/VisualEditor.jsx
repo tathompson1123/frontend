@@ -247,10 +247,7 @@ const createResizeHandles = (element) => {
   
   if (!element) return;
   
-  // Use prepareElementForDrag to properly position the element
-  if (!element.style.position || element.style.position === 'static') {
-    prepareElementForDrag(element, doc);
-  }
+  // REMOVED: prepareElementForDrag call - only do this when dragging starts
   
   const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
   
