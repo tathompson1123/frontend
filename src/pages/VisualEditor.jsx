@@ -604,14 +604,18 @@ const createResizeHandles = (element) => {
          let newLeft = firstElement.startLeft + dx;
 let newTop = firstElement.startTop + dy;
 
-// Calculate element center based on ACTUAL screen position
 const iframeRect = dragStateRef.current.iframeRect;
 const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
 const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
 
-// Calculate center from the INTENDED new position, not current DOM position
-const elemCenterX = newLeft + firstElement.width / 2;
-const elemCenterY = newTop + firstElement.height / 2;
+// Get the ACTUAL visual dimensions
+const elemRect = firstElement.el.getBoundingClientRect();
+const actualWidth = elemRect.width;
+const actualHeight = elemRect.height;
+
+// Calculate center from the INTENDED new position with ACTUAL dimensions
+const elemCenterX = newLeft + actualWidth / 2;
+const elemCenterY = newTop + actualHeight / 2;
           
 const snapThreshold = 10;
 const detectedGuides = { vertical: [], horizontal: [] };
@@ -637,7 +641,7 @@ if (distanceFromCenter < snapThreshold) {
   const movingTowardCenter = !wasCentered || distanceFromCenter < (snapThreshold - 5);
   
   if (movingTowardCenter) {
-    newLeft = viewportCenterX - firstElement.width / 2;
+    newLeft = viewportCenterX - actualWidth / 2;
     dragStateRef.current.wasSnappedX = true;
   console.log('✨ SNAPPED TO CENTER:', {
   calculatedLeft: newLeft,
@@ -672,7 +676,7 @@ if (distanceFromCenterY < snapThreshold) {
   const movingTowardCenter = !wasCentered || distanceFromCenterY < (snapThreshold - 5);
   
   if (movingTowardCenter) {
-    newTop = viewportCenterY - firstElement.height / 2;
+    newTop = viewportCenterY - actualHeight / 2;
     dragStateRef.current.wasSnappedY = true;
     
     detectedGuides.horizontal.push({ 
