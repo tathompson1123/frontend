@@ -660,7 +660,7 @@ if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
             parentSection.contains(el)
           );
           
-         siblingElements.forEach(other => {
+        siblingElements.forEach(other => {
   const otherRect = other.getBoundingClientRect();
   
   // Get the element's actual position in document coordinates
@@ -669,6 +669,19 @@ if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
   const otherTop = parseFloat(other.style.top) || otherRect.top;
   const otherCenterX = otherLeft + otherRect.width / 2;
   const otherCenterY = otherTop + otherRect.height / 2;
+  
+  console.log('🔍 Sibling snap check:', {
+    tag: other.tagName,
+    className: other.className,
+    otherLeft,
+    otherRectLeft: otherRect.left,
+    otherWidth: otherRect.width,
+    otherCenterX,
+    elemCenterX,
+    distance: Math.abs(elemCenterX - otherCenterX),
+    hasStyleLeft: !!other.style.left,
+    position: otherComputedStyle.position
+  });
   
   if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
     newLeft = otherCenterX - firstElement.width / 2;
