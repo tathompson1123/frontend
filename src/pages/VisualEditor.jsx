@@ -518,19 +518,25 @@ const createResizeHandles = (element) => {
         const dy = e.clientY - dragStateRef.current.startY;
         
         if (!dragStartedRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-          if (!dragStateRef.current.elements && dragStateRef.current.clickedElement) {
-            const clickedEl = dragStateRef.current.clickedElement;
-            
-            doc.querySelectorAll('.editor-selected').forEach(el => {
-              el.classList.remove('editor-selected');
-            });
-            clickedEl.classList.add('editor-selected');
-            selectedElementsRef.current = [clickedEl];
-            
-            const iframeRect = iframe.getBoundingClientRect();
-            prepareElementForDrag(clickedEl, doc);
-            const rect = clickedEl.getBoundingClientRect();
-            
+  if (!dragStateRef.current.elements && dragStateRef.current.clickedElement) {
+    const clickedEl = dragStateRef.current.clickedElement;
+    
+    doc.querySelectorAll('.editor-selected').forEach(el => {
+      el.classList.remove('editor-selected');
+    });
+    clickedEl.classList.add('editor-selected');
+    selectedElementsRef.current = [clickedEl];
+    
+    const iframeRect = iframe.getBoundingClientRect();
+    
+    // Only prepare if not already absolute positioned
+    const computedPosition = window.getComputedStyle(clickedEl).position;
+    if (computedPosition === 'static' || computedPosition === 'relative' || !clickedEl.style.position) {
+      prepareElementForDrag(clickedEl, doc);
+    }
+    
+    const rect = clickedEl.getBoundingClientRect();
+    
             dragStateRef.current = {
               elements: [{
                 el: clickedEl,
