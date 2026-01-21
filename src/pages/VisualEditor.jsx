@@ -241,7 +241,8 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
 
       const resizeStateRef = { current: null };
       
-const createResizeHandles = (element) => {
+FIND lines 257-294 and REPLACE the entire createResizeHandles function with this:
+javascriptconst createResizeHandles = (element) => {
   doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
   
   if (!element) return;
@@ -252,77 +253,55 @@ const createResizeHandles = (element) => {
   }
   
   const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-    
-    // Calculate position relative to parent, not viewport
-    const left = rect.left - parentRect.left;
-    const top = rect.top - parentRect.top;
-    
-    element.style.position = 'absolute';
-    element.style.left = left + 'px';
-    element.style.top = top + 'px';
-    element.style.width = rect.width + 'px';  // Also set width/height to preserve size
-    element.style.height = rect.height + 'px';
-    
-    console.log('📍 Changed to absolute positioning:', {
-      left: left,
-      top: top,
-      width: rect.width,
-      height: rect.height,
-      parentLeft: parentRect.left,
-      parentTop: parentRect.top
-    });
-  }
   
-        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
-        
-        handles.forEach(position => {
-          const handle = doc.createElement('div');
-          handle.className = `resize-handle resize-${position}`;
-          handle.dataset.position = position;
-          handle.dataset.isResizeHandle = 'true';
-          
-          handle.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const startX = e.clientX;
-            const startY = e.clientY;
-            const startWidth = element.offsetWidth;
-            const startHeight = element.offsetHeight;
-            const startLeft = parseFloat(element.style.left) || 0;
-            const startTop = parseFloat(element.style.top) || 0;
-            
-            const originalFontSizes = new Map();
-            const textElements = element.querySelectorAll('*');
-            textElements.forEach(el => {
-              const computedStyle = window.getComputedStyle(el);
-              const fontSize = parseFloat(computedStyle.fontSize);
-              if (fontSize) {
-                originalFontSizes.set(el, fontSize);
-              }
-            });
-            
-            const elementFontSize = parseFloat(window.getComputedStyle(element).fontSize);
-            if (elementFontSize) {
-              originalFontSizes.set(element, elementFontSize);
-            }
-            
-            resizeStateRef.current = {
-              element,
-              position,
-              startX,
-              startY,
-              startWidth,
-              startHeight,
-              startLeft,
-              startTop,
-              originalFontSizes
-            };
-          });
-          
-          element.appendChild(handle);
-        });
+  handles.forEach(position => {
+    const handle = doc.createElement('div');
+    handle.className = `resize-handle resize-${position}`;
+    handle.dataset.position = position;
+    handle.dataset.isResizeHandle = 'true';
+    
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const startWidth = element.offsetWidth;
+      const startHeight = element.offsetHeight;
+      const startLeft = parseFloat(element.style.left) || 0;
+      const startTop = parseFloat(element.style.top) || 0;
+      
+      const originalFontSizes = new Map();
+      const textElements = element.querySelectorAll('*');
+      textElements.forEach(el => {
+        const computedStyle = window.getComputedStyle(el);
+        const fontSize = parseFloat(computedStyle.fontSize);
+        if (fontSize) {
+          originalFontSizes.set(el, fontSize);
+        }
+      });
+      
+      const elementFontSize = parseFloat(window.getComputedStyle(element).fontSize);
+      if (elementFontSize) {
+        originalFontSizes.set(element, elementFontSize);
+      }
+      
+      resizeStateRef.current = {
+        element,
+        position,
+        startX,
+        startY,
+        startWidth,
+        startHeight,
+        startLeft,
+        startTop,
+        originalFontSizes
       };
+    });
+    
+    element.appendChild(handle);
+  });
+};
       
       const handleResizeMove = (e) => {
         if (!resizeStateRef.current) return;
