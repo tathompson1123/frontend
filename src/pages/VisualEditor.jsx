@@ -846,8 +846,6 @@ setModalVisible(true);
           doc.removeEventListener('mouseout', handlers.mouseout);
           doc.removeEventListener('dblclick', handlers.dblclick);
           
-          window.removeEventListener('mousemove', handleResizeMove);
-          window.removeEventListener('mouseup', handleResizeEnd);
         } catch (err) {
           // Ignore
         }
