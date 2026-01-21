@@ -1104,7 +1104,7 @@ if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
           title="Visual Editor"
         />
         
-       {guides.vertical.map((guide, i) => {
+{guides.vertical.map((guide, i) => {
   console.log('📍 Guide rendering:', {
     guideX: guide.x,
     iframeLeft: iframeRef.current?.getBoundingClientRect().left,
@@ -1119,35 +1119,36 @@ if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
         left: `${guide.x}px`,
         top: 0,
         bottom: 0,
-              width: '2px',
-              backgroundColor: '#ef4444',
-              boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
-            }}
-          >
-            <div className="absolute top-4 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
-              {guide.label}
-            </div>
-          </div>
-        ))}
-        
-        {guides.horizontal.map((guide, i) => (
-          <div 
-            key={`h-${i}`}
-            className="absolute pointer-events-none z-50"
-            style={{ 
-              top: `${guide.y}px`,
-              left: 0,
-              right: 0,
-              height: '2px',
-              backgroundColor: '#ef4444',
-              boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
-            }}
-          >
-            <div className="absolute left-4 top-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
-              {guide.label}
-            </div>
-          </div>
-        ))}
+        width: '2px',
+        backgroundColor: '#ef4444',
+        boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
+      }}
+    >
+      <div className="absolute top-4 left-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
+        {guide.label}
+      </div>
+    </div>
+  );
+})}
+
+{guides.horizontal.map((guide, i) => (
+  <div 
+    key={`h-${i}`}
+    className="absolute pointer-events-none z-50"
+    style={{ 
+      top: `${guide.y}px`,
+      left: 0,
+      right: 0,
+      height: '2px',
+      backgroundColor: '#ef4444',
+      boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
+    }}
+  >
+    <div className="absolute left-4 top-3 bg-red-500 text-white px-2 py-1 rounded text-xs font-bold shadow-lg whitespace-nowrap">
+      {guide.label}
+    </div>
+  </div>
+))}
       </div>
 
       {modalVisible && selectedElementsRef.current.length > 0 && (
