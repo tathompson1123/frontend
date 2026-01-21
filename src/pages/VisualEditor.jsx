@@ -583,6 +583,8 @@ const createResizeHandles = (element) => {
               startY: dragStateRef.current.startY,
               moved: true,
               iframeRect: iframeRect
+              wasSnappedX: false,  // ADD THIS
+  wasSnappedY: false 
             };
           }
           
@@ -626,9 +628,16 @@ console.log('📐 Snap calculation:', {
   elementWidth: firstElement.width
 });
 
-if (Math.abs(elemCenterX - viewportCenterX) < snapThreshold) {
-  newLeft = viewportCenterX - actualWidth / 2;
-  newLeft = viewportCenterX - firstElement.width / 2;
+const distanceFromCenter = Math.abs(elemCenterX - viewportCenterX);
+
+if (distanceFromCenter < snapThreshold) {
+  // Only snap if we're moving TOWARD center, not away from it
+  const wasCentered = dragStateRef.current.wasSnappedX;
+  const movingTowardCenter = !wasCentered || distanceFromCenter < (snapThreshold - 5);
+  
+  if (movingTowardCenter) {
+    newLeft = viewportCenterX - firstElement.width / 2;
+    dragStateRef.current.wasSnappedX = true;
   console.log('✨ SNAPPED TO CENTER:', {
   calculatedLeft: newLeft,
   elementWidth: firstElement.width,
@@ -646,19 +655,33 @@ if (Math.abs(elemCenterX - viewportCenterX) < snapThreshold) {
   marginRight: window.getComputedStyle(firstElement.el).marginRight
   });
   detectedGuides.vertical.push({ 
-    x: viewportCenterX,
-    type: 'center', 
-    label: 'Page Center' 
-  });
+      x: viewportCenterX,
+      type: 'center', 
+      label: 'Page Center' 
+    });
+  }
+} else {
+  dragStateRef.current.wasSnappedX = false;
 }
 
-if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
-  newTop = viewportCenterY - firstElement.height / 2;
-  detectedGuides.horizontal.push({ 
-    y: viewportCenterY,
-    type: 'center', 
-    label: 'Page Center' 
-  });
+const distanceFromCenterY = Math.abs(elemCenterY - viewportCenterY);
+
+if (distanceFromCenterY < snapThreshold) {
+  const wasCentered = dragStateRef.current.wasSnappedY;
+  const movingTowardCenter = !wasCentered || distanceFromCenterY < (snapThreshold - 5);
+  
+  if (movingTowardCenter) {
+    newTop = viewportCenterY - firstElement.height / 2;
+    dragStateRef.current.wasSnappedY = true;
+    
+    detectedGuides.horizontal.push({ 
+      y: viewportCenterY,
+      type: 'center', 
+      label: 'Page Center' 
+    });
+  }
+} else {
+  dragStateRef.current.wasSnappedY = false;
 }
           
           const draggingElement = firstElement.el;
