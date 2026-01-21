@@ -445,18 +445,31 @@ const createResizeHandles = (element) => {
       };
 
       const handleMouseDown = (e) => {
-        console.log('🟢 MOUSEDOWN - About to select element');
-        if (e.target.dataset.isResizeHandle === 'true') {
-          console.log('🔧 Clicked resize handle - skipping selection logic');
-          return;
-        }
+  console.log('🟢 MOUSEDOWN - About to select element');
+  console.log('🎯 Clicked element:', {
+    tag: e.target.tagName,
+    classes: e.target.className,
+    isResizeHandle: e.target.dataset.isResizeHandle
+  });
+  
+  if (e.target.dataset.isResizeHandle === 'true') {
+    console.log('🔧 Clicked resize handle - skipping selection logic');
+    return;
+  }
 
-        let target = e.target;
-        const draggableTarget = findDraggableElement(target);
-        
-        if (!draggableTarget) {
-          return;
-        }
+  let target = e.target;
+  const draggableTarget = findDraggableElement(target);
+  
+  console.log('🔍 findDraggableElement result:', {
+    original: target.tagName,
+    draggable: draggableTarget?.tagName || 'NULL',
+    rejected: !draggableTarget
+  });
+  
+  if (!draggableTarget) {
+    console.log('❌ Element rejected by findDraggableElement');
+    return;
+  }
         
         target = draggableTarget;
         
