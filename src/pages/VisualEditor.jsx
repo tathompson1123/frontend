@@ -599,12 +599,17 @@ const createResizeHandles = (element) => {
         if (dragStartedRef.current && dragStateRef.current.elements) {
           const firstElement = dragStateRef.current.elements[0];
           
-          let newLeft = firstElement.startLeft + dx;
-          let newTop = firstElement.startTop + dy;
-          
-          const actualWidth = firstElement.el.scrollWidth || firstElement.width;
-const elemCenterX = newLeft + actualWidth / 2;
-          const elemCenterY = newTop + firstElement.height / 2;
+         let newLeft = firstElement.startLeft + dx;
+let newTop = firstElement.startTop + dy;
+
+// Calculate element center based on ACTUAL screen position
+const elemRect = firstElement.el.getBoundingClientRect();
+const iframeRect = dragStateRef.current.iframeRect;
+const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+
+const elemCenterX = elemRect.left - iframeRect.left + scrollLeft + (elemRect.width / 2);
+const elemCenterY = elemRect.top - iframeRect.top + scrollTop + (elemRect.height / 2);
           
           const snapThreshold = 10;
           const detectedGuides = { vertical: [], horizontal: [] };
