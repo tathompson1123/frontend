@@ -450,7 +450,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     >
                       <ShoppingCart className="w-5 h-5" />
                       <span>Buy Domain</span>
-                      <span className="text-xs opacity-90">$3/mo</span>
+                      <span className="text-xs opacity-90">$15/year</span>
                     </button>
                     <button
                       onClick={() => {
@@ -499,7 +499,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Buy Your Domain</h2>
-                    <p className="text-sm text-gray-600 mt-1">$3/month • Fully managed • Instant setup</p>
+                    <p className="text-sm text-gray-600 mt-1">$15/year • Fully managed • Instant setup</p>
                   </div>
                   <button onClick={() => {
                     setShowDomainSetup(false);
@@ -595,7 +595,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                         </div>
                         <div className="flex-1">
                           <h3 className="font-semibold text-gray-900 text-lg mb-1">Ready to purchase?</h3>
-                          <p className="text-sm text-gray-600">You'll be charged ${selectedDomain.price}/month. Cancel anytime.</p>
+                          <p className="text-sm text-gray-600">You'll be charged ${selectedDomain.price}/year. Auto-renews annually.</p>
                         </div>
                       </div>
                       
@@ -605,8 +605,8 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                           <span className="font-semibold text-gray-900">{selectedDomain.name}</span>
                         </div>
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-gray-700">Monthly cost:</span>
-                          <span className="font-semibold text-gray-900">${selectedDomain.price}/mo</span>
+                          <span className="text-gray-700">Annual cost:</span>
+                          <span className="font-semibold text-gray-900">${selectedDomain.price}/year</span>
                         </div>
                         <div className="border-t border-gray-200 pt-2 mt-2">
                           <div className="flex items-center gap-2 text-sm text-green-700">
@@ -624,11 +624,11 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                         {isPurchasing ? (
                           <><Loader className="w-6 h-6 animate-spin" />Processing Purchase...</>
                         ) : (
-                          <><ShoppingCart className="w-6 h-6" />Purchase Domain - ${selectedDomain.price}/month</>
+                          <><ShoppingCart className="w-6 h-6" />Purchase Domain - ${selectedDomain.price}/year</>
                         )}
                       </button>
                       <p className="text-xs text-gray-500 text-center mt-3">
-                        Secure payment • No long-term commitment • Cancel anytime
+                        Secure payment • Auto-renews annually • Cancel anytime
                       </p>
                     </div>
                   )}
