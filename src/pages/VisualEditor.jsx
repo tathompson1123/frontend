@@ -607,15 +607,11 @@ const elemRect = firstElement.el.getBoundingClientRect();
 const iframeRect = dragStateRef.current.iframeRect;
 const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
 const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
-
 const elemCenterX = elemRect.left - iframeRect.left + scrollLeft + (elemRect.width / 2);
 const elemCenterY = elemRect.top - iframeRect.top + scrollTop + (elemRect.height / 2);
           
-          const snapThreshold = 10;
-          const detectedGuides = { vertical: [], horizontal: [] };
-          
-          const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+const snapThreshold = 10;
+const detectedGuides = { vertical: [], horizontal: [] };
 
 // Use iframe width for true viewport center
 const viewportCenterX = iframeRect.width / 2;
