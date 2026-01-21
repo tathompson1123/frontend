@@ -662,8 +662,11 @@ if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
           
          siblingElements.forEach(other => {
   const otherRect = other.getBoundingClientRect();
-  const otherLeft = otherRect.left - iframeRect.left + scrollLeft;
-  const otherTop = otherRect.top - iframeRect.top + scrollTop;
+  
+  // Get the element's actual position in document coordinates
+  const otherComputedStyle = window.getComputedStyle(other);
+  const otherLeft = parseFloat(other.style.left) || otherRect.left;
+  const otherTop = parseFloat(other.style.top) || otherRect.top;
   const otherCenterX = otherLeft + otherRect.width / 2;
   const otherCenterY = otherTop + otherRect.height / 2;
   
@@ -671,7 +674,7 @@ if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
     newLeft = otherCenterX - firstElement.width / 2;
     if (!detectedGuides.vertical.some(g => Math.abs(g.x - otherCenterX) < 1)) {
       detectedGuides.vertical.push({ 
-        x: otherCenterX,  // FIXED: removed + iframeRect.left
+        x: otherCenterX,
         type: 'center', 
         label: 'Element Center' 
       });
@@ -682,7 +685,7 @@ if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
     newTop = otherCenterY - firstElement.height / 2;
     if (!detectedGuides.horizontal.some(g => Math.abs(g.y - otherCenterY) < 1)) {
       detectedGuides.horizontal.push({ 
-        y: otherCenterY,  // FIXED: removed + iframeRect.top
+        y: otherCenterY,
         type: 'center', 
         label: 'Element Center' 
       });
