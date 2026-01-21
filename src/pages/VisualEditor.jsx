@@ -1105,6 +1105,14 @@ if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
         />
         
 {guides.vertical.map((guide, i) => {
+  const iframeRect = iframeRef.current?.getBoundingClientRect();
+  console.log('📍 Guide rendering:', {
+    guideX: guide.x,
+    iframeLeft: iframeRect?.left,
+    iframeWidth: iframeRect?.width,
+    windowWidth: window.innerWidth,
+    calculatedCenter: (iframeRect?.width || 0) / 2
+  });
   console.log('📍 Guide rendering:', {
     guideX: guide.x,
     iframeLeft: iframeRef.current?.getBoundingClientRect().left,
