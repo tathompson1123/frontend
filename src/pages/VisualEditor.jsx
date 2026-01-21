@@ -151,8 +151,9 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
   useEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-
+    
     console.log('🔄 Setting up editor for page:', currentPage);
+    console.log('🔍 Current event handlers:', eventHandlersRef.current?.currentPage);
     
     if (eventHandlersRef.current?.currentPage === currentPage) {
       console.log('⏭️ Editor already set up for this page, skipping');
@@ -736,6 +737,11 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
   selectedElementsRef.current = [target];
   // REMOVED: loadProps(target) - only load when opening modal
   createResizeHandles(target);
+            console.log('🎯 Element selected:', {
+    tagName: target.tagName,
+    className: target.className,
+    isInDocument: doc.body.contains(target),
+    hasResizeHandles: target.querySelectorAll('.resize-handle').length
           }
         }
         
