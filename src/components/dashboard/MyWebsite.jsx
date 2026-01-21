@@ -436,38 +436,26 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">Get your website online with a custom domain</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
-                        if (!vercelUrl) {
-                          alert('Please deploy your website first');
-                          return;
-                        }
-                        setDomainSetupMode('buy');
-                        setShowDomainSetup(true);
-                      }}
-                      className="bg-purple-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex flex-col items-center justify-center gap-1"
-                    >
-                      <ShoppingCart className="w-5 h-5" />
-                      <span>Buy Domain</span>
-                      <span className="text-xs opacity-90">$15/year</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!vercelUrl) {
-                          alert('Please deploy your website first');
-                          return;
-                        }
-                        setDomainSetupMode('connect');
-                        setShowDomainSetup(true);
-                      }}
-                      className="bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex flex-col items-center justify-center gap-1"
-                    >
-                      <Link className="w-5 h-5" />
-                      <span>Connect Domain</span>
-                      <span className="text-xs opacity-90">Free hosting</span>
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => {
+                      if (!vercelUrl) {
+                        alert('Please deploy your website first');
+                        return;
+                      }
+                      setDomainSetupMode('connect');
+                      setShowDomainSetup(true);
+                    }}
+                    className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
+                  >
+                    <Link className="w-5 h-5" />
+                    <div className="text-left">
+                      <div>Connect Your Domain</div>
+                      <div className="text-xs opacity-90">Free hosting • Bring your own domain</div>
+                    </div>
+                  </button>
+                  <p className="text-xs text-gray-500 text-center">
+                    Already have a domain? Connect it for free hosting!
+                  </p>
                 </div>
               )}
             </div>
@@ -545,44 +533,57 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   {/* Available Domains */}
                   {availableDomains.length > 0 && (
                     <div className="space-y-3">
-                      <h3 className="font-semibold text-gray-900">Available Domains:</h3>
-                      <div className="grid gap-3">
-                        {availableDomains.map((domain) => (
-                          <div
-                            key={domain.name}
-                            onClick={() => setSelectedDomain(domain)}
-                            className={`p-4 rounded-lg border-2 cursor-pointer transition ${
-                              selectedDomain?.name === domain.name
-                                ? 'border-purple-600 bg-purple-50'
-                                : 'border-gray-200 hover:border-purple-300 bg-white'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                      {availableDomains.filter(d => d.available).length > 0 ? (
+                        <>
+                          <h3 className="font-semibold text-gray-900">Available Domains:</h3>
+                          <div className="grid gap-3">
+                            {availableDomains.filter(d => d.available).map((domain) => (
+                              <div
+                                key={domain.name}
+                                onClick={() => setSelectedDomain(domain)}
+                                className={`p-4 rounded-lg border-2 cursor-pointer transition ${
                                   selectedDomain?.name === domain.name
-                                    ? 'border-purple-600 bg-purple-600'
-                                    : 'border-gray-300'
-                                }`}>
-                                  {selectedDomain?.name === domain.name && (
-                                    <Check className="w-3 h-3 text-white" />
-                                  )}
-                                </div>
-                                <div>
-                                  <p className="font-semibold text-gray-900 text-lg">{domain.name}</p>
-                                  {domain.available && (
-                                    <p className="text-sm text-green-600 font-medium">✓ Available</p>
-                                  )}
+                                    ? 'border-purple-600 bg-purple-50'
+                                    : 'border-gray-200 hover:border-purple-300 bg-white'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                      selectedDomain?.name === domain.name
+                                        ? 'border-purple-600 bg-purple-600'
+                                        : 'border-gray-300'
+                                    }`}>
+                                      {selectedDomain?.name === domain.name && (
+                                        <Check className="w-3 h-3 text-white" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-gray-900 text-lg">{domain.name}</p>
+                                      <p className="text-sm text-green-600 font-medium">✓ Available</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-2xl font-bold text-gray-900">${domain.price}</p>
+                                    <p className="text-xs text-gray-500">per year</p>
+                                  </div>
                                 </div>
                               </div>
-                              <div className="text-right">
-                                <p className="text-2xl font-bold text-gray-900">${domain.price}</p>
-                                <p className="text-xs text-gray-500">per year</p>
-                              </div>
-                            </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </>
+                      ) : (
+                        <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
+                          <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+                          <h3 className="font-semibold text-gray-900 mb-2">All domains are taken</h3>
+                          <p className="text-sm text-gray-600 mb-4">
+                            <strong>{domainSearchQuery}.com</strong>, <strong>.net</strong>, and <strong>.org</strong> are all registered.
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            Try a different name or variation
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
 
