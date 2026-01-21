@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Zap } from 'lucide-react';
+import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Zap, ShoppingCart, CreditCard } from 'lucide-react';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
@@ -8,7 +8,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [customDomain, setCustomDomain] = useState('');
   const [showEditWebsite, setShowEditWebsite] = useState(false);
   const [showDomainSetup, setShowDomainSetup] = useState(false);
-  const [showHostingOptions, setShowHostingOptions] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [websiteForm, setWebsiteForm] = useState({
     businessName: user.businessName || '', businessType: '', tagline: '', services: '',
@@ -21,7 +20,14 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [domainStatus, setDomainStatus] = useState(null);
   const [isDeploying, setIsDeploying] = useState(false);
   const [domainLoading, setDomainLoading] = useState(false);
-  const [hostingOption, setHostingOption] = useState(null); // 'we-buy-domain' or 'connect-existing'
+  const [domainSetupMode, setDomainSetupMode] = useState(null); // 'buy' or 'connect'
+
+  // Domain purchase state
+  const [domainSearchQuery, setDomainSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+  const [availableDomains, setAvailableDomains] = useState([]);
+  const [selectedDomain, setSelectedDomain] = useState(null);
+  const [isPurchasing, setIsPurchasing] = useState(false);
 
   useEffect(() => {
     if (websiteData) {
@@ -64,9 +70,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       if (response.ok) {
         const data = await response.json();
         setVercelUrl(data.url);
-        
-        // After deployment, show hosting options
-        setShowHostingOptions(true);
       } else {
         alert('Failed to deploy website. Please try again.');
       }
@@ -78,6 +81,67 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     }
   };
 
+  // Search for available domains
+  const searchDomains = async () => {
+    if (!domainSearchQuery.trim()) {
+      alert('Please enter a domain name to search');
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/website/search-domains`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: domainSearchQuery.trim() })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setAvailableDomains(data.domains || []);
+      } else {
+        alert('Failed to search domains');
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      alert('Failed to search domains');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Purchase domain
+  const purchaseDomain = async () => {
+    if (!selectedDomain) return;
+
+    setIsPurchasing(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/website/purchase-domain`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ domain: selectedDomain.name })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setCustomDomain(data.domain);
+        setDomainStatus('verified'); // Auto-verified since we manage it
+        alert('🎉 Domain purchased and connected! Your website is live!');
+        setShowDomainSetup(false);
+        setDomainSetupMode(null);
+      } else {
+        const error = await response.json();
+        alert('Failed to purchase domain: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Purchase error:', error);
+      alert('Failed to purchase domain');
+    } finally {
+      setIsPurchasing(false);
+    }
+  };
+
+  // Connect existing domain
   const addCustomDomain = async () => {
     if (!domainInput.trim()) {
       alert('Please enter a domain');
@@ -96,7 +160,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         const data = await response.json();
         setCustomDomain(data.domain);
         setDomainStatus('pending');
-        alert('✅ Domain added! Follow the DNS instructions below.');
+        alert('✅ Domain added! Follow the nameserver instructions below.');
       } else {
         const error = await response.json();
         alert('Failed to add domain: ' + (error.error || 'Unknown error'));
@@ -352,12 +416,15 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     </div>
                   </div>
                   <div className="flex gap-2">
-                    <button
-                      onClick={() => setShowDomainSetup(true)}
-                      className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition"
-                    >
-                      {domainStatus === 'verified' ? 'View Details' : 'Complete Setup'}
-                    </button>
+                    {domainStatus !== 'verified' && (
+                      <button
+                        onClick={checkDomainStatus}
+                        disabled={domainLoading}
+                        className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {domainLoading ? 'Checking...' : 'Check Status'}
+                      </button>
+                    )}
                     <button
                       onClick={removeDomain}
                       className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition"
@@ -368,20 +435,39 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-sm text-gray-600">Choose how you want to host your website</p>
-                  <button
-                    onClick={() => {
-                      if (!vercelUrl) {
-                        alert('Please deploy your website first');
-                        return;
-                      }
-                      setShowHostingOptions(true);
-                    }}
-                    className="w-full bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex items-center justify-center gap-2"
-                  >
-                    <Link className="w-4 h-4" />
-                    Set Up Domain & Hosting
-                  </button>
+                  <p className="text-sm text-gray-600">Get your website online with a custom domain</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        if (!vercelUrl) {
+                          alert('Please deploy your website first');
+                          return;
+                        }
+                        setDomainSetupMode('buy');
+                        setShowDomainSetup(true);
+                      }}
+                      className="bg-purple-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex flex-col items-center justify-center gap-1"
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      <span>Buy Domain</span>
+                      <span className="text-xs opacity-90">$3/mo</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!vercelUrl) {
+                          alert('Please deploy your website first');
+                          return;
+                        }
+                        setDomainSetupMode('connect');
+                        setShowDomainSetup(true);
+                      }}
+                      className="bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex flex-col items-center justify-center gap-1"
+                    >
+                      <Link className="w-5 h-5" />
+                      <span>Connect Domain</span>
+                      <span className="text-xs opacity-90">Free hosting</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -403,448 +489,412 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         </div>
       )}
 
-      {/* Hosting Options Modal */}
-      {showHostingOptions && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Choose Your Hosting Option</h2>
-                <p className="text-sm text-gray-600 mt-1">Select how you want to make your website accessible</p>
-              </div>
-              <button onClick={() => setShowHostingOptions(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="p-8">
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Option 1: We Buy & Host Domain */}
-                <div className="border-3 border-purple-500 rounded-2xl p-8 bg-gradient-to-br from-purple-50 to-pink-50 relative hover:shadow-xl transition-all">
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-purple-600 text-white text-sm font-bold rounded-full">
-                    ⭐ RECOMMENDED
-                  </div>
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Zap className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">We Handle Everything</h3>
-                    <div className="flex items-center justify-center gap-2 mb-3">
-                      <span className="text-4xl font-bold text-purple-600">$3</span>
-                      <span className="text-gray-600">/month</span>
-                    </div>
-                    <p className="text-sm text-gray-600">All-inclusive: domain + hosting + SSL + support</p>
-                  </div>
-
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">We buy your domain</p>
-                        <p className="text-sm text-gray-600">Choose any available .com domain</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Instant setup (5 minutes)</p>
-                        <p className="text-sm text-gray-600">No DNS configuration needed</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Free SSL certificate</p>
-                        <p className="text-sm text-gray-600">Secure HTTPS included</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Domain privacy protection</p>
-                        <p className="text-sm text-gray-600">Hide your personal info</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Auto-renewal & management</p>
-                        <p className="text-sm text-gray-600">Never worry about expiration</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Priority support</p>
-                        <p className="text-sm text-gray-600">We handle all technical issues</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setHostingOption('we-buy-domain');
-                      setShowHostingOptions(false);
-                      setShowDomainSetup(true);
-                    }}
-                    className="w-full bg-purple-600 text-white px-6 py-4 rounded-xl font-bold hover:bg-purple-700 transition text-lg"
-                  >
-                    Choose This Option →
-                  </button>
-                  <p className="text-xs text-gray-500 text-center mt-3">
-                    Cancel anytime • No long-term commitment
-                  </p>
-                </div>
-
-                {/* Option 2: Connect Existing Domain */}
-                <div className="border-2 border-gray-300 rounded-2xl p-8 bg-white hover:shadow-xl transition-all">
-                  <div className="text-center mb-6">
-                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                      <Link className="w-8 h-8 text-white" />
-                    </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2">Connect Your Domain</h3>
-                    <div className="flex items-center justify-center gap-2 mb-3">
-                      <span className="text-4xl font-bold text-blue-600">FREE</span>
-                      <span className="text-gray-600">hosting</span>
-                    </div>
-                    <p className="text-sm text-gray-600">You keep your domain, we host your site</p>
-                  </div>
-
-                  <div className="space-y-3 mb-6">
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Use your existing domain</p>
-                        <p className="text-sm text-gray-600">Keep paying your registrar (~$12/year)</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Free hosting on our platform</p>
-                        <p className="text-sm text-gray-600">Fast, reliable, and secure</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Free SSL certificate</p>
-                        <p className="text-sm text-gray-600">Secure HTTPS included</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">DNS setup required</p>
-                        <p className="text-sm text-gray-600">We'll guide you step-by-step (~15 minutes)</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">You manage renewals</p>
-                        <p className="text-sm text-gray-600">Remember to renew at your registrar</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-medium text-gray-900">Standard support</p>
-                        <p className="text-sm text-gray-600">Email support for technical issues</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => {
-                      setHostingOption('connect-existing');
-                      setShowHostingOptions(false);
-                      setShowDomainSetup(true);
-                    }}
-                    className="w-full bg-blue-600 text-white px-6 py-4 rounded-xl font-bold hover:bg-blue-700 transition text-lg"
-                  >
-                    Connect My Domain →
-                  </button>
-                  <p className="text-xs text-gray-500 text-center mt-3">
-                    Already have a domain? This is for you!
-                  </p>
-                </div>
-              </div>
-
-              {/* Comparison Note */}
-              <div className="mt-8 bg-blue-50 rounded-xl p-6 border border-blue-200">
-                <h4 className="font-semibold text-gray-900 mb-3">💡 Which option is right for you?</h4>
-                <div className="grid md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p className="font-medium text-purple-900 mb-2">Choose "We Handle Everything" if:</p>
-                    <ul className="space-y-1 text-gray-700">
-                      <li>• You don't have a domain yet</li>
-                      <li>• You want zero technical hassle</li>
-                      <li>• You prefer all-in-one billing</li>
-                      <li>• You want priority support</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <p className="font-medium text-blue-900 mb-2">Choose "Connect Your Domain" if:</p>
-                    <ul className="space-y-1 text-gray-700">
-                      <li>• You already own a domain</li>
-                      <li>• You're comfortable with DNS setup</li>
-                      <li>• You want to save $24/year</li>
-                      <li>• You want to keep your existing registrar</li>
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Domain Setup Modal - Shows different content based on hostingOption */}
+      {/* Domain Setup Modal */}
       {showDomainSetup && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Modal content depends on hostingOption */}
-            {hostingOption === 'we-buy-domain' ? (
-              // Coming Soon UI for managed domain purchase
+            {domainSetupMode === 'buy' ? (
+              // BUY DOMAIN FLOW
               <div>
-                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-gray-900">Managed Domain Setup</h2>
-                  <button onClick={() => setShowDomainSetup(false)} className="text-gray-400 hover:text-gray-600">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Buy Your Domain</h2>
+                    <p className="text-sm text-gray-600 mt-1">$3/month • Fully managed • Instant setup</p>
+                  </div>
+                  <button onClick={() => {
+                    setShowDomainSetup(false);
+                    setDomainSetupMode(null);
+                    setAvailableDomains([]);
+                    setSelectedDomain(null);
+                  }} className="text-gray-400 hover:text-gray-600">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
-                <div className="p-12 text-center">
-                  <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                    <Zap className="w-10 h-10 text-purple-600" />
+
+                <div className="p-8 space-y-6">
+                  {/* Search Domain */}
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+                    <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                      <Globe className="w-5 h-5 text-purple-600" />
+                      Search for your perfect domain
+                    </h3>
+                    <div className="flex gap-3">
+                      <input
+                        type="text"
+                        value={domainSearchQuery}
+                        onChange={(e) => setDomainSearchQuery(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                        onKeyPress={(e) => e.key === 'Enter' && searchDomains()}
+                        placeholder="mybusiness"
+                        className="flex-1 px-4 py-3 border-2 border-purple-300 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
+                      />
+                      <button
+                        onClick={searchDomains}
+                        disabled={isSearching || !domainSearchQuery.trim()}
+                        className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isSearching ? (
+                          <><Loader className="w-5 h-5 animate-spin" />Searching...</>
+                        ) : (
+                          <>Search</>
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-2">We'll show you available .com, .net, .org options</p>
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Coming Very Soon!</h3>
-                  <p className="text-gray-600 mb-8 max-w-md mx-auto">
-                    We're building a seamless domain purchase experience. For now, please use the "Connect Your Domain" option if you already have one.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setHostingOption('connect-existing');
-                    }}
-                    className="px-8 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition"
-                  >
-                    Connect Existing Domain Instead
-                  </button>
+
+                  {/* Available Domains */}
+                  {availableDomains.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="font-semibold text-gray-900">Available Domains:</h3>
+                      <div className="grid gap-3">
+                        {availableDomains.map((domain) => (
+                          <div
+                            key={domain.name}
+                            onClick={() => setSelectedDomain(domain)}
+                            className={`p-4 rounded-lg border-2 cursor-pointer transition ${
+                              selectedDomain?.name === domain.name
+                                ? 'border-purple-600 bg-purple-50'
+                                : 'border-gray-200 hover:border-purple-300 bg-white'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  selectedDomain?.name === domain.name
+                                    ? 'border-purple-600 bg-purple-600'
+                                    : 'border-gray-300'
+                                }`}>
+                                  {selectedDomain?.name === domain.name && (
+                                    <Check className="w-3 h-3 text-white" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="font-semibold text-gray-900 text-lg">{domain.name}</p>
+                                  {domain.available && (
+                                    <p className="text-sm text-green-600 font-medium">✓ Available</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-gray-900">${domain.price}</p>
+                                <p className="text-xs text-gray-500">per month</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Purchase Button */}
+                  {selectedDomain && (
+                    <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border-2 border-green-200">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="w-12 h-12 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0">
+                          <CreditCard className="w-6 h-6" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold text-gray-900 text-lg mb-1">Ready to purchase?</h3>
+                          <p className="text-sm text-gray-600">You'll be charged ${selectedDomain.price}/month. Cancel anytime.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-white rounded-lg p-4 mb-4 border border-green-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-700">Domain:</span>
+                          <span className="font-semibold text-gray-900">{selectedDomain.name}</span>
+                        </div>
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-700">Monthly cost:</span>
+                          <span className="font-semibold text-gray-900">${selectedDomain.price}/mo</span>
+                        </div>
+                        <div className="border-t border-gray-200 pt-2 mt-2">
+                          <div className="flex items-center gap-2 text-sm text-green-700">
+                            <Check className="w-4 h-4" />
+                            <span>Includes hosting, SSL, and auto-renewal</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={purchaseDomain}
+                        disabled={isPurchasing}
+                        className="w-full px-6 py-4 bg-green-600 text-white rounded-xl font-bold text-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                      >
+                        {isPurchasing ? (
+                          <><Loader className="w-6 h-6 animate-spin" />Processing Purchase...</>
+                        ) : (
+                          <><ShoppingCart className="w-6 h-6" />Purchase Domain - ${selectedDomain.price}/month</>
+                        )}
+                      </button>
+                      <p className="text-xs text-gray-500 text-center mt-3">
+                        Secure payment • No long-term commitment • Cancel anytime
+                      </p>
+                    </div>
+                  )}
+
+                  {/* What's Included */}
+                  <div className="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                    <h4 className="font-semibold text-gray-900 mb-3">✨ What's included:</h4>
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Domain registration</p>
+                          <p className="text-sm text-gray-600">We buy and manage it for you</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Instant setup</p>
+                          <p className="text-sm text-gray-600">Live in under 5 minutes</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Free SSL certificate</p>
+                          <p className="text-sm text-gray-600">Secure HTTPS included</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Auto-renewal</p>
+                          <p className="text-sm text-gray-600">Never worry about expiration</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Domain privacy</p>
+                          <p className="text-sm text-gray-600">Hide your personal info</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Check className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <div>
+                          <p className="font-medium text-gray-900">Priority support</p>
+                          <p className="text-sm text-gray-600">We handle all issues</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ) : (
-              // DNS Setup Flow for connecting existing domain
+              // CONNECT EXISTING DOMAIN FLOW
               <div>
-                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+                <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
                   <div>
                     <h2 className="text-2xl font-bold text-gray-900">Connect Your Domain</h2>
-                    <p className="text-sm text-gray-600 mt-1">3 easy steps to connect your existing domain</p>
+                    <p className="text-sm text-gray-600 mt-1">Free hosting • Just update nameservers</p>
                   </div>
-                  <button onClick={() => setShowDomainSetup(false)} className="text-gray-400 hover:text-gray-600">
+                  <button onClick={() => {
+                    setShowDomainSetup(false);
+                    setDomainSetupMode(null);
+                  }} className="text-gray-400 hover:text-gray-600">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
 
-                <div className="p-6 space-y-6">
+                <div className="p-8 space-y-6">
                   {!customDomain ? (
-  // Step 1: Enter Domain
-  <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
-    <div className="flex items-start gap-4 mb-4">
-      <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-        1
-      </div>
-      <div>
-        <h3 className="text-lg font-semibold text-gray-900">Enter Your Domain</h3>
-        <p className="text-sm text-gray-600 mt-1">The domain you already own</p>
-      </div>
-    </div>
+                    // Step 1: Enter Domain
+                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+                      <div className="flex items-start gap-4 mb-4">
+                        <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                          1
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">Enter Your Domain</h3>
+                          <p className="text-sm text-gray-600 mt-1">The domain you already own</p>
+                        </div>
+                      </div>
 
-    <div className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Your Domain Name
-        </label>
-        <input
-          type="text"
-          value={domainInput}
-          onChange={(e) => setDomainInput(e.target.value.toLowerCase())}
-          placeholder="yourbusiness.com"
-          className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
-        />
-      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Your Domain Name
+                          </label>
+                          <input
+                            type="text"
+                            value={domainInput}
+                            onChange={(e) => setDomainInput(e.target.value.toLowerCase())}
+                            placeholder="yourbusiness.com"
+                            className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-blue-500 focus:outline-none"
+                          />
+                        </div>
 
-      <button
-        onClick={addCustomDomain}
-        disabled={domainLoading || !domainInput.trim()}
-        className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        {domainLoading ? (
-          <><Loader className="w-5 h-5 animate-spin" />Adding Domain...</>
-        ) : (
-          <>Continue <ArrowRight className="w-5 h-5" /></>
-        )}
-      </button>
-    </div>
-  </div>
-) : (
-  <>
-    {/* Domain Confirmed */}
-    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
-      <div className="flex items-start gap-4">
-        <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-          <Check className="w-6 h-6" />
-        </div>
-        <div className="flex-1">
-          <h3 className="text-lg font-semibold text-gray-900">Domain: {customDomain}</h3>
-          <p className="text-sm text-gray-600">Ready to connect</p>
-        </div>
-        <button
-          onClick={removeDomain}
-          className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg"
-        >
-          Change
-        </button>
-      </div>
-    </div>
+                        <button
+                          onClick={addCustomDomain}
+                          disabled={domainLoading || !domainInput.trim()}
+                          className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                        >
+                          {domainLoading ? (
+                            <><Loader className="w-5 h-5 animate-spin" />Adding Domain...</>
+                          ) : (
+                            <>Continue <ArrowRight className="w-5 h-5" /></>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Domain Confirmed */}
+                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                            <Check className="w-6 h-6" />
+                          </div>
+                          <div className="flex-1">
+                            <h3 className="text-lg font-semibold text-gray-900">Domain: {customDomain}</h3>
+                            <p className="text-sm text-gray-600">Ready to connect</p>
+                          </div>
+                          <button
+                            onClick={removeDomain}
+                            className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 rounded-lg"
+                          >
+                            Change
+                          </button>
+                        </div>
+                      </div>
 
-    {/* Step 2: Update Nameservers (SIMPLE!) */}
-    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
-      <div className="flex items-start gap-4 mb-4">
-        <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-          2
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Update Your Nameservers</h3>
-          <p className="text-sm text-gray-600 mt-1">One simple step - just copy these 2 nameservers</p>
-        </div>
-      </div>
+                      {/* Step 2: Update Nameservers */}
+                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                            2
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Update Your Nameservers</h3>
+                            <p className="text-sm text-gray-600 mt-1">Copy these 2 nameservers to your domain registrar</p>
+                          </div>
+                        </div>
 
-      <div className="space-y-4">
-        <div className="bg-white rounded-lg p-4 border border-purple-200">
-          <p className="text-sm font-medium text-gray-900 mb-3">
-            Copy these nameservers to your domain registrar:
-          </p>
-          
-          <div className="space-y-2 mb-4">
-            <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <span className="font-mono text-purple-900 font-semibold flex-1">ns1.vercel-dns.com</span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText('ns1.vercel-dns.com');
-                  alert('Copied!');
-                }}
-                className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
-              >
-                Copy
-              </button>
-            </div>
-            <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
-              <span className="font-mono text-purple-900 font-semibold flex-1">ns2.vercel-dns.com</span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText('ns2.vercel-dns.com');
-                  alert('Copied!');
-                }}
-                className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-        </div>
+                        <div className="space-y-4">
+                          <div className="bg-white rounded-lg p-4 border border-purple-200">
+                            <div className="space-y-2 mb-4">
+                              <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                <span className="font-mono text-purple-900 font-semibold flex-1">ns1.vercel-dns.com</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText('ns1.vercel-dns.com');
+                                    alert('Copied!');
+                                  }}
+                                  className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                                <span className="font-mono text-purple-900 font-semibold flex-1">ns2.vercel-dns.com</span>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText('ns2.vercel-dns.com');
+                                    alert('Copied!');
+                                  }}
+                                  className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                                >
+                                  Copy
+                                </button>
+                              </div>
+                            </div>
+                          </div>
 
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <p className="font-medium text-gray-900 mb-2">📝 How to update nameservers:</p>
-          <ol className="space-y-2 text-sm text-gray-700 list-decimal list-inside">
-            <li>Log in to where you bought {customDomain}</li>
-            <li>Find "Nameservers" or "DNS Management"</li>
-            <li>Replace existing nameservers with the two above</li>
-            <li>Save changes</li>
-            <li>Wait 5-60 minutes for changes to take effect</li>
-          </ol>
-        </div>
+                          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                            <p className="font-medium text-gray-900 mb-2">📝 Quick Guide:</p>
+                            <ol className="space-y-1 text-sm text-gray-700 list-decimal list-inside">
+                              <li>Log in to where you bought {customDomain}</li>
+                              <li>Find "Nameservers" or "DNS Management"</li>
+                              <li>Replace existing nameservers with the two above</li>
+                              <li>Save changes</li>
+                              <li>Wait 5-60 minutes for DNS to update</li>
+                            </ol>
+                          </div>
 
-        <div>
-          <p className="text-sm font-medium text-gray-700 mb-2">Need help? Quick guides:</p>
-          <div className="flex gap-2 flex-wrap">
-            <a href="https://www.namecheap.com/support/knowledgebase/article.aspx/767/10/how-to-change-dns-for-a-domain/" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
-              Namecheap <ExternalLink className="w-3 h-3" />
-            </a>
-            <a href="https://www.godaddy.com/help/change-nameservers-for-my-domains-664" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
-              GoDaddy <ExternalLink className="w-3 h-3" />
-            </a>
-            <a href="https://support.google.com/domains/answer/3290309" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
-              Google Domains <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-700 mb-2">Need help? Quick guides:</p>
+                            <div className="flex gap-2 flex-wrap">
+                              <a href="https://www.namecheap.com/support/knowledgebase/article.aspx/767/10/how-to-change-dns-for-a-domain/" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
+                                Namecheap <ExternalLink className="w-3 h-3" />
+                              </a>
+                              <a href="https://www.godaddy.com/help/change-nameservers-for-my-domains-664" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
+                                GoDaddy <ExternalLink className="w-3 h-3" />
+                              </a>
+                              <a href="https://support.google.com/domains/answer/3290309" target="_blank" rel="noopener noreferrer" className="px-3 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1">
+                                Google Domains <ExternalLink className="w-3 h-3" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-    {/* Step 3: Verify */}
-    <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border-2 border-green-200">
-      <div className="flex items-start gap-4 mb-4">
-        <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
-          3
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Verify Connection</h3>
-          <p className="text-sm text-gray-600 mt-1">Check if nameservers have updated</p>
-        </div>
-      </div>
+                      {/* Step 3: Verify */}
+                      <div className="bg-gradient-to-br from-green-50 to-teal-50 rounded-xl p-6 border-2 border-green-200">
+                        <div className="flex items-start gap-4 mb-4">
+                          <div className="w-10 h-10 bg-green-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                            3
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">Verify Connection</h3>
+                            <p className="text-sm text-gray-600 mt-1">Check if nameservers have updated</p>
+                          </div>
+                        </div>
 
-      {domainStatus === 'verified' ? (
-        <div className="text-center py-6">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-green-600" />
-          </div>
-          <h4 className="text-lg font-semibold text-gray-900 mb-2">🎉 Domain Connected!</h4>
-          <p className="text-gray-600 mb-4">
-            Your website is now live at <strong className="text-green-700">{customDomain}</strong>
-          </p>
-          <button
-            onClick={() => window.open(`https://${customDomain}`, '_blank')}
-            className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
-          >
-            Visit Your Website <ExternalLink className="w-4 h-4" />
-          </button>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <div className="bg-white rounded-lg p-4 border border-yellow-200 bg-yellow-50">
-            <div className="flex items-start gap-3">
-              <Loader className="w-5 h-5 text-yellow-600 animate-spin mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium text-yellow-900">Waiting for Nameserver Update</p>
-                <p className="text-yellow-700 mt-1">
-                  This usually takes 5-60 minutes. Sometimes up to 24 hours depending on your registrar.
-                </p>
-              </div>
-            </div>
-          </div>
+                        {domainStatus === 'verified' ? (
+                          <div className="text-center py-6">
+                            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                              <Check className="w-8 h-8 text-green-600" />
+                            </div>
+                            <h4 className="text-lg font-semibold text-gray-900 mb-2">🎉 Domain Connected!</h4>
+                            <p className="text-gray-600 mb-4">
+                              Your website is now live at <strong className="text-green-700">{customDomain}</strong>
+                            </p>
+                            <button
+                              onClick={() => window.open(`https://${customDomain}`, '_blank')}
+                              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700"
+                            >
+                              Visit Your Website <ExternalLink className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            <div className="bg-white rounded-lg p-4 border border-yellow-200 bg-yellow-50">
+                              <div className="flex items-start gap-3">
+                                <Loader className="w-5 h-5 text-yellow-600 animate-spin mt-0.5" />
+                                <div className="text-sm">
+                                  <p className="font-medium text-yellow-900">Waiting for Nameserver Update</p>
+                                  <p className="text-yellow-700 mt-1">
+                                    This usually takes 5-60 minutes. Sometimes up to 24 hours.
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
 
-          <button
-            onClick={checkDomainStatus}
-            disabled={domainLoading}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-          >
-            {domainLoading ? (
-              <><Loader className="w-5 h-5 animate-spin" />Checking...</>
-            ) : (
-              <><RefreshCw className="w-5 h-5" />Check Status</>
-            )}
-          </button>
+                            <button
+                              onClick={checkDomainStatus}
+                              disabled={domainLoading}
+                              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                              {domainLoading ? (
+                                <><Loader className="w-5 h-5 animate-spin" />Checking...</>
+                              ) : (
+                                <><RefreshCw className="w-5 h-5" />Check Status</>
+                              )}
+                            </button>
 
-          <div className="text-center">
-  <p className="text-xs text-gray-500">
-    Taking longer than expected? <button onClick={() => window.open('mailto:support@yoursaas.com?subject=Domain Help&body=Domain: ' + customDomain, '_blank')} className="text-blue-600 hover:underline">Contact Support</button>
-  </p>
-</div>
-        </div>
-      )}
-    </div>
-  </>
-)}
+                            <div className="text-center">
+                              <p className="text-xs text-gray-500">
+                                Taking longer than expected? <button onClick={() => window.open('mailto:support@yoursaas.com?subject=Domain Help&body=Domain: ' + customDomain, '_blank')} className="text-blue-600 hover:underline">Contact Support</button>
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -852,7 +902,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         </div>
       )}
 
-     {/* Generate Website Modal */}
+      {/* Generate Website Modal */}
       {showEditWebsite && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
