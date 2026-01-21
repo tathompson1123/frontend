@@ -241,8 +241,8 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
 
       const resizeStateRef = { current: null };
       
-FIND lines 257-294 and REPLACE the entire createResizeHandles function with this:
-javascriptconst createResizeHandles = (element) => {
+
+const createResizeHandles = (element) => {
   doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
   
   if (!element) return;
