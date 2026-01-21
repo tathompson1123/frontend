@@ -1104,14 +1104,21 @@ if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
           title="Visual Editor"
         />
         
-        {guides.vertical.map((guide, i) => (
-          <div 
-            key={`v-${i}`}
-            className="absolute pointer-events-none z-50"
-            style={{ 
-              left: `${guide.x}px`,
-              top: 0,
-              bottom: 0,
+       {guides.vertical.map((guide, i) => {
+  console.log('📍 Guide rendering:', {
+    guideX: guide.x,
+    iframeLeft: iframeRef.current?.getBoundingClientRect().left,
+    windowWidth: window.innerWidth
+  });
+  
+  return (
+    <div 
+      key={`v-${i}`}
+      className="absolute pointer-events-none z-50"
+      style={{ 
+        left: `${guide.x}px`,
+        top: 0,
+        bottom: 0,
               width: '2px',
               backgroundColor: '#ef4444',
               boxShadow: '0 0 8px rgba(239, 68, 68, 0.5)'
