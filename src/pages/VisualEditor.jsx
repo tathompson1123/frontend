@@ -255,21 +255,18 @@ const createResizeHandles = (element) => {
   });
   
   if (!element.style.position || element.style.position === 'static') {
-    const rect = element.getBoundingClientRect();
-    const parentRect = element.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
+    prepareElementForDrag(element, doc);
+  }
+  const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
     
-    // Account for scroll position
-    const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-    const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
-    
-    // Calculate position relative to parent
-    const left = rect.left - parentRect.left + scrollLeft;
-    const top = rect.top - parentRect.top + scrollTop;
+    // Calculate position relative to parent, not viewport
+    const left = rect.left - parentRect.left;
+    const top = rect.top - parentRect.top;
     
     element.style.position = 'absolute';
     element.style.left = left + 'px';
     element.style.top = top + 'px';
-    element.style.width = rect.width + 'px';
+    element.style.width = rect.width + 'px';  // Also set width/height to preserve size
     element.style.height = rect.height + 'px';
     
     console.log('📍 Changed to absolute positioning:', {
@@ -277,14 +274,12 @@ const createResizeHandles = (element) => {
       top: top,
       width: rect.width,
       height: rect.height,
-      scrollLeft: scrollLeft,
-      scrollTop: scrollTop,
-      rectLeft: rect.left,
-      parentRectLeft: parentRect.left
+      parentLeft: parentRect.left,
+      parentTop: parentRect.top
     });
   }
   
-  const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
+        const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
         
         handles.forEach(position => {
           const handle = doc.createElement('div');
