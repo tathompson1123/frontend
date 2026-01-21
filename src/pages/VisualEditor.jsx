@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react';
 
-export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUndo, onRedo, canUndo, canRedo }) {
+export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   console.log('🔵 VisualEditor rendered');
   const selectedElementsRef = useRef([]);
   // REMOVED: const [, forceUpdate] = useState({});
@@ -1003,31 +1003,6 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
   return (
     <div className="w-full h-full flex relative">
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
-        <button
-          onClick={onUndo}
-          disabled={true} 
-          className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
-            canUndo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
-          title="Undo"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-          </svg>
-        </button>
-        
-        <button
-          onClick={onRedo}
-          disabled={true}
-          className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
-            canRedo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-          }`}
-          title="Redo"
-        >
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 10h-10a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6" />
-          </svg>
-        </button>
 
         <div className="relative group">
           <button className="p-2 bg-purple-600 text-white rounded-lg shadow-lg hover:shadow-xl transition">
