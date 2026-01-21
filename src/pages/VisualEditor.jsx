@@ -602,7 +602,8 @@ const createResizeHandles = (element) => {
           let newLeft = firstElement.startLeft + dx;
           let newTop = firstElement.startTop + dy;
           
-          const elemCenterX = newLeft + firstElement.width / 2;
+          const actualWidth = firstElement.el.scrollWidth || firstElement.width;
+const elemCenterX = newLeft + actualWidth / 2;
           const elemCenterY = newTop + firstElement.height / 2;
           
           const snapThreshold = 10;
@@ -627,6 +628,7 @@ console.log('📐 Snap calculation:', {
 });
 
 if (Math.abs(elemCenterX - viewportCenterX) < snapThreshold) {
+  newLeft = viewportCenterX - actualWidth / 2;
   newLeft = viewportCenterX - firstElement.width / 2;
   console.log('✨ SNAPPED TO CENTER:', {
   calculatedLeft: newLeft,
