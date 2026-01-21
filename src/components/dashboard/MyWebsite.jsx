@@ -512,6 +512,22 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 </div>
 
                 <div className="p-8 space-y-6">
+                  {/* Warning if using mock mode */}
+                  <div className="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-semibold text-yellow-900 mb-1">⚠️ Demo Mode - Not Connected to Domain Registrar</h4>
+                        <p className="text-sm text-yellow-800 mb-2">
+                          Domain purchasing is not configured. You can test the interface, but no actual purchases will be made.
+                        </p>
+                        <p className="text-xs text-yellow-700">
+                          To enable real domain purchasing, add <code className="bg-yellow-100 px-1 rounded">PORKBUN_API_KEY</code> and <code className="bg-yellow-100 px-1 rounded">PORKBUN_SECRET_KEY</code> to your environment variables.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Search Domain */}
                   <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
                     <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -577,7 +593,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                               </div>
                               <div className="text-right">
                                 <p className="text-2xl font-bold text-gray-900">${domain.price}</p>
-                                <p className="text-xs text-gray-500">per month</p>
+                                <p className="text-xs text-gray-500">per year</p>
                               </div>
                             </div>
                           </div>
