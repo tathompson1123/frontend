@@ -278,7 +278,6 @@ const createResizeHandles = (element) => {
     });
   }
   
-  const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
         const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
         
         handles.forEach(position => {
