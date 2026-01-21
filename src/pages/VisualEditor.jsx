@@ -770,7 +770,7 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         e.target.classList.remove('editor-hover');
       };
 
-      const handleDoubleClick = (e) => {
+     const handleDoubleClick = (e) => {
         e.preventDefault();
         e.stopPropagation();
         
@@ -779,24 +779,26 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
           return;
         }
-       if (!target.classList.contains('editor-selected')) {
-  doc.querySelectorAll('.editor-selected').forEach(el => {
-    el.classList.remove('editor-selected');
-  });
-  target.classList.add('editor-selected');
-  selectedElementsRef.current = [target];
-  // REMOVED: loadProps(target)
-  createResizeHandles(target);
-}
+        
+        if (!target.classList.contains('editor-selected')) {
+          doc.querySelectorAll('.editor-selected').forEach(el => {
+            el.classList.remove('editor-selected');
+          });
+          target.classList.add('editor-selected');
+          selectedElementsRef.current = [target];
+          createResizeHandles(target);
+        }
 
-// Load props only when opening modal
-if (selectedElementsRef.current[0]) {
-  loadProps(selectedElementsRef.current[0]);
-}
+        // Load props only when opening modal
+        if (selectedElementsRef.current[0]) {
+          loadProps(selectedElementsRef.current[0]);
+        }
 
-showPropertiesModalRef.current = true;
-setModalVisible(true);
+        showPropertiesModalRef.current = true;
+        setModalVisible(true);
+      };
 
+      // ADD ALL THE EVENT LISTENERS HERE (inside initEditor)
       doc.addEventListener('mousedown', handleMouseDown);
       doc.addEventListener('mousemove', handleMouseMove);
       doc.addEventListener('mouseup', handleMouseUp);
@@ -809,7 +811,7 @@ setModalVisible(true);
 
       eventHandlersRef.current = {
         doc,
-        currentPage,  // ADDED: Track which page
+        currentPage,
         handlers: {
           mousedown: handleMouseDown,
           mousemove: handleMouseMove,
@@ -819,8 +821,9 @@ setModalVisible(true);
           dblclick: handleDoubleClick
         }
       };
-    };
+    }; 
 
+    
     if (iframe.contentDocument?.readyState === 'complete') {
       initEditor();
     } else {
