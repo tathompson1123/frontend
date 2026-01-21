@@ -617,8 +617,6 @@ const elemCenterY = elemRect.top - iframeRect.top + scrollTop + (elemRect.height
           const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
 const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
 
-const iframeRect = dragStateRef.current.iframeRect;
-
 // Use iframe width for true viewport center
 const viewportCenterX = iframeRect.width / 2;
 const viewportCenterY = iframeRect.height / 2;
