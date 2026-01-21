@@ -860,44 +860,58 @@ const createResizeHandles = (element) => {
   }, [currentPage, reloadKey]);
 
   const prepareElementForDrag = (elem, doc) => {
-    const computed = window.getComputedStyle(elem);
+  const computed = window.getComputedStyle(elem);
+  
+  if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
+    const rect = elem.getBoundingClientRect();
+    const parentRect = elem.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
     
-    if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
-      const rect = elem.getBoundingClientRect();
-      const parentRect = elem.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
+    // Account for scroll
+    const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
+    const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
+    
+    const width = rect.width;
+    const height = rect.height;
+    
+    // Calculate position relative to offsetParent, accounting for scroll
+    const calculatedLeft = rect.left - parentRect.left + (scrollLeft - (doc.documentElement.scrollLeft || 0));
+    const calculatedTop = rect.top - parentRect.top + (scrollTop - (doc.documentElement.scrollTop || 0));
+    
+    if (!elem.dataset.hasPlaceholder) {
+      const placeholder = doc.createElement('div');
+      placeholder.className = 'drag-placeholder';
+      placeholder.style.width = width + 'px';
+      placeholder.style.height = height + 'px';
+      placeholder.style.margin = computed.margin;
+      placeholder.style.padding = '0';
+      placeholder.style.border = 'none';
+      placeholder.style.visibility = 'hidden';
+      placeholder.style.pointerEvents = 'none';
+      placeholder.style.display = computed.display;
       
-      const width = rect.width;
-      const height = rect.height;
-      const calculatedLeft = rect.left - parentRect.left;
-      const calculatedTop = rect.top - parentRect.top;
-      
-      if (!elem.dataset.hasPlaceholder) {
-        const placeholder = doc.createElement('div');
-        placeholder.className = 'drag-placeholder';
-        placeholder.style.width = width + 'px';
-        placeholder.style.height = height + 'px';
-        placeholder.style.margin = computed.margin;
-        placeholder.style.padding = '0';
-        placeholder.style.border = 'none';
-        placeholder.style.visibility = 'hidden';
-        placeholder.style.pointerEvents = 'none';
-        placeholder.style.display = computed.display;
-        
-        elem.parentNode.insertBefore(placeholder, elem);
-        elem.dataset.hasPlaceholder = 'true';
-        elem.dataset.placeholderId = 'placeholder-' + Date.now() + '-' + Math.random();
-        placeholder.dataset.placeholderId = elem.dataset.placeholderId;
-      }
-      
-      elem.style.position = 'absolute';
-      elem.style.left = calculatedLeft + 'px';
-      elem.style.top = calculatedTop + 'px';
-      elem.style.width = width + 'px';
-      elem.style.height = height + 'px';
-      elem.style.margin = '0';
-      elem.style.zIndex = '1000';
+      elem.parentNode.insertBefore(placeholder, elem);
+      elem.dataset.hasPlaceholder = 'true';
+      elem.dataset.placeholderId = 'placeholder-' + Date.now() + '-' + Math.random();
+      placeholder.dataset.placeholderId = elem.dataset.placeholderId;
     }
-  };
+    
+    elem.style.position = 'absolute';
+    elem.style.left = calculatedLeft + 'px';
+    elem.style.top = calculatedTop + 'px';
+    elem.style.width = width + 'px';
+    elem.style.height = height + 'px';
+    elem.style.margin = '0';
+    elem.style.zIndex = '1000';
+    
+    console.log('🔧 Prepared element for drag:', {
+      tag: elem.tagName,
+      left: calculatedLeft,
+      top: calculatedTop,
+      width: width,
+      height: height
+    });
+  }
+};
 
   const saveChanges = () => {
     console.log('🔴 saveChanges() CALLED');
