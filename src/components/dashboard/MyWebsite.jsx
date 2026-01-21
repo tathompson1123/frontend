@@ -297,14 +297,57 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   </div>
                   <div className="overflow-hidden">
                    <iframe 
-                     srcDoc={currentWebsite ? currentWebsite + `
-                       <style>
-                         /* Fix preview layering issues */
-                         header, nav { position: relative !important; z-index: 50 !important; }
-                         .hero, .banner, [class*="hero"], [class*="banner"] { position: relative !important; z-index: 10 !important; }
-                         main, section { position: relative !important; z-index: 1 !important; }
-                       </style>
-                     ` : ''} 
+                     srcDoc={currentWebsite ? (() => {
+                       // Inject CSS to fix z-index issues in preview only
+                       const fixCSS = `
+                         <style>
+                           /* Preview-only z-index fixes - AGGRESSIVE MODE */
+                           
+                           /* Reset all z-indexes first */
+                           * { 
+                             z-index: auto !important; 
+                           }
+                           
+                           /* Then apply correct layering */
+                           header, nav, [role="banner"] { 
+                             position: sticky !important; 
+                             top: 0 !important;
+                             z-index: 100 !important; 
+                           }
+                           
+                           /* Testimonials/scrolling banner */
+                           [class*="testimonial"], [class*="review"], [class*="scroll"], [id*="testimonial"], [id*="review"] {
+                             position: relative !important;
+                             z-index: 90 !important;
+                           }
+                           
+                           /* Hero/Banner sections */
+                           .hero, .banner, [class*="hero"], [class*="banner"], [id*="hero"], [id*="banner"] { 
+                             position: relative !important; 
+                             z-index: 10 !important; 
+                           }
+                           
+                           /* Main content */
+                           main, section, article, [role="main"] { 
+                             position: relative !important; 
+                             z-index: 1 !important; 
+                           }
+                           
+                           /* Force all children of header/nav to inherit */
+                           header *, nav * { 
+                             position: relative !important;
+                           }
+                         </style>
+                       `;
+                       // Insert CSS right before closing </head> or at start of <body>
+                       if (currentWebsite.includes('</head>')) {
+                         return currentWebsite.replace('</head>', fixCSS + '</head>');
+                       } else if (currentWebsite.includes('<body')) {
+                         return currentWebsite.replace('<body', fixCSS + '<body');
+                       } else {
+                         return fixCSS + currentWebsite;
+                       }
+                     })() : ''} 
                      title="Website Preview" 
                      className="w-full h-[450px] bg-white border-0 pointer-events-none" 
                      sandbox="" 
@@ -331,14 +374,24 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                       </div>
                       <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
                         <iframe 
-                          srcDoc={currentWebsite ? currentWebsite + `
-                            <style>
-                              /* Fix preview layering issues */
-                              header, nav { position: relative !important; z-index: 50 !important; }
-                              .hero, .banner, [class*="hero"], [class*="banner"] { position: relative !important; z-index: 10 !important; }
-                              main, section { position: relative !important; z-index: 1 !important; }
-                            </style>
-                          ` : ''} 
+                          srcDoc={currentWebsite ? (() => {
+                            const fixCSS = `
+                              <style>
+                                header, nav, [role="banner"] { position: relative !important; z-index: 50 !important; }
+                                .hero, .banner, [class*="hero"], [class*="banner"], [id*="hero"], [id*="banner"] { position: relative !important; z-index: 10 !important; }
+                                main, section, article, [role="main"] { position: relative !important; z-index: 1 !important; }
+                                * { z-index: auto; }
+                                header *, nav * { z-index: auto !important; }
+                              </style>
+                            `;
+                            if (currentWebsite.includes('</head>')) {
+                              return currentWebsite.replace('</head>', fixCSS + '</head>');
+                            } else if (currentWebsite.includes('<body')) {
+                              return currentWebsite.replace('<body', fixCSS + '<body');
+                            } else {
+                              return fixCSS + currentWebsite;
+                            }
+                          })() : ''} 
                           title="Mobile Website Preview" 
                           className="w-full h-full bg-white border-0 pointer-events-none" 
                           sandbox="" 
