@@ -779,20 +779,23 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
           return;
         }
-        
-        if (!target.classList.contains('editor-selected')) {
-          doc.querySelectorAll('.editor-selected').forEach(el => {
-            el.classList.remove('editor-selected');
-          });
-          target.classList.add('editor-selected');
-          selectedElementsRef.current = [target];
-          loadProps(target);
-          createResizeHandles(target);
-        }
-        
-        showPropertiesModalRef.current = true;
-        setModalVisible(true);
-      };
+       if (!target.classList.contains('editor-selected')) {
+  doc.querySelectorAll('.editor-selected').forEach(el => {
+    el.classList.remove('editor-selected');
+  });
+  target.classList.add('editor-selected');
+  selectedElementsRef.current = [target];
+  // REMOVED: loadProps(target)
+  createResizeHandles(target);
+}
+
+// Load props only when opening modal
+if (selectedElementsRef.current[0]) {
+  loadProps(selectedElementsRef.current[0]);
+}
+
+showPropertiesModalRef.current = true;
+setModalVisible(true);
 
       doc.addEventListener('mousedown', handleMouseDown);
       doc.addEventListener('mousemove', handleMouseMove);
