@@ -611,37 +611,34 @@ const createResizeHandles = (element) => {
           const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
 const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
 
-const bodyRect = doc.body.getBoundingClientRect();
 const iframeRect = dragStateRef.current.iframeRect;
 
-const bodyCenterX = bodyRect.width / 2;
-const bodyCenterY = bodyRect.height / 2;
+// Use iframe width for true viewport center
+const viewportCenterX = iframeRect.width / 2;
+const viewportCenterY = iframeRect.height / 2;
 
 console.log('📐 Snap calculation:', {
   elemCenterX,
-  bodyCenterX,
-  bodyWidth: bodyRect.width,
-  bodyRectLeft: bodyRect.left,
-  iframeRectLeft: iframeRect.left,
+  viewportCenterX,
+  iframeWidth: iframeRect.width,
   scrollLeft,
   elementLeft: newLeft,
-  elementWidth: firstElement.width,
-  guideXCalculated: bodyCenterX + iframeRect.left
+  elementWidth: firstElement.width
 });
 
-if (Math.abs(elemCenterX - bodyCenterX) < snapThreshold) {
-  newLeft = bodyCenterX - firstElement.width / 2;
+if (Math.abs(elemCenterX - viewportCenterX) < snapThreshold) {
+  newLeft = viewportCenterX - firstElement.width / 2;
   detectedGuides.vertical.push({ 
-    x: bodyCenterX, // CHANGED: removed + iframeRect.left
+    x: viewportCenterX,
     type: 'center', 
     label: 'Page Center' 
   });
 }
 
-if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
-  newTop = bodyCenterY - firstElement.height / 2;
+if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
+  newTop = viewportCenterY - firstElement.height / 2;
   detectedGuides.horizontal.push({ 
-    y: bodyCenterY, // CHANGED: removed + iframeRect.top
+    y: viewportCenterY,
     type: 'center', 
     label: 'Page Center' 
   });
