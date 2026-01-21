@@ -609,19 +609,30 @@ const createResizeHandles = (element) => {
           const detectedGuides = { vertical: [], horizontal: [] };
           
           const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
-          const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
-          
-          const bodyRect = doc.body.getBoundingClientRect();
-          const iframeRect = dragStateRef.current.iframeRect;
-          
-          const bodyCenterX = (bodyRect.width / 2);
-const bodyCenterY = (bodyRect.height / 2);
+const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
 
-          
-          if (Math.abs(elemCenterX - bodyCenterX) < snapThreshold) {
+const bodyRect = doc.body.getBoundingClientRect();
+const iframeRect = dragStateRef.current.iframeRect;
+
+const bodyCenterX = bodyRect.width / 2;
+const bodyCenterY = bodyRect.height / 2;
+
+console.log('📐 Snap calculation:', {
+  elemCenterX,
+  bodyCenterX,
+  bodyWidth: bodyRect.width,
+  bodyRectLeft: bodyRect.left,
+  iframeRectLeft: iframeRect.left,
+  scrollLeft,
+  elementLeft: newLeft,
+  elementWidth: firstElement.width,
+  guideXCalculated: bodyCenterX + iframeRect.left
+});
+
+if (Math.abs(elemCenterX - bodyCenterX) < snapThreshold) {
   newLeft = bodyCenterX - firstElement.width / 2;
   detectedGuides.vertical.push({ 
-    x: bodyCenterX + iframeRect.left, // Guide position in parent window coordinates
+    x: bodyCenterX + iframeRect.left,
     type: 'center', 
     label: 'Page Center' 
   });
