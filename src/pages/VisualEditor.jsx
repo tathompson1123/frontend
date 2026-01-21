@@ -246,17 +246,11 @@ const createResizeHandles = (element) => {
   
   if (!element) return;
   
-  console.log('🔧 Creating resize handles for:', {
-    tagName: element.tagName,
-    currentPosition: element.style.position,
-    computedPosition: window.getComputedStyle(element).position,
-    currentLeft: element.style.left,
-    currentTop: element.style.top
-  });
-  
+  // Use prepareElementForDrag to properly position the element
   if (!element.style.position || element.style.position === 'static') {
     prepareElementForDrag(element, doc);
   }
+  
   const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
     
     // Calculate position relative to parent, not viewport
