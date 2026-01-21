@@ -517,9 +517,19 @@ const createResizeHandles = (element) => {
         const dx = e.clientX - dragStateRef.current.startX;
         const dy = e.clientY - dragStateRef.current.startY;
         
-        if (!dragStartedRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+       if (!dragStartedRef.current && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
   if (!dragStateRef.current.elements && dragStateRef.current.clickedElement) {
     const clickedEl = dragStateRef.current.clickedElement;
+    
+    console.log('🎬 Starting drag for:', {
+      tag: clickedEl.tagName,
+      currentPosition: clickedEl.style.position,
+      computedPosition: window.getComputedStyle(clickedEl).position,
+      currentLeft: clickedEl.style.left,
+      currentTop: clickedEl.style.top,
+      parent: clickedEl.parentElement?.tagName,
+      offsetParent: clickedEl.offsetParent?.tagName
+    });
     
     doc.querySelectorAll('.editor-selected').forEach(el => {
       el.classList.remove('editor-selected');
@@ -532,7 +542,10 @@ const createResizeHandles = (element) => {
     // Only prepare if not already absolute positioned
     const computedPosition = window.getComputedStyle(clickedEl).position;
     if (computedPosition === 'static' || computedPosition === 'relative' || !clickedEl.style.position) {
+      console.log('🔧 Preparing element for drag');
       prepareElementForDrag(clickedEl, doc);
+    } else {
+      console.log('⏭️ Element already positioned, skipping prepare');
     }
     
     const rect = clickedEl.getBoundingClientRect();
