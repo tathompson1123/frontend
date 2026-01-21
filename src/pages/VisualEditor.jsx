@@ -605,12 +605,13 @@ const createResizeHandles = (element) => {
 let newTop = firstElement.startTop + dy;
 
 // Calculate element center based on ACTUAL screen position
-const elemRect = firstElement.el.getBoundingClientRect();
 const iframeRect = dragStateRef.current.iframeRect;
 const scrollLeft = doc.documentElement.scrollLeft || doc.body.scrollLeft;
 const scrollTop = doc.documentElement.scrollTop || doc.body.scrollTop;
-const elemCenterX = elemRect.left - iframeRect.left + scrollLeft + (elemRect.width / 2);
-const elemCenterY = elemRect.top - iframeRect.top + scrollTop + (elemRect.height / 2);
+
+// Calculate center from the INTENDED new position, not current DOM position
+const elemCenterX = newLeft + firstElement.width / 2;
+const elemCenterY = newTop + firstElement.height / 2;
           
 const snapThreshold = 10;
 const detectedGuides = { vertical: [], horizontal: [] };
