@@ -301,41 +301,36 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                        // Inject CSS to fix z-index issues in preview only
                        const fixCSS = `
                          <style>
-                           /* Preview-only z-index fixes - AGGRESSIVE MODE */
+                           /* Preview-only z-index fixes */
                            
-                           /* Reset all z-indexes first */
-                           * { 
-                             z-index: auto !important; 
-                           }
-                           
-                           /* Then apply correct layering */
+                           /* Keep header and testimonials on TOP */
                            header, nav, [role="banner"] { 
                              position: sticky !important; 
                              top: 0 !important;
-                             z-index: 100 !important; 
+                             z-index: 1000 !important; 
+                             background: inherit !important;
                            }
                            
-                           /* Testimonials/scrolling banner */
+                           /* Testimonials/scrolling banner also on top */
                            [class*="testimonial"], [class*="review"], [class*="scroll"], [id*="testimonial"], [id*="review"] {
                              position: relative !important;
-                             z-index: 90 !important;
+                             z-index: 999 !important;
                            }
                            
-                           /* Hero/Banner sections */
+                           /* Force ALL body content to stay BELOW header */
+                           main, section, article, div, p, h1, h2, h3, h4, h5, h6, [role="main"] { 
+                             z-index: 1 !important; 
+                           }
+                           
+                           /* Hero/Banner sections - below header but above main */
                            .hero, .banner, [class*="hero"], [class*="banner"], [id*="hero"], [id*="banner"] { 
                              position: relative !important; 
                              z-index: 10 !important; 
                            }
                            
-                           /* Main content */
-                           main, section, article, [role="main"] { 
-                             position: relative !important; 
-                             z-index: 1 !important; 
-                           }
-                           
-                           /* Force all children of header/nav to inherit */
-                           header *, nav * { 
-                             position: relative !important;
+                           /* Reset inline z-index from editor that's too high */
+                           main * [style*="z-index"] {
+                             z-index: 1 !important;
                            }
                          </style>
                        `;
@@ -377,11 +372,11 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                           srcDoc={currentWebsite ? (() => {
                             const fixCSS = `
                               <style>
-                                header, nav, [role="banner"] { position: relative !important; z-index: 50 !important; }
+                                header, nav, [role="banner"] { position: sticky !important; top: 0 !important; z-index: 1000 !important; background: inherit !important; }
+                                [class*="testimonial"], [class*="review"], [class*="scroll"], [id*="testimonial"], [id*="review"] { position: relative !important; z-index: 999 !important; }
+                                main, section, article, div, p, h1, h2, h3, h4, h5, h6, [role="main"] { z-index: 1 !important; }
                                 .hero, .banner, [class*="hero"], [class*="banner"], [id*="hero"], [id*="banner"] { position: relative !important; z-index: 10 !important; }
-                                main, section, article, [role="main"] { position: relative !important; z-index: 1 !important; }
-                                * { z-index: auto; }
-                                header *, nav * { z-index: auto !important; }
+                                main * [style*="z-index"] { z-index: 1 !important; }
                               </style>
                             `;
                             if (currentWebsite.includes('</head>')) {
@@ -623,11 +618,11 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   {/* Available Domains */}
                   {availableDomains.length > 0 && (
                     <div className="space-y-3">
-                      {availableDomains.filter(d => d.available).length > 0 ? (
+                      {availableDomains.filter(d => d.available && !d.isSuggestion).length > 0 ? (
                         <>
                           <h3 className="font-semibold text-gray-900">Available Domains:</h3>
                           <div className="grid gap-3">
-                            {availableDomains.filter(d => d.available).map((domain) => (
+                            {availableDomains.filter(d => d.available && !d.isSuggestion).map((domain) => (
                               <div
                                 key={domain.name}
                                 onClick={() => setSelectedDomain(domain)}
@@ -662,7 +657,53 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                             ))}
                           </div>
                         </>
-                      ) : (
+                      ) : null}
+                      
+                      {/* Suggested Alternatives */}
+                      {availableDomains.filter(d => d.available && d.isSuggestion).length > 0 && (
+                        <div className="mt-6">
+                          <h3 className="font-semibold text-gray-900 mb-2">💡 Suggested Alternatives:</h3>
+                          <p className="text-xs text-gray-500 mb-3">Similar domains that are available</p>
+                          <div className="grid gap-3">
+                            {availableDomains.filter(d => d.available && d.isSuggestion).map((domain) => (
+                              <div
+                                key={domain.name}
+                                onClick={() => setSelectedDomain(domain)}
+                                className={`p-4 rounded-lg border-2 cursor-pointer transition ${
+                                  selectedDomain?.name === domain.name
+                                    ? 'border-blue-600 bg-blue-50'
+                                    : 'border-blue-200 hover:border-blue-300 bg-blue-50/50'
+                                }`}
+                              >
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                      selectedDomain?.name === domain.name
+                                        ? 'border-blue-600 bg-blue-600'
+                                        : 'border-blue-300'
+                                    }`}>
+                                      {selectedDomain?.name === domain.name && (
+                                        <Check className="w-3 h-3 text-white" />
+                                      )}
+                                    </div>
+                                    <div>
+                                      <p className="font-semibold text-gray-900 text-lg">{domain.name}</p>
+                                      <p className="text-sm text-blue-600 font-medium">✓ Available</p>
+                                    </div>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-2xl font-bold text-gray-900">${domain.price}</p>
+                                    <p className="text-xs text-gray-500">per year</p>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* All Taken Message */}
+                      {availableDomains.filter(d => d.available).length === 0 && (
                         <div className="bg-yellow-50 border-2 border-yellow-200 rounded-xl p-6 text-center">
                           <AlertCircle className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
                           <h3 className="font-semibold text-gray-900 mb-2">All domains are taken</h3>
