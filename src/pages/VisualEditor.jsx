@@ -241,18 +241,32 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
 
       const resizeStateRef = { current: null };
       
-      const createResizeHandles = (element) => {
-        doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
-        
-        if (!element) return;
-        
-        if (!element.style.position || element.style.position === 'static') {
-          const rect = element.getBoundingClientRect();
-          element.style.position = 'absolute';
-          element.style.left = rect.left + 'px';
-          element.style.top = rect.top + 'px';
-        }
-        
+     const createResizeHandles = (element) => {
+  doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
+  
+  if (!element) return;
+  
+  console.log('🔧 Creating resize handles for:', {
+    tagName: element.tagName,
+    currentPosition: element.style.position,
+    computedPosition: window.getComputedStyle(element).position,
+    currentLeft: element.style.left,
+    currentTop: element.style.top
+  });
+  
+  if (!element.style.position || element.style.position === 'static') {
+    const rect = element.getBoundingClientRect();
+    element.style.position = 'absolute';
+    element.style.left = rect.left + 'px';
+    element.style.top = rect.top + 'px';
+    
+    console.log('📍 Changed to absolute positioning:', {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height
+    });
+  }
         const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
         
         handles.forEach(position => {
