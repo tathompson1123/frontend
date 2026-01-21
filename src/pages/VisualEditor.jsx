@@ -660,35 +660,35 @@ if (Math.abs(elemCenterY - viewportCenterY) < snapThreshold) {
             parentSection.contains(el)
           );
           
-          siblingElements.forEach(other => {
-            const otherRect = other.getBoundingClientRect();
-            const otherLeft = otherRect.left - iframeRect.left + scrollLeft;
-            const otherTop = otherRect.top - iframeRect.top + scrollTop;
-            const otherCenterX = otherLeft + otherRect.width / 2;
-            const otherCenterY = otherTop + otherRect.height / 2;
-            
-            if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
-              newLeft = otherCenterX - firstElement.width / 2;
-              if (!detectedGuides.vertical.some(g => Math.abs(g.x - (otherCenterX + iframeRect.left)) < 1)) {
-                detectedGuides.vertical.push({ 
-                  x: otherCenterX + iframeRect.left,
-                  type: 'center', 
-                  label: 'Element Center' 
-                });
-              }
-            }
-            
-            if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
-              newTop = otherCenterY - firstElement.height / 2;
-              if (!detectedGuides.horizontal.some(g => Math.abs(g.y - (otherCenterY + iframeRect.top)) < 1)) {
-                detectedGuides.horizontal.push({ 
-                  y: otherCenterY + iframeRect.top,
-                  type: 'center', 
-                  label: 'Element Center' 
-                });
-              }
-            }
-          });
+         siblingElements.forEach(other => {
+  const otherRect = other.getBoundingClientRect();
+  const otherLeft = otherRect.left - iframeRect.left + scrollLeft;
+  const otherTop = otherRect.top - iframeRect.top + scrollTop;
+  const otherCenterX = otherLeft + otherRect.width / 2;
+  const otherCenterY = otherTop + otherRect.height / 2;
+  
+  if (Math.abs(elemCenterX - otherCenterX) < snapThreshold) {
+    newLeft = otherCenterX - firstElement.width / 2;
+    if (!detectedGuides.vertical.some(g => Math.abs(g.x - otherCenterX) < 1)) {
+      detectedGuides.vertical.push({ 
+        x: otherCenterX,  // FIXED: removed + iframeRect.left
+        type: 'center', 
+        label: 'Element Center' 
+      });
+    }
+  }
+  
+  if (Math.abs(elemCenterY - otherCenterY) < snapThreshold) {
+    newTop = otherCenterY - firstElement.height / 2;
+    if (!detectedGuides.horizontal.some(g => Math.abs(g.y - otherCenterY) < 1)) {
+      detectedGuides.horizontal.push({ 
+        y: otherCenterY,  // FIXED: removed + iframeRect.top
+        type: 'center', 
+        label: 'Element Center' 
+      });
+    }
+  }
+});
           
           setGuides({ 
             vertical: detectedGuides.vertical.slice(0, 1),
