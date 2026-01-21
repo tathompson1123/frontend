@@ -726,16 +726,16 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
               doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
             }
           } else {
-            const previouslySelected = doc.querySelectorAll('.editor-selected');
-            
-            previouslySelected.forEach(el => {
-              el.classList.remove('editor-selected');
-            });
-            
-            target.classList.add('editor-selected');
-            selectedElementsRef.current = [target];
-            loadProps(target);
-            createResizeHandles(target);
+  const previouslySelected = doc.querySelectorAll('.editor-selected');
+  
+  previouslySelected.forEach(el => {
+    el.classList.remove('editor-selected');
+  });
+  
+  target.classList.add('editor-selected');
+  selectedElementsRef.current = [target];
+  // REMOVED: loadProps(target) - only load when opening modal
+  createResizeHandles(target);
           }
         }
         
