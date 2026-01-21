@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, memo } from 'react';
 import { 
   Move, 
   Type, 
@@ -13,10 +13,9 @@ import {
   X
 } from 'lucide-react';
 
-export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
+const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, currentPage }) {
   console.log('🔵 VisualEditor rendered');
   const selectedElementsRef = useRef([]);
-  // REMOVED: const [, forceUpdate] = useState({});
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const [reloadKey, setReloadKey] = useState(0);
   const showPropertiesModalRef = useRef(false);
@@ -1197,4 +1196,13 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage }) {
       )}
     </div>
   );
-}
+  }, (prevProps, nextProps) => {
+  const htmlChanged = prevProps.htmlContent !== nextProps.htmlContent;
+  const pageChanged = prevProps.currentPage !== nextProps.currentPage;
+  
+  console.log('🔍 Memo comparison:', { htmlChanged, pageChanged });
+  
+  return !htmlChanged && !pageChanged;
+});
+
+export default VisualEditor;
