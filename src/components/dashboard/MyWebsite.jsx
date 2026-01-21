@@ -330,7 +330,20 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                         </div>
                       </div>
                       <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
-                        <iframe srcDoc={currentWebsite} title="Mobile Website Preview" className="w-full h-full bg-white border-0 pointer-events-none" sandbox="" style={{ minHeight: '100%' }} />
+                        <iframe 
+                          srcDoc={currentWebsite ? currentWebsite + `
+                            <style>
+                              /* Fix preview layering issues */
+                              header, nav { position: relative !important; z-index: 50 !important; }
+                              .hero, .banner, [class*="hero"], [class*="banner"] { position: relative !important; z-index: 10 !important; }
+                              main, section { position: relative !important; z-index: 1 !important; }
+                            </style>
+                          ` : ''} 
+                          title="Mobile Website Preview" 
+                          className="w-full h-full bg-white border-0 pointer-events-none" 
+                          sandbox="" 
+                          style={{ minHeight: '100%' }} 
+                        />
                       </div>
                     </div>
                     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
