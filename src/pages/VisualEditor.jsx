@@ -1005,7 +1005,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
         <button
           onClick={onUndo}
-          disabled={!canUndo}
+          disabled={true} 
           className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
             canUndo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           }`}
@@ -1018,7 +1018,7 @@ export default function VisualEditor({ htmlContent, onUpdate, currentPage, onUnd
         
         <button
           onClick={onRedo}
-          disabled={!canRedo}
+          disabled={true}
           className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition ${
             canRedo ? 'bg-white text-gray-700' : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           }`}
