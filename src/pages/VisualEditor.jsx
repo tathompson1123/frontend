@@ -726,7 +726,7 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
               selectedElementsRef.current = newSelected;
               doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
             }
-          } else {
+         } else {
   const previouslySelected = doc.querySelectorAll('.editor-selected');
   
   previouslySelected.forEach(el => {
@@ -735,14 +735,15 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
   
   target.classList.add('editor-selected');
   selectedElementsRef.current = [target];
-  // REMOVED: loadProps(target) - only load when opening modal
   createResizeHandles(target);
-            console.log('🎯 Element selected:', {
+  
+  console.log('🎯 Element selected:', {
     tagName: target.tagName,
     className: target.className,
     isInDocument: doc.body.contains(target),
     hasResizeHandles: target.querySelectorAll('.resize-handle').length
-          }
+  });
+}
         }
         
         dragStateRef.current = null;
