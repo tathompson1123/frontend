@@ -614,26 +614,27 @@ const createResizeHandles = (element) => {
           const bodyRect = doc.body.getBoundingClientRect();
           const iframeRect = dragStateRef.current.iframeRect;
           
-          const bodyCenterX = bodyRect.width / 2;
-          const bodyCenterY = bodyRect.height / 2;
+          const bodyCenterX = (bodyRect.width / 2);
+const bodyCenterY = (bodyRect.height / 2);
+
           
           if (Math.abs(elemCenterX - bodyCenterX) < snapThreshold) {
-            newLeft = bodyCenterX - firstElement.width / 2;
-            detectedGuides.vertical.push({ 
-              x: bodyCenterX + iframeRect.left,
-              type: 'center', 
-              label: 'Page Center' 
-            });
-          }
-          
-          if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
-            newTop = bodyCenterY - firstElement.height / 2;
-            detectedGuides.horizontal.push({ 
-              y: bodyCenterY + iframeRect.top,
-              type: 'center', 
-              label: 'Page Center' 
-            });
-          }
+  newLeft = bodyCenterX - firstElement.width / 2;
+  detectedGuides.vertical.push({ 
+    x: bodyCenterX + iframeRect.left, // Guide position in parent window coordinates
+    type: 'center', 
+    label: 'Page Center' 
+  });
+}
+
+if (Math.abs(elemCenterY - bodyCenterY) < snapThreshold) {
+  newTop = bodyCenterY - firstElement.height / 2;
+  detectedGuides.horizontal.push({ 
+    y: bodyCenterY + iframeRect.top, // Guide position in parent window coordinates
+    type: 'center', 
+    label: 'Page Center' 
+  });
+}
           
           const draggingElement = firstElement.el;
           let parentSection = draggingElement.closest('section, header, footer, main, article, aside, div[class*="container"], div[class*="section"]');
