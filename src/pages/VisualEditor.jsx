@@ -582,7 +582,7 @@ const createResizeHandles = (element) => {
               startX: dragStateRef.current.startX,
               startY: dragStateRef.current.startY,
               moved: true,
-              iframeRect: iframeRect
+              iframeRect: iframeRect,
               wasSnappedX: false,  // ADD THIS
   wasSnappedY: false 
             };
@@ -763,36 +763,36 @@ if (distanceFromCenterY < snapThreshold) {
         }
       };
 
-      const handleMouseUp = (e) => {
-        if (resizeStateRef.current) {
-          handleResizeEnd();
-          return;
-        }
-        
-        if (!isMouseDownRef.current) {
-          return;
-        }
-        
-        isMouseDownRef.current = false;
-        
-        if (dragStartedRef.current && dragStateRef.current?.elements) {
-          dragStateRef.current.elements.forEach(data => {
-            data.el.classList.remove('editor-dragging');
-          });
-          
-          setGuides({ vertical: [], horizontal: [] });
-          
-          if (dragStateRef.current.moved) {
-            console.log('💾 Saving after drag');
-            saveChanges();
-          } else {
-            console.log('⏭️ No movement detected, skipping save');
-          }
-          
-          dragStateRef.current = null;
-          dragStartedRef.current = false;
-          return;
-        }
+     const handleMouseUp = (e) => {
+  if (resizeStateRef.current) {
+    handleResizeEnd();
+    return;
+  }
+  
+  if (!isMouseDownRef.current) {
+    return;
+  }
+  
+  isMouseDownRef.current = false;
+  
+  if (dragStartedRef.current && dragStateRef.current?.elements) {
+    dragStateRef.current.elements.forEach(data => {
+      data.el.classList.remove('editor-dragging');
+    });
+    
+    setGuides({ vertical: [], horizontal: [] });
+    
+    if (dragStateRef.current.moved) {
+      console.log('💾 Saving after drag');
+      saveChanges();
+    } else {
+      console.log('⏭️ No movement detected, skipping save');
+    }
+    
+    dragStateRef.current = null;
+    dragStartedRef.current = false;
+    return;
+  }
         
         if (dragStateRef.current && !dragStateRef.current.moved) {
           console.log('✅ Selection only - NOT saving');
