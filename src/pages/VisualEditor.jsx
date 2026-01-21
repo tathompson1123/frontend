@@ -628,6 +628,17 @@ console.log('📐 Snap calculation:', {
 
 if (Math.abs(elemCenterX - viewportCenterX) < snapThreshold) {
   newLeft = viewportCenterX - firstElement.width / 2;
+  console.log('✨ SNAPPED TO CENTER:', {
+    calculatedLeft: newLeft,
+    elementWidth: firstElement.width,
+    elementTag: firstElement.el.tagName,
+    elementClasses: firstElement.el.className,
+    computedWidth: window.getComputedStyle(firstElement.el).width,
+    paddingLeft: window.getComputedStyle(firstElement.el).paddingLeft,
+    paddingRight: window.getComputedStyle(firstElement.el).paddingRight,
+    marginLeft: window.getComputedStyle(firstElement.el).marginLeft,
+    marginRight: window.getComputedStyle(firstElement.el).marginRight
+  });
   detectedGuides.vertical.push({ 
     x: viewportCenterX,
     type: 'center', 
