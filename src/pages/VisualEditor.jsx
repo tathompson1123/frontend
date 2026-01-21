@@ -241,7 +241,7 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
 
       const resizeStateRef = { current: null };
       
-     const createResizeHandles = (element) => {
+const createResizeHandles = (element) => {
   doc.querySelectorAll('.resize-handle').forEach(h => h.remove());
   
   if (!element) return;
@@ -256,17 +256,29 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
   
   if (!element.style.position || element.style.position === 'static') {
     const rect = element.getBoundingClientRect();
+    const parentRect = element.offsetParent?.getBoundingClientRect() || doc.body.getBoundingClientRect();
+    
+    // Calculate position relative to parent, not viewport
+    const left = rect.left - parentRect.left;
+    const top = rect.top - parentRect.top;
+    
     element.style.position = 'absolute';
-    element.style.left = rect.left + 'px';
-    element.style.top = rect.top + 'px';
+    element.style.left = left + 'px';
+    element.style.top = top + 'px';
+    element.style.width = rect.width + 'px';  // Also set width/height to preserve size
+    element.style.height = rect.height + 'px';
     
     console.log('📍 Changed to absolute positioning:', {
-      left: rect.left,
-      top: rect.top,
+      left: left,
+      top: top,
       width: rect.width,
-      height: rect.height
+      height: rect.height,
+      parentLeft: parentRect.left,
+      parentTop: parentRect.top
     });
   }
+  
+  const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
         const handles = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'];
         
         handles.forEach(position => {
