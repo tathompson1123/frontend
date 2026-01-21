@@ -296,7 +296,19 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     </div>
                   </div>
                   <div className="overflow-hidden">
-                   <iframe srcDoc={currentWebsite} title="Website Preview" className="w-full h-[450px] bg-white border-0 pointer-events-none" sandbox="" />
+                   <iframe 
+                     srcDoc={currentWebsite ? currentWebsite + `
+                       <style>
+                         /* Fix preview layering issues */
+                         header, nav { position: relative !important; z-index: 50 !important; }
+                         .hero, .banner, [class*="hero"], [class*="banner"] { position: relative !important; z-index: 10 !important; }
+                         main, section { position: relative !important; z-index: 1 !important; }
+                       </style>
+                     ` : ''} 
+                     title="Website Preview" 
+                     className="w-full h-[450px] bg-white border-0 pointer-events-none" 
+                     sandbox="" 
+                   />
                   </div>
                 </div>
               ) : (
@@ -436,26 +448,38 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">Get your website online with a custom domain</p>
-                  <button
-                    onClick={() => {
-                      if (!vercelUrl) {
-                        alert('Please deploy your website first');
-                        return;
-                      }
-                      setDomainSetupMode('connect');
-                      setShowDomainSetup(true);
-                    }}
-                    className="w-full bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center justify-center gap-2"
-                  >
-                    <Link className="w-5 h-5" />
-                    <div className="text-left">
-                      <div>Connect Your Domain</div>
-                      <div className="text-xs opacity-90">Free hosting • Bring your own domain</div>
-                    </div>
-                  </button>
-                  <p className="text-xs text-gray-500 text-center">
-                    Already have a domain? Connect it for free hosting!
-                  </p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        if (!vercelUrl) {
+                          alert('Please deploy your website first');
+                          return;
+                        }
+                        setDomainSetupMode('buy');
+                        setShowDomainSetup(true);
+                      }}
+                      className="bg-purple-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex flex-col items-center justify-center gap-1"
+                    >
+                      <ShoppingCart className="w-5 h-5" />
+                      <span>Buy Domain</span>
+                      <span className="text-xs opacity-90">$15/year</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!vercelUrl) {
+                          alert('Please deploy your website first');
+                          return;
+                        }
+                        setDomainSetupMode('connect');
+                        setShowDomainSetup(true);
+                      }}
+                      className="bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex flex-col items-center justify-center gap-1"
+                    >
+                      <Link className="w-5 h-5" />
+                      <span>Connect Domain</span>
+                      <span className="text-xs opacity-90">Free hosting</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
