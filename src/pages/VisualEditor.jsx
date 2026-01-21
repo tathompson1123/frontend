@@ -444,7 +444,7 @@ const createResizeHandles = (element) => {
         return el;
       };
 
-      const handleMouseDown = (e) => {
+     const handleMouseDown = (e) => {
   console.log('🟢 MOUSEDOWN - About to select element');
   console.log('🎯 Clicked element:', {
     tag: e.target.tagName,
@@ -458,27 +458,35 @@ const createResizeHandles = (element) => {
   }
 
   let target = e.target;
-  const draggableTarget = findDraggableElement(target);
   
-  console.log('🔍 findDraggableElement result:', {
-    original: target.tagName,
-    draggable: draggableTarget?.tagName || 'NULL',
-    rejected: !draggableTarget
-  });
+  // If clicking an already selected element, allow it to be dragged even if findDraggableElement would reject it
+  const isAlreadySelected = target.classList.contains('editor-selected');
   
-  if (!draggableTarget) {
-    console.log('❌ Element rejected by findDraggableElement');
+  if (!isAlreadySelected) {
+    const draggableTarget = findDraggableElement(target);
+    
+    console.log('🔍 findDraggableElement result:', {
+      original: target.tagName,
+      draggable: draggableTarget?.tagName || 'NULL',
+      rejected: !draggableTarget
+    });
+    
+    if (!draggableTarget) {
+      console.log('❌ Element rejected by findDraggableElement');
+      return;
+    }
+    
+    target = draggableTarget;
+  } else {
+    console.log('✅ Element already selected, allowing drag');
+  }
+  
+  if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
     return;
   }
-        
-        target = draggableTarget;
-        
-        if (['BODY', 'HTML', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'].includes(target.tagName)) {
-          return;
-        }
 
-        e.preventDefault();
-        e.stopPropagation();
+  e.preventDefault();
+  e.stopPropagation();
         
         isMouseDownRef.current = true;
         dragStartedRef.current = false;
