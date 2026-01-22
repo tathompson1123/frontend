@@ -103,48 +103,53 @@ const handleOnboardingSkip = async () => {
   }, []);
 
   // Listen for onboarding step completion
-  useEffect(() => {
-    const handleStepComplete = async (event) => {
-      const { step } = event.detail;
-      
-      // Get current user data
-      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      
-      // Update completed steps
-      const updatedSteps = {
-        ...currentUser.onboarding_steps_completed,
-        [`step${step}`]: true
-      };
-      
-      // Save to backend
-      try {
-        await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            currentStep: step < 6 ? step + 1 : step,
-            completedSteps: updatedSteps
-          })
-        });
-        
-        const updatedUser = {
-  ...currentUser,
-  onboarding_steps_completed: updatedSteps,
-  onboarding_current_step: step < 6 ? step + 1 : step,
-  // Mark onboarding complete when all 6 steps are done
-  onboarding_completed: Object.keys(updatedSteps).length === 6
-};
-localStorage.setItem('user', JSON.stringify(updatedUser));
-
-// Notify components that user was updated
-window.dispatchEvent(new Event('user-updated'))
-        
-        // Show onboarding wizard to guide to next step
-        setShowOnboarding(true);
-      } catch (error) {
-        console.error('Error saving step completion:', error);
-      }
+ const handleStepComplete = async (event) => {
+  const { step } = event.detail;
+  
+  // Get current user data
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  
+  // Update completed steps
+  const updatedSteps = {
+    ...currentUser.onboarding_steps_completed,
+    [`step${step}`]: true
+  };
+  
+  // Count completed steps
+  const completedCount = Object.keys(updatedSteps).filter(key => updatedSteps[key]).length;
+  
+  // Save to backend
+  try {
+    await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        currentStep: step < 6 ? step + 1 : step,
+        completedSteps: updatedSteps
+      })
+    });
+    
+    // Update local storage
+    const updatedUser = {
+      ...currentUser,
+      onboarding_steps_completed: updatedSteps,
+      onboarding_current_step: step < 6 ? step + 1 : step,
+      // Mark onboarding complete when all 6 steps are done
+      onboarding_completed: completedCount === 6
     };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Notify components that user was updated
+    window.dispatchEvent(new Event('user-updated'));
+    
+    // Show onboarding wizard to guide to next step (only if not all done)
+    if (completedCount < 6) {
+      setShowOnboarding(true);
+    }
+  } catch (error) {
+    console.error('Error saving step completion:', error);
+  }
+};
     
     window.addEventListener('onboarding-step-complete', handleStepComplete);
     return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
