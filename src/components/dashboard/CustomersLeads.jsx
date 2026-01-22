@@ -43,27 +43,37 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [editingTableName, setEditingTableName] = useState(null);
   const [newRecord, setNewRecord] = useState({});
 
-  // Get current  from active table
- const getCurrentLeads = () => {
-  const table = leadTables.find(t => t.id === activeLeadTable);
-  return table ? table.leads : [];
-};
+  // Get current leads from active table
+  const getCurrentLeads = () => {
+    const table = leadTables.find(t => t.id === activeLeadTable);
+    return table ? table.leads : [];
+  };
 
-// Update leads in active table
-const setCurrentLeads = (leads) => {
-  setLeadTables(leadTables.map(table => 
-    table.id === activeLeadTable ? { ...table, leads } : table
-  ));
-};
+  // Update leads in active table
+  const setCurrentLeads = (leads) => {
+    setLeadTables(leadTables.map(table => 
+      table.id === activeLeadTable ? { ...table, leads } : table
+    ));
+  };
+
+  const loadSmsConversation = async (leadId) => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/leads/${leadId}/sms-conversation`);
+      const data = await response.json();
+      setSmsConversation(data.messages || []);
+    } catch (error) {
+      console.error('Error loading SMS conversation:', error);
+    }
+  };
 
   const exportToCSV = () => {
-  const data = activeTab === 'leads' ? getCurrentLeads() : customers;
+    const data = activeTab === 'leads' ? getCurrentLeads() : customers;
     if (data.length === 0) {
       alert('No data to export');
       return;
     }
 
-    const headers = activeTab === '' 
+    const headers = activeTab === 'leads' 
       ? ['ID', 'Name', 'Status', 'Phone', 'Email', 'Source', 'Notes']
       : ['ID', 'Name', 'Phone', 'Email', 'Service Booked', 'Service Date', 'Left Review', 'Notes'];
 
@@ -71,7 +81,7 @@ const setCurrentLeads = (leads) => {
     csvRows.push(headers.join(','));
 
     data.forEach(record => {
-      const values = activeTab === ''
+      const values = activeTab === 'leads'
         ? [
             record.id,
             `"${record.name || ''}"`,
@@ -99,8 +109,8 @@ const setCurrentLeads = (leads) => {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    const tableName = activeTab === '' 
-      ? leadTables.find(t => t.id === activeLeadTable)?.name || ''
+    const tableName = activeTab === 'leads' 
+      ? leadTables.find(t => t.id === activeLeadTable)?.name || 'leads'
       : 'customers';
     a.download = `${tableName.toLowerCase().replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
@@ -133,11 +143,11 @@ const setCurrentLeads = (leads) => {
             val.replace(/^"|"$/g, '').trim()
           );
 
-          if (activeTab === '') {
+          if (activeTab === 'leads') {
             const [id, name, status, phone, email, source, notes] = values;
             
             try {
-              const response = await authFetch(`${apiUrl}/api/`, {
+              const response = await authFetch(`${apiUrl}/api/leads`, {
                 method: 'POST',
                 body: JSON.stringify({
                   name: name || '',
@@ -190,10 +200,10 @@ const setCurrentLeads = (leads) => {
 
         alert(`Import complete!\nSuccess: ${successCount}\nErrors: ${errorCount}`);
         if (successCount > 0) {
-  window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-    detail: { step: 3 } 
-  }));
-}
+          window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+            detail: { step: 3 } 
+          }));
+        }
         
         if (activeTab === 'leads') {
           fetchLeads();
@@ -322,16 +332,6 @@ const setCurrentLeads = (leads) => {
           notes: 'Great customer, always on time'
         }
       ]);
-    }
-  };
-
-  const loadSmsConversation = async (leadId) => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/leads/${leadId}/sms-conversation`);
-      const data = await response.json();
-      setSmsConversation(data.messages || []);
-    } catch (error) {
-      console.error('Error loading SMS conversation:', error);
     }
   };
 
@@ -473,9 +473,8 @@ const setCurrentLeads = (leads) => {
           setNewRecord({});
           alert('Lead added successfully!');
           window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-    detail: { step: 3 } 
-  }));
-}
+            detail: { step: 3 } 
+          }));
         } else {
           alert(`Failed to add lead: ${data.error || 'Unknown error'}`);
         }
@@ -501,8 +500,8 @@ const setCurrentLeads = (leads) => {
           setNewRecord({});
           alert('Customer added successfully!');
           window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-    detail: { step: 3 } 
-  }));
+            detail: { step: 3 } 
+          }));
         } else {
           alert(`Failed to add customer: ${data.error || 'Unknown error'}`);
         }
@@ -788,6 +787,9 @@ const setCurrentLeads = (leads) => {
               saveCellEdit={saveCellEdit}
               cancelCellEdit={cancelCellEdit}
               deleteLead={deleteLead}
+              setSelectedLead={setSelectedLead}
+              loadSmsConversation={loadSmsConversation}
+              setShowSmsModal={setShowSmsModal}
             />
           ) : (
             <CustomersTable
@@ -1050,7 +1052,9 @@ const setCurrentLeads = (leads) => {
           </div>
         </div>
       )}
-{showSmsModal && selectedLead && (
+
+      {/* SMS Modal */}
+      {showSmsModal && selectedLead && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
             {/* Header */}
@@ -1146,8 +1150,8 @@ const setCurrentLeads = (leads) => {
   );
 }
 
-// Keep existing table components
-function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead }) {
+// LeadsTable component
+function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead, setSelectedLead, loadSmsConversation, setShowSmsModal }) {
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
@@ -1175,74 +1179,72 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200">
-       {leads.map((lead, idx) => (
-  <tr key={lead.id} className="hover:bg-gray-50">
-    <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
-    {columns.map((col) => (
-      <td key={col.key} className="px-4 py-3 text-sm">
-        {editingCell?.id === lead.id && editingCell?.field === col.key ? (
-          <div className="flex items-center gap-2">
-            {col.type === 'select' ? (
-              <select value={editValue} onChange={(e) => setEditValue(e.target.value)} className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm" autoFocus>
-                <option value="">Select...</option>
-                {col.options.map(opt => <option key={opt} value={opt}>{formatLabel(opt)}</option>)}
-              </select>
-            ) : (
-              <input
-                type="text"
-                value={editValue}
-                onChange={(e) => setEditValue(e.target.value)}
-                className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
-                autoFocus
-                onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
-              />
-            )}
-            <button onClick={saveCellEdit} className="p-1 text-green-600 hover:bg-green-50 rounded"><Save className="w-4 h-4" /></button>
-            <button onClick={cancelCellEdit} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4" /></button>
-          </div>
-        ) : (
-          <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key])} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
-            {col.key === 'status' ? (
-              <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
-            ) : col.key === 'source' ? (
-              <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
-            ) : col.key === 'email' ? (
-              <a href={`mailto:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
-            ) : col.key === 'phone' ? (
-              <a href={`tel:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
-            ) : (
-              lead[col.key] || <span className="text-gray-400">-</span>
-            )}
-          </div>
-        )}
-      </td>
-    ))}
-    <td className="px-4 py-3">
-      <div className="flex items-center gap-2">
-        {/* ⬇️ ADD SMS BUTTON HERE ⬇️ */}
-        {lead.phone && (
-          <button
-            onClick={() => {
-              setSelectedLead(lead);
-              loadSmsConversation(lead.id);
-              setShowSmsModal(true);
-            }}
-            className="p-1 text-green-600 hover:bg-green-50 rounded"
-            title="View SMS Conversation"
-          >
-            <MessageCircle className="w-4 h-4" />
-          </button>
-        )}
-        {/* ⬆️ END SMS BUTTON ⬆️ */}
-        
-        <button onClick={() => deleteLead(lead.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-    </td>
-  </tr>
-))}
-        </tbody>
+        {leads.map((lead, idx) => (
+          <tr key={lead.id} className="hover:bg-gray-50">
+            <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
+            {columns.map((col) => (
+              <td key={col.key} className="px-4 py-3 text-sm">
+                {editingCell?.id === lead.id && editingCell?.field === col.key ? (
+                  <div className="flex items-center gap-2">
+                    {col.type === 'select' ? (
+                      <select value={editValue} onChange={(e) => setEditValue(e.target.value)} className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm" autoFocus>
+                        <option value="">Select...</option>
+                        {col.options.map(opt => <option key={opt} value={opt}>{formatLabel(opt)}</option>)}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
+                      />
+                    )}
+                    <button onClick={saveCellEdit} className="p-1 text-green-600 hover:bg-green-50 rounded"><Save className="w-4 h-4" /></button>
+                    <button onClick={cancelCellEdit} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4" /></button>
+                  </div>
+                ) : (
+                  <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key])} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
+                    {col.key === 'status' ? (
+                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+                    ) : col.key === 'source' ? (
+                      <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+                    ) : col.key === 'email' ? (
+                      <a href={`mailto:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
+                    ) : col.key === 'phone' ? (
+                      <a href={`tel:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
+                    ) : (
+                      lead[col.key] || <span className="text-gray-400">-</span>
+                    )}
+                  </div>
+                )}
+              </td>
+            ))}
+            <td className="px-4 py-3">
+              <div className="flex items-center gap-2">
+                {lead.phone && (
+                  <button
+                    onClick={() => {
+                      setSelectedLead(lead);
+                      loadSmsConversation(lead.id);
+                      setShowSmsModal(true);
+                    }}
+                    className="p-1 text-green-600 hover:bg-green-50 rounded"
+                    title="View SMS Conversation"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                  </button>
+                )}
+                
+                <button onClick={() => deleteLead(lead.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
     </table>
   );
 } 
