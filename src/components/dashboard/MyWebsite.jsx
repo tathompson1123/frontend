@@ -30,6 +30,9 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [selectedDomain, setSelectedDomain] = useState(null);
   const [isPurchasing, setIsPurchasing] = useState(false);
 
+  const [showConnectWebsite, setShowConnectWebsite] = useState(false);
+  const [existingWebsiteUrl, setExistingWebsiteUrl] = useState('');
+
   useEffect(() => {
     if (websiteData) {
       setCurrentWebsite(websiteData.html_content);
@@ -56,10 +59,14 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     }
   };
 
-  const handleRegenerateWebsite = (e) => {
-    e.preventDefault();
-    navigate('/loading', { state: { formData: websiteForm } });
-  };
+ const handleRegenerateWebsite = (e) => {
+  e.preventDefault();
+  
+  // Store that we should trigger completion after generation
+  sessionStorage.setItem('trigger-onboarding-step-1', 'true');
+  
+  navigate('/loading', { state: { formData: websiteForm } });
+};
 
   const deployWebsite = async () => {
     setIsDeploying(true);
@@ -81,6 +88,41 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       setIsDeploying(false);
     }
   };
+
+  // After your other functions (deployWebsite, etc.)
+
+const handleConnectExistingWebsite = async () => {
+  if (!existingWebsiteUrl.trim()) {
+    alert('Please enter a website URL');
+    return;
+  }
+
+  try {
+    const response = await authFetch(`${apiUrl}/api/website/connect-existing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: existingWebsiteUrl.trim() })
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      setCurrentWebsite(data.html_content);
+      setShowConnectWebsite(false);
+      alert('✅ Website connected! You can now manage it from your dashboard.');
+      
+      // Trigger step 1 completion
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+        detail: { step: 1 } 
+      }));
+    } else {
+      const error = await response.json();
+      alert('Failed to connect website: ' + (error.error || 'Unknown error'));
+    }
+  } catch (error) {
+    console.error('Error connecting website:', error);
+    alert('Failed to connect website');
+  }
+};
 
   // Search for available domains
   const searchDomains = async () => {
@@ -565,15 +607,27 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No website yet</h3>
-          <p className="text-gray-600 mb-6">Generate your first AI-powered website</p>
-          <button 
-            type="button" 
-            onClick={() => setShowEditWebsite(true)} 
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center gap-2"
-          >
-            <RefreshCw className="w-5 h-5" />
-            Generate Website
-          </button>
+          <p className="text-gray-600 mb-6">Generate an AI-powered website or connect your existing one</p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+            <button 
+              type="button" 
+              onClick={() => setShowEditWebsite(true)} 
+              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Generate New Website
+            </button>
+            
+            <button 
+              type="button" 
+              onClick={() => setShowConnectWebsite(true)} 
+              className="flex-1 bg-white border-2 border-purple-600 text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-purple-50 transition-all inline-flex items-center justify-center gap-2"
+            >
+              <Link className="w-5 h-5" />
+              Connect Existing Website
+            </button>
+          </div>
         </div>
       )}
 
@@ -1124,6 +1178,67 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+{/* Connect Existing Website Modal */}
+      {showConnectWebsite && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8">
+            <div className="flex justify-between items-start mb-6">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Connect Your Website</h2>
+                <p className="text-gray-600 text-sm mt-1">Enter your website URL to import it</p>
+              </div>
+              <button 
+                onClick={() => setShowConnectWebsite(false)} 
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Website URL
+                </label>
+                <input
+                  type="url"
+                  value={existingWebsiteUrl}
+                  onChange={(e) => setExistingWebsiteUrl(e.target.value)}
+                  placeholder="https://yourbusiness.com"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                />
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <p className="text-sm text-gray-700">
+                  <strong>How it works:</strong>
+                </p>
+                <ul className="text-sm text-gray-600 mt-2 space-y-1 list-disc list-inside">
+                  <li>We'll fetch your website's HTML</li>
+                  <li>Make it editable in our visual editor</li>
+                  <li>You can deploy it to our hosting or keep your current setup</li>
+                </ul>
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => setShowConnectWebsite(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleConnectExistingWebsite}
+                  disabled={!existingWebsiteUrl.trim()}
+                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
+                >
+                  Connect Website
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
