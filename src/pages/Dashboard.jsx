@@ -28,7 +28,6 @@ import BusinessInformation from '../components/dashboard/BusinessInformation';
 import Analytics from '../components/dashboard/Analytics';
 import Billing from '../components/dashboard/Billing';
 import SettingsPage from '../components/dashboard/Settings';
-import OnboardingWizard from '../components/dashboard/OnboardingWizard';
 
 // Helper function for authenticated API calls
 const authFetch = async (url, options = {}) => {
@@ -57,7 +56,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('overview');
-  const [showOnboarding, setShowOnboarding] = useState(false);
   
   // Handle URL tab parameter
   useEffect(() => {
@@ -77,26 +75,8 @@ export default function Dashboard() {
   const [websiteData, setWebsiteData] = useState(null);
   const [googleBusinessData, setGoogleBusinessData] = useState(null);
 
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-  // Listen for navigation events from onboarding
-  useEffect(() => {
-    const handleNavigate = (event) => {
-      setCurrentView(event.detail.view);
-      setShowOnboarding(false);
-    };
-
-    window.addEventListener('navigate-to-view', handleNavigate);
-    return () => window.removeEventListener('navigate-to-view', handleNavigate);
-  }, []);
-
-  // Check if should show onboarding
-  useEffect(() => {
-    if (user && !user.onboarding_completed) {
-      setShowOnboarding(true);
-    }
-  }, [user]);
 
   // Fetch functions
   const fetchServices = async () => {
@@ -128,6 +108,13 @@ export default function Dashboard() {
       console.error('Error fetching business hours:', error);
     }
   };
+
+  useEffect(() => {
+    // Redirect to billing if no plan selected
+    if (user && !user.plan && currentView !== 'billing') {
+      setCurrentView('billing');
+    }
+  }, [user, currentView]);
 
   // Fetch initial data on mount
   useEffect(() => {
@@ -164,7 +151,6 @@ export default function Dashboard() {
             websitePublished: websiteDataRes.website.is_published || false
           };
           localStorage.setItem('user', JSON.stringify(updatedUser));
-          setUser(updatedUser);
         }
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -178,31 +164,6 @@ export default function Dashboard() {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/');
-  };
-
-  const handleOnboardingComplete = async () => {
-    setShowOnboarding(false);
-    // Refresh user data
-    try {
-      const response = await authFetch(`${apiUrl}/api/auth/verify`, {
-        method: 'POST',
-        body: JSON.stringify({ token: localStorage.getItem('token') })
-      });
-      const data = await response.json();
-      if (data.success) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setUser(data.user);
-      }
-    } catch (error) {
-      console.error('Error refreshing user:', error);
-    }
-  };
-
-  const handleOnboardingSkip = () => {
-    setShowOnboarding(false);
-    const updatedUser = { ...user, onboarding_completed: true, onboarding_skipped: true };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
   };
 
   const menuItems = [
@@ -220,17 +181,6 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
-      {/* Onboarding Wizard */}
-      {showOnboarding && (
-        <OnboardingWizard
-          user={user}
-          onComplete={handleOnboardingComplete}
-          onSkip={handleOnboardingSkip}
-          apiUrl={apiUrl}
-          authFetch={authFetch}
-        />
-      )}
-
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         {/* Logo & Toggle */}
