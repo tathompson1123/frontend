@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown } from 'lucide-react';
+import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
@@ -200,181 +200,188 @@ Kurt
           </div>
         )}
 
-        {/* Configuration */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Trigger Settings</h3>
-          
-          <div className="space-y-4 mb-6">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Send Email Response</p>
-                  <p className="text-sm text-gray-600">Immediately when lead form is submitted</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.emailEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, emailEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Send SMS Response</p>
-                  <p className="text-sm text-gray-600">If phone number is provided</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.smsEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, smsEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Follow-up Email</p>
-                  <p className="text-sm text-gray-600">Send if no response after 24 hours</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.followUpEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, followUpEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Auto-Create Booking</p>
-                  <p className="text-sm text-gray-600">Add lead to calendar if service & date mentioned</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.autoBookingEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, autoBookingEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
-          </div>
-
-          {/* Email Template */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Email Template</h3>
-              <span className="text-xs text-gray-500">
-                {`Available variables: {{name}}, {{email}}, {{phone}}, {{service}}, {{message}}`}
-              </span>
-            </div>
-            <textarea
-              value={agentConfig.emailTemplate}
-              onChange={(e) => setAgentConfig({ ...agentConfig, emailTemplate: e.target.value })}
-              rows="12"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-            />
-          </div>
-
-          {/* SMS Template */}
-          <div className="mb-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">SMS Template</h3>
-              <span className="text-xs text-gray-500">Max 160 characters recommended</span>
-            </div>
-            <textarea
-              value={agentConfig.smsTemplate}
-              onChange={(e) => setAgentConfig({ ...agentConfig, smsTemplate: e.target.value })}
-              rows="3"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-              maxLength="320"
-            />
-            <div className="mt-2">
-              <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
-            </div>
-          </div>
-
-          {/* Save Configuration Button */}
-          <button
-            onClick={saveConfiguration}
-            disabled={isSaving}
-            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-          >
-            <Save className="w-5 h-5" />
-            {isSaving ? 'Saving...' : 'Save Configuration'}
-          </button>
-        </div>
-      </div>
-
-      {/* Deploy Section */}
-      <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200 p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Deploy Lead Form Agent</h3>
-            <p className="text-gray-600">
-              {isDeployed 
-                ? 'Your lead form agent is active and will respond to all form submissions automatically.'
-                : 'Deploy this agent to automatically respond to lead form submissions.'}
-            </p>
+        {/* Configuration and Deploy Section - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Configuration - Takes 2/3 width */}
+          <div className="lg:col-span-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Trigger Settings</h3>
             
-            {user?.plan !== 'pro' && !isDeployed && (
-              <div className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mt-4">
-                <Crown className="w-5 h-5 text-amber-600" />
-                <p className="text-sm text-amber-800 font-medium">
-                  Pro Plan required to deploy AI agents
-                </p>
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Send Email Response</p>
+                    <p className="text-sm text-gray-600">Immediately when lead form is submitted</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={agentConfig.emailEnabled}
+                    onChange={(e) => setAgentConfig({ ...agentConfig, emailEnabled: e.target.checked })}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
               </div>
-            )}
-          </div>
-          
-          <FeatureGate 
-            user={user} 
-            feature="ai-agents"
-            onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-          >
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Send SMS Response</p>
+                    <p className="text-sm text-gray-600">If phone number is provided</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={agentConfig.smsEnabled}
+                    onChange={(e) => setAgentConfig({ ...agentConfig, smsEnabled: e.target.checked })}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+                    <Clock className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Follow-up Email</p>
+                    <p className="text-sm text-gray-600">Send if no response after 24 hours</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={agentConfig.followUpEnabled}
+                    onChange={(e) => setAgentConfig({ ...agentConfig, followUpEnabled: e.target.checked })}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">Auto-Create Booking</p>
+                    <p className="text-sm text-gray-600">Add lead to calendar if service & date mentioned</p>
+                  </div>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={agentConfig.autoBookingEnabled}
+                    onChange={(e) => setAgentConfig({ ...agentConfig, autoBookingEnabled: e.target.checked })}
+                    className="sr-only peer" 
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* Email Template */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Email Template</h3>
+                <span className="text-xs text-gray-500">
+                  {`Available variables: {{name}}, {{email}}, {{phone}}, {{service}}, {{message}}`}
+                </span>
+              </div>
+              <textarea
+                value={agentConfig.emailTemplate}
+                onChange={(e) => setAgentConfig({ ...agentConfig, emailTemplate: e.target.value })}
+                rows="12"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+              />
+            </div>
+
+            {/* SMS Template */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">SMS Template</h3>
+                <span className="text-xs text-gray-500">Max 160 characters recommended</span>
+              </div>
+              <textarea
+                value={agentConfig.smsTemplate}
+                onChange={(e) => setAgentConfig({ ...agentConfig, smsTemplate: e.target.value })}
+                rows="3"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                maxLength="320"
+              />
+              <div className="mt-2">
+                <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
+              </div>
+            </div>
+
+            {/* Save Configuration Button */}
             <button
-              onClick={deployAgent}
-              disabled={isDeployed}
-              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all whitespace-nowrap ${
-                isDeployed
-                  ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
-              }`}
+              onClick={saveConfiguration}
+              disabled={isSaving}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
             >
-              <Rocket className="w-4 h-4" />
-              {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+              <Save className="w-5 h-5" />
+              {isSaving ? 'Saving...' : 'Save Configuration'}
             </button>
-          </FeatureGate>
+          </div>
+
+          {/* Deploy Section - Takes 1/3 width */}
+          <div className="lg:col-span-1">
+            <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200 p-6 h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-6 h-6 text-green-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Deploy Agent</h3>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                {isDeployed 
+                  ? 'Your lead form agent is active and will respond to all form submissions automatically.'
+                  : 'Deploy this agent to automatically respond to lead form submissions.'}
+              </p>
+              
+              {user?.plan !== 'pro' && !isDeployed && (
+                <div className="flex items-start gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mb-4">
+                  <Crown className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800 font-medium">
+                    Pro Plan required to deploy AI agents
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-auto">
+                <FeatureGate 
+                  user={user} 
+                  feature="ai-agents"
+                  onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+                >
+                  <button
+                    onClick={deployAgent}
+                    disabled={isDeployed}
+                    className={`w-full px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
+                      isDeployed
+                        ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                    }`}
+                  >
+                    <Rocket className="w-5 h-5" />
+                    {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+                  </button>
+                </FeatureGate>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
