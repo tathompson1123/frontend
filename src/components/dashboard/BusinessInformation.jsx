@@ -184,6 +184,9 @@ export default function BusinessInformation({
       });
       if (!infoResponse.ok) throw new Error('Failed to save business information');
       alert('Business information saved successfully!');
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+      detail: { step: 2 } 
+    }));
     } catch (error) {
       console.error('Error saving:', error);
       alert('Failed to save business information: ' + error.message);
