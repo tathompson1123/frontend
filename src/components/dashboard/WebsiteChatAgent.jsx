@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Crown } from 'lucide-react';
+import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Crown, Sparkles } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
@@ -164,119 +164,126 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
           </div>
         )}
 
-        {/* Configuration */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuration</h3>
-          
-          <div className="space-y-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Agent Name</label>
-              <input
-                type="text"
-                value={agentConfig.agentName}
-                onChange={(e) => setAgentConfig({ ...agentConfig, agentName: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Initial Greeting</label>
-              <textarea
-                value={agentConfig.greetingMessage}
-                onChange={(e) => setAgentConfig({ ...agentConfig, greetingMessage: e.target.value })}
-                rows="3"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Auto-open After (seconds)
-              </label>
-              <input
-                type="number"
-                value={agentConfig.autoOpenDelay}
-                onChange={(e) => setAgentConfig({ ...agentConfig, autoOpenDelay: Number(e.target.value) })}
-                min="0"
-                max="60"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <div className="bg-blue-50 rounded-lg p-4">
-              <h4 className="font-semibold text-gray-900 mb-3">Agent Capabilities</h4>
-              <div className="space-y-2 text-sm text-gray-700">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span>Captures leads automatically (email, phone, name)</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span>Creates bookings and adds to calendar</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span>Answers questions about services and pricing</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span>Provides availability and scheduling options</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Save Configuration Button */}
-            <button
-              onClick={saveConfiguration}
-              disabled={isSaving}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Save className="w-5 h-5" />
-              {isSaving ? 'Saving...' : 'Save Configuration'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Deploy Section */}
-      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Deploy Chat Agent</h3>
-            <p className="text-gray-600">
-              {isDeployed 
-                ? 'Your chat agent is live on your website. Visitors can interact with it in real-time.'
-                : 'Deploy this agent to add an AI-powered chat widget to your website.'}
-            </p>
+        {/* Configuration and Deploy Section - Side by Side */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Configuration - Takes 2/3 width */}
+          <div className="lg:col-span-2">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuration</h3>
             
-            {user?.plan !== 'pro' && !isDeployed && (
-              <div className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mt-4">
-                <Crown className="w-5 h-5 text-amber-600" />
-                <p className="text-sm text-amber-800 font-medium">
-                  Pro Plan required to deploy AI agents
-                </p>
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Agent Name</label>
+                <input
+                  type="text"
+                  value={agentConfig.agentName}
+                  onChange={(e) => setAgentConfig({ ...agentConfig, agentName: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Initial Greeting</label>
+                <textarea
+                  value={agentConfig.greetingMessage}
+                  onChange={(e) => setAgentConfig({ ...agentConfig, greetingMessage: e.target.value })}
+                  rows="3"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Auto-open After (seconds)
+                </label>
+                <input
+                  type="number"
+                  value={agentConfig.autoOpenDelay}
+                  onChange={(e) => setAgentConfig({ ...agentConfig, autoOpenDelay: Number(e.target.value) })}
+                  min="0"
+                  max="60"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="bg-blue-50 rounded-lg p-4">
+                <h4 className="font-semibold text-gray-900 mb-3">Agent Capabilities</h4>
+                <div className="space-y-2 text-sm text-gray-700">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <span>Captures leads automatically (email, phone, name)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <span>Creates bookings and adds to calendar</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <span>Answers questions about services and pricing</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                    <span>Provides availability and scheduling options</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Save Configuration Button */}
+              <button
+                onClick={saveConfiguration}
+                disabled={isSaving}
+                className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                <Save className="w-5 h-5" />
+                {isSaving ? 'Saving...' : 'Save Configuration'}
+              </button>
+            </div>
           </div>
-          
-          <FeatureGate 
-            user={user} 
-            feature="ai-agents"
-            onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-          >
-            <button
-              onClick={deployAgent}
-              disabled={isDeployed}
-              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all whitespace-nowrap ${
-                isDeployed
-                  ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
-              }`}
-            >
-              <Rocket className="w-4 h-4" />
-              {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
-            </button>
-          </FeatureGate>
+
+          {/* Deploy Section - Takes 1/3 width */}
+          <div className="lg:col-span-1">
+            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6 h-full flex flex-col">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="w-6 h-6 text-blue-600" />
+                <h3 className="text-lg font-semibold text-gray-900">Deploy Agent</h3>
+              </div>
+              
+              <p className="text-sm text-gray-600 mb-4">
+                {isDeployed 
+                  ? 'Your chat agent is live on your website. Visitors can interact with it in real-time.'
+                  : 'Deploy this agent to add an AI-powered chat widget to your website.'}
+              </p>
+              
+              {user?.plan !== 'pro' && !isDeployed && (
+                <div className="flex items-start gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mb-4">
+                  <Crown className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-800 font-medium">
+                    Pro Plan required to deploy AI agents
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-auto">
+                <FeatureGate 
+                  user={user} 
+                  feature="ai-agents"
+                  onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+                >
+                  <button
+                    onClick={deployAgent}
+                    disabled={isDeployed}
+                    className={`w-full px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
+                      isDeployed
+                        ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                    }`}
+                  >
+                    <Rocket className="w-5 h-5" />
+                    {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+                  </button>
+                </FeatureGate>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
