@@ -23,6 +23,9 @@ export default function Billing({ user, apiUrl, authFetch }) {
 
       if (response.ok) {
         alert(`Successfully upgraded to ${planId}! 🎉`);
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+    detail: { step: 6 } 
+  }));
         window.location.reload();
       } else {
         alert('Upgrade failed. Please try again.');
