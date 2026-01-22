@@ -295,14 +295,15 @@ export default function Dashboard() {
           )}
 
           {currentView === 'website' && (
-            <MyWebsite 
-              apiUrl={apiUrl} 
-              user={user} 
-              navigate={navigate} 
-              websiteData={websiteData}
-              authFetch={authFetch}
-            />
-          )}
+  <MyWebsite 
+    apiUrl={apiUrl} 
+    user={user} 
+    navigate={navigate} 
+    websiteData={websiteData}
+    authFetch={authFetch}
+    setCurrentView={setCurrentView}  // ← ADD THIS
+  />
+)}
 
           {currentView === 'google-business' && (
             <GoogleBusiness 
