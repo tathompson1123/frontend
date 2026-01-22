@@ -1,52 +1,31 @@
-// LeadFormAgent.jsx
 import { useState, useEffect } from 'react';
-import { Power, Mail, Clock, CheckCircle, TrendingUp, Calendar, Users } from 'lucide-react';
+import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown } from 'lucide-react';
+import FeatureGate from './FeatureGate';
 
-export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView }) {
-  const [isEnabled, setIsEnabled] = useState(true);
-  const [emailTemplate, setEmailTemplate] = useState('');
-  const [smsTemplate, setSmsTemplate] = useState('');
-  const [responseStats, setResponseStats] = useState({
+export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
+  const [agentConfig, setAgentConfig] = useState({
+    emailEnabled: true,
+    smsEnabled: true,
+    followUpEnabled: true,
+    autoBookingEnabled: true,
+    emailTemplate: getDefaultEmailTemplate(),
+    smsTemplate: getDefaultSmsTemplate()
+  });
+  const [stats, setStats] = useState({
     total: 0,
     emailsSent: 0,
     smsSent: 0,
     responseRate: 0,
     bookingsCreated: 0
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    loadTemplates();
+    loadAgentConfig();
     loadStats();
   }, []);
 
-  const loadTemplates = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/templates`);
-      if (response.ok) {
-        const data = await response.json();
-        setEmailTemplate(data.email || getDefaultEmailTemplate());
-        setSmsTemplate(data.sms || getDefaultSmsTemplate());
-      }
-    } catch (error) {
-      console.error('Error loading templates:', error);
-      setEmailTemplate(getDefaultEmailTemplate());
-      setSmsTemplate(getDefaultSmsTemplate());
-    }
-  };
-
-  const loadStats = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/stats`);
-      if (response.ok) {
-        const data = await response.json();
-        setResponseStats(data);
-      }
-    } catch (error) {
-      console.error('Error loading stats:', error);
-    }
-  };
-
-  const getDefaultEmailTemplate = () => {
+  function getDefaultEmailTemplate() {
     return `Hey {{name}},
 
 Thanks for reaching out! I'm Kurt, and I just saw your request come through.
@@ -64,132 +43,202 @@ Looking forward to working with you!
 
 Kurt
 (555) 123-4567`;
-  };
+  }
 
-  const getDefaultSmsTemplate = () => {
+  function getDefaultSmsTemplate() {
     return `Hey {{name}}, it's Kurt! Just got your request for {{service}}. When's a good time to chat? - Kurt`;
-  };
+  }
 
-  const toggleAgent = async () => {
+  const loadAgentConfig = async () => {
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ enabled: !isEnabled })
-      });
+      const response = await authFetch(`${apiUrl}/api/agents/leadform/config`);
       if (response.ok) {
-        setIsEnabled(!isEnabled);
+        const data = await response.json();
+        if (data.config) {
+          setAgentConfig(data.config);
+        }
       }
     } catch (error) {
-      console.error('Error toggling agent:', error);
+      console.error('Error loading config:', error);
     }
   };
 
-  const saveTemplates = async () => {
+  const loadStats = async () => {
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/templates`, {
+      const response = await authFetch(`${apiUrl}/api/agents/leadform/stats`);
+      if (response.ok) {
+        const data = await response.json();
+        setStats(data);
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+    }
+  };
+
+  const saveConfiguration = async () => {
+    setIsSaving(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/leadform/config`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          email: emailTemplate,
-          sms: smsTemplate
-        })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(agentConfig)
       });
       
       if (response.ok) {
-        alert('✅ Templates saved successfully!');
+        alert('✅ Configuration saved successfully!');
       } else {
         const error = await response.json();
         alert('Failed to save: ' + (error.error || 'Unknown error'));
       }
     } catch (error) {
-      console.error('Error saving templates:', error);
-      alert('Failed to save templates');
+      console.error('Error saving config:', error);
+      alert('Failed to save configuration');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deployAgent = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/leadform/deploy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        alert('✅ Lead Form Agent deployed! It will respond to form submissions automatically.');
+        onDeploymentChange();
+        
+        // Trigger step 5 completion
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 5 } 
+        }));
+      }
+    } catch (error) {
+      console.error('Error deploying agent:', error);
+      alert('Failed to deploy agent');
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Action Buttons at Top */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Agent Controls</h3>
+            <p className="text-sm text-gray-600 mt-1">Configure and deploy your lead form agent</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={saveConfiguration}
+              disabled={isSaving}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2 disabled:opacity-50"
+            >
+              <Save className="w-5 h-5" />
+              {isSaving ? 'Saving...' : 'Save Configuration'}
+            </button>
+            
+            <FeatureGate 
+              user={user} 
+              feature="ai-agents"
+              onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+            >
+              <button
+                onClick={deployAgent}
+                disabled={isDeployed}
+                className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                  isDeployed
+                    ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                }`}
+              >
+                <Rocket className="w-5 h-5" />
+                {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+              </button>
+            </FeatureGate>
+          </div>
+        </div>
+      </div>
+
       {/* Status Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Lead Form Agent</h2>
-            <p className="text-gray-600 mt-1">Automatically respond to lead form submissions</p>
+            <p className="text-gray-600 mt-1">
+              {isDeployed 
+                ? 'Automatically responding to lead form submissions' 
+                : 'Configure settings and deploy to activate'}
+            </p>
           </div>
-          <button
-            onClick={toggleAgent}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-              isEnabled
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Power className="w-4 h-4" />
-            {isEnabled ? 'Active' : 'Inactive'}
-          </button>
+          <div className={`px-4 py-2 rounded-lg font-medium ${
+            isDeployed
+              ? 'bg-green-100 text-green-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}>
+            {isDeployed ? '● Deployed' : '○ Not Deployed'}
+          </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-5 gap-4 mb-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-blue-600 mb-2">
-              <Mail className="w-5 h-5" />
-              <span className="text-sm font-medium">Total Responses</span>
+        {isDeployed && (
+          <div className="grid grid-cols-5 gap-4 mb-6">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-blue-600 mb-2">
+                <Mail className="w-5 h-5" />
+                <span className="text-sm font-medium">Total Responses</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+              <p className="text-xs text-gray-600 mt-1">This month</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{responseStats.total}</p>
-            <p className="text-xs text-gray-600 mt-1">This month</p>
-          </div>
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-green-600 mb-2">
-              <CheckCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">Emails Sent</span>
+            <div className="bg-green-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-green-600 mb-2">
+                <CheckCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Emails Sent</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.emailsSent}</p>
+              <p className="text-xs text-gray-600 mt-1">Automated</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{responseStats.emailsSent}</p>
-            <p className="text-xs text-gray-600 mt-1">Automated</p>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-purple-600 mb-2">
-              <Mail className="w-5 h-5" />
-              <span className="text-sm font-medium">SMS Sent</span>
+            <div className="bg-purple-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-purple-600 mb-2">
+                <Mail className="w-5 h-5" />
+                <span className="text-sm font-medium">SMS Sent</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.smsSent}</p>
+              <p className="text-xs text-gray-600 mt-1">Automated</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{responseStats.smsSent}</p>
-            <p className="text-xs text-gray-600 mt-1">Automated</p>
-          </div>
-          <div className="bg-orange-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-orange-600 mb-2">
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-sm font-medium">Response Rate</span>
+            <div className="bg-orange-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-orange-600 mb-2">
+                <TrendingUp className="w-5 h-5" />
+                <span className="text-sm font-medium">Response Rate</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.responseRate}%</p>
+              <button
+                onClick={() => setCurrentView('customers-leads')}
+                className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
+              >
+                View Leads →
+              </button>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{responseStats.responseRate}%</p>
-            <button
-              onClick={() => setCurrentView('customers-leads')}
-              className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
-            >
-              View Leads →
-            </button>
-          </div>
-          <div className="bg-indigo-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-indigo-600 mb-2">
-              <Calendar className="w-5 h-5" />
-              <span className="text-sm font-medium">Bookings</span>
+            <div className="bg-indigo-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-indigo-600 mb-2">
+                <Calendar className="w-5 h-5" />
+                <span className="text-sm font-medium">Bookings</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.bookingsCreated}</p>
+              <button
+                onClick={() => setCurrentView('booking-calendar')}
+                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
+              >
+                View Calendar →
+              </button>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{responseStats.bookingsCreated}</p>
-            <button
-              onClick={() => setCurrentView('booking-calendar')}
-              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
-            >
-              View Calendar →
-            </button>
           </div>
-        </div>
+        )}
 
         {/* Trigger Settings */}
-        <div className="border-t border-gray-200 pt-6 mb-6">
+        <div className={isDeployed ? 'border-t border-gray-200 pt-6 mb-6' : 'mb-6'}>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Trigger Settings</h3>
           
           <div className="space-y-4">
@@ -204,7 +253,12 @@ Kurt
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <input 
+                  type="checkbox" 
+                  checked={agentConfig.emailEnabled}
+                  onChange={(e) => setAgentConfig({ ...agentConfig, emailEnabled: e.target.checked })}
+                  className="sr-only peer" 
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -220,7 +274,12 @@ Kurt
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <input 
+                  type="checkbox" 
+                  checked={agentConfig.smsEnabled}
+                  onChange={(e) => setAgentConfig({ ...agentConfig, smsEnabled: e.target.checked })}
+                  className="sr-only peer" 
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -236,7 +295,12 @@ Kurt
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <input 
+                  type="checkbox" 
+                  checked={agentConfig.followUpEnabled}
+                  onChange={(e) => setAgentConfig({ ...agentConfig, followUpEnabled: e.target.checked })}
+                  className="sr-only peer" 
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -252,7 +316,12 @@ Kurt
                 </div>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" defaultChecked className="sr-only peer" />
+                <input 
+                  type="checkbox" 
+                  checked={agentConfig.autoBookingEnabled}
+                  onChange={(e) => setAgentConfig({ ...agentConfig, autoBookingEnabled: e.target.checked })}
+                  className="sr-only peer" 
+                />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
               </label>
             </div>
@@ -268,8 +337,8 @@ Kurt
             </span>
           </div>
           <textarea
-            value={emailTemplate}
-            onChange={(e) => setEmailTemplate(e.target.value)}
+            value={agentConfig.emailTemplate}
+            onChange={(e) => setAgentConfig({ ...agentConfig, emailTemplate: e.target.value })}
             rows="12"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
           />
@@ -282,59 +351,48 @@ Kurt
             <span className="text-xs text-gray-500">Max 160 characters recommended</span>
           </div>
           <textarea
-            value={smsTemplate}
-            onChange={(e) => setSmsTemplate(e.target.value)}
+            value={agentConfig.smsTemplate}
+            onChange={(e) => setAgentConfig({ ...agentConfig, smsTemplate: e.target.value })}
             rows="3"
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
             maxLength="320"
           />
-          <div className="flex items-center justify-between mt-2">
-            <span className="text-xs text-gray-500">{smsTemplate.length} / 320 characters</span>
-            <button
-              onClick={saveTemplates}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Save Templates
-            </button>
+          <div className="mt-2">
+            <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
           </div>
         </div>
       </div>
 
       {/* How It Works */}
       <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ How It Works</h3>
+        <p className="text-gray-700 mb-4">
+          The Lead Form Agent automatically responds when someone submits a contact form on your website.
+        </p>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              1
-            </div>
+            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">1</div>
             <div>
               <p className="font-medium text-gray-900">Lead submits form</p>
               <p className="text-sm text-gray-600">Lead appears in your Customers & Leads tab with source "lead_form"</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              2
-            </div>
+            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">2</div>
             <div>
               <p className="font-medium text-gray-900">Instant automated response</p>
               <p className="text-sm text-gray-600">Email and/or SMS sent within seconds using your templates</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              3
-            </div>
+            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">3</div>
             <div>
               <p className="font-medium text-gray-900">Auto-create booking (if enabled)</p>
               <p className="text-sm text-gray-600">If service and date are mentioned, booking is created in your calendar</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              4
-            </div>
+            <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">4</div>
             <div>
               <p className="font-medium text-gray-900">Follow-up if needed</p>
               <p className="text-sm text-gray-600">Automatic follow-up email after 24 hours if no response</p>
