@@ -1,263 +1,408 @@
-const express = require('express');
-const router = express.Router();
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const { pool } = require('../config/database');
-const { EFFECTIVE_JWT_SECRET, authenticateToken } = require('../config/middleware');
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Home,
+  Calendar,
+  Globe,
+  MapPin,
+  Briefcase,
+  Users,
+  Clock,
+  TrendingUp,
+  CreditCard,
+  Settings,
+  LogOut,
+  Menu,
+  X,
+  Bot
+} from 'lucide-react';
 
-// POST - Signup
-router.post('/signup', async (req, res) => {
-  try {
-    const { email, password, businessName, fullName } = req.body;
+// Component imports
+import Overview from '../components/dashboard/Overview';
+import MyWebsite from '../components/dashboard/MyWebsite';
+import BookingCalendar from '../components/dashboard/BookingCalendar';
+import CustomersLeads from '../components/dashboard/CustomersLeads';
+import AIAgents from '../components/dashboard/AIAgents';
+import GoogleBusiness from '../components/dashboard/GoogleBusiness';
+import BusinessInformation from '../components/dashboard/BusinessInformation';
+import Analytics from '../components/dashboard/Analytics';
+import Billing from '../components/dashboard/Billing';
+import SettingsPage from '../components/dashboard/Settings';
+import OnboardingWizard from '../components/dashboard/OnboardingWizard';
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    const existing = await pool.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email.toLowerCase()]
-    );
-
-    if (existing.rows.length > 0) {
-      return res.status(409).json({ error: 'Email already registered' });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 12);
-
-    const result = await pool.query(
-      `INSERT INTO users (
-        email, password_hash, name, business_name, plan, 
-        onboarding_completed, onboarding_current_step, 
-        onboarding_steps_completed, created_at
-      )
-       VALUES ($1, $2, $3, $4, NULL, false, 1, $5, CURRENT_TIMESTAMP)
-       RETURNING id, email, name, business_name, plan, 
-                 onboarding_completed, onboarding_current_step, onboarding_steps_completed`,
-      [
-        email.toLowerCase(), 
-        hashedPassword, 
-        fullName || businessName || 'User',
-        businessName || 'My Business',
-        JSON.stringify({step1: false, step2: false, step3: false, step4: false, step5: false, step6: false})
-      ]
-    );
-
-    const user = result.rows[0];
-    const token = jwt.sign({ userId: user.id, email: user.email }, EFFECTIVE_JWT_SECRET, { expiresIn: '7d' });
-
-    console.log('✅ New user signed up (no plan, onboarding pending):', email);
-
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        businessName: user.business_name,
-        plan: user.plan,
-        onboarding_completed: user.onboarding_completed,
-        onboarding_current_step: user.onboarding_current_step,
-        onboarding_steps_completed: user.onboarding_steps_completed
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Signup error:', error);
-    res.status(500).json({ error: 'Registration failed', message: error.message });
-  }
-});
-
-// POST - Login
-router.post('/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
-
-    const result = await pool.query(
-      `SELECT id, email, password_hash, business_name, plan,
-              onboarding_completed, onboarding_current_step, onboarding_steps_completed
-       FROM users WHERE email = $1`,
-      [email.toLowerCase()]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const user = result.rows[0];
-    const passwordMatch = await bcrypt.compare(password, user.password_hash);
-
-    if (!passwordMatch) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const token = jwt.sign({ userId: user.id, email: user.email }, EFFECTIVE_JWT_SECRET, { expiresIn: '7d' });
-
-    console.log('✅ User logged in:', email);
-
-    res.json({
-      success: true,
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        businessName: user.business_name,
-        plan: user.plan,
-        onboarding_completed: user.onboarding_completed,
-        onboarding_current_step: user.onboarding_current_step,
-        onboarding_steps_completed: user.onboarding_steps_completed
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Login error:', error);
-    res.status(500).json({ error: 'Login failed', message: error.message });
-  }
-});
-
-// POST - Verify token
-router.post('/verify', async (req, res) => {
-  try {
-    const { token } = req.body;
-
-    if (!token) {
-      return res.status(401).json({ error: 'No token provided' });
-    }
-
-    const decoded = jwt.verify(token, EFFECTIVE_JWT_SECRET);
-
-    const result = await pool.query(
-      `SELECT id, email, business_name, plan,
-              onboarding_completed, onboarding_current_step, onboarding_steps_completed
-       FROM users WHERE id = $1`,
-      [decoded.userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: 'User not found' });
-    }
-
-    const user = result.rows[0];
-
-    res.json({
-      success: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        businessName: user.business_name,
-        plan: user.plan,
-        onboarding_completed: user.onboarding_completed,
-        onboarding_current_step: user.onboarding_current_step,
-        onboarding_steps_completed: user.onboarding_steps_completed
-      }
-    });
-
-  } catch (error) {
-    console.error('❌ Verify error:', error);
-    res.status(401).json({ error: 'Invalid token' });
-  }
-});
-
-// POST - Logout
-router.post('/logout', async (req, res) => {
-  res.json({ 
-    success: true, 
-    message: 'Logged out successfully' 
+// Helper function for authenticated API calls
+const authFetch = async (url, options = {}) => {
+  const token = localStorage.getItem('token');
+  
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      ...options.headers,
+    },
   });
-});
 
-// Onboarding Routes
-
-// POST - Save onboarding progress
-router.post('/onboarding/progress', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-    const { currentStep, completedSteps } = req.body;
-
-    await pool.query(
-      `UPDATE users 
-       SET onboarding_current_step = $1,
-           onboarding_steps_completed = $2
-       WHERE id = $3`,
-      [currentStep, JSON.stringify(completedSteps), userId]
-    );
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error saving onboarding progress:', error);
-    res.status(500).json({ error: 'Failed to save progress' });
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.location.href = '/login';
+    throw new Error('Unauthorized');
   }
-});
 
-// POST - Skip onboarding
-router.post('/onboarding/skip', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
+  return response;
+};
 
-    await pool.query(
-      `UPDATE users 
-       SET onboarding_skipped = true,
-           onboarding_completed = true,
-           onboarding_completed_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error skipping onboarding:', error);
-    res.status(500).json({ error: 'Failed to skip onboarding' });
-  }
-});
-
-// POST - Complete onboarding
-router.post('/onboarding/complete', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-
-    await pool.query(
-      `UPDATE users 
-       SET onboarding_completed = true,
-           onboarding_completed_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [userId]
-    );
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error completing onboarding:', error);
-    res.status(500).json({ error: 'Failed to complete onboarding' });
-  }
-});
-
-// GET - Get onboarding status
-router.get('/onboarding/status', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.userId;
-
-    const result = await pool.query(
-      `SELECT onboarding_completed, onboarding_current_step, 
-              onboarding_skipped, onboarding_steps_completed
-       FROM users WHERE id = $1`,
-      [userId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentView, setCurrentView] = useState('overview');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  // Handle URL tab parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setCurrentView(tab);
+      window.history.replaceState({}, '', '/dashboard');
     }
+  }, []);
+  
+  // Shared state
+  const [services, setServices] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [businessHours, setBusinessHours] = useState([]);
+  const [websiteData, setWebsiteData] = useState(null);
+  const [googleBusinessData, setGoogleBusinessData] = useState(null);
 
-    res.json({
-      success: true,
-      onboarding: result.rows[0]
-    });
-  } catch (error) {
-    console.error('Error getting onboarding status:', error);
-    res.status(500).json({ error: 'Failed to get status' });
-  }
-});
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-module.exports = router;
+  // Listen for navigation events from onboarding
+  useEffect(() => {
+    const handleNavigate = (event) => {
+      setCurrentView(event.detail.view);
+      setShowOnboarding(false);
+    };
+
+    window.addEventListener('navigate-to-view', handleNavigate);
+    return () => window.removeEventListener('navigate-to-view', handleNavigate);
+  }, []);
+
+  // Check if should show onboarding
+  useEffect(() => {
+    if (user && !user.onboarding_completed) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
+  // Fetch functions
+  const fetchServices = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/services`);
+      const data = await response.json();
+      setServices(data.services || []);
+    } catch (error) {
+      console.error('Error fetching services:', error);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/employees`);
+      const data = await response.json();
+      setEmployees(data.employees || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchBusinessHours = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/business-hours`);
+      const data = await response.json();
+      setBusinessHours(data.hours || []);
+    } catch (error) {
+      console.error('Error fetching business hours:', error);
+    }
+  };
+
+  // Fetch initial data on mount
+  useEffect(() => {
+    const fetchInitialData = async () => {
+      try {
+        const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes, googleBusinessRes] = await Promise.all([
+          authFetch(`${apiUrl}/api/bookings`),
+          authFetch(`${apiUrl}/api/services`),
+          authFetch(`${apiUrl}/api/employees`),
+          authFetch(`${apiUrl}/api/business-hours`),
+          authFetch(`${apiUrl}/api/website`),
+          authFetch(`${apiUrl}/api/google-business/profile`)
+        ]);
+
+        const bookingsData = await bookingsRes.json();
+        const servicesData = await servicesRes.json();
+        const employeesData = await employeesRes.json();
+        const hoursData = await hoursRes.json();
+        const websiteDataRes = await websiteRes.json();
+        const googleBusinessDataRes = await googleBusinessRes.json();
+
+        setBookings(bookingsData.bookings || []);
+        setServices(servicesData.services || []);
+        setEmployees(employeesData.employees || []);
+        setBusinessHours(hoursData.hours || []);
+        setWebsiteData(websiteDataRes.website || null);
+        setGoogleBusinessData(googleBusinessDataRes.profile || null);
+
+        if (websiteDataRes.website) {
+          const updatedUser = { 
+            ...user, 
+            websiteUrl: websiteDataRes.website.url || null,
+            websiteId: websiteDataRes.website.id || null,
+            websitePublished: websiteDataRes.website.is_published || false
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
+      } catch (error) {
+        console.error('Error fetching initial data:', error);
+      }
+    };
+
+    fetchInitialData();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    navigate('/');
+  };
+
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    // Refresh user data
+    try {
+      const response = await authFetch(`${apiUrl}/api/auth/verify`, {
+        method: 'POST',
+        body: JSON.stringify({ token: localStorage.getItem('token') })
+      });
+      const data = await response.json();
+      if (data.success) {
+        localStorage.setItem('user', JSON.stringify(data.user));
+        setUser(data.user);
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+  };
+
+  const handleOnboardingSkip = () => {
+    setShowOnboarding(false);
+    const updatedUser = { ...user, onboarding_completed: true, onboarding_skipped: true };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
+  const menuItems = [
+    { id: 'overview', icon: Home, label: 'Overview' },
+    { id: 'website', icon: Globe, label: 'My Website' },
+    { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
+    { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
+    { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
+    { id: 'google-business', icon: MapPin, label: 'Google Business' },
+    { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
+    { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
+    { id: 'billing', icon: CreditCard, label: 'Billing' },
+    { id: 'settings', icon: Settings, label: 'Settings' },
+  ];
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      {/* Onboarding Wizard */}
+      {showOnboarding && (
+        <OnboardingWizard
+          user={user}
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingSkip}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+        />
+      )}
+
+      {/* Sidebar */}
+      <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+        {/* Logo & Toggle */}
+        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          {sidebarOpen && (
+            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Dashboard
+            </h1>
+          )}
+          <button
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Navigation Menu */}
+        <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+          {menuItems.map((item) => {
+            const Icon = item.icon;
+            const isLuxuryItem = item.id === 'ai-agents' || item.id === 'google-business';
+            const isActive = currentView === item.id;
+            
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
+                  isActive
+                    ? isLuxuryItem
+                      ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-xl shadow-amber-500/50'
+                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                    : isLuxuryItem
+                      ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md'
+                      : 'text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                {isLuxuryItem && !isActive && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+                  </span>
+                )}
+                <Icon className={`w-5 h-5 flex-shrink-0 ${isLuxuryItem && !isActive ? 'text-amber-600' : ''}`} />
+                {sidebarOpen && (
+                  <span className={`font-medium ${isLuxuryItem && !isActive ? 'font-bold' : ''}`}>
+                    {item.label}
+                  </span>
+                )}
+                {isLuxuryItem && sidebarOpen && !isActive && (
+                  <span className="ml-auto text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">
+                    PRO
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Logout Button */}
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+          <button
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all"
+          >
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {sidebarOpen && <span className="font-medium">Logout</span>}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+        <div className="p-8">
+          {currentView === 'overview' && (
+            <Overview
+              bookings={bookings}
+              services={services}
+              employees={employees}
+              setCurrentView={setCurrentView}
+              user={user}
+            />
+          )}
+
+          {currentView === 'booking-calendar' && (
+            <BookingCalendar
+              apiUrl={apiUrl}
+              user={user}
+              services={services}
+              employees={employees}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'customers-leads' && (
+            <CustomersLeads
+              user={user}
+              setCurrentView={setCurrentView}
+              apiUrl={apiUrl}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'ai-agents' && (
+            <AIAgents
+              user={user}
+              setCurrentView={setCurrentView}
+              apiUrl={apiUrl}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'website' && (
+            <MyWebsite 
+              apiUrl={apiUrl} 
+              user={user} 
+              navigate={navigate} 
+              websiteData={websiteData}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'google-business' && (
+            <GoogleBusiness 
+              apiUrl={apiUrl} 
+              user={user}
+              profileData={googleBusinessData}
+              authFetch={authFetch}
+            />
+          )}
+
+          {/* Consolidated Business Settings - includes Business Info, Services, and Team */}
+          {currentView === 'business-settings' && (
+            <BusinessInformation
+              businessHours={businessHours}
+              setBusinessHours={setBusinessHours}
+              services={services}
+              setServices={setServices}
+              fetchServices={fetchServices}
+              employees={employees}
+              setEmployees={setEmployees}
+              fetchEmployees={fetchEmployees}
+              apiUrl={apiUrl}
+              user={user}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'analytics' && (
+            <Analytics 
+              apiUrl={apiUrl}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'billing' && (
+            <Billing 
+              user={user} 
+              apiUrl={apiUrl}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'settings' && (
+            <SettingsPage 
+              user={user}
+              authFetch={authFetch}
+            />
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
