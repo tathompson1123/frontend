@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Lock, CreditCard } from 'lucide-react';
+import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Crown } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
@@ -58,6 +58,9 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
       
       if (response.ok) {
         alert('✅ Configuration saved successfully!');
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 5 } 
+        }));
       } else {
         const error = await response.json();
         alert('Failed to save: ' + (error.error || 'Unknown error'));
@@ -81,7 +84,6 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
         alert('✅ Chat Agent deployed! It will appear on your published website.');
         onDeploymentChange();
         
-        // Trigger step 5 completion
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
           detail: { step: 5 } 
         }));
@@ -94,45 +96,6 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
 
   return (
     <div className="space-y-6">
-      {/* Action Buttons at Top */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Agent Controls</h3>
-            <p className="text-sm text-gray-600 mt-1">Configure and deploy your chat agent</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={saveConfiguration}
-              disabled={isSaving}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2 disabled:opacity-50"
-            >
-              <Save className="w-5 h-5" />
-              {isSaving ? 'Saving...' : 'Save Configuration'}
-            </button>
-            
-            <FeatureGate 
-              user={user} 
-              feature="ai-agents"
-              onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-            >
-              <button
-                onClick={deployAgent}
-                disabled={isDeployed}
-                className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                  isDeployed
-                    ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
-                }`}
-              >
-                <Rocket className="w-5 h-5" />
-                {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
-              </button>
-            </FeatureGate>
-          </div>
-        </div>
-      </div>
-
       {/* Status Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -155,7 +118,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
 
         {/* Stats */}
         {isDeployed && (
-          <div className="grid grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-200">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center gap-2 text-blue-600 mb-2">
                 <MessageCircle className="w-5 h-5" />
@@ -202,10 +165,10 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
         )}
 
         {/* Configuration */}
-        <div className={isDeployed ? 'border-t border-gray-200 pt-6' : ''}>
+        <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuration</h3>
           
-          <div className="space-y-4">
+          <div className="space-y-4 mb-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Agent Name</label>
               <input
@@ -261,11 +224,63 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
                 </div>
               </div>
             </div>
+
+            {/* Save Configuration Button */}
+            <button
+              onClick={saveConfiguration}
+              disabled={isSaving}
+              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Save className="w-5 h-5" />
+              {isSaving ? 'Saving...' : 'Save Configuration'}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Auto-Integration Notice */}
+      {/* Deploy Section */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-200 p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Deploy Chat Agent</h3>
+            <p className="text-gray-600">
+              {isDeployed 
+                ? 'Your chat agent is live on your website. Visitors can interact with it in real-time.'
+                : 'Deploy this agent to add an AI-powered chat widget to your website.'}
+            </p>
+            
+            {user?.plan !== 'pro' && !isDeployed && (
+              <div className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mt-4">
+                <Crown className="w-5 h-5 text-amber-600" />
+                <p className="text-sm text-amber-800 font-medium">
+                  Pro Plan required to deploy AI agents
+                </p>
+              </div>
+            )}
+          </div>
+          
+          <FeatureGate 
+            user={user} 
+            feature="ai-agents"
+            onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+          >
+            <button
+              onClick={deployAgent}
+              disabled={isDeployed}
+              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all whitespace-nowrap ${
+                isDeployed
+                  ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+              }`}
+            >
+              <Rocket className="w-4 h-4" />
+              {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+            </button>
+          </FeatureGate>
+        </div>
+      </div>
+
+      {/* How It Works */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ How It Works</h3>
         <p className="text-gray-700 mb-4">
