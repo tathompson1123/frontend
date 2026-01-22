@@ -122,20 +122,18 @@ const animateProgress = () => {
     }
   }
 
-  // Complete progress
+  // Complete progress and set state
   setProgress(100);
   setCurrentStep(steps.length);
-  // Redirect to dashboard when done
-  useEffect(() => {
-    if (generatedWebsite) {
-      setTimeout(() => {
-        navigate('/dashboard?tab=website', { 
-          state: { showSuccess: true } 
-        });
-      }, 1500);
-    }
-  }, [generatedWebsite]);
-
+  setGeneratedWebsite(data);
+  
+  // Redirect after delay
+  setTimeout(() => {
+    navigate('/dashboard?tab=website', { 
+      state: { showSuccess: true } 
+    });
+  }, 1500);
+}
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center p-4">
