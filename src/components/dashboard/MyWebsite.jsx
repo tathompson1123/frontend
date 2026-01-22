@@ -459,16 +459,16 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
                   >
                     <button
-                      onClick={deployWebsite}
-                      disabled={isDeploying}
-                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {isDeploying ? (
-                        <><Loader className="w-4 h-4 animate-spin" />Deploying...</>
-                      ) : (
-                        <><Globe className="w-4 h-4" />Deploy Website</>
-                      )}
-                    </button>
+  onClick={deployWebsite}
+  disabled={isDeploying}
+  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+>
+  {isDeploying ? (
+    <><Loader className="w-4 h-4 animate-spin" />Deploying...</>
+  ) : (
+    <><Globe className="w-4 h-4" />Deploy Website</>
+  )}
+</button>
                   </FeatureGate>
                 </div>
               )}
