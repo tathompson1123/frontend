@@ -267,7 +267,7 @@ export default function Dashboard() {
   Widget Test - Should see this
 </div>
 
-{(!user?.onboarding_completed || Object.keys(user?.onboarding_steps_completed || {}).length < 6) && (
+{!user?.onboarding_completed && (
   <OnboardingWidget user={user} setCurrentView={setCurrentView} />
 )}
 
@@ -344,7 +344,7 @@ export default function Dashboard() {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? 'mr-72' : ''}`}>
+     <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? 'mr-72' : ''}`}>
         <div className="p-8">
           {currentView === 'overview' && (
             <Overview
