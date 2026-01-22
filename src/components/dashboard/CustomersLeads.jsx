@@ -189,6 +189,11 @@ const setCurrentLeads = (leads) => {
         }
 
         alert(`Import complete!\nSuccess: ${successCount}\nErrors: ${errorCount}`);
+        if (successCount > 0) {
+  window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+    detail: { step: 3 } 
+  }));
+}
         
         if (activeTab === 'leads') {
           fetchLeads();
@@ -467,6 +472,10 @@ const setCurrentLeads = (leads) => {
           setShowAddModal(false);
           setNewRecord({});
           alert('Lead added successfully!');
+          window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+    detail: { step: 3 } 
+  }));
+}
         } else {
           alert(`Failed to add lead: ${data.error || 'Unknown error'}`);
         }
@@ -491,6 +500,9 @@ const setCurrentLeads = (leads) => {
           setShowAddModal(false);
           setNewRecord({});
           alert('Customer added successfully!');
+          window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+    detail: { step: 3 } 
+  }));
         } else {
           alert(`Failed to add customer: ${data.error || 'Unknown error'}`);
         }
