@@ -267,8 +267,9 @@ export default function Dashboard() {
   Widget Test - Should see this
 </div>
 
-{/* Onboarding Widget - Always show for testing */}
-<OnboardingWidget user={user} setCurrentView={setCurrentView} />
+{(!user?.onboarding_completed || Object.keys(user?.onboarding_steps_completed || {}).length < 6) && (
+  <OnboardingWidget user={user} setCurrentView={setCurrentView} />
+)}
 
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
