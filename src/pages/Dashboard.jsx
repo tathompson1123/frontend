@@ -62,6 +62,7 @@ export default function Dashboard() {
 
   // DEFINE user AND apiUrl FIRST
 const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+  const [widgetMinimized, setWidgetMinimized] = useState(false);
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   // Shared state
