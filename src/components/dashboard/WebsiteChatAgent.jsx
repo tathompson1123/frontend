@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Power, MessageCircle, TrendingUp, Calendar, Users } from 'lucide-react';
+import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Lock, CreditCard } from 'lucide-react';
+import FeatureGate from './FeatureGate';
 
-export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView }) {
-  const [isEnabled, setIsEnabled] = useState(true);
+export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
   const [agentConfig, setAgentConfig] = useState({
     agentName: 'Kurt',
     greetingMessage: "Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?",
@@ -14,6 +14,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     avgResponse: '2.3s',
     bookingsCreated: 0
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     loadAgentConfig();
@@ -27,7 +28,6 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
         const data = await response.json();
         if (data.config) {
           setAgentConfig(data.config);
-          setIsEnabled(data.config.enabled || false);
         }
       }
     } catch (error) {
@@ -47,39 +47,17 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     }
   };
 
-  const toggleAgent = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/website`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ enabled: !isEnabled })
-      });
-      
-      if (response.ok) {
-        setIsEnabled(!isEnabled);
-        alert(`Agent ${!isEnabled ? 'activated' : 'deactivated'}!`);
-      }
-    } catch (error) {
-      console.error('Error toggling agent:', error);
-      alert('Failed to toggle agent');
-    }
-  };
-
   const saveConfiguration = async () => {
+    setIsSaving(true);
     try {
       const response = await authFetch(`${apiUrl}/api/agents/website/config`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agentConfig)
       });
       
       if (response.ok) {
         alert('✅ Configuration saved successfully!');
-        loadAgentConfig();
       } else {
         const error = await response.json();
         alert('Failed to save: ' + (error.error || 'Unknown error'));
@@ -87,87 +65,149 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     } catch (error) {
       console.error('Error saving config:', error);
       alert('Failed to save configuration');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deployAgent = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/deploy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        alert('✅ Chat Agent deployed! It will appear on your published website.');
+        onDeploymentChange();
+        
+        // Trigger step 5 completion
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 5 } 
+        }));
+      }
+    } catch (error) {
+      console.error('Error deploying agent:', error);
+      alert('Failed to deploy agent');
     }
   };
 
   return (
     <div className="space-y-6">
+      {/* Action Buttons at Top */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Agent Controls</h3>
+            <p className="text-sm text-gray-600 mt-1">Configure and deploy your chat agent</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={saveConfiguration}
+              disabled={isSaving}
+              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2 disabled:opacity-50"
+            >
+              <Save className="w-5 h-5" />
+              {isSaving ? 'Saving...' : 'Save Configuration'}
+            </button>
+            
+            <FeatureGate 
+              user={user} 
+              feature="ai-agents"
+              onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+            >
+              <button
+                onClick={deployAgent}
+                disabled={isDeployed}
+                className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                  isDeployed
+                    ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                }`}
+              >
+                <Rocket className="w-5 h-5" />
+                {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+              </button>
+            </FeatureGate>
+          </div>
+        </div>
+      </div>
+
       {/* Status Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Website Chat Agent</h2>
-            <p className="text-gray-600 mt-1">Automatically integrated with your published website</p>
+            <p className="text-gray-600 mt-1">
+              {isDeployed 
+                ? 'Automatically integrated with your published website' 
+                : 'Configure settings and deploy to activate'}
+            </p>
           </div>
-          <button
-            onClick={toggleAgent}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-              isEnabled
-                ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <Power className="w-4 h-4" />
-            {isEnabled ? 'Active' : 'Inactive'}
-          </button>
+          <div className={`px-4 py-2 rounded-lg font-medium ${
+            isDeployed
+              ? 'bg-green-100 text-green-700'
+              : 'bg-gray-100 text-gray-700'
+          }`}>
+            {isDeployed ? '● Deployed' : '○ Not Deployed'}
+          </div>
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
-          <div className="bg-blue-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-blue-600 mb-2">
-              <MessageCircle className="w-5 h-5" />
-              <span className="text-sm font-medium">Conversations</span>
+        {isDeployed && (
+          <div className="grid grid-cols-4 gap-4 mb-6">
+            <div className="bg-blue-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-blue-600 mb-2">
+                <MessageCircle className="w-5 h-5" />
+                <span className="text-sm font-medium">Conversations</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.conversations}</p>
+              <p className="text-xs text-gray-600 mt-1">This month</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.conversations}</p>
-            <p className="text-xs text-gray-600 mt-1">This month</p>
-          </div>
-          <div className="bg-green-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-green-600 mb-2">
-              <Users className="w-5 h-5" />
-              <span className="text-sm font-medium">Leads Captured</span>
+            <div className="bg-green-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-green-600 mb-2">
+                <Users className="w-5 h-5" />
+                <span className="text-sm font-medium">Leads Captured</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.leadsCaptured}</p>
+              <button
+                onClick={() => setCurrentView('customers-leads')}
+                className="text-xs text-green-600 hover:text-green-700 font-medium mt-1"
+              >
+                View in CRM →
+              </button>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.leadsCaptured}</p>
-            <button
-              onClick={() => setCurrentView('customers-leads')}
-              className="text-xs text-green-600 hover:text-green-700 font-medium mt-1"
-            >
-              View in CRM →
-            </button>
-          </div>
-          <div className="bg-purple-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-purple-600 mb-2">
-              <Calendar className="w-5 h-5" />
-              <span className="text-sm font-medium">Bookings</span>
+            <div className="bg-purple-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-purple-600 mb-2">
+                <Calendar className="w-5 h-5" />
+                <span className="text-sm font-medium">Bookings</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.bookingsCreated}</p>
+              <button
+                onClick={() => setCurrentView('booking-calendar')}
+                className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+              >
+                View Calendar →
+              </button>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.bookingsCreated}</p>
-            <button
-              onClick={() => setCurrentView('booking-calendar')}
-              className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
-            >
-              View Calendar →
-            </button>
-          </div>
-          <div className="bg-orange-50 rounded-lg p-4">
-            <div className="flex items-center gap-2 text-orange-600 mb-2">
-              <TrendingUp className="w-5 h-5" />
-              <span className="text-sm font-medium">Avg Response</span>
+            <div className="bg-orange-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-orange-600 mb-2">
+                <TrendingUp className="w-5 h-5" />
+                <span className="text-sm font-medium">Avg Response</span>
+              </div>
+              <p className="text-2xl font-bold text-gray-900">{stats.avgResponse}</p>
+              <p className="text-xs text-gray-600 mt-1">Instant replies</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{stats.avgResponse}</p>
-            <p className="text-xs text-gray-600 mt-1">Instant replies</p>
           </div>
-        </div>
+        )}
 
         {/* Configuration */}
-        <div className="border-t border-gray-200 pt-6">
+        <div className={isDeployed ? 'border-t border-gray-200 pt-6' : ''}>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Configuration</h3>
           
           <div className="space-y-4">
-            {/* Agent Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Agent Name
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Agent Name</label>
               <input
                 type="text"
                 value={agentConfig.agentName}
@@ -176,11 +216,8 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
               />
             </div>
 
-            {/* Greeting Message */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Initial Greeting
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Initial Greeting</label>
               <textarea
                 value={agentConfig.greetingMessage}
                 onChange={(e) => setAgentConfig({ ...agentConfig, greetingMessage: e.target.value })}
@@ -189,7 +226,6 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
               />
             </div>
 
-            {/* Auto-open Delay */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Auto-open After (seconds)
@@ -204,7 +240,6 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
               />
             </div>
 
-            {/* Capabilities */}
             <div className="bg-blue-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3">Agent Capabilities</h4>
               <div className="space-y-2 text-sm text-gray-700">
@@ -226,68 +261,45 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
                 </div>
               </div>
             </div>
-
-            {/* Save Button */}
-            <button 
-              onClick={saveConfiguration}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Save Configuration
-            </button>
           </div>
         </div>
       </div>
 
       {/* Auto-Integration Notice */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ Automatic Integration</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ How It Works</h3>
         <p className="text-gray-700 mb-4">
-          The AI chat agent is automatically integrated with your website when you publish it from the Website tab. 
-          No code installation needed!
+          The AI chat agent automatically integrates with your published website. No code installation needed!
         </p>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              1
-            </div>
+            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">1</div>
             <div>
               <p className="font-medium text-gray-900">Visitor lands on your website</p>
               <p className="text-sm text-gray-600">The chat widget automatically appears after {agentConfig.autoOpenDelay} seconds</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              2
-            </div>
+            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">2</div>
             <div>
               <p className="font-medium text-gray-900">AI initiates conversation</p>
               <p className="text-sm text-gray-600">{agentConfig.agentName} greets them naturally and asks what they need</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              3
-            </div>
+            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">3</div>
             <div>
               <p className="font-medium text-gray-900">Captures lead information</p>
               <p className="text-sm text-gray-600">Automatically detects and saves contact details to Customers & Leads</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">
-              4
-            </div>
+            <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">4</div>
             <div>
               <p className="font-medium text-gray-900">Books appointments directly</p>
               <p className="text-sm text-gray-600">Can schedule services and add them to your Booking Calendar automatically</p>
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 p-4 bg-white rounded-lg border border-blue-200">
-          <p className="text-sm text-gray-700">
-            💡 <strong>Tip:</strong> Make sure your website is published from the Website tab for the chat agent to be active on your live site.
-          </p>
         </div>
       </div>
     </div>
