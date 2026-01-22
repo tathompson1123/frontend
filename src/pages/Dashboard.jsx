@@ -129,13 +129,15 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
         });
         
         // Update local storage
-        const updatedUser = {
-          ...currentUser,
-          onboarding_steps_completed: updatedSteps,
-          onboarding_current_step: step < 6 ? step + 1 : step
-        };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        
+       const updatedUser = {
+  ...currentUser,
+  onboarding_steps_completed: updatedSteps,
+  onboarding_current_step: step < 6 ? step + 1 : step
+};
+localStorage.setItem('user', JSON.stringify(updatedUser));
+
+// Notify components that user was updated
+window.dispatchEvent(new Event('user-updated'));
         // Show onboarding wizard to guide to next step
         setShowOnboarding(true);
       } catch (error) {
