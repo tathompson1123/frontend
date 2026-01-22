@@ -66,9 +66,9 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
             });
           }
           
-          // Close modal and trigger success callback
+          // Close modal and trigger success callback with user data
           if (onSuccess) {
-            onSuccess();
+            onSuccess(data.user);
           }
         } else {
           // Check if email already exists
@@ -115,9 +115,9 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
             });
           }
           
-          // Close modal and trigger success callback
+          // Close modal and trigger success callback with user data
           if (onSuccess) {
-            onSuccess();
+            onSuccess(data.user);
           }
         } else {
           setError(data.error || 'Login failed. Please check your credentials.');
