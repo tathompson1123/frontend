@@ -59,25 +59,40 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // DEFINE user AND apiUrl FIRST
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  // Shared state
+  const [services, setServices] = useState([]);
+  const [employees, setEmployees] = useState([]);
+  const [bookings, setBookings] = useState([]);
+  const [businessHours, setBusinessHours] = useState([]);
+  const [websiteData, setWebsiteData] = useState(null);
+  const [googleBusinessData, setGoogleBusinessData] = useState(null);
+
+  // Check if onboarding should be shown
   useEffect(() => {
     if (user && !user.onboarding_completed) {
       setShowOnboarding(true);
     }
   }, [user]);
 
+  // Handle onboarding complete
   const handleOnboardingComplete = async () => {
     setShowOnboarding(false);
-    // Refresh user data
     const updatedUser = { ...user, onboarding_completed: true };
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
+  // Handle onboarding skip
   const handleOnboardingSkip = async () => {
     setShowOnboarding(false);
     const updatedUser = { ...user, onboarding_completed: true };
     localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
+  // Listen for navigation events from onboarding
   useEffect(() => {
     const handleNavigate = (event) => {
       setCurrentView(event.detail.view);
@@ -87,7 +102,6 @@ export default function Dashboard() {
     return () => window.removeEventListener('navigate-to-view', handleNavigate);
   }, []);
 
-  
   // Handle URL tab parameter
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -97,17 +111,6 @@ export default function Dashboard() {
       window.history.replaceState({}, '', '/dashboard');
     }
   }, []);
-  
-  // Shared state
-  const [services, setServices] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [bookings, setBookings] = useState([]);
-  const [businessHours, setBusinessHours] = useState([]);
-  const [websiteData, setWebsiteData] = useState(null);
-  const [googleBusinessData, setGoogleBusinessData] = useState(null);
-
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   // Fetch functions
   const fetchServices = async () => {
@@ -140,8 +143,8 @@ export default function Dashboard() {
     }
   };
 
+  // Redirect to billing if no plan selected
   useEffect(() => {
-    // Redirect to billing if no plan selected
     if (user && !user.plan && currentView !== 'billing') {
       setCurrentView('billing');
     }
