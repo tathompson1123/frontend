@@ -40,9 +40,15 @@ export default function OnboardingWidget({ user, setCurrentView }) {
   const progressPercentage = (completedCount / steps.length) * 100;
 
   if (isDismissed) return null;
+  console.log('OnboardingWidget rendering:', {
+  isMinimized,
+  isDismissed,
+  completedSteps,
+  user
+});
 
   return (
-    <aside className={`fixed top-0 right-0 h-full bg-white shadow-xl transition-all duration-300 z-30 ${isMinimized ? 'w-16' : 'w-72'}`}>
+    <aside className={`fixed top-0 right-0 h-full bg-white shadow-xl transition-all duration-300 z-50 ${isMinimized ? 'w-16' : 'w-72'}`}>
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         {!isMinimized && (
