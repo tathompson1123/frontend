@@ -79,19 +79,17 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     }
   }, [user]);
 
-  // Handle onboarding complete
-  const handleOnboardingComplete = async () => {
-    setShowOnboarding(false);
-    const updatedUser = { ...user, onboarding_completed: true };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-  };
+// Handle onboarding complete
+const handleOnboardingComplete = async () => {
+  setShowOnboarding(false);
+  // Don't set onboarding_completed to true - let the steps system handle it
+};
 
-  // Handle onboarding skip
-  const handleOnboardingSkip = async () => {
-    setShowOnboarding(false);
-    const updatedUser = { ...user, onboarding_completed: true };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-  };
+// Handle onboarding skip
+const handleOnboardingSkip = async () => {
+  setShowOnboarding(false);
+  // Don't set onboarding_completed to true - let the steps system handle it
+};
 
   // Listen for navigation events from onboarding
   useEffect(() => {
@@ -128,16 +126,18 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
           })
         });
         
-        // Update local storage
-       const updatedUser = {
+        const updatedUser = {
   ...currentUser,
   onboarding_steps_completed: updatedSteps,
-  onboarding_current_step: step < 6 ? step + 1 : step
+  onboarding_current_step: step < 6 ? step + 1 : step,
+  // Mark onboarding complete when all 6 steps are done
+  onboarding_completed: Object.keys(updatedSteps).length === 6
 };
 localStorage.setItem('user', JSON.stringify(updatedUser));
 
 // Notify components that user was updated
-window.dispatchEvent(new Event('user-updated'));
+window.dispatchEvent(new Event('user-updated'))
+        
         // Show onboarding wizard to guide to next step
         setShowOnboarding(true);
       } catch (error) {
