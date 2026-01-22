@@ -439,11 +439,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     >
                       <button
                         onClick={handleTogglePublish}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                          isPublished 
-                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                            : 'bg-green-600 text-white hover:bg-green-700'
-                        }`}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${isPublished ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'}`}
                       >
                         {isPublished ? 'Unpublish' : 'Publish'}
                       </button>
@@ -561,7 +557,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     </div>
                   </FeatureGate>
                   </div>
-                </div>
               )}
             </div>
           </div>
