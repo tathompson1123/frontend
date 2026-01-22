@@ -102,15 +102,58 @@ export default function Dashboard() {
     return () => window.removeEventListener('navigate-to-view', handleNavigate);
   }, []);
 
-  // Handle URL tab parameter
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get('tab');
-    if (tab) {
-      setCurrentView(tab);
-      window.history.replaceState({}, '', '/dashboard');
+  const handleStepComplete = async (event) => {
+    const { step } = event.detail;
+    
+    // Get current user data
+    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    
+    // Update completed steps
+    const updatedSteps = {
+      ...currentUser.onboarding_steps_completed,
+      [`step${step}`]: true
+    };
+    
+    // Save to backend
+    try {
+      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentStep: step < 6 ? step + 1 : step,
+          completedSteps: updatedSteps
+        })
+      });
+      
+      // Update local storage
+      const updatedUser = {
+        ...currentUser,
+        onboarding_steps_completed: updatedSteps,
+        onboarding_current_step: step < 6 ? step + 1 : step
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Show onboarding wizard to guide to next step
+      setShowOnboarding(true);
+    } catch (error) {
+      console.error('Error saving step completion:', error);
     }
-  }, []);
+  };
+  
+  window.addEventListener('onboarding-step-complete', handleStepComplete);
+  return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
+}, [apiUrl]);
+
+// Handle URL tab parameter
+useEffect(() => {
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  if (tab) {
+    setCurrentView(tab);
+    window.history.replaceState({}, '', '/dashboard');
+  }
+}, []);
 
   // Fetch functions
   const fetchServices = async () => {
