@@ -279,7 +279,12 @@ useEffect(() => {
       )}
 
 {!user?.onboarding_completed && (
-  <OnboardingWidget user={user} setCurrentView={setCurrentView} />
+  <OnboardingWidget 
+    user={user} 
+    setCurrentView={setCurrentView}
+    isMinimized={widgetMinimized}
+    setIsMinimized={setWidgetMinimized}
+  />
 )}
 
       {/* Sidebar */}
@@ -355,7 +360,7 @@ useEffect(() => {
       </aside>
 
       {/* Main Content */}
-     <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? 'mr-72' : ''}`}>
+     <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? (widgetMinimized ? 'mr-16' : 'mr-72') : ''}`}>
         <div className="p-8">
           {currentView === 'overview' && (
             <Overview
