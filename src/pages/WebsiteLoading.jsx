@@ -94,40 +94,37 @@ const animateProgress = () => {
         throw new Error(data.error || 'Failed to generate website');
       }
 
-      if (data.success && data.html) {
-        // Auto-save
-        if (token) {
-          await fetch(`${apiUrl}/api/website`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-              htmlContent: data.html,
-              pages: data.pages || { 'index.html': data.html }
-            })
-          });
-          console.log('✅ Website auto-saved with all pages');
-        }
-
-        // Complete progress
-        setProgress(100);
-        setCurrentStep(steps.length);
-        
-        setTimeout(() => {
-          setGeneratedWebsite(data.html);
-        }, 500);
-      } else {
-        throw new Error('Invalid response from server');
-      }
-    } catch (err) {
-      console.error('❌ Generation error:', err);
-      setError(err.message || 'Failed to generate website');
-      setProgress(0);
+     if (data.success && data.html) {
+  // Auto-save
+  if (token) {
+    await fetch(`${apiUrl}/api/website`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        htmlContent: data.html,
+        pages: data.pages || { 'index.html': data.html }
+      })
+    });
+    console.log('✅ Website auto-saved with all pages');
+    
+    // Check if we should trigger onboarding step completion
+    if (sessionStorage.getItem('trigger-onboarding-step-1') === 'true') {
+      sessionStorage.removeItem('trigger-onboarding-step-1');
+      
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+        detail: { step: 1 } 
+      }));
+      
+      console.log('✅ Triggered onboarding step 1 completion');
     }
-  };
+  }
 
+  // Complete progress
+  setProgress(100);
+  setCurrentStep(steps.length);
   // Redirect to dashboard when done
   useEffect(() => {
     if (generatedWebsite) {
