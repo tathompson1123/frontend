@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Zap, ShoppingCart, CreditCard } from 'lucide-react';
+import FeatureGate from './FeatureGate';
+
+export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView }) {
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
@@ -431,32 +434,44 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     >
                       {isDeploying ? 'Redeploying...' : 'Redeploy'}
                     </button>
-                    <button
-                      onClick={handleTogglePublish}
-                      className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
-                        isPublished 
-                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}
+                    <FeatureGate 
+                      user={user} 
+                      feature="publish"
+                      onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
                     >
-                      {isPublished ? 'Unpublish' : 'Publish'}
-                    </button>
+                      <button
+                        onClick={handleTogglePublish}
+                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${
+                          isPublished 
+                            ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+                            : 'bg-green-600 text-white hover:bg-green-700'
+                        }`}
+                      >
+                        {isPublished ? 'Unpublish' : 'Publish'}
+                      </button>
+                    </FeatureGate>
                   </div>
                 </div>
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">Deploy your website to make it accessible online</p>
-                  <button
-                    onClick={deployWebsite}
-                    disabled={isDeploying}
-                    className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  <FeatureGate 
+                    user={user} 
+                    feature="deploy"
+                    onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
                   >
-                    {isDeploying ? (
-                      <><Loader className="w-4 h-4 animate-spin" />Deploying...</>
-                    ) : (
-                      <><Globe className="w-4 h-4" />Deploy Website</>
-                    )}
-                  </button>
+                    <button
+                      onClick={deployWebsite}
+                      disabled={isDeploying}
+                      className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isDeploying ? (
+                        <><Loader className="w-4 h-4 animate-spin" />Deploying...</>
+                      ) : (
+                        <><Globe className="w-4 h-4" />Deploy Website</>
+                      )}
+                    </button>
+                  </FeatureGate>
                 </div>
               )}
             </div>
@@ -509,37 +524,44 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">Get your website online with a custom domain</p>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => {
-                        if (!vercelUrl) {
-                          alert('Please deploy your website first');
-                          return;
-                        }
-                        setDomainSetupMode('buy');
-                        setShowDomainSetup(true);
-                      }}
-                      className="bg-purple-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex flex-col items-center justify-center gap-1"
-                    >
-                      <ShoppingCart className="w-5 h-5" />
-                      <span>Buy Domain</span>
-                      <span className="text-xs opacity-90">$15/year</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (!vercelUrl) {
-                          alert('Please deploy your website first');
-                          return;
-                        }
-                        setDomainSetupMode('connect');
-                        setShowDomainSetup(true);
-                      }}
-                      className="bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex flex-col items-center justify-center gap-1"
-                    >
-                      <Link className="w-5 h-5" />
-                      <span>Connect Domain</span>
-                      <span className="text-xs opacity-90">Free hosting</span>
-                    </button>
+                 <FeatureGate 
+                    user={user} 
+                    feature="deploy"
+                    onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+                  >
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => {
+                          if (!vercelUrl) {
+                            alert('Please deploy your website first');
+                            return;
+                          }
+                          setDomainSetupMode('buy');
+                          setShowDomainSetup(true);
+                        }}
+                        className="bg-purple-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-purple-700 transition flex flex-col items-center justify-center gap-1"
+                      >
+                        <ShoppingCart className="w-5 h-5" />
+                        <span>Buy Domain</span>
+                        <span className="text-xs opacity-90">$15/year</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (!vercelUrl) {
+                            alert('Please deploy your website first');
+                            return;
+                          }
+                          setDomainSetupMode('connect');
+                          setShowDomainSetup(true);
+                        }}
+                        className="bg-blue-600 text-white px-4 py-3 rounded-lg text-sm font-medium hover:bg-blue-700 transition flex flex-col items-center justify-center gap-1"
+                      >
+                        <Link className="w-5 h-5" />
+                        <span>Connect Domain</span>
+                        <span className="text-xs opacity-90">Free hosting</span>
+                      </button>
+                    </div>
+                  </FeatureGate>
                   </div>
                 </div>
               )}
