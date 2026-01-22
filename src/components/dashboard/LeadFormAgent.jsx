@@ -86,6 +86,9 @@ Kurt
       
       if (response.ok) {
         alert('✅ Configuration saved successfully!');
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 5 } 
+        }));
       } else {
         const error = await response.json();
         alert('Failed to save: ' + (error.error || 'Unknown error'));
@@ -109,7 +112,6 @@ Kurt
         alert('✅ Lead Form Agent deployed! It will respond to form submissions automatically.');
         onDeploymentChange();
         
-        // Trigger step 5 completion
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
           detail: { step: 5 } 
         }));
@@ -122,45 +124,6 @@ Kurt
 
   return (
     <div className="space-y-6">
-      {/* Action Buttons at Top */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">Agent Controls</h3>
-            <p className="text-sm text-gray-600 mt-1">Configure and deploy your lead form agent</p>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={saveConfiguration}
-              disabled={isSaving}
-              className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center gap-2 disabled:opacity-50"
-            >
-              <Save className="w-5 h-5" />
-              {isSaving ? 'Saving...' : 'Save Configuration'}
-            </button>
-            
-            <FeatureGate 
-              user={user} 
-              feature="ai-agents"
-              onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-            >
-              <button
-                onClick={deployAgent}
-                disabled={isDeployed}
-                className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                  isDeployed
-                    ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
-                }`}
-              >
-                <Rocket className="w-5 h-5" />
-                {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
-              </button>
-            </FeatureGate>
-          </div>
-        </div>
-      </div>
-
       {/* Status Card */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
@@ -183,7 +146,7 @@ Kurt
 
         {/* Stats */}
         {isDeployed && (
-          <div className="grid grid-cols-5 gap-4 mb-6">
+          <div className="grid grid-cols-5 gap-4 mb-6 pb-6 border-b border-gray-200">
             <div className="bg-blue-50 rounded-lg p-4">
               <div className="flex items-center gap-2 text-blue-600 mb-2">
                 <Mail className="w-5 h-5" />
@@ -237,11 +200,11 @@ Kurt
           </div>
         )}
 
-        {/* Trigger Settings */}
-        <div className={isDeployed ? 'border-t border-gray-200 pt-6 mb-6' : 'mb-6'}>
+        {/* Configuration */}
+        <div>
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Trigger Settings</h3>
           
-          <div className="space-y-4">
+          <div className="space-y-4 mb-6">
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -326,40 +289,92 @@ Kurt
               </label>
             </div>
           </div>
-        </div>
 
-        {/* Email Template */}
-        <div className="border-t border-gray-200 pt-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Email Template</h3>
-            <span className="text-xs text-gray-500">
-              {`Available variables: {{name}}, {{email}}, {{phone}}, {{service}}, {{message}}`}
-            </span>
+          {/* Email Template */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Email Template</h3>
+              <span className="text-xs text-gray-500">
+                {`Available variables: {{name}}, {{email}}, {{phone}}, {{service}}, {{message}}`}
+              </span>
+            </div>
+            <textarea
+              value={agentConfig.emailTemplate}
+              onChange={(e) => setAgentConfig({ ...agentConfig, emailTemplate: e.target.value })}
+              rows="12"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+            />
           </div>
-          <textarea
-            value={agentConfig.emailTemplate}
-            onChange={(e) => setAgentConfig({ ...agentConfig, emailTemplate: e.target.value })}
-            rows="12"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-          />
-        </div>
 
-        {/* SMS Template */}
-        <div className="border-t border-gray-200 pt-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">SMS Template</h3>
-            <span className="text-xs text-gray-500">Max 160 characters recommended</span>
+          {/* SMS Template */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">SMS Template</h3>
+              <span className="text-xs text-gray-500">Max 160 characters recommended</span>
+            </div>
+            <textarea
+              value={agentConfig.smsTemplate}
+              onChange={(e) => setAgentConfig({ ...agentConfig, smsTemplate: e.target.value })}
+              rows="3"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+              maxLength="320"
+            />
+            <div className="mt-2">
+              <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
+            </div>
           </div>
-          <textarea
-            value={agentConfig.smsTemplate}
-            onChange={(e) => setAgentConfig({ ...agentConfig, smsTemplate: e.target.value })}
-            rows="3"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-            maxLength="320"
-          />
-          <div className="mt-2">
-            <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
+
+          {/* Save Configuration Button */}
+          <button
+            onClick={saveConfiguration}
+            disabled={isSaving}
+            className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+          >
+            <Save className="w-5 h-5" />
+            {isSaving ? 'Saving...' : 'Save Configuration'}
+          </button>
+        </div>
+      </div>
+
+      {/* Deploy Section */}
+      <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200 p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex-1">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Deploy Lead Form Agent</h3>
+            <p className="text-gray-600">
+              {isDeployed 
+                ? 'Your lead form agent is active and will respond to all form submissions automatically.'
+                : 'Deploy this agent to automatically respond to lead form submissions.'}
+            </p>
+            
+            {user?.plan !== 'pro' && !isDeployed && (
+              <div className="flex items-center gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mt-4">
+                <Crown className="w-5 h-5 text-amber-600" />
+                <p className="text-sm text-amber-800 font-medium">
+                  Pro Plan required to deploy AI agents
+                </p>
+              </div>
+            )}
           </div>
+          
+          <FeatureGate 
+            user={user} 
+            feature="ai-agents"
+            onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+          >
+            <button
+              onClick={deployAgent}
+              disabled={isDeployed}
+              className={`px-6 py-3 rounded-lg font-semibold flex items-center gap-2 transition-all whitespace-nowrap ${
+                isDeployed
+                  ? 'bg-green-100 text-green-700 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+              }`}
+            >
+              <Rocket className="w-4 h-4" />
+              {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+            </button>
+          </FeatureGate>
         </div>
       </div>
 
