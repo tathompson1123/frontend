@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Circle, ChevronRight, ChevronLeft, Sparkles, X } from 'lucide-react';
 
-export default function OnboardingWidget({ user, setCurrentView }) {
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [isDismissed, setIsDismissed] = useState(false);
+export default function OnboardingWidget({ user, setCurrentView, isMinimized, setIsMinimized }) {
   const [completedSteps, setCompletedSteps] = useState({});
 
   useEffect(() => {
@@ -49,34 +47,23 @@ export default function OnboardingWidget({ user, setCurrentView }) {
 
   return (
     <aside className={`fixed top-0 right-0 h-full bg-white shadow-xl transition-all duration-300 z-50 ${isMinimized ? 'w-16' : 'w-72'}`}>
-      {/* Header */}
-      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-        {!isMinimized && (
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-purple-600" />
-            <h2 className="font-bold text-gray-900">Get Started</h2>
-          </div>
-        )}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setIsMinimized(!isMinimized)}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            title={isMinimized ? 'Expand' : 'Minimize'}
-          >
-            {isMinimized ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-          </button>
-          {!isMinimized && (
-            <button
-              onClick={() => setIsDismissed(true)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Dismiss"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-      </div>
-
+    {/* Header */}
+<div className="p-4 border-b border-gray-200 flex items-center justify-between">
+  {!isMinimized && (
+    <div className="flex items-center gap-2">
+      <Sparkles className="w-5 h-5 text-purple-600" />
+      <h2 className="font-bold text-gray-900">Get Started</h2>
+    </div>
+  )}
+  <button
+    onClick={() => setIsMinimized(!isMinimized)}
+    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+    title={isMinimized ? 'Expand' : 'Minimize'}
+  >
+    {isMinimized ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+  </button>
+</div>
+      
       {/* Progress Bar */}
       {!isMinimized && (
         <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50">
