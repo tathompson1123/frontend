@@ -73,22 +73,27 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const [websiteData, setWebsiteData] = useState(null);
   const [googleBusinessData, setGoogleBusinessData] = useState(null);
 
-  // Check if onboarding should be shown
-  useEffect(() => {
-    if (user && !user.onboarding_completed) {
-      setShowOnboarding(true);
-    }
-  }, [user]);
+ // Check if onboarding should be shown - only once on first visit
+useEffect(() => {
+  const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
+  
+  if (user && !user.onboarding_completed && !hasSeenWelcome) {
+    setShowOnboarding(true);
+    localStorage.setItem('hasSeenWelcome', 'true');
+  }
+}, [user]);
 
 // Handle onboarding complete
 const handleOnboardingComplete = async () => {
   setShowOnboarding(false);
+  localStorage.setItem('hasSeenWelcome', 'true');
   // Don't set onboarding_completed to true - let the steps system handle it
 };
 
 // Handle onboarding skip
 const handleOnboardingSkip = async () => {
   setShowOnboarding(false);
+  localStorage.setItem('hasSeenWelcome', 'true');
   // Don't set onboarding_completed to true - let the steps system handle it
 };
 
@@ -145,7 +150,6 @@ useEffect(() => {
       
       // Show onboarding wizard to guide to next step (only if not all done)
       if (completedCount < 6) {
-        setShowOnboarding(true);
       }
     } catch (error) {
       console.error('Error saving step completion:', error);
