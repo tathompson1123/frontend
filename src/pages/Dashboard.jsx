@@ -57,6 +57,36 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('overview');
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    if (user && !user.onboarding_completed) {
+      setShowOnboarding(true);
+    }
+  }, [user]);
+
+  const handleOnboardingComplete = async () => {
+    setShowOnboarding(false);
+    // Refresh user data
+    const updatedUser = { ...user, onboarding_completed: true };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  const handleOnboardingSkip = async () => {
+    setShowOnboarding(false);
+    const updatedUser = { ...user, onboarding_completed: true };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  useEffect(() => {
+    const handleNavigate = (event) => {
+      setCurrentView(event.detail.view);
+    };
+    
+    window.addEventListener('navigate-to-view', handleNavigate);
+    return () => window.removeEventListener('navigate-to-view', handleNavigate);
+  }, []);
+
   
   // Handle URL tab parameter
   useEffect(() => {
@@ -182,6 +212,15 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      {showOnboarding && (
+      <OnboardingWizard
+        user={user}
+        onComplete={handleOnboardingComplete}
+        onSkip={handleOnboardingSkip}
+        apiUrl={apiUrl}
+        authFetch={authFetch}
+      />
+    )}
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         {/* Logo & Toggle */}
