@@ -3,8 +3,6 @@ import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Smartphone, L
 import FeatureGate from './FeatureGate';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView }) {
-
-export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
   const [isPublished, setIsPublished] = useState(false);
   const [devicePreview, setDevicePreview] = useState('desktop');
