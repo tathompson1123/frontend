@@ -61,8 +61,8 @@ export default function Dashboard() {
   const [showOnboarding, setShowOnboarding] = useState(false);
 
   // DEFINE user AND apiUrl FIRST
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
+const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   // Shared state
   const [services, setServices] = useState([]);
@@ -232,6 +232,18 @@ export default function Dashboard() {
     fetchInitialData();
   }, []);
 
+  // Listen for user updates from localStorage
+useEffect(() => {
+  const handleStorageChange = () => {
+    setUser(JSON.parse(localStorage.getItem('user') || '{}'));
+  };
+
+  // Listen for custom event when user is updated
+  window.addEventListener('user-updated', handleStorageChange);
+  
+  return () => window.removeEventListener('user-updated', handleStorageChange);
+}, []);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -262,10 +274,6 @@ export default function Dashboard() {
           authFetch={authFetch}
         />
       )}
-
-      <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded z-50">
-  Widget Test - Should see this
-</div>
 
 {!user?.onboarding_completed && (
   <OnboardingWidget user={user} setCurrentView={setCurrentView} />
