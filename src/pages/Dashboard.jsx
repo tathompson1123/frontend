@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OnboardingWizard from '../components/dashboard/OnboardingWizard';
+import OnboardingWidget from '../components/dashboard/OnboardingWidget';
 import {
   Home,
   Calendar,
@@ -102,58 +103,59 @@ export default function Dashboard() {
     return () => window.removeEventListener('navigate-to-view', handleNavigate);
   }, []);
 
+  // Listen for onboarding step completion
   useEffect(() => {
-  const handleStepComplete = async (event) => {
-    const { step } = event.detail;
-    
-    // Get current user data
-    const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-    
-    // Update completed steps
-    const updatedSteps = {
-      ...currentUser.onboarding_steps_completed,
-      [`step${step}`]: true
+    const handleStepComplete = async (event) => {
+      const { step } = event.detail;
+      
+      // Get current user data
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      
+      // Update completed steps
+      const updatedSteps = {
+        ...currentUser.onboarding_steps_completed,
+        [`step${step}`]: true
+      };
+      
+      // Save to backend
+      try {
+        await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentStep: step < 6 ? step + 1 : step,
+            completedSteps: updatedSteps
+          })
+        });
+        
+        // Update local storage
+        const updatedUser = {
+          ...currentUser,
+          onboarding_steps_completed: updatedSteps,
+          onboarding_current_step: step < 6 ? step + 1 : step
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Show onboarding wizard to guide to next step
+        setShowOnboarding(true);
+      } catch (error) {
+        console.error('Error saving step completion:', error);
+      }
     };
     
-    // Save to backend
-    try {
-      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentStep: step < 6 ? step + 1 : step,
-          completedSteps: updatedSteps
-        })
-      });
-      
-      // Update local storage
-      const updatedUser = {
-        ...currentUser,
-        onboarding_steps_completed: updatedSteps,
-        onboarding_current_step: step < 6 ? step + 1 : step
-      };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-      
-      // Show onboarding wizard to guide to next step
-      setShowOnboarding(true);
-    } catch (error) {
-      console.error('Error saving step completion:', error);
-    }
-  };
-  
-  window.addEventListener('onboarding-step-complete', handleStepComplete);
-  return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
-}, [apiUrl]);
+    window.addEventListener('onboarding-step-complete', handleStepComplete);
+    return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
+  }, [apiUrl]);
 
-// Handle URL tab parameter
-useEffect(() => {
-  const params = new URLSearchParams(window.location.search);
-  const tab = params.get('tab');
-  if (tab) {
-    setCurrentView(tab);
-    window.history.replaceState({}, '', '/dashboard');
-  }
-}, []);
+  // Handle URL tab parameter
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get('tab');
+    if (tab) {
+      setCurrentView(tab);
+      window.history.replaceState({}, '', '/dashboard');
+    }
+  }, []);
 
   // Fetch functions
   const fetchServices = async () => {
@@ -252,14 +254,20 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
       {showOnboarding && (
-      <OnboardingWizard
-        user={user}
-        onComplete={handleOnboardingComplete}
-        onSkip={handleOnboardingSkip}
-        apiUrl={apiUrl}
-        authFetch={authFetch}
-      />
-    )}
+        <OnboardingWizard
+          user={user}
+          onComplete={handleOnboardingComplete}
+          onSkip={handleOnboardingSkip}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+        />
+      )}
+
+      {/* Onboarding Widget */}
+      {!user?.onboarding_completed && (
+        <OnboardingWidget user={user} setCurrentView={setCurrentView} />
+      )}
+
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
         {/* Logo & Toggle */}
@@ -333,7 +341,7 @@ useEffect(() => {
       </aside>
 
       {/* Main Content */}
-      <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+      <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? 'mr-72' : ''}`}>
         <div className="p-8">
           {currentView === 'overview' && (
             <Overview
@@ -374,15 +382,15 @@ useEffect(() => {
           )}
 
           {currentView === 'website' && (
-  <MyWebsite 
-    apiUrl={apiUrl} 
-    user={user} 
-    navigate={navigate} 
-    websiteData={websiteData}
-    authFetch={authFetch}
-    setCurrentView={setCurrentView}  // ← ADD THIS
-  />
-)}
+            <MyWebsite 
+              apiUrl={apiUrl} 
+              user={user} 
+              navigate={navigate} 
+              websiteData={websiteData}
+              authFetch={authFetch}
+              setCurrentView={setCurrentView}
+            />
+          )}
 
           {currentView === 'google-business' && (
             <GoogleBusiness 
@@ -393,7 +401,6 @@ useEffect(() => {
             />
           )}
 
-          {/* Consolidated Business Settings - includes Business Info, Services, and Team */}
           {currentView === 'business-settings' && (
             <BusinessInformation
               businessHours={businessHours}
