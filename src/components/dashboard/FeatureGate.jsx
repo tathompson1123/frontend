@@ -103,7 +103,7 @@ export default function FeatureGate({
         </button>
 
         <p className="text-xs text-gray-500 mt-4">
-          Plans start at just $50/month • Cancel anytime
+          Plans start at just $29/month • Cancel anytime
         </p>
       </div>
     </div>
