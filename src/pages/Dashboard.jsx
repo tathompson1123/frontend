@@ -263,10 +263,12 @@ export default function Dashboard() {
         />
       )}
 
-      {/* Onboarding Widget */}
-      {!user?.onboarding_completed && (
-        <OnboardingWidget user={user} setCurrentView={setCurrentView} />
-      )}
+      <div className="fixed top-4 right-4 bg-red-500 text-white p-4 rounded z-50">
+  Widget Test - Should see this
+</div>
+
+{/* Onboarding Widget - Always show for testing */}
+<OnboardingWidget user={user} setCurrentView={setCurrentView} />
 
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
