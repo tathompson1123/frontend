@@ -61,79 +61,84 @@ const animateProgress = () => {
     generateWebsite(formData);
   }, []);
 
-  const generateWebsite = async (formData) => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-    const token = localStorage.getItem('token');
+const generateWebsite = async (formData) => {
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const token = localStorage.getItem('token');
 
-    // Start progress animation
-    animateProgress();
+  // Start progress animation
+  animateProgress();
 
-    try {
-      const response = await fetch(`${apiUrl}/api/generate`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          businessName: formData.businessName,
-          businessType: formData.businessType,
-          tagline: formData.tagline,
-          services: formData.services,
-          yearsInBusiness: formData.yearsInBusiness,
-          certifications: formData.certifications,
-          description: formData.description,
-          uniqueSellingPoints: formData.uniqueSellingPoints,
-          targetCustomer: formData.targetCustomer
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate website');
-      }
-
-     if (data.success && data.html) {
-  // Auto-save
-  if (token) {
-    await fetch(`${apiUrl}/api/website`, {
+  try {
+    const response = await fetch(`${apiUrl}/api/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify({
-        htmlContent: data.html,
-        pages: data.pages || { 'index.html': data.html }
+        businessName: formData.businessName,
+        businessType: formData.businessType,
+        tagline: formData.tagline,
+        services: formData.services,
+        yearsInBusiness: formData.yearsInBusiness,
+        certifications: formData.certifications,
+        description: formData.description,
+        uniqueSellingPoints: formData.uniqueSellingPoints,
+        targetCustomer: formData.targetCustomer
       })
     });
-    console.log('✅ Website auto-saved with all pages');
-    
-    // Check if we should trigger onboarding step completion
-    if (sessionStorage.getItem('trigger-onboarding-step-1') === 'true') {
-      sessionStorage.removeItem('trigger-onboarding-step-1');
-      
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-        detail: { step: 1 } 
-      }));
-      
-      console.log('✅ Triggered onboarding step 1 completion');
-    }
-  }
 
-  // Complete progress and set state
-  setProgress(100);
-  setCurrentStep(steps.length);
-  setGeneratedWebsite(data);
-  
-  // Redirect after delay
-  setTimeout(() => {
-    navigate('/dashboard?tab=website', { 
-      state: { showSuccess: true } 
-    });
-  }, 1500);
-}
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate website');
+    }
+
+    if (data.success && data.html) {
+      // Auto-save
+      if (token) {
+        await fetch(`${apiUrl}/api/website`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            htmlContent: data.html,
+            pages: data.pages || { 'index.html': data.html }
+          })
+        });
+        console.log('✅ Website auto-saved with all pages');
+        
+        // Check if we should trigger onboarding step completion
+        if (sessionStorage.getItem('trigger-onboarding-step-1') === 'true') {
+          sessionStorage.removeItem('trigger-onboarding-step-1');
+          
+          window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+            detail: { step: 1 } 
+          }));
+          
+          console.log('✅ Triggered onboarding step 1 completion');
+        }
+      }
+
+      // Complete progress and set state
+      setProgress(100);
+      setCurrentStep(steps.length);
+      setGeneratedWebsite(data);
+      
+      // Redirect after delay
+      setTimeout(() => {
+        navigate('/dashboard?tab=website', { 
+          state: { showSuccess: true } 
+        });
+      }, 1500);
+    }
+  } catch (err) {
+    console.error('Website generation error:', err);
+    setError(err.message || 'Something went wrong during website generation');
+  }
+};
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center p-4">
