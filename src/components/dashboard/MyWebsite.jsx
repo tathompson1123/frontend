@@ -669,8 +669,7 @@ const handleConnectExistingWebsite = async () => {
                   Examples: yourbusiness.com, yourname.net
                 </p>
               </div>
-
-              {/* Connect Domain Option */}
+{/* Connect Domain Option */}
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-8 border-2 border-blue-200 hover:shadow-lg transition-all">
                 <div className="flex items-center gap-3 mb-4">
                   <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
@@ -737,6 +736,33 @@ const handleConnectExistingWebsite = async () => {
             </div>
           )}
         </>
+      ) : (
+        <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
+          <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No website yet</h3>
+          <p className="text-gray-600 mb-6">Generate an AI-powered website or connect your existing one</p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center max-w-md mx-auto">
+            <button 
+              type="button" 
+              onClick={() => setShowEditWebsite(true)} 
+              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center justify-center gap-2"
+            >
+              <RefreshCw className="w-5 h-5" />
+              Generate New Website
+            </button>
+            
+            <button 
+              type="button" 
+              onClick={() => setShowConnectWebsite(true)} 
+              className="flex-1 bg-white border-2 border-purple-600 text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-purple-50 transition-all inline-flex items-center justify-center gap-2"
+            >
+              <Link className="w-5 h-5" />
+              Connect Existing Website
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Domain Setup Modal */}
       {showDomainSetup && (
