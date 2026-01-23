@@ -86,10 +86,10 @@ export default function WebsiteGenerator() {
     runStep();
   };
 
- const handleGenerate = async (e, preFilledData = null) => {
-  if (e) e.preventDefault(); // Make this conditional
+const handleGenerate = async (e, preFilledData = null) => {
+  if (e) e.preventDefault();
   
-  const dataToSubmit = preFilledData || formData; // Add this line
+  const dataToSubmit = preFilledData || formData;
   
   setIsGenerating(true);
   setError(null);
@@ -99,72 +99,82 @@ export default function WebsiteGenerator() {
   
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const token = localStorage.getItem('token');
+    
+    // Check if user is logged in
+    if (!token) {
+      setError('Please log in to generate a website');
+      setIsGenerating(false);
+      setProgress(0);
+      setBuildStatus('');
+      navigate('/login');
+      return;
+    }
     
     const response = await fetch(`${apiUrl}/api/website/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}` // ADD THIS LINE
       },
       body: JSON.stringify({
-  businessName: dataToSubmit.businessName,
-  businessType: dataToSubmit.businessType,
-  tagline: dataToSubmit.tagline,
-  services: dataToSubmit.services,
-  yearsInBusiness: dataToSubmit.yearsInBusiness,
-  certifications: dataToSubmit.certifications,
-  description: dataToSubmit.description,
-  uniqueSellingPoints: dataToSubmit.uniqueSellingPoints,
-  targetCustomer: dataToSubmit.targetCustomer
-})
+        businessName: dataToSubmit.businessName,
+        businessType: dataToSubmit.businessType,
+        tagline: dataToSubmit.tagline,
+        services: dataToSubmit.services,
+        yearsInBusiness: dataToSubmit.yearsInBusiness,
+        certifications: dataToSubmit.certifications,
+        description: dataToSubmit.description,
+        uniqueSellingPoints: dataToSubmit.uniqueSellingPoints,
+        targetCustomer: dataToSubmit.targetCustomer
+      })
     });
     
-      const data = await response.json();
+    const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to generate website');
-      }
-
-      if (data.success && data.html) {
-        setBuildStatus('Complete! 🎉');
-        setProgress(100);
-        
-setTimeout(() => {
-  console.log('✅ Setting generated website, length:', data.html.length);
-  console.log('✅ First 200 chars:', data.html.substring(0, 200));
-  setGeneratedWebsite(data.html);
-  
-  // Auto-save if logged in
-  const token = localStorage.getItem('token');
-  if (token) {
-    fetch(`${apiUrl}/api/website`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        htmlContent: data.html,
-        pages: data.pages || { 'index.html': data.html }
-      })
-    }).then(() => console.log('✅ Website auto-saved'))
-      .catch(err => console.error('⚠️ Could not auto-save:', err));
-  }
-  
-  setIsGenerating(false);
-  setError(null);
-}, 500);
-      } else {
-        throw new Error('Invalid response from server');
-      }
-    } catch (err) {
-      console.error('❌ Generation error:', err);
-      setError(err.message || 'Failed to generate website. Please try again.');
-      setIsGenerating(false);
-      setProgress(0);
-      setBuildStatus('');
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to generate website');
     }
-  };
 
+    if (data.success && data.html) {
+      setBuildStatus('Complete! 🎉');
+      setProgress(100);
+      
+      setTimeout(() => {
+        console.log('✅ Setting generated website, length:', data.html.length);
+        console.log('✅ First 200 chars:', data.html.substring(0, 200));
+        setGeneratedWebsite(data.html);
+        
+        // Auto-save if logged in
+        if (token) {
+          fetch(`${apiUrl}/api/website`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              htmlContent: data.html,
+              pages: data.pages || { 'index.html': data.html }
+            })
+          }).then(() => console.log('✅ Website auto-saved'))
+            .catch(err => console.error('⚠️ Could not auto-save:', err));
+        }
+        
+        setIsGenerating(false);
+        setError(null);
+      }, 500);
+    } else {
+      throw new Error('Invalid response from server');
+    }
+  } catch (err) {
+    console.error('❌ Generation error:', err);
+    setError(err.message || 'Failed to generate website. Please try again.');
+    setIsGenerating(false);
+    setProgress(0);
+    setBuildStatus('');
+  }
+};
   const handleSignupSuccess = () => {
     navigate('/dashboard');
   };
