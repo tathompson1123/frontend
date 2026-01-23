@@ -68,10 +68,12 @@ export default function HomePage() {
             <Rocket className="w-4 h-4 text-primary-600" />
             <span className="text-sm font-medium text-gray-700">The All-in-One Platform for Service Businesses</span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            Stop Juggling Tools.<br />
+          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight uppercase">
+            Grow Your Google Reviews,<br />
+            Have AI Talk to Leads,<br />
             <span className="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-              Start Growing.
+              Boost Your Website Rankings<br />
+              And More
             </span>
           </h1>
           <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
