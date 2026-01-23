@@ -46,7 +46,7 @@ export default function AIAgents({ user, setCurrentView, apiUrl, authFetch }) {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-14 h-14 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center">
               <Bot className="w-7 h-7 text-white" />
             </div>
             <div>
@@ -66,7 +66,7 @@ export default function AIAgents({ user, setCurrentView, apiUrl, authFetch }) {
             onClick={() => setActiveTab('chat')}
             className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all relative ${
               activeTab === 'chat'
-                ? 'text-blue-600 bg-blue-50'
+                ? 'text-primary-600 bg-blue-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
@@ -76,14 +76,14 @@ export default function AIAgents({ user, setCurrentView, apiUrl, authFetch }) {
               <span className="w-2 h-2 bg-green-600 rounded-full"></span>
             )}
             {activeTab === 'chat' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
             )}
           </button>
           <button
             onClick={() => setActiveTab('leadform')}
             className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all relative ${
               activeTab === 'leadform'
-                ? 'text-blue-600 bg-blue-50'
+                ? 'text-primary-600 bg-blue-50'
                 : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
             }`}
           >
@@ -93,7 +93,7 @@ export default function AIAgents({ user, setCurrentView, apiUrl, authFetch }) {
               <span className="w-2 h-2 bg-green-600 rounded-full"></span>
             )}
             {activeTab === 'leadform' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
             )}
           </button>
         </div>
