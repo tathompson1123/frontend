@@ -369,7 +369,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
             type="button"
-            onClick={() => setCurrentView('customers')}
+            onClick={() => setCurrentView('customers-leads')}
             className="p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
           >
             <Users className="w-8 h-8 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
