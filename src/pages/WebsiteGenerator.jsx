@@ -100,7 +100,7 @@ export default function WebsiteGenerator() {
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     
-    const response = await fetch(`${apiUrl}/api/generate`, { // Fix: Add parentheses
+    const response = await fetch(`${apiUrl}/api/website/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
