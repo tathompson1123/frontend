@@ -8,7 +8,7 @@ const AIWebsiteBuilder = () => {
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
   const [services, setServices] = useState('');
-  const [colorScheme, setColorScheme] = useState('blue');
+  const [colorScheme, setColorScheme] = useState('terracotta');
   const [description, setDescription] = useState('');
   const [uploadedImages, setUploadedImages] = useState([]);
   const [generatedHTML, setGeneratedHTML] = useState('');
@@ -17,11 +17,11 @@ const AIWebsiteBuilder = () => {
   const [generationStep, setGenerationStep] = useState('');
 
   const colorSchemes = {
+    terracotta: { name: 'Warm Terracotta', from: 'from-primary-600', to: 'to-accent-600', accent: 'bg-primary-600' },
+    teal: { name: 'Deep Teal', from: 'from-teal-600', to: 'to-teal-700', accent: 'bg-teal-600' },
     blue: { name: 'Ocean Blue', from: 'from-blue-600', to: 'to-cyan-600', accent: 'bg-blue-600' },
     purple: { name: 'Royal Purple', from: 'from-purple-600', to: 'to-pink-600', accent: 'bg-purple-600' },
     green: { name: 'Forest Green', from: 'from-green-600', to: 'to-emerald-600', accent: 'bg-green-600' },
-    orange: { name: 'Sunset Orange', from: 'from-orange-600', to: 'to-amber-600', accent: 'bg-orange-600' },
-    red: { name: 'Bold Red', from: 'from-red-600', to: 'to-rose-600', accent: 'bg-red-600' },
     slate: { name: 'Professional Gray', from: 'from-slate-700', to: 'to-gray-800', accent: 'bg-slate-700' }
   };
 
@@ -263,9 +263,9 @@ CRITICAL: Return ONLY the HTML for the body content. No explanations, no markdow
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600">
-      <div className="bg-white/95 backdrop-blur border-b px-8 py-5 flex items-center gap-4 shadow-lg sticky top-0 z-50">
-        <div className="w-12 h-12 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+   <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
+     <div className="bg-white/95 backdrop-blur border-b px-8 py-5 flex items-center gap-4 shadow-lg sticky top-0 z-50">
+        <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center shadow-lg">
           <Wand2 className="text-white" size={24} />
         </div>
         <div>
@@ -277,7 +277,7 @@ CRITICAL: Return ONLY the HTML for the body content. No explanations, no markdow
       <div className="max-w-5xl mx-auto p-8">
         <div className="bg-white rounded-3xl shadow-2xl p-12">
           <div className="text-center mb-12">
-            <h2 className="text-5xl font-extrabold text-gray-900 mb-4">🚀 Let's Build Your Website</h2>
+           <h2 className="text-5xl font-extrabold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent mb-4">🚀 Let's Build Your Website</h2>
             <p className="text-xl text-gray-600">Fill in your business details and we'll create a stunning website for you</p>
           </div>
 
