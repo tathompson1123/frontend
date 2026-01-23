@@ -69,7 +69,7 @@ const generateWebsite = async (formData) => {
   animateProgress();
 
   try {
-    const response = await fetch(`${apiUrl}/api/website/generate`, { // FIXED: Changed from /api/generate
+    const response = await fetch(`${apiUrl}/api/website/generate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -110,20 +110,12 @@ const generateWebsite = async (formData) => {
         });
         console.log('✅ Website auto-saved with all pages');
         
-        // Check if we should trigger onboarding step completion
-const shouldTriggerOnboarding = sessionStorage.getItem('trigger-onboarding-step-1') === 'true';
-const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-const hasCompletedStep1 = currentUser.onboarding_steps_completed?.step1;
-
-if (shouldTriggerOnboarding || !hasCompletedStep1) {
-  sessionStorage.removeItem('trigger-onboarding-step-1');
-  
-  window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-    detail: { step: 1 } 
-  }));
-  
-  console.log('✅ Triggered onboarding step 1 completion');
-}
+        // ALWAYS trigger step 1 completion when website is generated
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 1 } 
+        }));
+        console.log('✅ Triggered onboarding step 1 completion');
+      }
 
       // Complete progress and set state
       setProgress(100);
@@ -142,6 +134,7 @@ if (shouldTriggerOnboarding || !hasCompletedStep1) {
     setError(err.message || 'Something went wrong during website generation');
   }
 };
+  
   if (error) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-red-50 flex items-center justify-center p-4">
