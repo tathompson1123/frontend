@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart } from 'lucide-react';
+import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart, Calendar, Globe, Brain, LineChart } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
 
 export default function HomePage() {
@@ -66,40 +66,40 @@ export default function HomePage() {
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm mb-6">
             <Rocket className="w-4 h-4 text-primary-600" />
-            <span className="text-sm font-medium text-gray-700">Built for Service-Based Businesses</span>
+            <span className="text-sm font-medium text-gray-700">The All-in-One Platform for Service Businesses</span>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-            Your Website Should<br />
+            Stop Juggling Tools.<br />
             <span className="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-              Grow Your Business
+              Start Growing.
             </span>
           </h1>
           <p className="text-xl text-gray-600 mb-10 max-w-3xl mx-auto">
-            Most websites just sit there. SORCE websites actively work to grow your service business with 
-            AI conversations, automated review requests, and SEO blog writing that boosts your rankings.
+            SORCE connects every aspect of your service business in one dashboard—lead flow, Google Business growth, 
+            AI messaging, website SEO, online booking, and market research. Everything you need to grow, without the complexity.
           </p>
           <button
             onClick={handleGetStarted}
             className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all inline-flex items-center gap-2"
           >
             <Wand2 className="w-5 h-5" />
-            Generate Your Website
+            Start Growing Your Business
             <ArrowRight className="w-5 h-5" />
           </button>
           <p className="text-sm text-gray-500 mt-6">
-            ✨ Free to generate • 🚀 Live in 2 minutes • 💎 Upgrade for growth features
+            ✨ Free to start • 🚀 Up and running in minutes • 💎 Built for sustainable growth
           </p>
         </div>
       </section>
 
-      {/* Problems Section */}
+      {/* The Problem Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-            Why Traditional Websites Fail Service Businesses
+            Why Service Businesses Struggle to Grow
           </h2>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Most websites are passive brochures. They don't engage visitors, capture leads, or drive growth.
+            You're drowning in disconnected tools, wasting hours on manual tasks, and missing opportunities daily.
           </p>
         </div>
 
@@ -108,13 +108,13 @@ export default function HomePage() {
             <div className="w-14 h-14 bg-red-100 rounded-xl flex items-center justify-center mb-6">
               <Target className="w-7 h-7 text-red-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Low Engagement Rates</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Tool Chaos</h3>
             <p className="text-gray-600 mb-4">
-              The average website converts only 2-3% of visitors. Without proactive engagement, 
-              97% of your traffic leaves without taking action.
+              Separate tools for booking, website, CRM, reviews, and messaging means constant tab-switching, 
+              duplicate data entry, and things falling through the cracks.
             </p>
             <div className="bg-red-50 rounded-lg p-3 text-sm text-red-900 font-medium">
-              Lost Opportunity: $1,000s in potential revenue monthly
+              Result: Hours wasted daily on admin work
             </div>
           </div>
 
@@ -122,13 +122,13 @@ export default function HomePage() {
             <div className="w-14 h-14 bg-orange-100 rounded-xl flex items-center justify-center mb-6">
               <Users className="w-7 h-7 text-orange-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Limited Availability</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Leaked Leads</h3>
             <p className="text-gray-600 mb-4">
-              Service businesses lose 60% of potential bookings to competitors simply because 
-              customers can't reach them after hours or on weekends.
+              Leads come from your website, Google, social media, and referrals—but without a central system, 
+              you lose track of who needs follow-up and when.
             </p>
             <div className="bg-orange-50 rounded-lg p-3 text-sm text-orange-900 font-medium">
-              Impact: Competitors capture your overflow traffic
+              Impact: 40-60% of leads never get followed up
             </div>
           </div>
 
@@ -136,14 +136,139 @@ export default function HomePage() {
             <div className="w-14 h-14 bg-yellow-100 rounded-xl flex items-center justify-center mb-6">
               <BarChart className="w-7 h-7 text-yellow-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-3">Invisible on Google</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">No Growth Visibility</h3>
             <p className="text-gray-600 mb-4">
-              Without consistent reviews and fresh content, service businesses struggle to rank 
-              on Google Maps and organic search—where 80% of customers find providers.
+              Without seeing your full business in one place, you can't identify what's working, what's not, 
+              or where to focus your energy for maximum growth.
             </p>
             <div className="bg-yellow-50 rounded-lg p-3 text-sm text-yellow-900 font-medium">
-              Result: Customers never see you in search results
+              Consequence: Guessing instead of growing strategically
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* The Solution - Core Platform Benefits */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+            One Dashboard. Your Entire Business.
+          </h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            SORCE integrates everything service businesses need to grow—no more juggling tools or losing opportunities.
+          </p>
+        </div>
+
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Lead Flow Management */}
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-accent-100 rounded-xl flex items-center justify-center mb-6">
+              <Users className="w-7 h-7 text-primary-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Unified Lead Flow</h3>
+            <p className="text-gray-600 mb-4">
+              Every lead—from your website, Google, forms, and AI chat—flows into one place. 
+              See exactly who needs follow-up, when to reach out, and what stage they're in.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-teal-700 font-medium">
+              <Check className="w-4 h-4" />
+              <span>Never lose track of a lead again</span>
+            </div>
+          </div>
+
+          {/* Google Business Growth */}
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-14 h-14 bg-gradient-to-br from-teal-100 to-primary-100 rounded-xl flex items-center justify-center mb-6">
+              <Star className="w-7 h-7 text-teal-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Google Business Growth</h3>
+            <p className="text-gray-600 mb-4">
+              Automatically request reviews after jobs, respond with AI, and watch your Google ranking climb. 
+              More reviews = more visibility = more customers finding you.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-teal-700 font-medium">
+              <Check className="w-4 h-4" />
+              <span>Rank higher on Google Maps</span>
+            </div>
+          </div>
+
+          {/* AI Lead Messaging */}
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-14 h-14 bg-gradient-to-br from-accent-100 to-highlight-100 rounded-xl flex items-center justify-center mb-6">
+              <MessageCircle className="w-7 h-7 text-accent-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">AI Lead Messaging</h3>
+            <p className="text-gray-600 mb-4">
+              Your AI assistant engages website visitors 24/7, qualifies leads while you sleep, 
+              and captures contact info so you can follow up during business hours.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-teal-700 font-medium">
+              <Check className="w-4 h-4" />
+              <span>Convert visitors while you sleep</span>
+            </div>
+          </div>
+
+          {/* Website + SEO */}
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-14 h-14 bg-gradient-to-br from-primary-100 to-teal-100 rounded-xl flex items-center justify-center mb-6">
+              <Globe className="w-7 h-7 text-primary-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Website + SEO Engine</h3>
+            <p className="text-gray-600 mb-4">
+              Your website isn't just pretty—it's a growth machine. AI writes fresh content daily to boost 
+              your Google rankings, bringing in more organic traffic month after month.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-teal-700 font-medium">
+              <Check className="w-4 h-4" />
+              <span>Climb search rankings automatically</span>
+            </div>
+          </div>
+
+          {/* Online Booking */}
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-14 h-14 bg-gradient-to-br from-teal-100 to-accent-100 rounded-xl flex items-center justify-center mb-6">
+              <Calendar className="w-7 h-7 text-teal-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">Comprehensive Booking</h3>
+            <p className="text-gray-600 mb-4">
+              Let customers book online 24/7—directly on your website. Syncs with your calendar, 
+              sends reminders, and eliminates phone tag that wastes your time.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-teal-700 font-medium">
+              <Check className="w-4 h-4" />
+              <span>Get bookings around the clock</span>
+            </div>
+          </div>
+
+          {/* Market Research */}
+          <div className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow">
+            <div className="w-14 h-14 bg-gradient-to-br from-accent-100 to-primary-100 rounded-xl flex items-center justify-center mb-6">
+              <Brain className="w-7 h-7 text-accent-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-3">AI Market Research</h3>
+            <p className="text-gray-600 mb-4">
+              Know exactly what your competitors charge, what customers in your area want, 
+              and how to position your business for maximum growth—powered by AI analysis.
+            </p>
+            <div className="flex items-center gap-2 text-sm text-teal-700 font-medium">
+              <Check className="w-4 h-4" />
+              <span>Make data-driven decisions</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Integration Callout */}
+        <div className="mt-16 bg-gradient-to-r from-primary-600 to-accent-600 rounded-3xl p-12 text-white text-center">
+          <h3 className="text-3xl md:text-4xl font-bold mb-4">
+            The Power Isn't in the Features—It's in the Integration
+          </h3>
+          <p className="text-xl text-primary-100 mb-6 max-w-3xl mx-auto">
+            When your lead flow, booking system, reviews, SEO, and AI messaging all talk to each other, 
+            you get compounding growth. One system feeding the next, working together to drive sustainable results.
+          </p>
+          <div className="inline-flex items-center gap-2 bg-white/20 px-6 py-3 rounded-full">
+            <LineChart className="w-5 h-5" />
+            <span className="font-semibold">Built for long-term, sustainable growth</span>
           </div>
         </div>
       </section>
