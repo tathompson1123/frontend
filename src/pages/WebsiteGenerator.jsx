@@ -100,6 +100,10 @@ const handleGenerate = async (e, preFilledData = null) => {
   try {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
     const token = localStorage.getItem('token');
+
+    console.log('🔍 API URL:', apiUrl);
+    console.log('🔍 Full endpoint:', `${apiUrl}/api/website/generate`);
+    console.log('🔍 Has token:', !!token);
     
     // Check if user is logged in
     if (!token) {
