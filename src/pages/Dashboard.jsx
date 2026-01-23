@@ -410,6 +410,8 @@ useEffect(() => {
               employees={employees}
               setCurrentView={setCurrentView}
               user={user}
+              apiUrl={apiUrl}
+              authFetch={authFetch}
             />
           )}
 
