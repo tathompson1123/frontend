@@ -1,8 +1,36 @@
-import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
+import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight, Building2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
-export default function Overview({ bookings, services, employees, setCurrentView, user }) {
+export default function Overview({ bookings, services, employees, setCurrentView, user, apiUrl, authFetch }) {
   const [weekOffset, setWeekOffset] = useState(0);
+  const [customers, setCustomers] = useState([]);
+  const [leads, setLeads] = useState([]);
+
+  // Fetch customers and leads
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [customersRes, leadsRes] = await Promise.all([
+          authFetch(`${apiUrl}/api/customers`),
+          authFetch(`${apiUrl}/api/leads`)
+        ]);
+        
+        if (customersRes.ok) {
+          const customersData = await customersRes.json();
+          setCustomers(customersData.customers || []);
+        }
+        
+        if (leadsRes.ok) {
+          const leadsData = await leadsRes.json();
+          setLeads(leadsData.leads || []);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+
+    fetchData();
+  }, [apiUrl, authFetch]);
 
   // Calculate date range for current week view
   const getWeekRange = (offset) => {
@@ -37,43 +65,57 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const weekCompleted = weekBookings.filter(b => b.status === 'completed').length;
   const completionRate = weekBookings.length > 0 ? ((weekCompleted / weekBookings.length) * 100).toFixed(1) : 0;
 
+  // Calculate week leads
+  const weekLeads = leads.filter(lead => {
+    const leadDate = new Date(lead.created_at);
+    return leadDate >= startOfWeek && leadDate <= endOfWeek;
+  });
+
+  // Calculate week customers
+  const weekCustomers = customers.filter(customer => {
+    const customerDate = new Date(customer.created_at);
+    return customerDate >= startOfWeek && customerDate <= endOfWeek;
+  });
+
   // Calculate today's bookings
   const today = new Date().toDateString();
   const todayBookings = bookings.filter(b => new Date(b.booking_date).toDateString() === today);
 
-  // Simulated data for features not yet built
+  // Real data stats
   const weekStats = {
     websiteChat: {
-      conversationsStarted: 50,
-      bookingsMade: 5,
-      phoneNumbersCollected: 25,
-      followUpLeads: 25,
-      conversionRate: 10
+      conversationsStarted: weekLeads.filter(l => l.source === 'website_chat').length,
+      bookingsMade: weekBookings.filter(b => b.source === 'website_chat').length,
+      phoneNumbersCollected: weekLeads.filter(l => l.source === 'website_chat' && l.phone).length,
+      followUpLeads: weekLeads.filter(l => l.status === 'new' || l.status === 'contacted').length,
+      conversionRate: weekLeads.length > 0 ? ((weekBookings.filter(b => b.source === 'website_chat').length / weekLeads.filter(l => l.source === 'website_chat').length) * 100).toFixed(0) : 0
     },
     leadForms: {
-      totalSubmissions: 32,
-      emailConversions: 22,
-      smsConversions: 10,
-      qualificationSuccess: 28,
-      costSavings: 4.50
+      totalSubmissions: weekLeads.filter(l => l.source === 'lead_form').length,
+      emailConversions: weekLeads.filter(l => l.source === 'lead_form' && l.email).length,
+      smsConversions: weekLeads.filter(l => l.source === 'lead_form' && l.phone).length,
+      qualificationSuccess: weekLeads.filter(l => l.qualified === true).length,
+      costSavings: (weekLeads.filter(l => l.source === 'lead_form').length * 0.15).toFixed(2)
     },
     newBookings: {
       total: weekBookings.length,
-      fromChat: 5,
-      fromLeadForms: 8,
-      manualEntry: weekBookings.length - 13,
+      fromChat: weekBookings.filter(b => b.source === 'website_chat').length,
+      fromLeadForms: weekBookings.filter(b => b.source === 'lead_form').length,
+      manualEntry: weekBookings.filter(b => !b.source || b.source === 'manual').length,
       revenue: weekRevenue
     },
     reviewSystem: {
-      requestsSent: 12,
-      reviewsReceived: 7,
-      aiRepliesGenerated: 15,
-      responseRate: 58,
-      timeSaved: 1.25
+      requestsSent: weekBookings.filter(b => b.review_request_sent).length,
+      reviewsReceived: weekBookings.filter(b => b.review_received).length,
+      aiRepliesGenerated: weekBookings.filter(b => b.ai_reply_sent).length,
+      responseRate: weekBookings.filter(b => b.review_request_sent).length > 0 
+        ? ((weekBookings.filter(b => b.review_received).length / weekBookings.filter(b => b.review_request_sent).length) * 100).toFixed(0)
+        : 0,
+      timeSaved: (weekBookings.filter(b => b.ai_reply_sent).length * 0.1).toFixed(2)
     }
   };
 
-  const totalLeads = weekStats.websiteChat.conversationsStarted + weekStats.leadForms.totalSubmissions;
+  const totalLeads = weekLeads.length;
 
   return (
     <div className="space-y-6">
@@ -117,18 +159,22 @@ export default function Overview({ bookings, services, employees, setCurrentView
             <div>
               <div className="text-sm text-gray-600 mb-1">Total Leads Captured</div>
               <div className="text-3xl font-bold text-gray-900">{totalLeads}</div>
+              <div className="text-xs text-gray-500 mt-1">+{weekCustomers.length} new customers</div>
             </div>
             <div>
               <div className="text-sm text-gray-600 mb-1">Conversion Rate</div>
               <div className="text-3xl font-bold text-gray-900">{completionRate}%</div>
+              <div className="text-xs text-gray-500 mt-1">{weekCompleted} completed jobs</div>
             </div>
             <div>
               <div className="text-sm text-gray-600 mb-1">Revenue This Week</div>
               <div className="text-3xl font-bold text-gray-900">${weekRevenue.toFixed(0)}</div>
+              <div className="text-xs text-gray-500 mt-1">from {weekBookings.length} bookings</div>
             </div>
             <div>
               <div className="text-sm text-gray-600 mb-1">AI Cost Savings</div>
-              <div className="text-3xl font-bold text-gray-900">${weekStats.leadForms.costSavings.toFixed(2)}</div>
+              <div className="text-3xl font-bold text-gray-900">${weekStats.leadForms.costSavings}</div>
+              <div className="text-xs text-gray-500 mt-1">automated lead qualification</div>
             </div>
           </div>
         </div>
@@ -188,11 +234,11 @@ export default function Overview({ bookings, services, employees, setCurrentView
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Email Conversions</span>
-                <span className="font-bold text-green-600">{weekStats.leadForms.emailConversions} (69%)</span>
+                <span className="font-bold text-green-600">{weekStats.leadForms.emailConversions}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">SMS Conversions</span>
-                <span className="font-bold text-orange-600">{weekStats.leadForms.smsConversions} (31%)</span>
+                <span className="font-bold text-orange-600">{weekStats.leadForms.smsConversions}</span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">AI Qualification Success</span>
@@ -203,7 +249,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="bg-yellow-50 px-3 py-2 rounded-lg text-center">
                 <span className="text-sm font-semibold text-yellow-700">
-                  Cost Savings: ${weekStats.leadForms.costSavings.toFixed(2)} this week
+                  Cost Savings: ${weekStats.leadForms.costSavings} this week
                 </span>
               </div>
             </div>
@@ -323,42 +369,42 @@ export default function Overview({ bookings, services, employees, setCurrentView
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
             type="button"
-            onClick={() => setCurrentView('services')}
+            onClick={() => setCurrentView('customers')}
             className="p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
           >
-            <Briefcase className="w-8 h-8 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Services</h3>
-            <p className="text-sm text-gray-600">Manage offerings</p>
+            <Users className="w-8 h-8 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">Customers & Leads</h3>
+            <p className="text-sm text-gray-600">{customers.length} customers, {leads.length} leads</p>
           </button>
 
           <button
             type="button"
-            onClick={() => setCurrentView('team')}
+            onClick={() => setCurrentView('ai-agents')}
             className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
           >
-            <Users className="w-8 h-8 text-blue-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Team</h3>
-            <p className="text-sm text-gray-600">Manage employees</p>
+            <Bot className="w-8 h-8 text-blue-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">AI Agents</h3>
+            <p className="text-sm text-gray-600">Deploy automation</p>
           </button>
 
           <button
             type="button"
-            onClick={() => setCurrentView('hours')}
+            onClick={() => setCurrentView('google-business')}
             className="p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
           >
-            <Clock className="w-8 h-8 text-green-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Hours</h3>
-            <p className="text-sm text-gray-600">Set availability</p>
+            <Globe className="w-8 h-8 text-green-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">Google Business</h3>
+            <p className="text-sm text-gray-600">Manage profile & reviews</p>
           </button>
 
           <button
             type="button"
-            onClick={() => setCurrentView('website')}
+            onClick={() => setCurrentView('settings')}
             className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
           >
-            <Globe className="w-8 h-8 text-indigo-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Website</h3>
-            <p className="text-sm text-gray-600">Edit your site</p>
+            <Building2 className="w-8 h-8 text-indigo-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">Business Info</h3>
+            <p className="text-sm text-gray-600">Settings & details</p>
           </button>
         </div>
       </div>
