@@ -560,11 +560,6 @@ const handleConnectExistingWebsite = async () => {
               ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">Get your website online with a custom domain</p>
-                 <FeatureGate 
-                    user={user} 
-                    feature="deploy"
-                    onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-                  >
                     <div className="grid grid-cols-2 gap-2">
                       <button
                         onClick={() => {
@@ -583,10 +578,6 @@ const handleConnectExistingWebsite = async () => {
                       </button>
                       <button
                         onClick={() => {
-                          if (!vercelUrl) {
-                            alert('Please deploy your website first');
-                            return;
-                          }
                           setDomainSetupMode('connect');
                           setShowDomainSetup(true);
                         }}
