@@ -310,7 +310,7 @@ useEffect(() => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
       {showOnboarding && (
         <OnboardingWizard
           user={user}
@@ -337,7 +337,7 @@ useEffect(() => {
         {/* Logo & Toggle */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           {sidebarOpen && (
-            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
               Dashboard
             </h1>
           )}
@@ -360,14 +360,14 @@ useEffect(() => {
               <button
                 key={item.id}
                 onClick={() => setCurrentView(item.id)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
+               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
                   isActive
                     ? isLuxuryItem
                       ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-xl shadow-amber-500/50'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      : 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
                     : isLuxuryItem
                       ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      : 'text-gray-700 hover:bg-primary-50'
                 }`}
               >
                 {isLuxuryItem && !isActive && (
