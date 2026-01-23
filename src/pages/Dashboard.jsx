@@ -89,12 +89,9 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const [businessHours, setBusinessHours] = useState([]);
   const [websiteData, setWebsiteData] = useState(null);
   const [googleBusinessData, setGoogleBusinessData] = useState(null);
-
- // Check if onboarding should be shown - only once on first visit
-useEffect(() => {
-  const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
   
- useEffect(() => {
+// Check if onboarding should be shown - only once on first visit
+useEffect(() => {
   if (user && !user.onboarding_completed && !user.hasSeenWelcome) {
     setShowOnboarding(true);
     // Mark as seen
@@ -102,7 +99,7 @@ useEffect(() => {
   }
 }, [user]);
 
-  const markWelcomeAsSeen = async () => {
+const markWelcomeAsSeen = async () => {
   try {
     await authFetch(`${apiUrl}/api/auth/welcome-seen`, {
       method: 'POST'
@@ -129,7 +126,7 @@ const handleOnboardingSkip = async () => {
   // Don't set onboarding_completed to true - let the steps system handle it
 };
 
- // Listen for navigation events from onboarding
+// Listen for navigation events from onboarding
 useEffect(() => {
   const handleNavigate = (event) => {
     setCurrentView(event.detail.view);
@@ -150,7 +147,7 @@ useEffect(() => {
     // Update completed steps
     const updatedSteps = {
       ...currentUser.onboarding_steps_completed,
-      [`step${step}`]: true  // FIXED: Added opening bracket
+      [`step${step}`]: true
     };
     
     // Count completed steps
@@ -158,7 +155,7 @@ useEffect(() => {
     
     // Save to backend
     try {
-      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {  // FIXED: Added opening parenthesis
+      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -182,6 +179,7 @@ useEffect(() => {
       
       // Show onboarding wizard to guide to next step (only if not all done)
       if (completedCount < 6) {
+        // Optional: trigger wizard
       }
     } catch (error) {
       console.error('Error saving step completion:', error);
