@@ -1,8 +1,55 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Circle, ChevronRight, ChevronLeft, Sparkles, X } from 'lucide-react';
 
-export default function OnboardingWidget({ user, setCurrentView, isMinimized, setIsMinimized }) {
+export default function OnboardingWidget({ user, setCurrentView, isMinimized, setIsMinimized, apiUrl, authFetch }) {
   const [completedSteps, setCompletedSteps] = useState({});
+  const [hasWebsite, setHasWebsite] = useState(false);
+
+  // Check for actual completion status
+  useEffect(() => {
+    const checkCompletionStatus = async () => {
+      try {
+        // Check if website exists
+        const websiteResponse = await authFetch(`${apiUrl}/api/website`);
+        const websiteData = await websiteResponse.json();
+        
+        const websiteExists = websiteData.success && websiteData.website?.html_content;
+        setHasWebsite(websiteExists);
+
+        // Auto-complete step 1 if website exists
+        if (websiteExists && !completedSteps.step1) {
+          const updatedSteps = { ...completedSteps, step1: true };
+          setCompletedSteps(updatedSteps);
+          
+          // Save to backend
+          await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              currentStep: 2,
+              completedSteps: updatedSteps
+            })
+          });
+
+          // Update localStorage
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const updatedUser = {
+            ...currentUser,
+            onboarding_steps_completed: updatedSteps,
+            onboarding_current_step: 2
+          };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          window.dispatchEvent(new Event('user-updated'));
+        }
+      } catch (error) {
+        console.error('Error checking completion status:', error);
+      }
+    };
+
+    if (apiUrl && authFetch) {
+      checkCompletionStatus();
+    }
+  }, [apiUrl, authFetch]);
 
   useEffect(() => {
     // Load completed steps from user data
@@ -37,6 +84,7 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
   const completedCount = Object.values(completedSteps).filter(Boolean).length;
   const progressPercentage = (completedCount / steps.length) * 100;
 
+  // Rest of your component stays the same...
   return (
     <aside className={`fixed top-0 right-0 h-full bg-white shadow-xl transition-all duration-300 z-50 ${isMinimized ? 'w-16' : 'w-72'}`}>
     {/* Header */}
