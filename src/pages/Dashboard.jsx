@@ -77,23 +77,38 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 useEffect(() => {
   const hasSeenWelcome = localStorage.getItem('hasSeenWelcome');
   
-  if (user && !user.onboarding_completed && !hasSeenWelcome) {
+ useEffect(() => {
+  if (user && !user.onboarding_completed && !user.hasSeenWelcome) {
     setShowOnboarding(true);
-    localStorage.setItem('hasSeenWelcome', 'true');
+    // Mark as seen
+    markWelcomeAsSeen();
   }
 }, [user]);
+
+  const markWelcomeAsSeen = async () => {
+  try {
+    await authFetch(`${apiUrl}/api/auth/welcome-seen`, {
+      method: 'POST'
+    });
+    
+    // Update local storage
+    const updatedUser = { ...user, hasSeenWelcome: true };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  } catch (error) {
+    console.error('Error marking welcome as seen:', error);
+  }
+};
 
 // Handle onboarding complete
 const handleOnboardingComplete = async () => {
   setShowOnboarding(false);
-  localStorage.setItem('hasSeenWelcome', 'true');
   // Don't set onboarding_completed to true - let the steps system handle it
 };
 
 // Handle onboarding skip
 const handleOnboardingSkip = async () => {
   setShowOnboarding(false);
-  localStorage.setItem('hasSeenWelcome', 'true');
   // Don't set onboarding_completed to true - let the steps system handle it
 };
 
