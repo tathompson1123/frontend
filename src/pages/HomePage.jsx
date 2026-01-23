@@ -33,27 +33,27 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+   <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
       {/* Navigation */}
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-600 to-accent-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
                 SORCE
               </span>
             </div>
             <div className="flex items-center gap-4">
-              <button onClick={handleLogin} className="text-gray-700 hover:text-purple-600 font-medium transition">
+              <button onClick={handleLogin} className="text-gray-700 hover:text-primary-600 font-medium transition">
                 Login
               </button>
-              <button onClick={handleNavigateToPricing} className="text-gray-700 hover:text-purple-600 font-medium transition">
+              <button onClick={handleNavigateToPricing} className="text-gray-700 hover:text-primary-600 font-medium transition">
                 Pricing
               </button>
-              <button onClick={handleGetStarted} className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition font-semibold">
+              <button onClick={handleGetStarted} className="px-6 py-2 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-lg hover:shadow-lg transition font-semibold">
                 Get Started
               </button>
             </div>
@@ -65,12 +65,12 @@ export default function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="text-center">
           <div className="inline-flex items-center gap-2 bg-white px-4 py-2 rounded-full shadow-sm mb-6">
-            <Rocket className="w-4 h-4 text-purple-600" />
+            <Rocket className="w-4 h-4 text-primary-600" />
             <span className="text-sm font-medium text-gray-700">Built for Service-Based Businesses</span>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight">
             Your Website Should<br />
-            <span className="bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
               Grow Your Business
             </span>
           </h1>
@@ -80,7 +80,7 @@ export default function HomePage() {
           </p>
           <button
             onClick={handleGetStarted}
-            className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all inline-flex items-center gap-2"
+            className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all inline-flex items-center gap-2"
           >
             <Wand2 className="w-5 h-5" />
             Generate Your Website
@@ -163,9 +163,9 @@ export default function HomePage() {
           {/* Benefit 1: AI Conversations */}
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 bg-purple-100 px-4 py-2 rounded-full mb-4">
-                <MessageCircle className="w-5 h-5 text-purple-600" />
-                <span className="text-sm font-semibold text-purple-900">Benefit #1</span>
+              <div className="inline-flex items-center gap-2 bg-primary-100 px-4 py-2 rounded-full mb-4">
+                <MessageCircle className="w-5 h-5 text-primary-600" />
+                <span className="text-sm font-semibold text-primary-900">Benefit #1</span>
               </div>
               <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 AI Starts Conversations with Every Visitor
@@ -176,21 +176,21 @@ export default function HomePage() {
               </p>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">Never miss a lead</p>
                     <p className="text-gray-600">Responds to website visitors 24/7, even at 2am</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">Qualifies prospects instantly</p>
                     <p className="text-gray-600">Asks the right questions to identify serious customers</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">Captures contact info</p>
                     <p className="text-gray-600">Turns anonymous visitors into leads you can follow up with</p>
@@ -198,10 +198,10 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-purple-100 to-blue-100 rounded-2xl p-8 border-2 border-purple-300">
+            <div className="bg-gradient-to-br from-primary-100 to-accent-100 rounded-2xl p-8 border-2 border-primary-300">
               <div className="bg-white rounded-xl p-6 shadow-lg mb-4">
                 <div className="flex items-start gap-3 mb-3">
-                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                  <div className="w-10 h-10 bg-primary-600 rounded-full flex items-center justify-center flex-shrink-0">
                     <MessageCircle className="w-5 h-5 text-white" />
                   </div>
                   <div className="flex-1">
@@ -221,7 +221,7 @@ export default function HomePage() {
                   </div>
                 </div>
               </div>
-              <p className="text-center text-purple-900 font-semibold">
+              <p className="text-center text-primary-900 font-semibold">
                 ✨ Engagement Rate: 67% vs 2% industry average
               </p>
             </div>
@@ -229,7 +229,7 @@ export default function HomePage() {
 
           {/* Benefit 2: Review Requests */}
           <div className="grid md:grid-cols-2 gap-12 items-center">
-            <div className="order-2 md:order-1 bg-gradient-to-br from-green-100 to-blue-100 rounded-2xl p-8 border-2 border-green-300">
+            <div className="order-2 md:order-1 bg-gradient-to-br from-teal-100 to-accent-100 rounded-2xl p-8 border-2 border-teal-300">
               <div className="space-y-4">
                 <div className="bg-white rounded-xl p-4 shadow-md">
                   <div className="flex items-center gap-3 mb-2">
@@ -239,21 +239,21 @@ export default function HomePage() {
                   <p className="text-sm text-gray-600">Fixed water heater for John Smith</p>
                 </div>
                 <div className="flex items-center justify-center">
-                  <ArrowRight className="w-6 h-6 text-green-600" />
+                  <ArrowRight className="w-6 h-6 text-teal-600" />
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-md">
                   <div className="flex items-center gap-3 mb-2">
-                    <Zap className="w-5 h-5 text-purple-600" />
+                    <Zap className="w-5 h-5 text-primary-600" />
                     <span className="font-semibold text-gray-900">Auto-Send Review Request</span>
                   </div>
                   <p className="text-sm text-gray-600">Sent via email & SMS after 2 hours</p>
                 </div>
                 <div className="flex items-center justify-center">
-                  <ArrowRight className="w-6 h-6 text-green-600" />
+                  <ArrowRight className="w-6 h-6 text-teal-600" />
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-md">
                   <div className="flex items-center gap-3 mb-2">
-                    <BarChart className="w-5 h-5 text-green-600" />
+                    <BarChart className="w-5 h-5 text-teal-600" />
                     <span className="font-semibold text-gray-900">Google Ranking ↑</span>
                   </div>
                   <p className="text-sm text-gray-600">More reviews = higher visibility</p>
@@ -261,9 +261,9 @@ export default function HomePage() {
               </div>
             </div>
             <div className="order-1 md:order-2">
-              <div className="inline-flex items-center gap-2 bg-green-100 px-4 py-2 rounded-full mb-4">
-                <Star className="w-5 h-5 text-green-600" />
-                <span className="text-sm font-semibold text-green-900">Benefit #2</span>
+              <div className="inline-flex items-center gap-2 bg-teal-100 px-4 py-2 rounded-full mb-4">
+                <Star className="w-5 h-5 text-teal-600" />
+                <span className="text-sm font-semibold text-teal-900">Benefit #2</span>
               </div>
               <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 Automated Google Review Requests
@@ -274,21 +274,21 @@ export default function HomePage() {
               </p>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">Automatic timing</p>
                     <p className="text-gray-600">Sends review request at the perfect moment after job completion</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">100x faster growth</p>
                     <p className="text-gray-600">Get more reviews in weeks than most businesses get in years</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">Boost local SEO</p>
                     <p className="text-gray-600">More reviews = higher Google Maps ranking = more customers</p>
@@ -301,9 +301,9 @@ export default function HomePage() {
           {/* Benefit 3: SEO Content */}
           <div className="grid md:grid-cols-2 gap-12 items-center">
             <div>
-              <div className="inline-flex items-center gap-2 bg-blue-100 px-4 py-2 rounded-full mb-4">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-                <span className="text-sm font-semibold text-blue-900">Benefit #3</span>
+              <div className="inline-flex items-center gap-2 bg-accent-100 px-4 py-2 rounded-full mb-4">
+                <TrendingUp className="w-5 h-5 text-accent-600" />
+                <span className="text-sm font-semibold text-accent-900">Benefit #3</span>
               </div>
               <h3 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
                 AI Writes SEO Content Daily
@@ -314,21 +314,21 @@ export default function HomePage() {
               </p>
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">Daily fresh content</p>
                     <p className="text-gray-600">New blog posts and pages published automatically</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">SEO optimized</p>
                     <p className="text-gray-600">Written specifically to rank on Google for your keywords</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
-                  <Check className="w-6 h-6 text-green-500 flex-shrink-0 mt-1" />
+                  <Check className="w-6 h-6 text-teal-600 flex-shrink-0 mt-1" />
                   <div>
                     <p className="font-semibold text-gray-900">Zero effort required</p>
                     <p className="text-gray-600">You never have to write a single word yourself</p>
@@ -336,15 +336,15 @@ export default function HomePage() {
                 </div>
               </div>
             </div>
-            <div className="bg-gradient-to-br from-blue-100 to-purple-100 rounded-2xl p-8 border-2 border-blue-300">
+            <div className="bg-gradient-to-br from-accent-100 to-highlight-100 rounded-2xl p-8 border-2 border-accent-300">
               <div className="space-y-4">
                 <div className="bg-white rounded-xl p-4 shadow-md">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-semibold text-gray-900">🔍 Search Ranking</span>
-                    <span className="text-green-600 font-bold">↑ +47%</span>
+                    <span className="text-teal-600 font-bold">↑ +47%</span>
                   </div>
                   <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-green-500 to-blue-500 w-3/4"></div>
+                    <div className="h-full bg-gradient-to-r from-teal-500 to-accent-500 w-3/4"></div>
                   </div>
                 </div>
                 <div className="bg-white rounded-xl p-4 shadow-md">
@@ -358,7 +358,7 @@ export default function HomePage() {
                 <div className="bg-white rounded-xl p-4 shadow-md">
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-semibold text-gray-900">📊 Organic Traffic</span>
-                    <span className="text-2xl font-bold text-blue-600">+312%</span>
+                    <span className="text-2xl font-bold text-accent-600">+312%</span>
                   </div>
                 </div>
               </div>
@@ -369,12 +369,12 @@ export default function HomePage() {
 
       {/* Results Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-3xl p-12 text-white">
+        <div className="bg-gradient-to-br from-primary-600 to-accent-600 rounded-3xl p-12 text-white">
           <div className="text-center mb-12">
             <h2 className="text-4xl md:text-5xl font-bold mb-4">
               Real Results from Service Businesses
             </h2>
-            <p className="text-xl text-purple-100">
+            <p className="text-xl text-primary-100">
               These aren't hypothetical—this is what happens when your website actually works for you
             </p>
           </div>
@@ -382,23 +382,23 @@ export default function HomePage() {
           <div className="grid md:grid-cols-4 gap-8 text-center">
             <div>
               <div className="text-5xl font-bold mb-2">3x</div>
-              <div className="text-purple-100">More Bookings</div>
-              <p className="text-sm text-purple-200 mt-2">AI chat converts 3x better than forms</p>
+              <div className="text-primary-100">More Bookings</div>
+              <p className="text-sm text-primary-200 mt-2">AI chat converts 3x better than forms</p>
             </div>
             <div>
               <div className="text-5xl font-bold mb-2">100x</div>
-              <div className="text-purple-100">Faster Reviews</div>
-              <p className="text-sm text-purple-200 mt-2">Automated requests get results</p>
+              <div className="text-primary-100">Faster Reviews</div>
+              <p className="text-sm text-primary-200 mt-2">Automated requests get results</p>
             </div>
             <div>
               <div className="text-5xl font-bold mb-2">24/7</div>
-              <div className="text-purple-100">Lead Capture</div>
-              <p className="text-sm text-purple-200 mt-2">Never miss another late-night lead</p>
+              <div className="text-primary-100">Lead Capture</div>
+              <p className="text-sm text-primary-200 mt-2">Never miss another late-night lead</p>
             </div>
             <div>
               <div className="text-5xl font-bold mb-2">+47%</div>
-              <div className="text-purple-100">SEO Growth</div>
-              <p className="text-sm text-purple-200 mt-2">Daily content boosts rankings</p>
+              <div className="text-primary-100">SEO Growth</div>
+              <p className="text-sm text-primary-200 mt-2">Daily content boosts rankings</p>
             </div>
           </div>
         </div>
@@ -416,7 +416,7 @@ export default function HomePage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={handleGetStarted}
-              className="px-10 py-5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-semibold text-xl hover:shadow-2xl transition-all inline-flex items-center gap-3 justify-center"
+              className="px-10 py-5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold text-xl hover:shadow-2xl transition-all inline-flex items-center gap-3 justify-center"
             >
               <Wand2 className="w-6 h-6" />
               Generate Free Website
@@ -424,7 +424,7 @@ export default function HomePage() {
             </button>
             <button
               onClick={handleNavigateToPricing}
-              className="px-10 py-5 bg-white text-gray-900 border-2 border-gray-300 rounded-xl font-semibold text-xl hover:border-purple-600 transition-all"
+              className="px-10 py-5 bg-white text-gray-900 border-2 border-gray-300 rounded-xl font-semibold text-xl hover:border-primary-600 transition-all"
             >
               See Growth Plans →
             </button>
@@ -440,7 +440,7 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center gap-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-accent-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
               <span className="text-xl font-bold">SORCE</span>
@@ -453,7 +453,7 @@ export default function HomePage() {
               <button onClick={handleNavigateToPricing} className="text-gray-400 hover:text-white transition">
                 Pricing
               </button>
-              <button onClick={handleSignup} className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg transition font-semibold">
+              <button onClick={handleSignup} className="px-4 py-2 bg-primary-600 hover:bg-primary-700 rounded-lg transition font-semibold">
                 Sign Up
               </button>
             </div>
