@@ -65,6 +65,23 @@ const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'
   const [widgetMinimized, setWidgetMinimized] = useState(false);
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
+  useEffect(() => {
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  const completedSteps = currentUser.onboarding_steps_completed || {};
+  const completedCount = Object.keys(completedSteps).filter(key => completedSteps[key]).length;
+  
+  // If marked complete but not all steps done, fix it
+  if (currentUser.onboarding_completed && completedCount < 6) {
+    const updatedUser = {
+      ...currentUser,
+      onboarding_completed: false
+    };
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  }
+}, []);
+
+
   // Shared state
   const [services, setServices] = useState([]);
   const [employees, setEmployees] = useState([]);
