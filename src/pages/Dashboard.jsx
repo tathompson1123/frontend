@@ -90,11 +90,10 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const [websiteData, setWebsiteData] = useState(null);
   const [googleBusinessData, setGoogleBusinessData] = useState(null);
   
-// Check if onboarding should be shown - only once on first visit
+// Show welcome wizard ONLY on first signup (never on login)
 useEffect(() => {
-  if (user && !user.onboarding_completed && !user.hasSeenWelcome) {
+  if (user && !user.hasSeenWelcome) {
     setShowOnboarding(true);
-    // Mark as seen
     markWelcomeAsSeen();
   }
 }, [user]);
