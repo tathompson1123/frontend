@@ -111,16 +111,19 @@ const generateWebsite = async (formData) => {
         console.log('✅ Website auto-saved with all pages');
         
         // Check if we should trigger onboarding step completion
-        if (sessionStorage.getItem('trigger-onboarding-step-1') === 'true') {
-          sessionStorage.removeItem('trigger-onboarding-step-1');
-          
-          window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-            detail: { step: 1 } 
-          }));
-          
-          console.log('✅ Triggered onboarding step 1 completion');
-        }
-      }
+const shouldTriggerOnboarding = sessionStorage.getItem('trigger-onboarding-step-1') === 'true';
+const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+const hasCompletedStep1 = currentUser.onboarding_steps_completed?.step1;
+
+if (shouldTriggerOnboarding || !hasCompletedStep1) {
+  sessionStorage.removeItem('trigger-onboarding-step-1');
+  
+  window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+    detail: { step: 1 } 
+  }));
+  
+  console.log('✅ Triggered onboarding step 1 completion');
+}
 
       // Complete progress and set state
       setProgress(100);
