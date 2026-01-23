@@ -557,7 +557,7 @@ const handleConnectExistingWebsite = async () => {
                     </button>
                   </div>
                 </div>
-              ) : (
+             ) : (
                 <div className="space-y-3">
                   <p className="text-sm text-gray-600">Get your website online with a custom domain</p>
                     <div className="grid grid-cols-2 gap-2">
@@ -588,8 +588,7 @@ const handleConnectExistingWebsite = async () => {
                         <span className="text-xs opacity-90">Free hosting</span>
                       </button>
                     </div>
-                  </FeatureGate>
-                  </div>
+                </div>
               )}
             </div>
           </div>
