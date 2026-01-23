@@ -445,7 +445,7 @@ const handleConnectExistingWebsite = async () => {
           </div>
 
           {/* Deployment & Domain Management */}
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
             {/* Deployment Status */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
