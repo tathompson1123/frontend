@@ -512,7 +512,7 @@ const handleConnectExistingWebsite = async () => {
               )}
             </div>
 
-           {/* Domain Management */}
+         {/* Domain Management */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                 <Link className="w-5 h-5 text-purple-600" />
@@ -558,36 +558,71 @@ const handleConnectExistingWebsite = async () => {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-4 h-full flex flex-col">
                   <p className="text-sm text-gray-600">Choose how you want to get your domain:</p>
                   
-                  {/* Side by side domain options */}
-                  <div className="grid md:grid-cols-2 gap-4">
+                  {/* Side by side domain options - flex-1 makes them grow */}
+                  <div className="grid md:grid-cols-2 gap-4 flex-1">
                     {/* Buy Domain Option */}
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200">
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200 flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                          <ShoppingCart className="w-4 h-4 text-white" />
+                        <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                          <ShoppingCart className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-900 text-sm">Buy a Domain</h4>
-                          <p className="text-xs text-gray-600">$15/year</p>
+                          <h4 className="font-bold text-gray-900">Buy a Domain</h4>
+                          <p className="text-xs text-purple-600 font-medium">Perfect if you don't have one</p>
                         </div>
                       </div>
-                      <ul className="space-y-1 text-xs text-gray-700 mb-3">
-                        <li className="flex items-center gap-1">
-                          <Check className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span>Fully managed</span>
-                        </li>
-                        <li className="flex items-center gap-1">
-                          <Check className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span>Instant activation</span>
-                        </li>
-                        <li className="flex items-center gap-1">
-                          <Check className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span>Privacy included</span>
-                        </li>
-                      </ul>
+                      
+                      <div className="space-y-2 mb-4 flex-1">
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Brand new domain</p>
+                            <p className="text-xs text-gray-600">Get yourbusiness.com, .net, or .org</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Fully managed</p>
+                            <p className="text-xs text-gray-600">We handle renewals & DNS setup</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Instant activation</p>
+                            <p className="text-xs text-gray-600">Live in under 5 minutes</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Privacy protection</p>
+                            <p className="text-xs text-gray-600">Hide your personal information</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Free SSL certificate</p>
+                            <p className="text-xs text-gray-600">Secure HTTPS included</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 mb-3 border border-purple-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-700 font-medium">Annual Price</span>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-purple-600">$15</p>
+                            <p className="text-xs text-gray-500">per year</p>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <button
                         onClick={() => {
                           if (!vercelUrl) {
@@ -597,47 +632,82 @@ const handleConnectExistingWebsite = async () => {
                           setDomainSetupMode('buy');
                           setShowDomainSetup(true);
                         }}
-                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2 text-sm"
+                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2"
                       >
                         <ShoppingCart className="w-4 h-4" />
-                        Search Domains
+                        Search & Buy Domain
                       </button>
                     </div>
 
                     {/* Connect Domain Option */}
-                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 border-2 border-blue-200">
+                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 border-2 border-blue-200 flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
-                          <Link className="w-4 h-4 text-white" />
+                        <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                          <Link className="w-5 h-5 text-white" />
                         </div>
                         <div>
-                          <h4 className="font-bold text-gray-900 text-sm">Connect Domain</h4>
-                          <p className="text-xs text-gray-600">Free hosting</p>
+                          <h4 className="font-bold text-gray-900">Connect Domain</h4>
+                          <p className="text-xs text-blue-600 font-medium">Already have a domain?</p>
                         </div>
                       </div>
-                      <ul className="space-y-1 text-xs text-gray-700 mb-3">
-                        <li className="flex items-center gap-1">
-                          <Check className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span>Use your domain</span>
-                        </li>
-                        <li className="flex items-center gap-1">
-                          <Check className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span>Free SSL & hosting</span>
-                        </li>
-                        <li className="flex items-center gap-1">
-                          <Check className="w-3 h-3 text-green-600 flex-shrink-0" />
-                          <span>2-step setup</span>
-                        </li>
-                      </ul>
+                      
+                      <div className="space-y-2 mb-4 flex-1">
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Use existing domain</p>
+                            <p className="text-xs text-gray-600">Keep the domain you already own</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Free hosting</p>
+                            <p className="text-xs text-gray-600">No additional domain costs</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Simple 2-step setup</p>
+                            <p className="text-xs text-gray-600">Just update nameservers</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Keep your registrar</p>
+                            <p className="text-xs text-gray-600">Works with GoDaddy, Namecheap, etc.</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Check className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">Free SSL certificate</p>
+                            <p className="text-xs text-gray-600">Secure HTTPS included</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3 mb-3 border border-blue-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-gray-700 font-medium">Hosting Cost</span>
+                          <div className="text-right">
+                            <p className="text-xl font-bold text-blue-600">Free</p>
+                            <p className="text-xs text-gray-500">included</p>
+                          </div>
+                        </div>
+                      </div>
+                      
                       <button
                         onClick={() => {
                           setDomainSetupMode('connect');
                           setShowDomainSetup(true);
                         }}
-                        className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2 text-sm"
+                        className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2"
                       >
                         <Link className="w-4 h-4" />
-                        Connect Domain
+                        Connect My Domain
                       </button>
                     </div>
                   </div>
