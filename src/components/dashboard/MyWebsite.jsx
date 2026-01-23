@@ -564,7 +564,7 @@ const handleConnectExistingWebsite = async () => {
                   {/* Side by side domain options - flex-1 makes them grow */}
                   <div className="grid md:grid-cols-2 gap-4 flex-1">
                     {/* Buy Domain Option */}
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200 flex flex-col">
+                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 pb-6 border-2 border-purple-200 flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                           <ShoppingCart className="w-5 h-5 text-white" />
@@ -640,7 +640,7 @@ const handleConnectExistingWebsite = async () => {
                     </div>
 
                     {/* Connect Domain Option */}
-                    <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 border-2 border-blue-200 flex flex-col">
+                   <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-lg p-4 pb-6 border-2 border-blue-200 flex flex-col">
                       <div className="flex items-center gap-2 mb-3">
                         <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
                           <Link className="w-5 h-5 text-white" />
