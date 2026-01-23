@@ -323,6 +323,8 @@ useEffect(() => {
     setCurrentView={setCurrentView}
     isMinimized={widgetMinimized}
     setIsMinimized={setWidgetMinimized}
+    apiUrl={apiUrl}
+    authFetch={authFetch}
   />
 )}
 
