@@ -571,7 +571,6 @@ const handleConnectExistingWebsite = async () => {
            </div>
             </div>
           )}
-        </>
       ) : (
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
