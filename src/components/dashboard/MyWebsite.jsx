@@ -568,8 +568,9 @@ const handleConnectExistingWebsite = async () => {
                   </p>
                 </div>
               )}
+           </div>
             </div>
-          </div>
+          )}
         </>
       ) : (
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
