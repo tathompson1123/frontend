@@ -399,7 +399,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
 
           <button
             type="button"
-            onClick={() => setCurrentView('settings')}
+            onClick={() => setCurrentView('business-settings')}
             className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
           >
             <Building2 className="w-8 h-8 text-indigo-600 mb-3 group-hover:scale-110 transition-transform" />
