@@ -286,6 +286,10 @@ useEffect(() => {
   return () => window.removeEventListener('user-updated', handleStorageChange);
 }, []);
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentView]);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
