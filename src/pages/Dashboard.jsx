@@ -321,7 +321,7 @@ useEffect(() => {
         />
       )}
 
-{!user?.onboarding_completed && (
+{user && Object.keys(user).length > 0 && !user?.onboarding_completed && (
   <OnboardingWidget 
     user={user} 
     setCurrentView={setCurrentView}
