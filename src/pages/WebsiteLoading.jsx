@@ -69,7 +69,7 @@ const generateWebsite = async (formData) => {
   animateProgress();
 
   try {
-    const response = await fetch(`${apiUrl}/api/generate`, {
+    const response = await fetch(`${apiUrl}/api/website/generate`, { // FIXED: Changed from /api/generate
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
