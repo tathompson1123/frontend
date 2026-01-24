@@ -595,10 +595,6 @@ const handleConnectExistingWebsite = async () => {
                       </div>
                       <button
                         onClick={() => {
-                          if (!vercelUrl) {
-                            alert('Please deploy your website first');
-                            return;
-                          }
                           setDomainSetupMode('buy');
                           setShowDomainSetup(true);
                         }}
