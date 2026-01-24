@@ -5,6 +5,25 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
   const [completedSteps, setCompletedSteps] = useState({});
   const [hasWebsite, setHasWebsite] = useState(false);
 
+  // Don't render until user data is loaded
+  if (!user || Object.keys(user).length === 0) {
+    return null;
+  }
+
+  useEffect(() => {
+    const completedCount = Object.values(completedSteps).filter(Boolean).length;
+    if (completedCount === 6) {
+      // Mark onboarding as complete
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = {
+        ...currentUser,
+        onboarding_completed: true
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event('user-updated'));
+    }
+  }, [completedSteps]);
+
   // Check for actual completion status
   useEffect(() => {
     const checkCompletionStatus = async () => {
@@ -83,6 +102,10 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
 
   const completedCount = Object.values(completedSteps).filter(Boolean).length;
   const progressPercentage = (completedCount / steps.length) * 100;
+
+  if (completedCount === 6) {
+    return null;
+  }
 
   // Rest of your component stays the same...
   return (
