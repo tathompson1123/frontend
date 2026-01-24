@@ -350,7 +350,7 @@ Kurt
                   : 'Deploy this agent to automatically respond to lead form submissions.'}
               </p>
               
-              {user?.plan !== 'pro' && !isDeployed && (
+             {user?.plan?.toLowerCase() !== 'pro' && user?.plan?.toLowerCase() !== 'expert' && !isDeployed && (
                 <div className="flex items-start gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mb-4">
                   <Crown className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800 font-medium">
@@ -359,11 +359,7 @@ Kurt
                 </div>
               )}
 
-              <FeatureGate 
-                user={user} 
-                feature="ai-agents"
-                onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-              >
+              {user?.plan?.toLowerCase() === 'pro' || user?.plan?.toLowerCase() === 'expert' || isDeployed ? (
                 <button
                   onClick={deployAgent}
                   disabled={isDeployed}
@@ -376,7 +372,15 @@ Kurt
                   <Rocket className="w-5 h-5" />
                   {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
                 </button>
-              </FeatureGate>
+              ) : (
+                <button
+                  onClick={() => setCurrentView('billing')}
+                  className="w-full px-6 py-3 rounded-xl font-bold bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-600 text-white hover:shadow-xl transition-all flex items-center justify-center gap-2"
+                >
+                  <Crown className="w-5 h-5" />
+                  Upgrade to Pro to Deploy
+                </button>
+              )}
             </div>
           </div>
         </div>
