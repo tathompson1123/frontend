@@ -92,7 +92,7 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   
 // Show welcome wizard ONLY on first signup (never on login)
 useEffect(() => {
-  if (user && !user.hasSeenWelcome) {
+  if (user && Object.keys(user).length > 0 && !user.hasSeenWelcome && !showOnboarding) {
     setShowOnboarding(true);
     markWelcomeAsSeen();
   }
@@ -311,15 +311,15 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
-      {showOnboarding && (
-        <OnboardingWizard
-          user={user}
-          onComplete={handleOnboardingComplete}
-          onSkip={handleOnboardingSkip}
-          apiUrl={apiUrl}
-          authFetch={authFetch}
-        />
-      )}
+      {showOnboarding && user && Object.keys(user).length > 0 && (
+  <OnboardingWizard
+    user={user}
+    onComplete={handleOnboardingComplete}
+    onSkip={handleOnboardingSkip}
+    apiUrl={apiUrl}
+    authFetch={authFetch}
+  />
+)}
 
 {user && Object.keys(user).length > 0 && !user?.onboarding_completed && (
   <OnboardingWidget 
