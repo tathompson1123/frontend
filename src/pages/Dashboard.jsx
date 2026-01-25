@@ -98,7 +98,8 @@ useEffect(() => {
     hasSeenWelcome: user?.hasSeenWelcome,
     showOnboarding
   });
-  if (user && Object.keys(user).length > 0 && !user.hasSeenWelcome && !showOnboarding) {
+ if (user && Object.keys(user).length > 0 && !user.hasSeenWelcome) {
+    setShowOnboarding(true);
     console.log('✅ Setting showOnboarding to TRUE');
     setShowOnboarding(true);
     markWelcomeAsSeen();
@@ -120,16 +121,14 @@ const markWelcomeAsSeen = async () => {
   }
 };
 
-// Handle onboarding complete
 const handleOnboardingComplete = async () => {
   setShowOnboarding(false);
-  // Don't set onboarding_completed to true - let the steps system handle it
+  await markWelcomeAsSeen(); // Mark as seen AFTER completing
 };
-
-// Handle onboarding skip
+  
 const handleOnboardingSkip = async () => {
   setShowOnboarding(false);
-  // Don't set onboarding_completed to true - let the steps system handle it
+  await markWelcomeAsSeen(); // Mark as seen AFTER skipping
 };
 
 // Listen for navigation events from onboarding
