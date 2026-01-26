@@ -309,8 +309,8 @@ useEffect(() => {
     { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
-    { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
     { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
+    { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
