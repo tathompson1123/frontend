@@ -31,6 +31,12 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
    const checkContactForm = async () => {
   try {
     const response = await authFetch(`${apiUrl}/api/website/check-contact-form`);
+    useEffect(() => {
+  console.log('🔍 API URL:', apiUrl);
+  loadAgentConfig();
+  loadStats();
+  checkContactForm();
+}, []);
     if (response.ok) {
       const data = await response.json();
       setFormNeedsFix(!data.isValid);
