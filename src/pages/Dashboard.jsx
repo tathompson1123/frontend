@@ -310,7 +310,7 @@ useEffect(() => {
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
-    { id: 'analytics', icon: TrendingUp, label: 'Analytics' },
+    { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
@@ -359,7 +359,7 @@ useEffect(() => {
         <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isLuxuryItem = item.id === 'ai-agents' || item.id === 'google-business';
+            const isLuxuryItem = item.id === 'ai-agents' || item.id === 'google-business' || item.id === 'market-research';
             const isActive = currentView === item.id;
             
             return (
@@ -489,13 +489,19 @@ useEffect(() => {
             />
           )}
 
-          {currentView === 'analytics' && (
-            <Analytics 
-              apiUrl={apiUrl}
-              authFetch={authFetch}
-            />
-          )}
-
+         {currentView === 'market-research' && (
+  <FeatureGate 
+    user={user} 
+    requiredPlan="expert"
+    feature="market-research"
+    onUpgradeClick={() => setCurrentView('billing')}
+  >
+    <Analytics 
+      apiUrl={apiUrl}
+      authFetch={authFetch}
+    />
+  </FeatureGate>
+)}
           {currentView === 'billing' && (
             <Billing 
               user={user} 
