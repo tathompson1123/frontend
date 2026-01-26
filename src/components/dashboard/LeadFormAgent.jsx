@@ -29,16 +29,22 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
   }, []);
 
    const checkContactForm = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/website/check-contact-form`);
-      if (response.ok) {
-        const data = await response.json();
-        setFormNeedsFix(!data.isValid);
+  try {
+    const response = await authFetch(`${apiUrl}/api/website/check-contact-form`);
+    if (response.ok) {
+      const data = await response.json();
+      setFormNeedsFix(!data.isValid);
+      
+      // Optional: Log details for debugging
+      if (!data.isValid && data.issues) {
+        console.log('Form issues:', data.issues);
       }
-    } catch (error) {
-      console.error('Error checking contact form:', error);
     }
-  };
+  } catch (error) {
+    console.error('Error checking contact form:', error);
+    setFormNeedsFix(true); // Assume needs fix if check fails
+  }
+};
 
   const fixContactForm = async () => {
     if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
