@@ -111,18 +111,25 @@ Kurt
   }
 
   const loadAgentConfig = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`);
-      if (response.ok) {
-        const data = await response.json();
-        if (data.config) {
-          setAgentConfig(data.config);
-        }
-      }
-    } catch (error) {
-      console.error('Error loading config:', error);
+  try {
+    const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`);
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Merge the config settings with templates
+      setAgentConfig({
+        emailEnabled: data.config?.emailEnabled ?? true,
+        smsEnabled: data.config?.smsEnabled ?? true,
+        followUpEnabled: data.config?.followUpEnabled ?? true,
+        autoBookingEnabled: data.config?.autoBookingEnabled ?? true,
+        emailTemplate: data.emailTemplate || getDefaultEmailTemplate(),
+        smsTemplate: data.smsTemplate || getDefaultSmsTemplate()
+      });
     }
-  };
+  } catch (error) {
+    console.error('Error loading config:', error);
+  }
+};
 
   const loadStats = async () => {
     try {
@@ -136,32 +143,38 @@ Kurt
     }
   };
 
-  const saveConfiguration = async () => {
-    setIsSaving(true);
-    try {
-      const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(agentConfig)
-      });
-      
-      if (response.ok) {
-        alert('✅ Configuration saved successfully!');
-        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-          detail: { step: 5 } 
-        }));
-      } else {
-        const error = await response.json();
-        alert('Failed to save: ' + (error.error || 'Unknown error'));
-      }
-    } catch (error) {
-      console.error('Error saving config:', error);
-      alert('Failed to save configuration');
-    } finally {
-      setIsSaving(false);
+ const saveConfiguration = async () => {
+  setIsSaving(true);
+  try {
+    const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        emailEnabled: agentConfig.emailEnabled,
+        smsEnabled: agentConfig.smsEnabled,
+        followUpEnabled: agentConfig.followUpEnabled,
+        autoBookingEnabled: agentConfig.autoBookingEnabled,
+        emailTemplate: agentConfig.emailTemplate,
+        smsTemplate: agentConfig.smsTemplate
+      })
+    });
+    
+    if (response.ok) {
+      alert('✅ Configuration saved successfully!');
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+        detail: { step: 5 } 
+      }));
+    } else {
+      const error = await response.json();
+      alert('Failed to save: ' + (error.error || 'Unknown error'));
     }
-  };
-
+  } catch (error) {
+    console.error('Error saving config:', error);
+    alert('Failed to save configuration');
+  } finally {
+    setIsSaving(false);
+  }
+};
   const deployAgent = async () => {
     try {
       const response = await authFetch(`${apiUrl}/api/agents/lead-form/deploy`, {
