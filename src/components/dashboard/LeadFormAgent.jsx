@@ -46,37 +46,45 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
   }
 };
 
-  const fixContactForm = async () => {
-    if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
-      return;
-    }
+ const fixContactForm = async () => {
+  if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
+    return;
+  }
+  
+  setIsFixingForm(true);
+  try {
+    const response = await authFetch(`${apiUrl}/api/website/fix-contact-form`, {
+      method: 'POST'
+    });
     
-    setIsFixingForm(true);
-    try {
-      const response = await authFetch(`${apiUrl}/api/website/fix-contact-form`, {
-        method: 'POST'
-      });
+    if (response.ok) {
+      const data = await response.json();
       
-      if (response.ok) {
-        alert('✅ Contact form updated! Your website now properly captures leads with SMS consent.');
-        setFormNeedsFix(false); // Mark as fixed
-        
-        // Optional: Trigger onboarding step if needed
-        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-          detail: { step: 5 } 
-        }));
+      if (data.redeployed) {
+        alert(`✅ Contact form updated and deployed!\n\nChanges will be live at ${data.deployUrl || 'your website'} in 1-2 minutes.`);
+        // Don't check immediately - mark as fixed
+        setFormNeedsFix(false);
       } else {
-        const error = await response.json();
-        alert('Failed: ' + (error.error || 'Unknown error'));
+        alert('✅ Contact form updated in database!\n\n⚠️ Auto-deploy failed. Please manually redeploy from My Website to see changes.');
+        // Still needs manual redeploy, so keep showing fix button
+        setFormNeedsFix(true);
       }
-    } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to update contact form');
-    } finally {
-      setIsFixingForm(false);
+      
+      // Trigger onboarding step
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+        detail: { step: 5 } 
+      }));
+    } else {
+      const error = await response.json();
+      alert('Failed: ' + (error.error || 'Unknown error'));
     }
-  };
-
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Failed to update contact form');
+  } finally {
+    setIsFixingForm(false);
+  }
+};
   function getDefaultEmailTemplate() {
     return `Hey {{name}},
 
