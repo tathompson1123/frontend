@@ -88,6 +88,20 @@ export default function FeatureGate({
     }
   };
 
+  'market-research': {
+      title: 'Market Research & Revenue Potential',
+      description: 'AI-powered business intelligence and growth insights',
+      icon: Crown,
+      requiredPlan: 'Expert',
+      benefits: [
+        'AI-generated market research reports',
+        'Revenue forecasting & predictions',
+        'Competitor analysis & benchmarking',
+        'Service pricing optimization'
+      ]
+    }
+  };
+
   const currentFeature = featureInfo[feature] || {
     title: 'Premium Feature',
     description: 'This feature requires a paid plan',
