@@ -127,17 +127,22 @@ export default function FeatureGate({
 
   // Show upgrade prompt
   const Icon = currentFeature.icon;
-  const isProFeature = requiredLevel >= 2;
+  const isProFeature = requiredLevel === 2; // Only Pro
+const isExpertFeature = requiredLevel === 3; // Only Expert
 
   return (
     <div className={`bg-gradient-to-br rounded-xl border-2 p-8 ${
-      isProFeature 
+      isExpertFeature
+        ? 'from-purple-50 via-pink-50 to-indigo-50 border-purple-300'
+        : isProFeature 
         ? 'from-amber-50 via-yellow-50 to-orange-50 border-amber-200'
         : 'from-primary-50 via-accent-50 to-highlight-50 border-primary-200'
     }`}>
       <div className="text-center max-w-md mx-auto">
         <div className={`w-20 h-20 bg-gradient-to-br rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl ${
-          isProFeature
+          isExpertFeature
+            ? 'from-purple-500 to-pink-600'
+            : isProFeature
             ? 'from-amber-500 to-orange-600'
             : 'from-primary-500 to-accent-600'
         }`}>
@@ -154,16 +159,16 @@ export default function FeatureGate({
 
         <div className="bg-white rounded-lg p-6 shadow-md mb-6">
           <div className="flex items-center justify-center gap-2 mb-3">
-            <Lock className={`w-5 h-5 ${isProFeature ? 'text-amber-600' : 'text-primary-600'}`} />
+            <Lock className={`w-5 h-5 ${isExpertFeature ? 'text-purple-600' : isProFeature ? 'text-amber-600' : 'text-primary-600'}`} />
             <p className="font-semibold text-gray-900">
-              Requires <span className={isProFeature ? 'text-amber-600' : 'text-primary-600'}>{currentFeature.requiredPlan}</span> Plan
+              Requires <span className={isExpertFeature ? 'text-purple-600' : isProFeature ? 'text-amber-600' : 'text-primary-600'}>{currentFeature.requiredPlan}</span> Plan
             </p>
           </div>
           <ul className="text-sm text-left space-y-2 text-gray-700">
             {currentFeature.benefits.map((benefit, index) => (
               <li key={index} className="flex items-center gap-2">
                 <span className={`w-1.5 h-1.5 rounded-full ${
-                  isProFeature ? 'bg-amber-500' : 'bg-primary-500'
+                  isExpertFeature ? 'bg-purple-500' : isProFeature ? 'bg-amber-500' : 'bg-primary-500'
                 }`}></span>
                 {benefit}
               </li>
@@ -174,12 +179,14 @@ export default function FeatureGate({
         <button
           onClick={onUpgradeClick}
           className={`w-full text-white px-8 py-4 rounded-xl font-bold text-lg hover:shadow-2xl transition-all transform hover:scale-105 flex items-center justify-center gap-3 ${
-            isProFeature
+            isExpertFeature
+              ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-indigo-600'
+              : isProFeature
               ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-orange-600'
               : 'bg-gradient-to-r from-primary-600 to-accent-600'
           }`}
         >
-          {isProFeature ? <Crown className="w-6 h-6" /> : <CreditCard className="w-6 h-6" />}
+          {isExpertFeature || isProFeature ? <Crown className="w-6 h-6" /> : <CreditCard className="w-6 h-6" />}
           Upgrade to {currentFeature.requiredPlan}
         </button>
 
