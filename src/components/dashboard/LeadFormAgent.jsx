@@ -11,7 +11,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
     emailTemplate: getDefaultEmailTemplate(),
     smsTemplate: getDefaultSmsTemplate()
   });
-  const [formNeedsFix, setFormNeedsFix] = useState(null); // null = not checked, true = needs fix, false = good
+  const [formNeedsFix, setFormNeedsFix] = useState(null);
   const [isFixingForm, setIsFixingForm] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
@@ -22,75 +22,70 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // FIX: useEffect at the component level, with apiUrl dependency
   useEffect(() => {
+    if (!apiUrl) return; // Don't run if apiUrl isn't ready
+    
+    console.log('🔍 API URL:', apiUrl);
     loadAgentConfig();
     loadStats();
     checkContactForm();
-  }, []);
+  }, [apiUrl]); // Add apiUrl as dependency
 
-   const checkContactForm = async () => {
-  try {
-    const response = await authFetch(`${apiUrl}/api/website/check-contact-form`);
-    useEffect(() => {
-  console.log('🔍 API URL:', apiUrl);
-  loadAgentConfig();
-  loadStats();
-  checkContactForm();
-}, []);
-    if (response.ok) {
-      const data = await response.json();
-      setFormNeedsFix(!data.isValid);
-      
-      // Optional: Log details for debugging
-      if (!data.isValid && data.issues) {
-        console.log('Form issues:', data.issues);
+  const checkContactForm = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/website/check-contact-form`);
+      if (response.ok) {
+        const data = await response.json();
+        setFormNeedsFix(!data.isValid);
+        
+        if (!data.isValid && data.issues) {
+          console.log('Form issues:', data.issues);
+        }
       }
+    } catch (error) {
+      console.error('Error checking contact form:', error);
+      setFormNeedsFix(true);
     }
-  } catch (error) {
-    console.error('Error checking contact form:', error);
-    setFormNeedsFix(true); // Assume needs fix if check fails
-  }
-};
+  };
 
- const fixContactForm = async () => {
-  if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
-    return;
-  }
-  
-  setIsFixingForm(true);
-  try {
-    const response = await authFetch(`${apiUrl}/api/website/fix-contact-form`, {
-      method: 'POST'
-    });
+  const fixContactForm = async () => {
+    if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
+      return;
+    }
     
-    if (response.ok) {
-      const data = await response.json();
+    setIsFixingForm(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/website/fix-contact-form`, {
+        method: 'POST'
+      });
       
-      if (data.redeployed) {
-        alert(`✅ Contact form updated and deployed!\n\nChanges will be live at ${data.deployUrl || 'your website'} in 1-2 minutes.`);
-        // Don't check immediately - mark as fixed
-        setFormNeedsFix(false);
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.redeployed) {
+          alert(`✅ Contact form updated and deployed!\n\nChanges will be live at ${data.deployUrl || 'your website'} in 1-2 minutes.`);
+          setFormNeedsFix(false);
+        } else {
+          alert('✅ Contact form updated in database!\n\n⚠️ Auto-deploy failed. Please manually redeploy from My Website to see changes.');
+          setFormNeedsFix(true);
+        }
+        
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 5 } 
+        }));
       } else {
-        alert('✅ Contact form updated in database!\n\n⚠️ Auto-deploy failed. Please manually redeploy from My Website to see changes.');
-        // Still needs manual redeploy, so keep showing fix button
-        setFormNeedsFix(true);
+        const error = await response.json();
+        alert('Failed: ' + (error.error || 'Unknown error'));
       }
-      
-      // Trigger onboarding step
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-        detail: { step: 5 } 
-      }));
-    } else {
-      const error = await response.json();
-      alert('Failed: ' + (error.error || 'Unknown error'));
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to update contact form');
+    } finally {
+      setIsFixingForm(false);
     }
-  } catch (error) {
-    console.error('Error:', error);
-    alert('Failed to update contact form');
-  } finally {
-    setIsFixingForm(false);
-  }
-};
+  };
+
   function getDefaultEmailTemplate() {
     return `Hey {{name}},
 
@@ -117,7 +112,7 @@ Kurt
 
   const loadAgentConfig = async () => {
     try {
-     const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`);
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`);
       if (response.ok) {
         const data = await response.json();
         if (data.config) {
@@ -131,7 +126,7 @@ Kurt
 
   const loadStats = async () => {
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/stats`);
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/stats`);
       if (response.ok) {
         const data = await response.json();
         setStats(data);
@@ -144,7 +139,7 @@ Kurt
   const saveConfiguration = async () => {
     setIsSaving(true);
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/config`, {
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(agentConfig)
@@ -169,7 +164,7 @@ Kurt
 
   const deployAgent = async () => {
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/deploy`, {
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/deploy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });
