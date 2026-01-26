@@ -86,7 +86,6 @@ export default function FeatureGate({
         'Boost local SEO automatically'
       ]
     }
-  };
 
   'market-research': {
       title: 'Market Research & Revenue Potential',
