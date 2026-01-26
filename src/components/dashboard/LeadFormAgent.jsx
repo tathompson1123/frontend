@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles } from 'lucide-react';
+import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles, Settings } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
@@ -381,6 +381,63 @@ Kurt
                   Upgrade to Pro to Deploy
                 </button>
               )}
+            </div>
+            {/* Fix Contact Form Section - RIGHT BELOW DEPLOY */}
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 p-6 mt-4">
+              <div className="flex items-center gap-2 mb-3">
+                <AlertCircle className="w-5 h-5 text-amber-600" />
+                <h3 className="text-sm font-semibold text-gray-900">Contact Form Setup</h3>
+              </div>
+              
+              <p className="text-xs text-gray-600 mb-3">
+                Ensure your website form captures leads with SMS consent
+              </p>
+
+              <div className="bg-white rounded-lg p-3 border border-amber-200 mb-3">
+                <p className="text-xs font-medium text-gray-700 mb-2">✅ Required:</p>
+                <ul className="space-y-1 text-xs text-gray-600">
+                  <li className="flex items-center gap-1">
+                    <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+                    SMS consent checkbox
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+                    Leads auto-submit
+                  </li>
+                  <li className="flex items-center gap-1">
+                    <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+                    Proper form tagging
+                  </li>
+                </ul>
+              </div>
+
+              <button
+                onClick={async () => {
+                  if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
+                    return;
+                  }
+                  
+                  try {
+                    const response = await authFetch(`${apiUrl}/api/website/fix-contact-form`, {
+                      method: 'POST'
+                    });
+                    
+                    if (response.ok) {
+                      alert('✅ Contact form updated! Your website now properly captures leads with SMS consent.');
+                    } else {
+                      const error = await response.json();
+                      alert('Failed: ' + (error.error || 'Unknown error'));
+                    }
+                  } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to update contact form');
+                  }
+                }}
+                className="w-full px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm"
+              >
+                <Settings className="w-4 h-4" />
+                Fix Contact Form
+              </button>
             </div>
           </div>
         </div>
