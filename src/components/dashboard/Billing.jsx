@@ -61,7 +61,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
         { text: 'SEO Blog Writing', included: false },
         { text: 'Advanced Analytics', included: false }
       ],
-      cta: 'Current Plan',
+     cta: 'Select Basic Plan',
       ctaVariant: 'outline'
     },
     {
@@ -342,20 +342,20 @@ export default function Billing({ user, apiUrl, authFetch }) {
 
                 {/* CTA Button */}
                 <button
-                  onClick={() => !plan.comingSoon && handleUpgrade(plan.id)}
-                  disabled={isCurrentPlan || loading || plan.comingSoon}
-                  className={`w-full py-3 rounded-xl font-bold transition-all ${
-                    plan.ctaVariant === 'primary' && !isCurrentPlan
-                      ? `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`
-                      : isCurrentPlan
-                      ? 'bg-green-100 text-green-700 cursor-default'
-                      : plan.comingSoon
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                      : 'border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-                  }`}
-                >
-                  {isCurrentPlan ? '✓ Current Plan' : plan.cta}
-                </button>
+  onClick={() => !plan.comingSoon && handleUpgrade(plan.id)}
+  disabled={isCurrentPlan || loading || plan.comingSoon}
+  className={`w-full py-3 rounded-xl font-bold transition-all ${
+    plan.ctaVariant === 'primary' && !isCurrentPlan
+      ? `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`
+      : isCurrentPlan
+      ? 'bg-green-100 text-green-700 cursor-default'
+      : plan.comingSoon
+      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+      : 'border-2 border-gray-300 text-gray-700 hover:border-gray-400'
+  }`}
+>
+  {isCurrentPlan ? '✓ Current Plan' : loading ? 'Processing...' : plan.cta}
+</button>
               </div>
             </div>
           );
