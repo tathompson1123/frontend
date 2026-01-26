@@ -111,7 +111,7 @@ Kurt
 
   const loadAgentConfig = async () => {
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/leadform/config`);
+     const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`);
       if (response.ok) {
         const data = await response.json();
         if (data.config) {
