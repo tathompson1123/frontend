@@ -27,9 +27,10 @@ import CustomersLeads from '../components/dashboard/CustomersLeads';
 import AIAgents from '../components/dashboard/AIAgents';
 import GoogleBusiness from '../components/dashboard/GoogleBusiness';
 import BusinessInformation from '../components/dashboard/BusinessInformation';
-import Analytics from '../components/dashboard/Analytics';
+import MarketResearch from '../components/dashboard/MarketResearch';
 import Billing from '../components/dashboard/Billing';
 import SettingsPage from '../components/dashboard/Settings';
+import FeatureGate from '../components/dashboard/FeatureGate'; 
 
 // Helper function for authenticated API calls
 const authFetch = async (url, options = {}) => {
@@ -505,14 +506,14 @@ useEffect(() => {
             />
           )}
 
-         {currentView === 'market-research' && (
+        {currentView === 'market-research' && (
   <FeatureGate 
     user={user} 
     requiredPlan="expert"
     feature="market-research"
     onUpgradeClick={() => setCurrentView('billing')}
   >
-    <Analytics 
+    <MarketResearch 
       apiUrl={apiUrl}
       authFetch={authFetch}
     />
