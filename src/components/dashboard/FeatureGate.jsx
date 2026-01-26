@@ -85,7 +85,7 @@ export default function FeatureGate({
         '100x faster review growth',
         'Boost local SEO automatically'
       ]
-    }
+    },
 
   'market-research': {
       title: 'Market Research & Revenue Potential',
