@@ -363,38 +363,54 @@ useEffect(() => {
             const isActive = currentView === item.id;
             
             return (
-              <button
-                key={item.id}
-                onClick={() => setCurrentView(item.id)}
-               className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
-                  isActive
-                    ? isLuxuryItem
-                      ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-xl shadow-amber-500/50'
-                      : 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
-                    : isLuxuryItem
-                      ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md'
-                      : 'text-gray-700 hover:bg-primary-50'
-                }`}
-              >
-                {isLuxuryItem && !isActive && (
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                  </span>
-                )}
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isLuxuryItem && !isActive ? 'text-amber-600' : ''}`} />
-                {sidebarOpen && (
-                  <span className={`font-medium ${isLuxuryItem && !isActive ? 'font-bold' : ''}`}>
-                    {item.label}
-                  </span>
-                )}
-                {isLuxuryItem && sidebarOpen && !isActive && (
-                  <span className="ml-auto text-xs bg-amber-500 text-white px-2 py-0.5 rounded-full font-bold">
-                    PRO
-                  </span>
-                )}
-              </button>
-            );
+  <button
+    key={item.id}
+    onClick={() => setCurrentView(item.id)}
+    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
+      isActive
+        ? item.id === 'market-research'
+          ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white shadow-xl shadow-purple-500/50'
+          : isLuxuryItem
+          ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-xl shadow-amber-500/50'
+          : 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
+        : item.id === 'market-research'
+          ? 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-900 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 shadow-md'
+          : isLuxuryItem
+          ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md'
+          : 'text-gray-700 hover:bg-primary-50'
+    }`}
+  >
+    {isLuxuryItem && !isActive && (
+      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+          item.id === 'market-research' ? 'bg-purple-400' : 'bg-amber-400'
+        }`}></span>
+        <span className={`relative inline-flex rounded-full h-3 w-3 ${
+          item.id === 'market-research' ? 'bg-purple-500' : 'bg-amber-500'
+        }`}></span>
+      </span>
+    )}
+    <Icon className={`w-5 h-5 flex-shrink-0 ${
+      isLuxuryItem && !isActive 
+        ? item.id === 'market-research' ? 'text-purple-600' : 'text-amber-600'
+        : ''
+    }`} />
+    {sidebarOpen && (
+      <span className={`font-medium ${isLuxuryItem && !isActive ? 'font-bold' : ''}`}>
+        {item.label}
+      </span>
+    )}
+    {isLuxuryItem && sidebarOpen && !isActive && (
+      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold text-white ${
+        item.id === 'market-research'
+          ? 'bg-gradient-to-r from-purple-500 to-pink-600'
+          : 'bg-amber-500'
+      }`}>
+        {item.id === 'market-research' ? 'EXPERT' : 'PRO'}
+      </span>
+    )}
+  </button>
+);
           })}
         </nav>
 
