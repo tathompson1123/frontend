@@ -11,6 +11,8 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
     emailTemplate: getDefaultEmailTemplate(),
     smsTemplate: getDefaultSmsTemplate()
   });
+  const [formNeedsFix, setFormNeedsFix] = useState(null); // null = not checked, true = needs fix, false = good
+  const [isFixingForm, setIsFixingForm] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     emailsSent: 0,
@@ -23,7 +25,51 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
   useEffect(() => {
     loadAgentConfig();
     loadStats();
+    checkContactForm();
   }, []);
+
+   const checkContactForm = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/website/check-contact-form`);
+      if (response.ok) {
+        const data = await response.json();
+        setFormNeedsFix(!data.isValid);
+      }
+    } catch (error) {
+      console.error('Error checking contact form:', error);
+    }
+  };
+
+  const fixContactForm = async () => {
+    if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
+      return;
+    }
+    
+    setIsFixingForm(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/website/fix-contact-form`, {
+        method: 'POST'
+      });
+      
+      if (response.ok) {
+        alert('✅ Contact form updated! Your website now properly captures leads with SMS consent.');
+        setFormNeedsFix(false); // Mark as fixed
+        
+        // Optional: Trigger onboarding step if needed
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 5 } 
+        }));
+      } else {
+        const error = await response.json();
+        alert('Failed: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Failed to update contact form');
+    } finally {
+      setIsFixingForm(false);
+    }
+  };
 
   function getDefaultEmailTemplate() {
     return `Hey {{name}},
@@ -382,63 +428,65 @@ Kurt
                 </button>
               )}
             </div>
-            {/* Fix Contact Form Section - RIGHT BELOW DEPLOY */}
-            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 p-6 mt-4">
-              <div className="flex items-center gap-2 mb-3">
-                <AlertCircle className="w-5 h-5 text-amber-600" />
-                <h3 className="text-sm font-semibold text-gray-900">Contact Form Setup</h3>
-              </div>
-              
-              <p className="text-xs text-gray-600 mb-3">
-                Ensure your website form captures leads with SMS consent
-              </p>
+           {/* Fix Contact Form Section */}
+<div className={`rounded-xl border-2 p-6 mt-4 ${
+  formNeedsFix === false 
+    ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
+    : 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
+}`}>
+  <div className="flex items-center gap-2 mb-3">
+    {formNeedsFix === false ? (
+      <>
+        <CheckCircle className="w-5 h-5 text-green-600" />
+        <h3 className="text-sm font-semibold text-gray-900">Contact Form Ready</h3>
+      </>
+    ) : (
+      <>
+        <AlertCircle className="w-5 h-5 text-amber-600" />
+        <h3 className="text-sm font-semibold text-gray-900">Contact Form Setup</h3>
+      </>
+    )}
+  </div>
+  
+  {formNeedsFix === false ? (
+    <p className="text-xs text-green-700 font-medium">
+      ✅ Your website form is properly configured and ready to capture leads!
+    </p>
+  ) : (
+    <>
+      <p className="text-xs text-gray-600 mb-3">
+        Ensure your website form captures leads with SMS consent
+      </p>
 
-              <div className="bg-white rounded-lg p-3 border border-amber-200 mb-3">
-                <p className="text-xs font-medium text-gray-700 mb-2">✅ Required:</p>
-                <ul className="space-y-1 text-xs text-gray-600">
-                  <li className="flex items-center gap-1">
-                    <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
-                    SMS consent checkbox
-                  </li>
-                  <li className="flex items-center gap-1">
-                    <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
-                    Leads auto-submit
-                  </li>
-                  <li className="flex items-center gap-1">
-                    <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
-                    Proper form tagging
-                  </li>
-                </ul>
-              </div>
+      <div className="bg-white rounded-lg p-3 border border-amber-200 mb-3">
+        <p className="text-xs font-medium text-gray-700 mb-2">✅ Required:</p>
+        <ul className="space-y-1 text-xs text-gray-600">
+          <li className="flex items-center gap-1">
+            <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+            SMS consent checkbox
+          </li>
+          <li className="flex items-center gap-1">
+            <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+            Leads auto-submit
+          </li>
+          <li className="flex items-center gap-1">
+            <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+            Proper form tagging
+          </li>
+        </ul>
+      </div>
 
-              <button
-                onClick={async () => {
-                  if (!confirm('Update your website contact form to work with the Lead Form Agent? This will replace your existing form.')) {
-                    return;
-                  }
-                  
-                  try {
-                    const response = await authFetch(`${apiUrl}/api/website/fix-contact-form`, {
-                      method: 'POST'
-                    });
-                    
-                    if (response.ok) {
-                      alert('✅ Contact form updated! Your website now properly captures leads with SMS consent.');
-                    } else {
-                      const error = await response.json();
-                      alert('Failed: ' + (error.error || 'Unknown error'));
-                    }
-                  } catch (error) {
-                    console.error('Error:', error);
-                    alert('Failed to update contact form');
-                  }
-                }}
-                className="w-full px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm"
-              >
-                <Settings className="w-4 h-4" />
-                Fix Contact Form
-              </button>
-            </div>
+      <button
+        onClick={fixContactForm}
+        disabled={isFixingForm}
+        className="w-full px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+      >
+        <Settings className="w-4 h-4" />
+        {isFixingForm ? 'Updating...' : 'Fix Contact Form'}
+      </button>
+    </>
+  )}
+</div>
           </div>
         </div>
       </div>
