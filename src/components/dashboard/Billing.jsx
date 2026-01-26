@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import { Check, X, Sparkles, Crown, Rocket, DollarSign, TrendingUp, ArrowRight } from 'lucide-react';
 
 export default function Billing({ user, apiUrl, authFetch }) {
-  const [currentPlan, setCurrentPlan] = useState('basic');
+  const [currentPlan, setCurrentPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showAnnual, setShowAnnual] = useState(false);
 
   useEffect(() => {
-    setCurrentPlan(user?.plan || 'basic');
+    setCurrentPlan(user?.plan || null);
   }, [user]);
 
   const handleUpgrade = async (planId) => {
@@ -130,13 +130,13 @@ export default function Billing({ user, apiUrl, authFetch }) {
 
       {/* No Plan Warning */}
       {!user?.plan && (
-        <div className="mt-6 mx-auto max-w-xl p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl">
-          <p className="text-yellow-900 font-semibold flex items-center justify-center gap-2">
-            <span className="text-2xl">⚠️</span>
-            Please select a plan to access your dashboard features
-          </p>
-        </div>
-      )}
+  <div className="mt-6 mx-auto max-w-xl p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl">
+    <p className="text-yellow-900 font-semibold flex items-center justify-center gap-2">
+      <span className="text-2xl">⚠️</span>
+      No plan selected - Choose a plan below to unlock features
+    </p>
+  </div>
+)}
 
       {/* Billing Toggle */}
       <div className="mt-8 inline-flex items-center gap-3 bg-gray-100 rounded-full p-1">
