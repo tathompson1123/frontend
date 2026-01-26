@@ -1,42 +1,45 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Sparkles, Crown, Rocket, DollarSign, TrendingUp, ArrowRight } from 'lucide-react';
+import { loadStripe } from '@stripe/stripe-js';
 
 export default function Billing({ user, apiUrl, authFetch }) {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showAnnual, setShowAnnual] = useState(false);
 
+  const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+
   useEffect(() => {
     setCurrentPlan(user?.plan || null);
   }, [user]);
 
   const handleUpgrade = async (planId) => {
-    if (planId === currentPlan) return;
-    
-    setLoading(true);
-    try {
-      const response = await authFetch(`${apiUrl}/api/billing/upgrade`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: planId })
-      });
+  if (planId === currentPlan) return;
+  
+  setLoading(true);
+  try {
+    // Create Stripe Checkout Session
+    const response = await authFetch(`${apiUrl}/api/billing/create-checkout-session`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ plan: planId })
+    });
 
-      if (response.ok) {
-        alert(`Successfully upgraded to ${planId}! 🎉`);
-        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-    detail: { step: 6 } 
-  }));
-        window.location.reload();
-      } else {
-        alert('Upgrade failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Upgrade error:', error);
-      alert('Something went wrong. Please contact support.');
-    } finally {
-      setLoading(false);
+    if (response.ok) {
+      const { url } = await response.json();
+      
+      // Redirect to Stripe Checkout
+      window.location.href = url;
+    } else {
+      alert('Failed to start checkout. Please try again.');
     }
-  };
+  } catch (error) {
+    console.error('Checkout error:', error);
+    alert('Something went wrong. Please contact support.');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const plans = [
     {
