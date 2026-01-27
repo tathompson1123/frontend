@@ -3,11 +3,11 @@ import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Crown, Sparkl
 import FeatureGate from './FeatureGate';
 
 export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed: initialDeployed, onDeploymentChange }) {
-  const [agentConfig, setAgentConfig] = useState({
-    agentName: 'Kurt',
-    greetingMessage: "Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?",
-    autoOpenDelay: 3
-  });
+ const [agentConfig, setAgentConfig] = useState({
+  agentName: 'Kurt',
+  greetingMessage: "Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?",
+  autoOpenDelay: 14  // Changed from 3
+});
   const [stats, setStats] = useState({
     conversations: 0,
     leadsCaptured: 0,
