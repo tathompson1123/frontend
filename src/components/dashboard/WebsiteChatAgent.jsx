@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Crown, Sparkles } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
-export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
+export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed: initialDeployed, onDeploymentChange }) {
   const [agentConfig, setAgentConfig] = useState({
     agentName: 'Kurt',
     greetingMessage: "Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?",
@@ -15,11 +15,29 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     bookingsCreated: 0
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeployed, setIsDeployed] = useState(false);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
 
   useEffect(() => {
     loadAgentConfig();
-    loadStats();
+    checkDeploymentStatus();
   }, []);
+
+  const checkDeploymentStatus = async () => {
+    setIsCheckingStatus(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/status`);
+      if (response.ok) {
+        const data = await response.json();
+        setIsDeployed(data.isDeployed);
+        console.log('✅ Chat agent deployment status:', data.isDeployed);
+      }
+    } catch (error) {
+      console.error('Error checking deployment status:', error);
+    } finally {
+      setIsCheckingStatus(false);
+    }
+  };
 
   const loadAgentConfig = async () => {
     try {
@@ -46,6 +64,16 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
       console.error('Error loading stats:', error);
     }
   };
+
+  // Load stats when deployed
+  useEffect(() => {
+    if (isDeployed) {
+      loadStats();
+      // Refresh stats every 30 seconds if deployed
+      const interval = setInterval(loadStats, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isDeployed]);
 
   const saveConfiguration = async () => {
     setIsSaving(true);
@@ -82,7 +110,11 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
       
       if (response.ok) {
         alert('✅ Chat Agent deployed! It will appear on your published website.');
-        onDeploymentChange();
+        setIsDeployed(true);
+        
+        if (onDeploymentChange) {
+          onDeploymentChange();
+        }
         
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
           detail: { step: 5 } 
@@ -102,13 +134,19 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
         <div className="mb-6">
           <div className="flex items-center gap-3 mb-2">
             <h2 className="text-xl font-bold text-gray-900">Website Chat Agent</h2>
-            <div className={`px-3 py-1 rounded-lg font-medium text-sm ${
-              isDeployed
-                ? 'bg-green-100 text-green-700'
-                : 'bg-gray-100 text-gray-700'
-            }`}>
-              {isDeployed ? '● Deployed' : '○ Not Deployed'}
-            </div>
+            {isCheckingStatus ? (
+              <div className="px-3 py-1 rounded-lg font-medium text-sm bg-gray-100 text-gray-700 animate-pulse">
+                ⟳ Checking...
+              </div>
+            ) : (
+              <div className={`px-3 py-1 rounded-lg font-medium text-sm ${
+                isDeployed
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-100 text-gray-700'
+              }`}>
+                {isDeployed ? '● Deployed' : '○ Not Deployed'}
+              </div>
+            )}
           </div>
           <p className="text-gray-600">
             {isDeployed 
@@ -210,19 +248,19 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
               <div className="space-y-2 text-sm text-gray-700">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <span>Identifies customer needs and recommends services</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                  <span>Books appointments with available employees</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
                   <span>Captures leads automatically (email, phone, name)</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span>Creates bookings and adds to calendar</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span>Answers questions about services and pricing</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <span>Provides availability and scheduling options</span>
+                  <span>Answers questions about pricing and availability</span>
                 </div>
               </div>
             </div>
@@ -299,28 +337,28 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">1</div>
             <div>
               <p className="font-medium text-gray-900">Visitor lands on your website</p>
-              <p className="text-sm text-gray-600">The chat widget automatically appears after {agentConfig.autoOpenDelay} seconds</p>
+              <p className="text-sm text-gray-600">The chat widget automatically appears after {agentConfig.autoOpenDelay} seconds with: "{agentConfig.greetingMessage}"</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">2</div>
             <div>
-              <p className="font-medium text-gray-900">AI initiates conversation</p>
-              <p className="text-sm text-gray-600">{agentConfig.agentName} greets them naturally and asks what they need</p>
+              <p className="font-medium text-gray-900">AI identifies their needs</p>
+              <p className="text-sm text-gray-600">{agentConfig.agentName} asks what they're looking to get done and recommends your services</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">3</div>
             <div>
-              <p className="font-medium text-gray-900">Captures lead information</p>
-              <p className="text-sm text-gray-600">Automatically detects and saves contact details to Customers & Leads</p>
+              <p className="font-medium text-gray-900">Captures contact information</p>
+              <p className="text-sm text-gray-600">Automatically collects name, email, and phone during booking process</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">4</div>
             <div>
-              <p className="font-medium text-gray-900">Books appointments directly</p>
-              <p className="text-sm text-gray-600">Can schedule services and add them to your Booking Calendar automatically</p>
+              <p className="font-medium text-gray-900">Books appointments instantly</p>
+              <p className="text-sm text-gray-600">Schedules services with available employees and adds to your calendar automatically</p>
             </div>
           </div>
         </div>
