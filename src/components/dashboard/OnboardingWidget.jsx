@@ -78,18 +78,50 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
   }, [user]);
 
   // Listen for step completion events
-  useEffect(() => {
-    const handleStepComplete = (event) => {
-      const { step } = event.detail;
-      setCompletedSteps(prev => ({
-        ...prev,
-        [`step${step}`]: true
-      }));
+ useEffect(() => {
+  const handleStepComplete = async (event) => {
+    const { step } = event.detail;
+    
+    console.log('🎉 Onboarding step completed:', step);
+    
+    const updatedSteps = {
+      ...completedSteps,
+      [`step${step}`]: true
     };
+    
+    setCompletedSteps(updatedSteps);
+    
+    // SAVE TO BACKEND - This was missing!
+    try {
+      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentStep: step,
+          completedSteps: updatedSteps
+        })
+      });
+      
+      console.log('✅ Saved onboarding progress to backend');
+      
+      // Update localStorage
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const updatedUser = {
+        ...currentUser,
+        onboarding_steps_completed: updatedSteps,
+        onboarding_current_step: step
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event('user-updated'));
+      
+    } catch (error) {
+      console.error('Error saving onboarding progress:', error);
+    }
+  };
 
-    window.addEventListener('onboarding-step-complete', handleStepComplete);
-    return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
-  }, []);
+  window.addEventListener('onboarding-step-complete', handleStepComplete);
+  return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
+}, [completedSteps, apiUrl, authFetch]);
 
   const steps = [
     { id: 1, label: 'Generate your website', view: 'website', key: 'step1' },
