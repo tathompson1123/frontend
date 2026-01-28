@@ -139,7 +139,57 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
     return null;
   }
 
-  // Rest of your component stays the same...
+  // Add this around line 90 in OnboardingWidget.jsx, after the other useEffects
+
+useEffect(() => {
+  const checkAgentDeployment = async () => {
+    if (!apiUrl || !authFetch) return;
+    
+    try {
+      // Check if any agent is deployed
+      const chatResponse = await authFetch(`${apiUrl}/api/agents/website/status`);
+      const leadResponse = await authFetch(`${apiUrl}/api/agents/leadform/status`);
+      
+      const chatData = await chatResponse.json();
+      const leadData = await leadResponse.json();
+      
+      const anyAgentDeployed = chatData.isDeployed || leadData.isDeployed;
+      
+      // If any agent is deployed and step 5 isn't marked complete, mark it
+      if (anyAgentDeployed && !completedSteps.step5) {
+        console.log('🤖 Agent detected as deployed - marking step 5 complete');
+        
+        const updatedSteps = { ...completedSteps, step5: true };
+        setCompletedSteps(updatedSteps);
+        
+        // Save to backend
+        await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentStep: 5,
+            completedSteps: updatedSteps
+          })
+        });
+        
+        // Update localStorage
+        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+        const updatedUser = {
+          ...currentUser,
+          onboarding_steps_completed: updatedSteps,
+          onboarding_current_step: 5
+        };
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        window.dispatchEvent(new Event('user-updated'));
+      }
+    } catch (error) {
+      console.error('Error checking agent deployment:', error);
+    }
+  };
+  
+  checkAgentDeployment();
+}, [apiUrl, authFetch, completedSteps.step5]);
+
   return (
     <aside className={`fixed top-0 right-0 h-full bg-white shadow-xl transition-all duration-300 z-50 ${isMinimized ? 'w-16' : 'w-72'}`}>
     {/* Header */}
