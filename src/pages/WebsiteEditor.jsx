@@ -26,10 +26,9 @@ export default function WebsiteEditor() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-const [isPublishing, setIsPublishing] = useState(false);
-const [lastSavedPages, setLastSavedPages] = useState(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [lastSavedPages, setLastSavedPages] = useState(null);
   
   // AI Chat state
   const [messages, setMessages] = useState([]);
@@ -147,27 +146,28 @@ const [lastSavedPages, setLastSavedPages] = useState(null);
     }
   };
 
-const handleVisualUpdate = (updatedHTML) => {
-  console.log('═══════════════════════════════════');
-  console.log('📝 HANDLE VISUAL UPDATE');
-  
-  const newPages = {
-    ...allPages,
-    [currentPage]: updatedHTML
-  };
-  
-  setAllPages(newPages);
-  setHasUnsavedChanges(true);
+  const handleVisualUpdate = (updatedHTML) => {
+    console.log('═══════════════════════════════════');
+    console.log('📝 HANDLE VISUAL UPDATE');
+    
+    const newPages = {
+      ...allPages,
+      [currentPage]: updatedHTML
+    };
+    
+    setAllPages(newPages);
+    setHasUnsavedChanges(true);
     
     const newHistory = history.slice(0, historyIndex + 1);
-  newHistory.push(newPages);
-  
-  setHistory(newHistory);
-  setHistoryIndex(newHistory.length - 1);
-  
-  console.log('✅ UPDATE COMPLETE - Changes marked as unsaved');
-  console.log('═══════════════════════════════════');
-};
+    newHistory.push(newPages);
+    
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+    
+    console.log('✅ UPDATE COMPLETE - Changes marked as unsaved');
+    console.log('═══════════════════════════════════');
+  };
+
   const handleUndo = () => {
     console.log('🔙 UNDO CLICKED');
     console.log('  - Current historyIndex:', historyIndex);
@@ -195,95 +195,79 @@ const handleVisualUpdate = (updatedHTML) => {
     }
   };
 
- const handleSave = async () => {
-  setIsSaving(true);
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${apiUrl}/api/website/save`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        html_content: allPages['index.html'],
-        pages: allPages
-      })
-    });
-    
-    if (response.ok) {
-      setLastSavedPages(allPages);
-      setHasUnsavedChanges(false);
-      setShowSaveSuccess(true);
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${apiUrl}/api/website/save`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          html_content: allPages['index.html'],
+          pages: allPages
+        })
+      });
       
-      setTimeout(() => {
-        setShowSaveSuccess(false);
-      }, 3000);
-    }
-  } catch (error) {
-    console.error('Save error:', error);
-    alert('Failed to save changes');
-  } finally {
-    setIsSaving(false);
-  }
-};
-
-  const handlePublish = async () => {
-  setIsPublishing(true);
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${apiUrl}/api/website/publish`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        html_content: allPages['index.html'],
-        pages: allPages
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      setLastSavedPages(allPages);
-      setHasUnsavedChanges(false);
-      alert(`✅ Website published successfully!\n\nLive at: ${data.url}`);
-    } else {
-      throw new Error(data.error || 'Publish failed');
-    }
-  } catch (error) {
-    console.error('Publish error:', error);
-    alert('Failed to publish website: ' + error.message);
-  } finally {
-    setIsPublishing(false);
-  }
-};
-
-  const handleBackToDashboard = () => {
-  if (hasUnsavedChanges) {
-    if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
-      navigate('/dashboard?tab=website');
-    }
-  } else {
-    navigate('/dashboard?tab=website');
-  }
-};
-      
-      // Show success toast
-      setShowSaveSuccess(true);
-      
-      // Wait 1.5 seconds to show the success message, then navigate
-      setTimeout(() => {
-        navigate('/dashboard?tab=website');
-      }, 1500);
-      
+      if (response.ok) {
+        setLastSavedPages(allPages);
+        setHasUnsavedChanges(false);
+        setShowSaveSuccess(true);
+        
+        setTimeout(() => {
+          setShowSaveSuccess(false);
+        }, 3000);
+      }
     } catch (error) {
       console.error('Save error:', error);
-      alert('Failed to save website');
+      alert('Failed to save changes');
+    } finally {
       setIsSaving(false);
-      setShowSaveSuccess(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${apiUrl}/api/website/publish`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          html_content: allPages['index.html'],
+          pages: allPages
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setLastSavedPages(allPages);
+        setHasUnsavedChanges(false);
+        alert(`✅ Website published successfully!\n\nLive at: ${data.url}`);
+      } else {
+        throw new Error(data.error || 'Publish failed');
+      }
+    } catch (error) {
+      console.error('Publish error:', error);
+      alert('Failed to publish website: ' + error.message);
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  const handleBackToDashboard = () => {
+    if (hasUnsavedChanges) {
+      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
+        navigate('/dashboard?tab=website');
+      }
+    } else {
+      navigate('/dashboard?tab=website');
     }
   };
 
@@ -299,172 +283,178 @@ const handleVisualUpdate = (updatedHTML) => {
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       {/* Success Toast Notification */}
-{showSaveSuccess && (
-  <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
-    <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-2xl flex items-center gap-3">
-      <div className="bg-white rounded-full p-1">
-        <Check className="w-5 h-5 text-green-500" />
-      </div>
-      <div>
-        <p className="font-semibold">Changes Saved!</p>
-        <p className="text-sm text-green-100">Click "Publish Changes" to go live</p>
-      </div>
-    </div>
-  </div>
-)}
+      {showSaveSuccess && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="bg-green-500 text-white px-6 py-3 rounded-lg shadow-2xl flex items-center gap-3">
+            <div className="bg-white rounded-full p-1">
+              <Check className="w-5 h-5 text-green-500" />
+            </div>
+            <div>
+              <p className="font-semibold">Changes Saved!</p>
+              <p className="text-sm text-green-100">Click "Publish Changes" to go live</p>
+            </div>
+          </div>
+        </div>
+      )}
 
-  {/* Header */}
-<header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-  <div className="flex items-center gap-6 flex-1 overflow-x-auto">
-    <button
-      type="button"
-      onClick={handleBackToDashboard}
-      className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition flex-shrink-0"
-    >
-      <ArrowLeft className="w-5 h-5" />
-      <span className="font-medium hidden md:inline">Back</span>
-    </button>
-    
-    <div className="h-6 w-px bg-gray-300 hidden md:block" />
-    
-    {/* Desktop - Full Controls */}
-    <div className="hidden lg:flex items-center gap-4 flex-1">
-      <h1 className="text-lg font-bold text-gray-900">Editing:</h1>
-      
-      {/* Page Tabs */}
-      <div className="flex gap-2">
-        {Object.keys(allPages).map((pageName) => (
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+        <div className="flex items-center gap-6 flex-1 overflow-x-auto">
           <button
-            key={pageName}
-            onClick={() => setCurrentPage(pageName)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              currentPage === pageName
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            type="button"
+            onClick={handleBackToDashboard}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition flex-shrink-0"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium hidden md:inline">Back</span>
+          </button>
+          
+          <div className="h-6 w-px bg-gray-300 hidden md:block" />
+          
+          {/* Desktop - Full Controls */}
+          <div className="hidden lg:flex items-center gap-4 flex-1">
+            <h1 className="text-lg font-bold text-gray-900">Editing:</h1>
+            
+            {/* Page Tabs */}
+            <div className="flex gap-2">
+              {Object.keys(allPages).map((pageName) => (
+                <button
+                  key={pageName}
+                  onClick={() => setCurrentPage(pageName)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                    currentPage === pageName
+                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  {getPageDisplayName(pageName)}
+                </button>
+              ))}
+            </div>
+            
+            {/* Device Preview Toggle */}
+            <div className="h-6 w-px bg-gray-300" />
+            <div className="flex gap-2">
+              <button 
+                type="button" 
+                onClick={() => setDevicePreview('desktop')} 
+                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+                  devicePreview === 'desktop' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Monitor className="w-4 h-4" />
+                <span>Desktop</span>
+              </button>
+              <button 
+                type="button" 
+                onClick={() => setDevicePreview('mobile')} 
+                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+                  devicePreview === 'mobile' 
+                    ? 'bg-purple-600 text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <Smartphone className="w-4 h-4" />
+                <span>Mobile</span>
+              </button>
+            </div>
+
+            {/* Undo/Redo */}
+            <div className="h-6 w-px bg-gray-300" />
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleUndo}
+                disabled={historyIndex <= 0}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Undo (Ctrl+Z)"
+              >
+                <Undo2 className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                onClick={handleRedo}
+                disabled={historyIndex >= history.length - 1}
+                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+                title="Redo (Ctrl+Y)"
+              >
+                <Redo2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile - Compact Logo + Menu */}
+          <div className="flex lg:hidden items-center gap-4 flex-1">
+            <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
+            
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="ml-auto p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center gap-3 ml-4 flex-shrink-0">
+          {/* Save Button - Only show when there are unsaved changes */}
+          {hasUnsavedChanges && (
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              className="px-4 lg:px-6 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition flex items-center gap-2 disabled:opacity-50"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="hidden md:inline">Saving...</span>
+                </>
+              ) : (
+                <>
+                  <Save className="w-4 h-4" />
+                  <span className="hidden md:inline">Save</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* Publish Button - Green when changes exist, gray when published */}
+          <button
+            type="button"
+            onClick={handlePublish}
+            disabled={isPublishing || !hasUnsavedChanges}
+            className={`px-4 lg:px-6 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
+              hasUnsavedChanges
+                ? 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {getPageDisplayName(pageName)}
+            {isPublishing ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span className="hidden md:inline">Publishing...</span>
+              </>
+            ) : (
+              <>
+                <Send className="w-4 h-4" />
+                <span className="hidden md:inline">
+                  {hasUnsavedChanges ? 'Publish Changes' : 'Published ✓'}
+                </span>
+              </>
+            )}
           </button>
-        ))}
-      </div>
-      
-      {/* Device Preview Toggle */}
-      <div className="h-6 w-px bg-gray-300" />
-      <div className="flex gap-2">
-        <button 
-          type="button" 
-          onClick={() => setDevicePreview('desktop')} 
-          className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-            devicePreview === 'desktop' 
-              ? 'bg-purple-600 text-white' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Monitor className="w-4 h-4" />
-          <span>Desktop</span>
-        </button>
-        <button 
-          type="button" 
-          onClick={() => setDevicePreview('mobile')} 
-          className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
-            devicePreview === 'mobile' 
-              ? 'bg-purple-600 text-white' 
-              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-          }`}
-        >
-          <Smartphone className="w-4 h-4" />
-          <span>Mobile</span>
-        </button>
-      </div>
+        </div>
+      </header>
 
-      {/* Undo/Redo */}
-      <div className="h-6 w-px bg-gray-300" />
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={handleUndo}
-          disabled={historyIndex <= 0}
-          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
-          title="Undo (Ctrl+Z)"
-        >
-          <Undo2 className="w-4 h-4" />
-        </button>
-        <button
-          type="button"
-          onClick={handleRedo}
-          disabled={historyIndex >= history.length - 1}
-          className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
-          title="Redo (Ctrl+Y)"
-        >
-          <Redo2 className="w-4 h-4" />
-        </button>
-      </div>
+      {/* Rest of your component continues here... */}
+      {/* Add the mobile menu, main content, AI chat widget etc. from your original file */}
     </div>
-
-    {/* Mobile - Compact Logo + Menu */}
-    <div className="flex lg:hidden items-center gap-4 flex-1">
-      <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
-      
-      <button
-        type="button"
-        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-        className="ml-auto p-2 hover:bg-gray-100 rounded-lg"
-      >
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
-      </button>
-    </div>
-  </div>
-
-  {/* Action Buttons */}
-  <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-    {/* Save Button - Only show when there are unsaved changes */}
-    {hasUnsavedChanges && (
-      <button
-        type="button"
-        onClick={handleSave}
-        disabled={isSaving}
-        className="px-4 lg:px-6 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition flex items-center gap-2 disabled:opacity-50"
-      >
-        {isSaving ? (
-          <>
-            <Loader2 className="w-4 h-4 animate-spin" />
-            <span className="hidden md:inline">Saving...</span>
-          </>
-        ) : (
-          <>
-            <Save className="w-4 h-4" />
-            <span className="hidden md:inline">Save</span>
-          </>
-        )}
-      </button>
-    )}
-
-    {/* Publish Button - Green when changes exist, gray when published */}
-    <button
-      type="button"
-      onClick={handlePublish}
-      disabled={isPublishing || !hasUnsavedChanges}
-      className={`px-4 lg:px-6 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-        hasUnsavedChanges
-          ? 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg'
-          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-      }`}
-    >
-      {isPublishing ? (
-        <>
-          <Loader2 className="w-4 h-4 animate-spin" />
-          <span className="hidden md:inline">Publishing...</span>
-        </>
-      ) : (
-        <>
-          <Send className="w-4 h-4" />
-          <span className="hidden md:inline">
-            {hasUnsavedChanges ? 'Publish Changes' : 'Published ✓'}
-          </span>
-        </>
-      )}
-    </button>
-  </div>
-</header>
+  );
+}
