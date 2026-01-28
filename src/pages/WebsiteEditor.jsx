@@ -453,8 +453,155 @@ export default function WebsiteEditor() {
         </div>
       </header>
 
-      {/* Rest of your component continues here... */}
-      {/* Add the mobile menu, main content, AI chat widget etc. from your original file */}
+      {/* Mobile Menu Dropdown */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden bg-white border-b border-gray-200 p-4 space-y-4">
+          {/* Page Selection */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Current Page</label>
+            <select
+              value={currentPage}
+              onChange={(e) => setCurrentPage(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
+            >
+              {Object.keys(allPages).map((pageName) => (
+                <option key={pageName} value={pageName}>
+                  {getPageDisplayName(pageName)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Device Preview */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
+            <div className="flex gap-2">
+              <button 
+                onClick={() => setDevicePreview('desktop')} 
+                className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 ${
+                  devicePreview === 'desktop' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                <Monitor className="w-4 h-4" />
+                Desktop
+              </button>
+              <button 
+                onClick={() => setDevicePreview('mobile')} 
+                className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 ${
+                  devicePreview === 'mobile' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'
+                }`}
+              >
+                <Smartphone className="w-4 h-4" />
+                Mobile
+              </button>
+            </div>
+          </div>
+
+          {/* Undo/Redo */}
+          <div className="flex gap-2">
+            <button
+              onClick={handleUndo}
+              disabled={historyIndex <= 0}
+              className="flex-1 px-3 py-2 bg-gray-100 rounded-lg disabled:opacity-30 flex items-center justify-center gap-2"
+            >
+              <Undo2 className="w-4 h-4" />
+              Undo
+            </button>
+            <button
+              onClick={handleRedo}
+              disabled={historyIndex >= history.length - 1}
+              className="flex-1 px-3 py-2 bg-gray-100 rounded-lg disabled:opacity-30 flex items-center justify-center gap-2"
+            >
+              <Redo2 className="w-4 h-4" />
+              Redo
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Main Content - Visual Editor */}
+      <main className="flex-1 overflow-hidden">
+        <VisualEditor
+          htmlContent={allPages[currentPage] || ''}
+          onUpdate={handleVisualUpdate}
+          devicePreview={devicePreview}
+        />
+      </main>
+
+      {/* AI Chat Widget */}
+      {isAIChatOpen && (
+        <div className="fixed bottom-4 right-4 w-96 h-[500px] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50">
+          {/* Chat Header */}
+          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-t-xl flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-5 h-5" />
+              <h3 className="font-semibold">AI Editor Assistant</h3>
+            </div>
+            <button onClick={() => setIsAIChatOpen(false)} className="hover:bg-white/20 p-1 rounded">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
+            {messages.map((msg, i) => (
+              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] rounded-lg p-3 ${
+                  msg.role === 'user' 
+                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
+                    : 'bg-gray-100 text-gray-900'
+                }`}>
+                  <p className="text-sm whitespace-pre-line">{msg.content}</p>
+                </div>
+              </div>
+            ))}
+            {isAIThinking && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-lg p-3">
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <div className="p-4 border-t border-gray-200">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                placeholder="Tell me what to change..."
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                disabled={isAIThinking}
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={isAIThinking || !inputMessage.trim()}
+                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50"
+              >
+                <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Chat Toggle Button */}
+      {!isAIChatOpen && (
+        <button
+          onClick={() => setIsAIChatOpen(true)}
+          className="fixed bottom-4 right-4 w-14 h-14 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40"
+          title="Open AI Assistant"
+        >
+          <Sparkles className="w-6 h-6" />
+        </button>
+      )}
     </div>
   );
 }
