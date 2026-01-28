@@ -13,25 +13,37 @@ export default function AIAgents({ user, setCurrentView, apiUrl, authFetch }) {
     loadDeploymentStatus();
   }, []);
 
-  const loadDeploymentStatus = async () => {
-    try {
-      // Load chat agent status
-      const chatResponse = await authFetch(`${apiUrl}/api/agents/website/status`);
-      if (chatResponse.ok) {
-        const chatData = await chatResponse.json();
-        setChatAgentDeployed(chatData.isDeployed || false);
-      }
-
-      // Load lead form agent status
-      const leadResponse = await authFetch(`${apiUrl}/api/agents/leadform/status`);
-      if (leadResponse.ok) {
-        const leadData = await leadResponse.json();
-        setLeadAgentDeployed(leadData.isDeployed || false);
-      }
-    } catch (error) {
-      console.error('Error loading deployment status:', error);
+const loadDeploymentStatus = async () => {
+  console.log('🔍 Loading agent deployment status...');
+  
+  try {
+    // Load chat agent status
+    const chatResponse = await authFetch(`${apiUrl}/api/agents/website/status`);
+    if (chatResponse.ok) {
+      const chatData = await chatResponse.json();
+      console.log('💬 Chat agent status:', chatData.isDeployed);
+      setChatAgentDeployed(chatData.isDeployed || false);
+    } else {
+      console.warn('Failed to load chat agent status');
+      setChatAgentDeployed(false);
     }
-  };
+
+    // Load lead form agent status
+    const leadResponse = await authFetch(`${apiUrl}/api/agents/leadform/status`);
+    if (leadResponse.ok) {
+      const leadData = await leadResponse.json();
+      console.log('📧 Lead agent status:', leadData.isDeployed);
+      setLeadAgentDeployed(leadData.isDeployed || false);
+    } else {
+      console.warn('Failed to load lead agent status');
+      setLeadAgentDeployed(false);
+    }
+  } catch (error) {
+    console.error('❌ Error loading deployment status:', error);
+    setChatAgentDeployed(false);
+    setLeadAgentDeployed(false);
+  }
+};
 
   const handleDeploymentChange = () => {
     // Reload deployment status when an agent is deployed/undeployed
