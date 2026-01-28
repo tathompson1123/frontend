@@ -8,7 +8,6 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
     smsEnabled: true,
     followUpEnabled: true,
     autoBookingEnabled: true,
-    emailTemplate: getDefaultEmailTemplate(),
     smsTemplate: getDefaultSmsTemplate()
   });
   const [formNeedsFix, setFormNeedsFix] = useState(null);
@@ -101,26 +100,6 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
     }
   };
 
-  function getDefaultEmailTemplate() {
-    return `Hey {{name}},
-
-Thanks for reaching out! I'm Kurt, and I just saw your request come through.
-
-You mentioned you're interested in {{service}}. I'd love to help you out with that!
-
-Here's what I can do:
-- Get you scheduled ASAP (we have availability this week)
-- Answer any questions about pricing or our process
-- Show you some before/after photos of similar work we've done
-
-What day works best for you? Or if you want, just reply with your phone number and I'll give you a call directly.
-
-Looking forward to working with you!
-
-Kurt
-(555) 123-4567`;
-  }
-
   function getDefaultSmsTemplate() {
     return `Hey {{name}}, it's Kurt! Just got your request for {{service}}. When's a good time to chat? - Kurt`;
   }
@@ -132,11 +111,9 @@ Kurt
         const data = await response.json();
         
         setAgentConfig({
-          emailEnabled: data.config?.emailEnabled ?? true,
           smsEnabled: data.config?.smsEnabled ?? true,
           followUpEnabled: data.config?.followUpEnabled ?? true,
           autoBookingEnabled: data.config?.autoBookingEnabled ?? true,
-          emailTemplate: data.emailTemplate || getDefaultEmailTemplate(),
           smsTemplate: data.smsTemplate || getDefaultSmsTemplate()
         });
       }
@@ -266,196 +243,155 @@ Kurt
           </p>
         </div>
 
-        {/* Stats */}
-        {isDeployed && (
-          <div className="grid grid-cols-5 gap-4 mb-6 pb-6 border-b border-gray-200">
-            <div className="bg-blue-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-blue-600 mb-2">
-                <Mail className="w-5 h-5" />
-                <span className="text-sm font-medium">Total Responses</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-              <p className="text-xs text-gray-600 mt-1">This month</p>
-            </div>
-            <div className="bg-green-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-green-600 mb-2">
-                <CheckCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">Emails Sent</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{stats.emailsSent}</p>
-              <p className="text-xs text-gray-600 mt-1">Automated</p>
-            </div>
-            <div className="bg-purple-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-purple-600 mb-2">
-                <Mail className="w-5 h-5" />
-                <span className="text-sm font-medium">SMS Sent</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{stats.smsSent}</p>
-              <p className="text-xs text-gray-600 mt-1">Automated</p>
-            </div>
-            <div className="bg-orange-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-orange-600 mb-2">
-                <TrendingUp className="w-5 h-5" />
-                <span className="text-sm font-medium">Response Rate</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{stats.responseRate}%</p>
-              <button
-                onClick={() => setCurrentView('customers-leads')}
-                className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
-              >
-                View Leads →
-              </button>
-            </div>
-            <div className="bg-indigo-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-indigo-600 mb-2">
-                <Calendar className="w-5 h-5" />
-                <span className="text-sm font-medium">Bookings</span>
-              </div>
-              <p className="text-2xl font-bold text-gray-900">{stats.bookingsCreated}</p>
-              <button
-                onClick={() => setCurrentView('booking-calendar')}
-                className="text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
-              >
-                View Calendar →
-              </button>
-            </div>
-          </div>
-        )}
+       {isDeployed && (
+  <div className="grid grid-cols-4 gap-4 mb-6 pb-6 border-b border-gray-200">
+    <div className="bg-blue-50 rounded-lg p-4">
+      <div className="flex items-center gap-2 text-blue-600 mb-2">
+        <Phone className="w-5 h-5" />
+        <span className="text-sm font-medium">Total Leads</span>
+      </div>
+      <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+      <p className="text-xs text-gray-600 mt-1">This month</p>
+    </div>
+    <div className="bg-purple-50 rounded-lg p-4">
+      <div className="flex items-center gap-2 text-purple-600 mb-2">
+        <MessageCircle className="w-5 h-5" />
+        <span className="text-sm font-medium">SMS Sent</span>
+      </div>
+      <p className="text-2xl font-bold text-gray-900">{stats.smsSent}</p>
+      <p className="text-xs text-gray-600 mt-1">Automated</p>
+    </div>
+    <div className="bg-orange-50 rounded-lg p-4">
+      <div className="flex items-center gap-2 text-orange-600 mb-2">
+        <TrendingUp className="w-5 h-5" />
+        <span className="text-sm font-medium">Response Rate</span>
+      </div>
+      <p className="text-2xl font-bold text-gray-900">{stats.responseRate}%</p>
+      <button
+        onClick={() => setCurrentView('customers-leads')}
+        className="text-xs text-orange-600 hover:text-orange-700 font-medium mt-1"
+      >
+        View Leads →
+      </button>
+    </div>
+    <div className="bg-indigo-50 rounded-lg p-4">
+      <div className="flex items-center gap-2 text-indigo-600 mb-2">
+        <Calendar className="w-5 h-5" />
+        <span className="text-sm font-medium">Bookings</span>
+      </div>
+      <p className="text-2xl font-bold text-gray-900">{stats.bookingsCreated}</p>
+      <button
+        onClick={() => setCurrentView('booking-calendar')}
+        className="text-xs text-indigo-600 hover:text-indigo-700 font-medium mt-1"
+      >
+        View Calendar →
+      </button>
+    </div>
+  </div>
+)}
 
         {/* Configuration and Deploy Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configuration - Takes 2/3 width */}
-          <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Trigger Settings</h3>
-            
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Send Email Response</p>
-                  <p className="text-sm text-gray-600">Immediately when lead form is submitted</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.emailEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, emailEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
+<div className="lg:col-span-2 space-y-4">
+  <h3 className="text-lg font-semibold text-gray-900">Trigger Settings</h3>
+  
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+        <Phone className="w-5 h-5 text-green-600" />
+      </div>
+      <div>
+        <p className="font-medium text-gray-900">Send SMS Response</p>
+        <p className="text-sm text-gray-600">Delayed 45-75 seconds to mimic human response time</p>
+      </div>
+    </div>
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input 
+        type="checkbox" 
+        checked={agentConfig.smsEnabled}
+        onChange={(e) => setAgentConfig({ ...agentConfig, smsEnabled: e.target.checked })}
+        className="sr-only peer" 
+      />
+      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+    </label>
+  </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-green-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Send SMS Response</p>
-                  <p className="text-sm text-gray-600">If phone number is provided</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.smsEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, smsEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+        <Clock className="w-5 h-5 text-purple-600" />
+      </div>
+      <div>
+        <p className="font-medium text-gray-900">AI Conversation Follow-up</p>
+        <p className="text-sm text-gray-600">Continue SMS conversation with human-like delays</p>
+      </div>
+    </div>
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input 
+        type="checkbox" 
+        checked={agentConfig.followUpEnabled}
+        onChange={(e) => setAgentConfig({ ...agentConfig, followUpEnabled: e.target.checked })}
+        className="sr-only peer" 
+      />
+      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+    </label>
+  </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                  <Clock className="w-5 h-5 text-purple-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Follow-up Email</p>
-                  <p className="text-sm text-gray-600">Send if no response after 24 hours</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.followUpEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, followUpEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+    <div className="flex items-center gap-3">
+      <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+        <Calendar className="w-5 h-5 text-indigo-600" />
+      </div>
+      <div>
+        <p className="font-medium text-gray-900">Auto-Create Booking</p>
+        <p className="text-sm text-gray-600">Add lead to calendar if service & date mentioned</p>
+      </div>
+    </div>
+    <label className="relative inline-flex items-center cursor-pointer">
+      <input 
+        type="checkbox" 
+        checked={agentConfig.autoBookingEnabled}
+        onChange={(e) => setAgentConfig({ ...agentConfig, autoBookingEnabled: e.target.checked })}
+        className="sr-only peer" 
+      />
+      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+    </label>
+  </div>
 
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-indigo-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Auto-Create Booking</p>
-                  <p className="text-sm text-gray-600">Add lead to calendar if service & date mentioned</p>
-                </div>
-              </div>
-              <label className="relative inline-flex items-center cursor-pointer">
-                <input 
-                  type="checkbox" 
-                  checked={agentConfig.autoBookingEnabled}
-                  onChange={(e) => setAgentConfig({ ...agentConfig, autoBookingEnabled: e.target.checked })}
-                  className="sr-only peer" 
-                />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-              </label>
-            </div>
+  {/* Remove Email Template section entirely */}
 
-            {/* Email Template */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Email Template</h3>
-                <span className="text-xs text-gray-500">
-                  {`Available variables: {{name}}, {{email}}, {{phone}}, {{service}}, {{message}}`}
-                </span>
-              </div>
-              <textarea
-                value={agentConfig.emailTemplate}
-                onChange={(e) => setAgentConfig({ ...agentConfig, emailTemplate: e.target.value })}
-                rows="12"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-              />
-            </div>
+  {/* SMS Template */}
+  <div>
+    <div className="flex items-center justify-between mb-4">
+      <h3 className="text-lg font-semibold text-gray-900">Initial SMS Template</h3>
+      <span className="text-xs text-gray-500">Max 160 characters recommended</span>
+    </div>
+    <textarea
+      value={agentConfig.smsTemplate}
+      onChange={(e) => setAgentConfig({ ...agentConfig, smsTemplate: e.target.value })}
+      rows="3"
+      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+      maxLength="320"
+    />
+    <div className="mt-2">
+      <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
+    </div>
+    <p className="text-xs text-gray-500 mt-2">
+      {`Available variables: {{name}}, {{phone}}, {{service}}, {{message}}`}
+    </p>
+  </div>
 
-            {/* SMS Template */}
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">SMS Template</h3>
-                <span className="text-xs text-gray-500">Max 160 characters recommended</span>
-              </div>
-              <textarea
-                value={agentConfig.smsTemplate}
-                onChange={(e) => setAgentConfig({ ...agentConfig, smsTemplate: e.target.value })}
-                rows="3"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
-                maxLength="320"
-              />
-              <div className="mt-2">
-                <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
-              </div>
-            </div>
-
-            {/* Save Configuration Button */}
-            <button
-              onClick={saveConfiguration}
-              disabled={isSaving}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <Save className="w-5 h-5" />
-              {isSaving ? 'Saving...' : 'Save Configuration'}
-            </button>
-          </div>
+  {/* Save Configuration Button */}
+  <button
+    onClick={saveConfiguration}
+    disabled={isSaving}
+    className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+  >
+    <Save className="w-5 h-5" />
+    {isSaving ? 'Saving...' : 'Save Configuration'}
+  </button>
+</div>
 
           {/* Deploy Section - Takes 1/3 width */}
           <div className="lg:col-span-1">
