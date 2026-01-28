@@ -147,7 +147,7 @@ const [lastSavedPages, setLastSavedPages] = useState(null);
     }
   };
 
-onst handleVisualUpdate = (updatedHTML) => {
+const handleVisualUpdate = (updatedHTML) => {
   console.log('═══════════════════════════════════');
   console.log('📝 HANDLE VISUAL UPDATE');
   
