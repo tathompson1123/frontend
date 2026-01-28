@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles, AlertCircle, Settings } from 'lucide-react';
+import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles, AlertCircle, Settings, Phone } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
@@ -21,16 +21,31 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
     bookingsCreated: 0
   });
   const [isSaving, setIsSaving] = useState(false);
+  const [isDeploying, setIsDeploying] = useState(false);
+  const [phoneNumber, setPhoneNumber] = useState(null);
+  const [areaCode, setAreaCode] = useState('');
 
-  // FIX: useEffect at the component level, with apiUrl dependency
   useEffect(() => {
-    if (!apiUrl) return; // Don't run if apiUrl isn't ready
+    if (!apiUrl) return;
     
     console.log('🔍 API URL:', apiUrl);
     loadAgentConfig();
     loadStats();
     checkContactForm();
-  }, [apiUrl]); // Add apiUrl as dependency
+    loadPhoneNumber();
+  }, [apiUrl]);
+
+  const loadPhoneNumber = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/auth/user`);
+      if (response.ok) {
+        const userData = await response.json();
+        setPhoneNumber(userData.user?.twilio_phone_number || null);
+      }
+    } catch (error) {
+      console.error('Error loading phone number:', error);
+    }
+  };
 
   const checkContactForm = async () => {
     try {
@@ -111,25 +126,24 @@ Kurt
   }
 
   const loadAgentConfig = async () => {
-  try {
-    const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`);
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Merge the config settings with templates
-      setAgentConfig({
-        emailEnabled: data.config?.emailEnabled ?? true,
-        smsEnabled: data.config?.smsEnabled ?? true,
-        followUpEnabled: data.config?.followUpEnabled ?? true,
-        autoBookingEnabled: data.config?.autoBookingEnabled ?? true,
-        emailTemplate: data.emailTemplate || getDefaultEmailTemplate(),
-        smsTemplate: data.smsTemplate || getDefaultSmsTemplate()
-      });
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`);
+      if (response.ok) {
+        const data = await response.json();
+        
+        setAgentConfig({
+          emailEnabled: data.config?.emailEnabled ?? true,
+          smsEnabled: data.config?.smsEnabled ?? true,
+          followUpEnabled: data.config?.followUpEnabled ?? true,
+          autoBookingEnabled: data.config?.autoBookingEnabled ?? true,
+          emailTemplate: data.emailTemplate || getDefaultEmailTemplate(),
+          smsTemplate: data.smsTemplate || getDefaultSmsTemplate()
+        });
+      }
+    } catch (error) {
+      console.error('Error loading config:', error);
     }
-  } catch (error) {
-    console.error('Error loading config:', error);
-  }
-};
+  };
 
   const loadStats = async () => {
     try {
@@ -143,56 +157,83 @@ Kurt
     }
   };
 
- const saveConfiguration = async () => {
-  setIsSaving(true);
-  try {
-    const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        emailEnabled: agentConfig.emailEnabled,
-        smsEnabled: agentConfig.smsEnabled,
-        followUpEnabled: agentConfig.followUpEnabled,
-        autoBookingEnabled: agentConfig.autoBookingEnabled,
-        emailTemplate: agentConfig.emailTemplate,
-        smsTemplate: agentConfig.smsTemplate
-      })
-    });
-    
-    if (response.ok) {
-      alert('✅ Configuration saved successfully!');
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-        detail: { step: 5 } 
-      }));
-    } else {
-      const error = await response.json();
-      alert('Failed to save: ' + (error.error || 'Unknown error'));
-    }
-  } catch (error) {
-    console.error('Error saving config:', error);
-    alert('Failed to save configuration');
-  } finally {
-    setIsSaving(false);
-  }
-};
-  const deployAgent = async () => {
+  const saveConfiguration = async () => {
+    setIsSaving(true);
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/lead-form/deploy`, {
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/config`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailEnabled: agentConfig.emailEnabled,
+          smsEnabled: agentConfig.smsEnabled,
+          followUpEnabled: agentConfig.followUpEnabled,
+          autoBookingEnabled: agentConfig.autoBookingEnabled,
+          emailTemplate: agentConfig.emailTemplate,
+          smsTemplate: agentConfig.smsTemplate
+        })
       });
       
       if (response.ok) {
-        alert('✅ Lead Form Agent deployed! It will respond to form submissions automatically.');
-        onDeploymentChange();
-        
+        alert('✅ Configuration saved successfully!');
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
           detail: { step: 5 } 
         }));
+      } else {
+        const error = await response.json();
+        alert('Failed to save: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error saving config:', error);
+      alert('Failed to save configuration');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const deployAgent = async () => {
+    // Validate area code if SMS is enabled and no phone number exists
+    if (agentConfig.smsEnabled && !phoneNumber) {
+      if (!areaCode) {
+        alert('Please enter your area code to provision a phone number for SMS messaging.');
+        return;
+      }
+      if (!/^\d{3}$/.test(areaCode)) {
+        alert('Area code must be exactly 3 digits (e.g., 206, 425, 360)');
+        return;
+      }
+    }
+
+    setIsDeploying(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/deploy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ areaCode })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.phoneNumber) {
+          setPhoneNumber(data.phoneNumber);
+          alert(`✅ Lead Form Agent deployed!\n\n📱 Your business phone number: ${data.phoneNumber}\n\nThe agent will now respond to form submissions automatically.`);
+        } else {
+          alert('✅ Lead Form Agent deployed! It will respond to form submissions automatically.');
+        }
+        
+        onDeploymentChange();
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
+          detail: { step: 5 } 
+        }));
+      } else {
+        const error = await response.json();
+        alert('Failed to deploy: ' + (error.error || error.details || 'Unknown error'));
       }
     } catch (error) {
       console.error('Error deploying agent:', error);
-      alert('Failed to deploy agent');
+      alert('Failed to deploy agent: ' + error.message);
+    } finally {
+      setIsDeploying(false);
     }
   };
 
@@ -211,6 +252,12 @@ Kurt
             }`}>
               {isDeployed ? '● Deployed' : '○ Not Deployed'}
             </div>
+            {phoneNumber && (
+              <div className="px-3 py-1 rounded-lg font-medium text-sm bg-blue-100 text-blue-700 flex items-center gap-2">
+                <Phone className="w-4 h-4" />
+                {phoneNumber}
+              </div>
+            )}
           </div>
           <p className="text-gray-600">
             {isDeployed 
@@ -275,7 +322,7 @@ Kurt
           </div>
         )}
 
-        {/* Configuration and Deploy Section - Side by Side */}
+        {/* Configuration and Deploy Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Configuration - Takes 2/3 width */}
           <div className="lg:col-span-2 space-y-4">
@@ -305,7 +352,7 @@ Kurt
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <Mail className="w-5 h-5 text-green-600" />
+                  <Phone className="w-5 h-5 text-green-600" />
                 </div>
                 <div>
                   <p className="font-medium text-gray-900">Send SMS Response</p>
@@ -423,8 +470,28 @@ Kurt
                   ? 'Your lead form agent is active and will respond to all form submissions automatically.'
                   : 'Deploy this agent to automatically respond to lead form submissions.'}
               </p>
+
+              {/* Area Code Input - Only show if SMS enabled and no phone number */}
+              {agentConfig.smsEnabled && !phoneNumber && !isDeployed && (
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Area Code for SMS Number
+                  </label>
+                  <input
+                    type="text"
+                    value={areaCode}
+                    onChange={(e) => setAreaCode(e.target.value.replace(/\D/g, '').slice(0, 3))}
+                    placeholder="206"
+                    maxLength="3"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    A local phone number will be purchased for SMS messaging
+                  </p>
+                </div>
+              )}
               
-             {user?.plan?.toLowerCase() !== 'pro' && user?.plan?.toLowerCase() !== 'expert' && !isDeployed && (
+              {user?.plan?.toLowerCase() !== 'pro' && user?.plan?.toLowerCase() !== 'expert' && !isDeployed && (
                 <div className="flex items-start gap-2 bg-amber-100 border border-amber-300 rounded-lg p-3 mb-4">
                   <Crown className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                   <p className="text-sm text-amber-800 font-medium">
@@ -436,7 +503,7 @@ Kurt
               {user?.plan?.toLowerCase() === 'pro' || user?.plan?.toLowerCase() === 'expert' || isDeployed ? (
                 <button
                   onClick={deployAgent}
-                  disabled={isDeployed}
+                  disabled={isDeployed || isDeploying}
                   className={`w-full px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
                     isDeployed
                       ? 'bg-green-100 text-green-700 cursor-not-allowed'
@@ -444,7 +511,7 @@ Kurt
                   }`}
                 >
                   <Rocket className="w-5 h-5" />
-                  {isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
+                  {isDeploying ? 'Deploying...' : isDeployed ? 'Agent Deployed' : 'Deploy Agent'}
                 </button>
               ) : (
                 <button
@@ -456,65 +523,66 @@ Kurt
                 </button>
               )}
             </div>
-           {/* Fix Contact Form Section */}
-<div className={`rounded-xl border-2 p-6 mt-4 ${
-  formNeedsFix === false 
-    ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
-    : 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
-}`}>
-  <div className="flex items-center gap-2 mb-3">
-    {formNeedsFix === false ? (
-      <>
-        <CheckCircle className="w-5 h-5 text-green-600" />
-        <h3 className="text-sm font-semibold text-gray-900">Contact Form Ready</h3>
-      </>
-    ) : (
-      <>
-        <AlertCircle className="w-5 h-5 text-amber-600" />
-        <h3 className="text-sm font-semibold text-gray-900">Contact Form Setup</h3>
-      </>
-    )}
-  </div>
-  
-  {formNeedsFix === false ? (
-    <p className="text-xs text-green-700 font-medium">
-      ✅ Your website form is properly configured and ready to capture leads!
-    </p>
-  ) : (
-    <>
-      <p className="text-xs text-gray-600 mb-3">
-        Ensure your website form captures leads with SMS consent
-      </p>
 
-      <div className="bg-white rounded-lg p-3 border border-amber-200 mb-3">
-        <p className="text-xs font-medium text-gray-700 mb-2">✅ Required:</p>
-        <ul className="space-y-1 text-xs text-gray-600">
-          <li className="flex items-center gap-1">
-            <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
-            SMS consent checkbox
-          </li>
-          <li className="flex items-center gap-1">
-            <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
-            Leads auto-submit
-          </li>
-          <li className="flex items-center gap-1">
-            <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
-            Proper form tagging
-          </li>
-        </ul>
-      </div>
+            {/* Fix Contact Form Section */}
+            <div className={`rounded-xl border-2 p-6 mt-4 ${
+              formNeedsFix === false 
+                ? 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200' 
+                : 'bg-gradient-to-br from-amber-50 to-orange-50 border-amber-200'
+            }`}>
+              <div className="flex items-center gap-2 mb-3">
+                {formNeedsFix === false ? (
+                  <>
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <h3 className="text-sm font-semibold text-gray-900">Contact Form Ready</h3>
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-5 h-5 text-amber-600" />
+                    <h3 className="text-sm font-semibold text-gray-900">Contact Form Setup</h3>
+                  </>
+                )}
+              </div>
+              
+              {formNeedsFix === false ? (
+                <p className="text-xs text-green-700 font-medium">
+                  ✅ Your website form is properly configured and ready to capture leads!
+                </p>
+              ) : (
+                <>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Ensure your website form captures leads with SMS consent
+                  </p>
 
-      <button
-        onClick={fixContactForm}
-        disabled={isFixingForm}
-        className="w-full px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
-      >
-        <Settings className="w-4 h-4" />
-        {isFixingForm ? 'Updating...' : 'Fix Contact Form'}
-      </button>
-    </>
-  )}
-</div>
+                  <div className="bg-white rounded-lg p-3 border border-amber-200 mb-3">
+                    <p className="text-xs font-medium text-gray-700 mb-2">✅ Required:</p>
+                    <ul className="space-y-1 text-xs text-gray-600">
+                      <li className="flex items-center gap-1">
+                        <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+                        SMS consent checkbox
+                      </li>
+                      <li className="flex items-center gap-1">
+                        <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+                        Leads auto-submit
+                      </li>
+                      <li className="flex items-center gap-1">
+                        <div className="w-1 h-1 bg-amber-600 rounded-full"></div>
+                        Proper form tagging
+                      </li>
+                    </ul>
+                  </div>
+
+                  <button
+                    onClick={fixContactForm}
+                    disabled={isFixingForm}
+                    className="w-full px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                  >
+                    <Settings className="w-4 h-4" />
+                    {isFixingForm ? 'Updating...' : 'Fix Contact Form'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -543,15 +611,15 @@ Kurt
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">3</div>
             <div>
-              <p className="font-medium text-gray-900">Auto-create booking (if enabled)</p>
-              <p className="text-sm text-gray-600">If service and date are mentioned, booking is created in your calendar</p>
+              <p className="font-medium text-gray-900">Two-way SMS conversation</p>
+              <p className="text-sm text-gray-600">Leads can text your business number and get AI-powered responses</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <div className="w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center flex-shrink-0 font-bold">4</div>
             <div>
-              <p className="font-medium text-gray-900">Follow-up if needed</p>
-              <p className="text-sm text-gray-600">Automatic follow-up email after 24 hours if no response</p>
+              <p className="font-medium text-gray-900">Auto-create booking (if enabled)</p>
+              <p className="text-sm text-gray-600">If service and date are mentioned, booking is created in your calendar</p>
             </div>
           </div>
         </div>
