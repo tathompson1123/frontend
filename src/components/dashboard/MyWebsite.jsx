@@ -407,42 +407,48 @@ const handleConnectExistingWebsite = async () => {
         </div>
       </div>
       <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
-        <iframe 
-          srcDoc={currentWebsite ? (() => {
-            const fixCSS = `
-              <style>
-                * { box-sizing: border-box; }
-                html, body {
-                  width: 375px !important;
-                  overflow: hidden !important;
-                  margin: 0 !important;
-                  padding: 0 !important;
-                }
-                body {
-                  transform: scale(0.85);
-                  transform-origin: top left;
-                  width: 441px !important;
-                }
-                img {
-                  max-width: 100% !important;
-                  height: auto !important;
-                }
-                header, nav { position: sticky !important; top: 0 !important; z-index: 1000 !important; }
-              </style>
-            `;
-            if (currentWebsite.includes('</head>')) {
-              return currentWebsite.replace('</head>', fixCSS + '</head>');
-            } else if (currentWebsite.includes('<body')) {
-              return currentWebsite.replace('<body', fixCSS + '<body');
-            } else {
-              return fixCSS + currentWebsite;
-            }
-          })() : ''} 
-          title="Mobile Website Preview" 
-          className="w-full h-full bg-white border-0 pointer-events-none" 
-          sandbox=""
-          style={{ width: '375px', height: '575px' }}
-        />
+<iframe 
+  srcDoc={currentWebsite ? (() => {
+    const fixCSS = `
+      <style>
+        html, body {
+          width: 375px !important;
+          max-width: 375px !important;
+          overflow-x: hidden !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        * {
+          max-width: 100% !important;
+          box-sizing: border-box !important;
+        }
+        section, div, header, main, article, nav {
+          max-width: 100% !important;
+          overflow-x: hidden !important;
+        }
+        img, video, iframe, svg {
+          max-width: 100% !important;
+          height: auto !important;
+        }
+        /* Hide chat widget */
+        #sorce-chat-widget {
+          display: none !important;
+        }
+      </style>
+    `;
+    if (currentWebsite.includes('</head>')) {
+      return currentWebsite.replace('</head>', fixCSS + '</head>');
+    } else if (currentWebsite.includes('<body')) {
+      return currentWebsite.replace('<body', fixCSS + '<body');
+    } else {
+      return fixCSS + currentWebsite;
+    }
+  })() : ''} 
+  title="Mobile Website Preview" 
+  className="w-full h-full bg-white border-0 pointer-events-none" 
+  sandbox="allow-scripts allow-same-origin"
+  style={{ width: '375px', height: '575px' }}
+/>
       </div>
     </div>
     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
