@@ -482,7 +482,7 @@ const handleConnectExistingWebsite = async () => {
 
           {/* Deployment & Domain Management */}
           <div className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
-          {/* Deployment Status */}
+        {/* Deployment Status */}
 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
     <Zap className="w-5 h-5 text-blue-600" />
@@ -490,11 +490,22 @@ const handleConnectExistingWebsite = async () => {
   </h3>
   {vercelUrl ? (
     <div className="space-y-3">
-      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-        <Check className="w-5 h-5 text-green-600" />
-        <span className="text-sm text-green-900 font-medium">
-          {isPublished ? 'Published & Live' : 'Deployed (Unpublished)'}
-        </span>
+      <div className={`flex items-center gap-2 p-3 rounded-lg border ${
+        isPublished 
+          ? 'bg-green-50 border-green-200'
+          : 'bg-yellow-50 border-yellow-200'
+      }`}>
+        {isPublished ? (
+          <>
+            <Check className="w-5 h-5 text-green-600" />
+            <span className="text-sm text-green-900 font-medium">Published & Live</span>
+          </>
+        ) : (
+          <>
+            <AlertCircle className="w-5 h-5 text-yellow-600" />
+            <span className="text-sm text-yellow-900 font-medium">Unpublished Changes</span>
+          </>
+        )}
       </div>
       <a 
         href={vercelUrl} 
@@ -504,15 +515,6 @@ const handleConnectExistingWebsite = async () => {
       >
         {vercelUrl} <ExternalLink className="w-3 h-3 flex-shrink-0" />
       </a>
-      
-      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 text-sm text-gray-700">
-        <p className="font-medium mb-1">✏️ How to update your website:</p>
-        <ol className="text-xs space-y-1 ml-4 list-decimal">
-          <li>Click "Edit Website" to make changes</li>
-          <li>Click "Save Changes" in the editor</li>
-          <li>Click "Publish Changes" to go live</li>
-        </ol>
-      </div>
     </div>
   ) : (
     <div className="space-y-3">
