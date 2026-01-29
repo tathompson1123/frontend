@@ -11,9 +11,12 @@ import {
   X,
   Undo2,
   Redo2,
-  Check
+  Check,
+  Clock
 } from 'lucide-react';
 import VisualEditor from './VisualEditor';
+import WebsiteVersionHistory from './WebsiteVersionHistory';
+
 
 export default function WebsiteEditor() {
   const navigate = useNavigate();
@@ -26,6 +29,8 @@ export default function WebsiteEditor() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+
+  const [showVersionHistory, setShowVersionHistory] = useState(false);
   
   // AI Chat state
   const [messages, setMessages] = useState([]);
@@ -89,6 +94,17 @@ export default function WebsiteEditor() {
       console.error('Error fetching website:', error);
     }
   };
+
+  const handleRestoreVersion = (html_content, pages) => {
+  setAllPages(pages || { 'index.html': html_content });
+  setCurrentPage('index.html');
+
+    const newPages = pages || { 'index.html': html_content };
+  const newHistory = history.slice(0, historyIndex + 1);
+  newHistory.push(newPages);
+  setHistory(newHistory);
+  setHistoryIndex(newHistory.length - 1);
+};
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isAIThinking) return;
@@ -357,11 +373,24 @@ export default function WebsiteEditor() {
     </div>
   </div>
 
+ {/* Action Buttons */}
+<div className="flex items-center gap-3 ml-4 flex-shrink-0">
+  {/* Version History Button */}
+  <button
+    type="button"
+    onClick={() => setShowVersionHistory(true)}
+    className="px-4 lg:px-6 py-2 bg-white border-2 border-purple-600 text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition flex items-center gap-2"
+  >
+    <Clock className="w-4 h-4" />
+    <span className="hidden md:inline">History</span>
+  </button>
+
+  {/* Save Changes Button */}
   <button
     type="button"
     onClick={handleSave}
     disabled={isSaving}
-    className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50 flex-shrink-0 ml-4"
+    className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50"
   >
     {isSaving ? (
       <>
@@ -375,6 +404,7 @@ export default function WebsiteEditor() {
       </>
     )}
   </button>
+</div>
 </header>
 
       {/* Mobile Dropdown Menu */}
@@ -634,6 +664,24 @@ export default function WebsiteEditor() {
           </div>
         )}
       </div>
-    </div>
+      {/* VERSION HISTORY MODAL - ADD HERE */}
+      {showVersionHistory && (
+        <WebsiteVersionHistory
+          apiUrl={apiUrl}
+          authFetch={(url, options) => {
+            const token = localStorage.getItem('token');
+            return fetch(url, {
+              ...options,
+              headers: {
+                ...options?.headers,
+                'Authorization': `Bearer ${token}`
+              }
+            });
+          }}
+          onRestore={handleRestoreVersion}
+          onClose={() => setShowVersionHistory(false)}
+        />
+      )}
+    </div> 
   );
 }
