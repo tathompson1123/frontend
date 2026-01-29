@@ -264,26 +264,48 @@ const handleConnectExistingWebsite = async () => {
           <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
           <p className="text-gray-600 mt-1">Manage your website and domain</p>
         </div>
-        <div className="flex gap-3">
-          {currentWebsite && (
-            <button 
-              type="button" 
-              onClick={() => navigate('/editor')} 
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
-            >
-              <Edit className="w-4 h-4" />
-              Edit Website
-            </button>
-          )}
-          <button 
-            type="button" 
-            onClick={() => setShowEditWebsite(true)} 
-            className="bg-white border-2 border-purple-600 text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-purple-50 transition-all flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Generate New
-          </button>
-        </div>
+       <div className="flex gap-3">
+  {currentWebsite && (
+    <>
+      <button 
+        type="button" 
+        onClick={() => navigate('/editor')} 
+        className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+      >
+        <Edit className="w-4 h-4" />
+        Edit Website
+      </button>
+      
+      {/* PUBLISH BUTTON - Green when needs publish, Gray when published */}
+      <FeatureGate 
+        user={user} 
+        feature="publish"
+        onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+      >
+        <button
+          onClick={handleTogglePublish}
+          className={`px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${
+            isPublished
+              ? 'bg-gray-300 text-gray-600 cursor-default'
+              : 'bg-green-600 text-white hover:bg-green-700 hover:scale-105'
+          }`}
+          disabled={isPublished}
+        >
+          <Send className="w-4 h-4" />
+          {isPublished ? 'Published ✓' : 'Publish Changes'}
+        </button>
+      </FeatureGate>
+    </>
+  )}
+  <button 
+    type="button" 
+    onClick={() => setShowEditWebsite(true)} 
+    className="bg-white border-2 border-purple-600 text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-purple-50 transition-all flex items-center gap-2"
+  >
+    <RefreshCw className="w-4 h-4" />
+    Generate New
+  </button>
+</div>
       </div>
 
       {currentWebsite ? (
@@ -446,8 +468,7 @@ const handleConnectExistingWebsite = async () => {
 
           {/* Deployment & Domain Management */}
           <div className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
-           Replace the Deployment Status section (around line 624):
-javascript{/* Deployment Status */}
+          {/* Deployment Status */}
 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
   <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
     <Zap className="w-5 h-5 text-blue-600" />
@@ -457,7 +478,9 @@ javascript{/* Deployment Status */}
     <div className="space-y-3">
       <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
         <Check className="w-5 h-5 text-green-600" />
-        <span className="text-sm text-green-900 font-medium">Deployed & Live</span>
+        <span className="text-sm text-green-900 font-medium">
+          {isPublished ? 'Published & Live' : 'Deployed (Unpublished)'}
+        </span>
       </div>
       <a 
         href={vercelUrl} 
@@ -468,23 +491,14 @@ javascript{/* Deployment Status */}
         {vercelUrl} <ExternalLink className="w-3 h-3 flex-shrink-0" />
       </a>
       
-      {/* ONLY PUBLISH BUTTON - NO REDEPLOY */}
-      <FeatureGate 
-        user={user} 
-        feature="publish"
-        onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-      >
-        <button
-          onClick={handleTogglePublish}
-          className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition ${
-            isPublished 
-              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
-              : 'bg-green-600 text-white hover:bg-green-700'
-          }`}
-        >
-          {isPublished ? 'Unpublish' : 'Publish Changes'}
-        </button>
-      </FeatureGate>
+      <div className="bg-blue-50 rounded-lg p-3 border border-blue-200 text-sm text-gray-700">
+        <p className="font-medium mb-1">✏️ How to update your website:</p>
+        <ol className="text-xs space-y-1 ml-4 list-decimal">
+          <li>Click "Edit Website" to make changes</li>
+          <li>Click "Save Changes" in the editor</li>
+          <li>Click "Publish Changes" to go live</li>
+        </ol>
+      </div>
     </div>
   ) : (
     <div className="space-y-3">
