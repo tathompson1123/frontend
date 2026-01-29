@@ -484,7 +484,6 @@ export default function WebsiteEditor() {
     </div>
   )
 ) : (
- ) : (
   <div className="w-full h-full flex flex-col bg-gray-100">
     {/* Mobile Editor Header - Dropdown Menu*/}
     <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 shadow-sm">
