@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Zap, ShoppingCart, CreditCard } from 'lucide-react';
+import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Zap, ShoppingCart, CreditCard } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView }) {
