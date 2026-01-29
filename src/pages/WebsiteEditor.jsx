@@ -484,17 +484,30 @@ export default function WebsiteEditor() {
     </div>
   )
 ) : (
+ ) : (
   <div className="w-full h-full flex flex-col bg-gray-100">
-    {/* Mobile Editor Header - Dropdown Menu like Wix */}
+    {/* Mobile Editor Header - Dropdown Menu
     <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 shadow-sm">
       <div className="flex items-center gap-2">
         <Smartphone className="w-5 h-5 text-purple-600" />
         <span className="font-semibold text-gray-900">Mobile View</span>
       </div>
-      <div className="flex-1 flex justify-center">
-        <div className="bg-gray-800 text-white px-4 py-1 rounded text-xs font-medium">
-          375px width
-        </div>
+      
+      {/* Page Dropdown */}
+      <select
+        value={currentPage}
+        onChange={(e) => setCurrentPage(e.target.value)}
+        className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium focus:border-purple-500 focus:outline-none bg-white"
+      >
+        {Object.keys(allPages).map((pageName) => (
+          <option key={pageName} value={pageName}>
+            {getPageDisplayName(pageName)}
+          </option>
+        ))}
+      </select>
+      
+      <div className="bg-gray-800 text-white px-3 py-1 rounded text-xs font-medium">
+        375px
       </div>
     </div>
 
