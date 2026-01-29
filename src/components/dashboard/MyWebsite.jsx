@@ -446,71 +446,69 @@ const handleConnectExistingWebsite = async () => {
 
           {/* Deployment & Domain Management */}
           <div className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
-            {/* Deployment Status */}
-            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-              <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Zap className="w-5 h-5 text-blue-600" />
-                Deployment Status
-              </h3>
-              {vercelUrl ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
-                    <Check className="w-5 h-5 text-green-600" />
-                    <span className="text-sm text-green-900 font-medium">Deployed & Live</span>
-                  </div>
-                  <a 
-                    href={vercelUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-blue-600 hover:underline break-all"
-                  >
-                    {vercelUrl} <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                  </a>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={deployWebsite}
-                      disabled={isDeploying}
-                      className="flex-1 bg-gray-100 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 transition disabled:opacity-50"
-                    >
-                      {isDeploying ? 'Redeploying...' : 'Redeploy'}
-                    </button>
-                    <FeatureGate 
-                      user={user} 
-                      feature="publish"
-                      onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-                    >
-                      <button
-                        onClick={handleTogglePublish}
-                        className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition ${isPublished ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-green-600 text-white hover:bg-green-700'}`}
-                      >
-                        {isPublished ? 'Unpublish' : 'Publish'}
-                      </button>
-                    </FeatureGate>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-600">Deploy your website to make it accessible online</p>
-                  <FeatureGate 
-                    user={user} 
-                    feature="deploy"
-                    onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
-                  >
-                    <button
-  onClick={deployWebsite}
-  disabled={isDeploying}
-  className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
->
-  {isDeploying ? (
-    <><Loader className="w-4 h-4 animate-spin" />Deploying...</>
+           Replace the Deployment Status section (around line 624):
+javascript{/* Deployment Status */}
+<div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+    <Zap className="w-5 h-5 text-blue-600" />
+    Deployment Status
+  </h3>
+  {vercelUrl ? (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg border border-green-200">
+        <Check className="w-5 h-5 text-green-600" />
+        <span className="text-sm text-green-900 font-medium">Deployed & Live</span>
+      </div>
+      <a 
+        href={vercelUrl} 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="flex items-center gap-2 text-sm text-blue-600 hover:underline break-all"
+      >
+        {vercelUrl} <ExternalLink className="w-3 h-3 flex-shrink-0" />
+      </a>
+      
+      {/* ONLY PUBLISH BUTTON - NO REDEPLOY */}
+      <FeatureGate 
+        user={user} 
+        feature="publish"
+        onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+      >
+        <button
+          onClick={handleTogglePublish}
+          className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition ${
+            isPublished 
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' 
+              : 'bg-green-600 text-white hover:bg-green-700'
+          }`}
+        >
+          {isPublished ? 'Unpublish' : 'Publish Changes'}
+        </button>
+      </FeatureGate>
+    </div>
   ) : (
-    <><Globe className="w-4 h-4" />Deploy Website</>
+    <div className="space-y-3">
+      <p className="text-sm text-gray-600">Deploy your website to make it accessible online</p>
+      <FeatureGate 
+        user={user} 
+        feature="deploy"
+        onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
+      >
+        <button
+          onClick={deployWebsite}
+          disabled={isDeploying}
+          className="w-full bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {isDeploying ? (
+            <><Loader className="w-4 h-4 animate-spin" />Deploying...</>
+          ) : (
+            <><Globe className="w-4 h-4" />Deploy Website</>
+          )}
+        </button>
+      </FeatureGate>
+    </div>
   )}
-</button>
-                  </FeatureGate>
-                </div>
-              )}
-            </div>
+</div>
 
         {/* Domain Management */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex flex-col">
