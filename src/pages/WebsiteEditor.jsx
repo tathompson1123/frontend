@@ -527,6 +527,7 @@ export default function WebsiteEditor() {
     </div>
   </div>
 )}
+  </div>
 
         {/* AI Chat Widget */}
         {!isAIChatOpen ? (
