@@ -219,8 +219,8 @@ export default function WebsiteEditor() {
   try {
     const token = localStorage.getItem('token');
     
-    // Save to database
-    await fetch(`${apiUrl}/api/website/save`, {
+    // Just save to database - NO auto-publish
+    const saveResponse = await fetch(`${apiUrl}/api/website/save`, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
@@ -232,34 +232,30 @@ export default function WebsiteEditor() {
       })
     });
     
-    // Automatically publish (deploy to Vercel)
-    const publishResponse = await fetch(`${apiUrl}/api/website/publish`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        html_content: allPages['index.html'],
-        pages: allPages
-      })
-    });
-    
-    if (publishResponse.ok) {
+    if (saveResponse.ok) {
+      // Mark as unpublished in the backend
+      await fetch(`${apiUrl}/api/website/mark-unpublished`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
       // Show success toast
       setShowSaveSuccess(true);
       
-      // Wait 1.5 seconds to show the success message, then navigate
+      // Wait 1.5 seconds then navigate
       setTimeout(() => {
         navigate('/dashboard?tab=website');
       }, 1500);
     } else {
-      throw new Error('Publish failed');
+      throw new Error('Save failed');
     }
     
   } catch (error) {
     console.error('Save error:', error);
-    alert('Failed to save and publish website');
+    alert('Failed to save website');
     setIsSaving(false);
     setShowSaveSuccess(false);
   }
