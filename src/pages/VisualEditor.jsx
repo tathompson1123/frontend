@@ -196,6 +196,118 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         }
       }
 
+      if (eventHandlersRef.current) {
+  const { doc: oldDoc, handlers } = eventHandlersRef.current;
+  try {
+    oldDoc.removeEventListener('mousedown', handlers.mousedown);
+    oldDoc.removeEventListener('mousemove', handlers.mousemove);
+    oldDoc.removeEventListener('mouseup', handlers.mouseup);
+    oldDoc.removeEventListener('mouseover', handlers.mouseover);
+    oldDoc.removeEventListener('mouseout', handlers.mouseout);
+    oldDoc.removeEventListener('dblclick', handlers.dblclick);
+  } catch (e) {
+    // Ignore
+  }
+}
+
+// ADD THE SECTION RESIZERS FUNCTION HERE
+const addSectionResizers = () => {
+  const doc = iframe.contentDocument;
+  if (!doc) return;
+  
+  // Remove existing resizers
+  doc.querySelectorAll('.section-height-adjuster').forEach(el => el.remove());
+  
+  // Find all major sections
+  const sections = doc.querySelectorAll('section, .section, [class*="section"], main > div, body > div');
+  
+  sections.forEach((section, index) => {
+    if (section.classList.contains('section-height-adjuster')) return;
+    if (section.offsetHeight < 50) return; // Skip tiny sections
+    
+    // Create adjuster
+    const adjuster = doc.createElement('div');
+    adjuster.className = 'section-height-adjuster';
+    adjuster.innerHTML = `
+      <div class="adjuster-line"></div>
+      <div class="adjuster-handle">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M7 10l5 5 5-5z"/>
+        </svg>
+      </div>
+      <div class="adjuster-tooltip">Adjust section height or double click to remove any extra space above.</div>
+    `;
+    
+    section.style.position = 'relative';
+    section.appendChild(adjuster);
+    
+    // Handle dragging
+    const handle = adjuster.querySelector('.adjuster-handle');
+    const tooltip = adjuster.querySelector('.adjuster-tooltip');
+    
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+    
+    handle.addEventListener('mouseenter', () => {
+      tooltip.style.display = 'block';
+    });
+    
+    handle.addEventListener('mouseleave', () => {
+      if (!isDragging) {
+        tooltip.style.display = 'none';
+      }
+    });
+    
+    handle.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      isDragging = true;
+      startY = e.clientY;
+      startHeight = section.offsetHeight;
+      handle.style.cursor = 'ns-resize';
+      tooltip.style.display = 'none';
+    });
+    
+    doc.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      e.preventDefault();
+      const deltaY = e.clientY - startY;
+      const newHeight = Math.max(100, startHeight + deltaY);
+      section.style.height = newHeight + 'px';
+      section.style.minHeight = newHeight + 'px';
+    });
+    
+    doc.addEventListener('mouseup', () => {
+      if (isDragging) {
+        isDragging = false;
+        handle.style.cursor = 'pointer';
+        
+        // Trigger save
+        if (onUpdate) {
+          onUpdate(doc.documentElement.outerHTML);
+        }
+      }
+    });
+    
+    // Double click to auto-adjust
+    handle.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Remove extra padding/margin from section
+      section.style.paddingTop = '20px';
+      section.style.paddingBottom = '20px';
+      section.style.height = 'auto';
+      section.style.minHeight = 'auto';
+      
+      if (onUpdate) {
+        onUpdate(doc.documentElement.outerHTML);
+      }
+    });
+  });
+};
+
       let style = doc.getElementById('editor-styles');
       if (!style) {
         style = doc.createElement('style');
@@ -936,6 +1048,8 @@ if (distanceFromCenterY < snapThreshold) {
       };
     }; 
 
+    setTimeout(addSectionResizers, 100);
+};
     
     if (iframe.contentDocument?.readyState === 'complete') {
       initEditor();
