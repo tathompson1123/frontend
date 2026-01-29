@@ -429,7 +429,7 @@ const handleConnectExistingWebsite = async () => {
                      })() : ''} 
                      title="Website Preview" 
                      className="w-full h-[450px] bg-white border-0 pointer-events-none" 
-                     sandbox="" 
+                     sandbox="allow-scripts"
                    />
                   </div>
                 </div>
