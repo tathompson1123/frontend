@@ -389,124 +389,44 @@ const handleConnectExistingWebsite = async () => {
 </div>
 </div> 
 ) : (
-               <div className="relative">
-  <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
-    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-    <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
-      <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
-        <span>9:41</span>
-        <div className="flex items-center gap-1">
-          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
-          <span>100%</span>
+  <div className="flex justify-center items-center w-full overflow-hidden">
+    <div className="w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900 flex-shrink-0">
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+      <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative">
+        <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
+          <span>9:41</span>
+          <div className="flex items-center gap-1">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
+            <span>100%</span>
+          </div>
+        </div>
+        <div className="absolute top-11 left-0 right-0 h-12 bg-gray-100 z-10 flex items-center px-3 border-b border-gray-200 overflow-hidden">
+          <div className="flex-1 bg-white rounded-full px-4 py-2 text-xs text-gray-500 flex items-center gap-2 min-w-0">
+            <Globe className="w-3 h-3 flex-shrink-0" />
+            <span className="truncate">{customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}</span>
+          </div>
+        </div>
+        <div className="absolute top-[92px] left-0 w-full bottom-0 overflow-hidden">
+          <div className="w-full h-full overflow-hidden">
+            <iframe 
+              srcDoc={currentWebsite || ''} 
+              title="Mobile Website Preview" 
+              className="border-0 pointer-events-none bg-white"
+              sandbox="allow-scripts allow-same-origin"
+              style={{ 
+                width: '375px', 
+                height: '100%',
+                transform: 'scale(1)',
+                transformOrigin: 'top left'
+              }}
+            />
+          </div>
         </div>
       </div>
-      <div className="absolute top-11 left-0 right-0 h-12 bg-gray-100 z-10 flex items-center px-3 border-b border-gray-200">
-        <div className="flex-1 bg-white rounded-full px-4 py-2 text-xs text-gray-500 flex items-center gap-2">
-          <Globe className="w-3 h-3" />
-          <span className="truncate">{customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}</span>
-        </div>
-      </div>
-      <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
- <iframe 
-  srcDoc={currentWebsite ? (() => {
-    const fixCSS = `
-      <style>
-        /* Force mobile viewport */
-        html {
-          width: 100% !important;
-          max-width: 375px !important;
-          overflow-x: hidden !important;
-          margin: 0 !important;
-          padding: 0 !important;
-        }
-        
-        body {
-          width: 100% !important;
-          max-width: 375px !important;
-          overflow-x: hidden !important;
-          margin: 0 !important;
-          padding: 0 !important;
-          min-width: unset !important;
-        }
-        
-        /* Prevent any element from exceeding viewport */
-        * {
-          max-width: 100% !important;
-          box-sizing: border-box !important;
-        }
-        
-        /* Target common overflow culprits */
-        section, div, header, main, article, nav, footer,
-        .container, .wrapper, [class*="container"], [class*="wrapper"] {
-          max-width: 100% !important;
-          overflow-x: hidden !important;
-        }
-        
-        /* Fix media elements */
-        img, video, iframe:not([src*="youtube"]):not([src*="vimeo"]), svg, canvas {
-          max-width: 100% !important;
-          height: auto !important;
-        }
-        
-        /* Fix tables */
-        table {
-          max-width: 100% !important;
-          table-layout: fixed !important;
-        }
-        
-        /* Fix text that might cause overflow */
-        pre, code {
-          max-width: 100% !important;
-          overflow-x: auto !important;
-          word-wrap: break-word !important;
-        }
-        
-        /* Hide horizontal scrollbar */
-        ::-webkit-scrollbar-track:horizontal {
-          display: none;
-        }
-        
-        /* Hide chat widget and any fixed position elements that might overflow */
-        #sorce-chat-widget,
-        [style*="position: fixed"][style*="right: 0"],
-        [style*="position: fixed"][style*="left: 100%"] {
-          display: none !important;
-        }
-        
-        /* Fix any absolutely positioned elements */
-        [style*="position: absolute"] {
-          max-width: 100% !important;
-        }
-      </style>
-      <meta name="viewport" content="width=375, initial-scale=1, maximum-scale=1, user-scalable=no">
-    `;
-    
-    // Insert CSS and viewport meta tag
-    let modifiedHTML = currentWebsite;
-    
-    if (modifiedHTML.includes('</head>')) {
-      modifiedHTML = modifiedHTML.replace('</head>', fixCSS + '</head>');
-    } else if (modifiedHTML.includes('<head>')) {
-      modifiedHTML = modifiedHTML.replace('<head>', '<head>' + fixCSS);
-    } else if (modifiedHTML.includes('<body')) {
-      modifiedHTML = modifiedHTML.replace('<body', fixCSS + '<body');
-    } else {
-      modifiedHTML = fixCSS + modifiedHTML;
-    }
-    
-    return modifiedHTML;
-  })() : ''} 
-  title="Mobile Website Preview" 
-  className="w-full h-full bg-white border-0 pointer-events-none" 
-  sandbox="allow-scripts allow-same-origin"
-  style={{ width: '375px', height: '575px' }}
-/>
-      </div>
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
     </div>
-    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
   </div>
-</div>
-              )}
+)
             </div>
           </div>
 
