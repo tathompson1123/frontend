@@ -45,20 +45,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     }
   }, [websiteData]);
 
-  const handleTogglePublish = async () => {
-    try {
-      const response = await authFetch(`${apiUrl}/api/website/publish`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ isPublished: !isPublished })
-      });
-      const data = await response.json();
-      if (data.success) setIsPublished(!isPublished);
-    } catch (error) {
-      console.error('Error toggling publish:', error);
-    }
-  };
-
  const handleRegenerateWebsite = (e) => {
   e.preventDefault();
   
