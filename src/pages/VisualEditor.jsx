@@ -1115,12 +1115,10 @@ if (distanceFromCenterY < snapThreshold) {
           mouseout: handleMouseOut,
           dblclick: handleDoubleClick
         }
-      };
     }; 
 
     setTimeout(addSectionResizers, 100);
 };
-  };
     
     if (iframe.contentDocument?.readyState === 'complete') {
       initEditor();
