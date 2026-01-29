@@ -89,24 +89,109 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         currentDoc.head.appendChild(style);
       }
       
-      style.textContent = `
-        * { box-sizing: border-box; }
-        body { position: relative !important; min-height: 100vh; }
-        .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
-        .editor-selected:active { cursor: grabbing !important; }
-        .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
-        .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
-        .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-        .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
-        .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
-        .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
-        .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
-        .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
-        .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
-        .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
-      `;
+     style.textContent = `
+  * { box-sizing: border-box; }
+  body { position: relative !important; min-height: 100vh; }
+  .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
+  .editor-selected:active { cursor: grabbing !important; }
+  .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
+  .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
+  .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+  .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
+  .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
+  .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
+  .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+  .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
+  .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+  .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+  .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+  .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+  
+  /* Section Height Adjuster Styles - ADD THESE */
+  .section-height-adjuster {
+    position: absolute !important;
+    bottom: -20px !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 40px !important;
+    z-index: 9999 !important;
+    pointer-events: all !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+  
+  .adjuster-line {
+    position: absolute !important;
+    top: 20px !important;
+    left: 0 !important;
+    right: 0 !important;
+    height: 1px !important;
+    background: repeating-linear-gradient(
+      to right,
+      #8b5cf6 0px,
+      #8b5cf6 10px,
+      transparent 10px,
+      transparent 20px
+    ) !important;
+    pointer-events: none !important;
+  }
+  
+  .adjuster-handle {
+    position: relative !important;
+    width: 40px !important;
+    height: 24px !important;
+    background: white !important;
+    border: 2px solid #8b5cf6 !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+    z-index: 10000 !important;
+    pointer-events: all !important;
+  }
+  
+  .adjuster-handle:hover {
+    background: #f3f4f6 !important;
+    border-color: #7c3aed !important;
+  }
+  
+  .adjuster-handle svg {
+    width: 20px !important;
+    height: 20px !important;
+    color: #8b5cf6 !important;
+  }
+  
+  .adjuster-tooltip {
+    position: absolute !important;
+    bottom: 100% !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    background: #1f2937 !important;
+    color: white !important;
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    font-size: 12px !important;
+    white-space: nowrap !important;
+    margin-bottom: 8px !important;
+    display: none !important;
+    z-index: 10001 !important;
+    pointer-events: none !important;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+  }
+  
+  .adjuster-tooltip::after {
+    content: '' !important;
+    position: absolute !important;
+    top: 100% !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    border: 6px solid transparent !important;
+    border-top-color: #1f2937 !important;
+  }
+`;
       
       lastHtmlContentRef.current = htmlContent;
       isSavingRef.current = false;
