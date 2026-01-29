@@ -484,50 +484,48 @@ export default function WebsiteEditor() {
     </div>
   )
 ) : (
-  <div className="w-full h-full flex items-center justify-center bg-gray-100 p-8">
-    <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
-      {/* Notch */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-      
-      {/* Screen */}
-      <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
-        {/* Status Bar */}
-        <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold pointer-events-none">
-          <span>9:41</span>
-          <div className="flex items-center gap-1">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-            </svg>
-            <span>100%</span>
-          </div>
-        </div>
-        
-        {/* Editable Content Area */}
-        <div className="absolute top-11 left-0 right-0 bottom-0" style={{ width: '375px', height: 'calc(100% - 44px)' }}>
-          {allPages[currentPage] ? (
-            <VisualEditor 
-              htmlContent={allPages[currentPage]}
-              onUpdate={handleVisualUpdate}
-              currentPage={currentPage}
-              onUndo={handleUndo}
-              onRedo={handleRedo}
-              canUndo={historyIndex > 0}
-              canRedo={historyIndex < history.length - 1}
-            />
-          ) : (
-            <div className="flex items-center justify-center h-full">
-              <div className="text-gray-500">Loading page content...</div>
-            </div>
-          )}
+  <div className="w-full h-full flex flex-col bg-gray-100">
+    {/* Mobile Editor Header - Dropdown Menu like Wix */}
+    <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 shadow-sm">
+      <div className="flex items-center gap-2">
+        <Smartphone className="w-5 h-5 text-purple-600" />
+        <span className="font-semibold text-gray-900">Mobile View</span>
+      </div>
+      <div className="flex-1 flex justify-center">
+        <div className="bg-gray-800 text-white px-4 py-1 rounded text-xs font-medium">
+          375px width
         </div>
       </div>
-      
-      {/* Home Indicator */}
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50 pointer-events-none"></div>
+    </div>
+
+    {/* Mobile Content - Scrollable Editor */}
+    <div className="flex-1 overflow-auto flex justify-center p-8 bg-gradient-to-br from-gray-100 to-gray-200">
+      <div 
+        className="bg-white shadow-2xl" 
+        style={{ 
+          width: '375px',
+          minHeight: '100%'
+        }}
+      >
+        {allPages[currentPage] ? (
+          <VisualEditor 
+            htmlContent={allPages[currentPage]}
+            onUpdate={handleVisualUpdate}
+            currentPage={currentPage}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            canUndo={historyIndex > 0}
+            canRedo={historyIndex < history.length - 1}
+          />
+        ) : (
+          <div className="flex items-center justify-center h-full p-8">
+            <div className="text-gray-500">Loading page content...</div>
+          </div>
+        )}
+      </div>
     </div>
   </div>
 )}
-  </div>
 
         {/* AI Chat Widget */}
         {!isAIChatOpen ? (
