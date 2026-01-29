@@ -379,59 +379,16 @@ const handleConnectExistingWebsite = async () => {
                       {customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}
                     </div>
                   </div>
-                  <div className="overflow-hidden">
-                  <iframe 
-  srcDoc={currentWebsite ? (() => {
-    const fixCSS = `
-      <style>
-        * { box-sizing: border-box; }
-        html, body {
-          width: 375px !important;
-          max-width: 375px !important;
-          overflow-x: hidden !important;
-          margin: 0 !important;
-          padding: 0 !important;
-        }
-        body {
-          transform: scale(0.85);
-          transform-origin: top left;
-          width: 441px !important;
-        }
-        img {
-          max-width: 100% !important;
-          height: auto !important;
-        }
-        header, nav { 
-          position: sticky !important; 
-          top: 0 !important; 
-          z-index: 1000 !important;
-          max-width: 100% !important;
-        }
-        header * {
-          max-width: 100% !important;
-        }
-        /* Hide chat widget in preview */
-        #sorce-chat-widget {
-          display: none !important;
-        }
-      </style>
-    `;
-    if (currentWebsite.includes('</head>')) {
-      return currentWebsite.replace('</head>', fixCSS + '</head>');
-    } else if (currentWebsite.includes('<body')) {
-      return currentWebsite.replace('<body', fixCSS + '<body');
-    } else {
-      return fixCSS + currentWebsite;
-    }
-  })() : ''} 
-  title="Mobile Website Preview" 
-  className="w-full h-full bg-white border-0 pointer-events-none" 
-  sandbox="allow-scripts allow-same-origin"
-  style={{ width: '375px', height: '575px' }}
-/>
-                  </div>
-                </div>
-              ) : (
+                  <div className="overflow-hidden" style={{ height: '600px' }}>
+  <iframe 
+    srcDoc={currentWebsite || ''} 
+    title="Desktop Website Preview" 
+    className="w-full h-full bg-white border-0" 
+    sandbox="allow-scripts allow-same-origin"
+  />
+</div>
+</div> 
+) : (
                <div className="relative">
   <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
