@@ -380,57 +380,55 @@ const handleConnectExistingWebsite = async () => {
                     </div>
                   </div>
                   <div className="overflow-hidden">
-                   <iframe 
-                     srcDoc={currentWebsite ? (() => {
-                       // Inject CSS to fix z-index issues in preview only
-                       const fixCSS = `
-                         <style>
-                           /* Preview-only z-index fixes */
-                           
-                           /* Keep header and testimonials on TOP */
-                           header, nav, [role="banner"] { 
-                             position: sticky !important; 
-                             top: 0 !important;
-                             z-index: 1000 !important; 
-                             background: inherit !important;
-                           }
-                           
-                           /* Testimonials/scrolling banner also on top */
-                           [class*="testimonial"], [class*="review"], [class*="scroll"], [id*="testimonial"], [id*="review"] {
-                             position: relative !important;
-                             z-index: 999 !important;
-                           }
-                           
-                           /* Force ALL body content to stay BELOW header */
-                           main, section, article, div, p, h1, h2, h3, h4, h5, h6, [role="main"] { 
-                             z-index: 1 !important; 
-                           }
-                           
-                           /* Hero/Banner sections - below header but above main */
-                           .hero, .banner, [class*="hero"], [class*="banner"], [id*="hero"], [id*="banner"] { 
-                             position: relative !important; 
-                             z-index: 10 !important; 
-                           }
-                           
-                           /* Reset inline z-index from editor that's too high */
-                           main * [style*="z-index"] {
-                             z-index: 1 !important;
-                           }
-                         </style>
-                       `;
-                       // Insert CSS right before closing </head> or at start of <body>
-                       if (currentWebsite.includes('</head>')) {
-                         return currentWebsite.replace('</head>', fixCSS + '</head>');
-                       } else if (currentWebsite.includes('<body')) {
-                         return currentWebsite.replace('<body', fixCSS + '<body');
-                       } else {
-                         return fixCSS + currentWebsite;
-                       }
-                     })() : ''} 
-                     title="Website Preview" 
-                     className="w-full h-[450px] bg-white border-0 pointer-events-none" 
-                     sandbox="allow-scripts"
-                   />
+                  <iframe 
+  srcDoc={currentWebsite ? (() => {
+    const fixCSS = `
+      <style>
+        * { box-sizing: border-box; }
+        html, body {
+          width: 375px !important;
+          max-width: 375px !important;
+          overflow-x: hidden !important;
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+        body {
+          transform: scale(0.85);
+          transform-origin: top left;
+          width: 441px !important;
+        }
+        img {
+          max-width: 100% !important;
+          height: auto !important;
+        }
+        header, nav { 
+          position: sticky !important; 
+          top: 0 !important; 
+          z-index: 1000 !important;
+          max-width: 100% !important;
+        }
+        header * {
+          max-width: 100% !important;
+        }
+        /* Hide chat widget in preview */
+        #sorce-chat-widget {
+          display: none !important;
+        }
+      </style>
+    `;
+    if (currentWebsite.includes('</head>')) {
+      return currentWebsite.replace('</head>', fixCSS + '</head>');
+    } else if (currentWebsite.includes('<body')) {
+      return currentWebsite.replace('<body', fixCSS + '<body');
+    } else {
+      return fixCSS + currentWebsite;
+    }
+  })() : ''} 
+  title="Mobile Website Preview" 
+  className="w-full h-full bg-white border-0 pointer-events-none" 
+  sandbox="allow-scripts allow-same-origin"
+  style={{ width: '375px', height: '575px' }}
+/>
                   </div>
                 </div>
               ) : (
