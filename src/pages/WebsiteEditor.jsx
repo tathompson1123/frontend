@@ -468,117 +468,65 @@ export default function WebsiteEditor() {
   height: devicePreview === 'desktop' ? '100%' : '667px'
 }}>
   {devicePreview === 'desktop' ? (
-    allPages[currentPage] ? (
-      <VisualEditor 
-        htmlContent={allPages[currentPage]}
-        onUpdate={handleVisualUpdate}
-        currentPage={currentPage}
-        onUndo={handleUndo}
-        onRedo={handleRedo}
-        canUndo={historyIndex > 0}
-        canRedo={historyIndex < history.length - 1}
-      />
-    ) : (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-gray-500">Loading page content...</div>
-      </div>
-    )
+  allPages[currentPage] ? (
+    <VisualEditor 
+      htmlContent={allPages[currentPage]}
+      onUpdate={handleVisualUpdate}
+      currentPage={currentPage}
+      onUndo={handleUndo}
+      onRedo={handleRedo}
+      canUndo={historyIndex > 0}
+      canRedo={historyIndex < history.length - 1}
+    />
   ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gray-100">
-              <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-                <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
-                  <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
-                    <span>9:41</span>
-                    <div className="flex items-center gap-1">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                      </svg>
-                      <span>100%</span>
-                    </div>
-                  </div>
-                  <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
-                    <iframe
-                      key={currentPage + '-mobile'}
-                      srcDoc={allPages[currentPage]}
-                      title={`${currentPage} Mobile Preview`}
-                      className="border-none"
-                      style={{ 
-                        width: '375px',
-                        height: '100%',
-                        minHeight: '100%'
-                      }}
-                      ref={(iframe) => {
-                        if (iframe && iframe.contentWindow) {
-                          iframe.onload = () => {
-                            try {
-                              const iframeDoc = iframe.contentWindow.document;
-                              
-                              let viewport = iframeDoc.querySelector('meta[name="viewport"]');
-                              if (!viewport) {
-                                viewport = iframeDoc.createElement('meta');
-                                viewport.name = 'viewport';
-                                iframeDoc.head.appendChild(viewport);
-                              }
-                              viewport.content = 'width=375, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no';
-                              
-                              const style = iframeDoc.createElement('style');
-                              style.textContent = `
-                                html {
-                                  width: 375px !important;
-                                  overflow-x: hidden !important;
-                                }
-                                body {
-                                  width: 375px !important;
-                                  min-width: 375px !important;
-                                  max-width: 375px !important;
-                                  overflow-x: hidden !important;
-                                  margin: 0 !important;
-                                  padding: 0 !important;
-                                }
-                                * {
-                                  max-width: 375px !important;
-                                  box-sizing: border-box !important;
-                                }
-                                img {
-                                  max-width: 100% !important;
-                                  height: auto !important;
-                                }
-                              `;
-                              iframeDoc.head.appendChild(style);
-                              
-                              iframeDoc.addEventListener('click', (e) => {
-                                const link = e.target.closest('a');
-                                if (link) {
-                                  const href = link.getAttribute('href');
-                                  
-                                  if (href && href.startsWith('#')) {
-                                    return;
-                                  }
-                                  
-                                  if (href && href.endsWith('.html') && allPages[href]) {
-                                    e.preventDefault();
-                                    setCurrentPage(href);
-                                    return;
-                                  }
-                                  
-                                  e.preventDefault();
-                                }
-                              }, true);
-                            } catch (err) {
-                              console.log('Could not access iframe:', err);
-                            }
-                          };
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
-              </div>
+    <div className="flex items-center justify-center h-full">
+      <div className="text-gray-500">Loading page content...</div>
+    </div>
+  )
+) : (
+  <div className="w-full h-full flex items-center justify-center bg-gray-100 p-8">
+    <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
+      {/* Notch */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+      
+      {/* Screen */}
+      <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
+        {/* Status Bar */}
+        <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold pointer-events-none">
+          <span>9:41</span>
+          <div className="flex items-center gap-1">
+            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+            </svg>
+            <span>100%</span>
+          </div>
+        </div>
+        
+        {/* Editable Content Area */}
+        <div className="absolute top-11 left-0 right-0 bottom-0" style={{ width: '375px', height: 'calc(100% - 44px)' }}>
+          {allPages[currentPage] ? (
+            <VisualEditor 
+              htmlContent={allPages[currentPage]}
+              onUpdate={handleVisualUpdate}
+              currentPage={currentPage}
+              onUndo={handleUndo}
+              onRedo={handleRedo}
+              canUndo={historyIndex > 0}
+              canRedo={historyIndex < history.length - 1}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-gray-500">Loading page content...</div>
             </div>
           )}
         </div>
+      </div>
+      
+      {/* Home Indicator */}
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50 pointer-events-none"></div>
+    </div>
+  </div>
+)}
 
         {/* AI Chat Widget */}
         {!isAIChatOpen ? (
