@@ -15,8 +15,7 @@ import {
   Clock
 } from 'lucide-react';
 import VisualEditor from './VisualEditor';
-import WebsiteVersionHistory from './WebsiteVersionHistory';
-
+import WebsiteVersionHistory from '../components/WebsiteVersionHistory';
 
 export default function WebsiteEditor() {
   const navigate = useNavigate();
