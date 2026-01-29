@@ -521,11 +521,11 @@ export default function WebsiteEditor() {
 
       {/* Main Content - Visual Editor */}
       <main className="flex-1 overflow-hidden">
-        <VisualEditor
-          htmlContent={allPages[currentPage] || ''}
-          onUpdate={handleVisualUpdate}
-          devicePreview={devicePreview}
-        />
+       <VisualEditor
+  htmlContent={allPages[currentPage] || ''}
+  onUpdate={handleVisualUpdate}
+  currentPage={currentPage}
+/>
       </main>
 
       {/* AI Chat Widget */}
