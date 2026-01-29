@@ -408,41 +408,94 @@ const handleConnectExistingWebsite = async () => {
       </div>
       <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
 <iframe 
+ <iframe 
   srcDoc={currentWebsite ? (() => {
     const fixCSS = `
       <style>
-        html, body {
-          width: 375px !important;
+        /* Force mobile viewport */
+        html {
+          width: 100% !important;
           max-width: 375px !important;
           overflow-x: hidden !important;
           margin: 0 !important;
           padding: 0 !important;
         }
+        
+        body {
+          width: 100% !important;
+          max-width: 375px !important;
+          overflow-x: hidden !important;
+          margin: 0 !important;
+          padding: 0 !important;
+          min-width: unset !important;
+        }
+        
+        /* Prevent any element from exceeding viewport */
         * {
           max-width: 100% !important;
           box-sizing: border-box !important;
         }
-        section, div, header, main, article, nav {
+        
+        /* Target common overflow culprits */
+        section, div, header, main, article, nav, footer,
+        .container, .wrapper, [class*="container"], [class*="wrapper"] {
           max-width: 100% !important;
           overflow-x: hidden !important;
         }
-        img, video, iframe, svg {
+        
+        /* Fix media elements */
+        img, video, iframe:not([src*="youtube"]):not([src*="vimeo"]), svg, canvas {
           max-width: 100% !important;
           height: auto !important;
         }
-        /* Hide chat widget */
-        #sorce-chat-widget {
+        
+        /* Fix tables */
+        table {
+          max-width: 100% !important;
+          table-layout: fixed !important;
+        }
+        
+        /* Fix text that might cause overflow */
+        pre, code {
+          max-width: 100% !important;
+          overflow-x: auto !important;
+          word-wrap: break-word !important;
+        }
+        
+        /* Hide horizontal scrollbar */
+        ::-webkit-scrollbar-track:horizontal {
+          display: none;
+        }
+        
+        /* Hide chat widget and any fixed position elements that might overflow */
+        #sorce-chat-widget,
+        [style*="position: fixed"][style*="right: 0"],
+        [style*="position: fixed"][style*="left: 100%"] {
           display: none !important;
         }
+        
+        /* Fix any absolutely positioned elements */
+        [style*="position: absolute"] {
+          max-width: 100% !important;
+        }
       </style>
+      <meta name="viewport" content="width=375, initial-scale=1, maximum-scale=1, user-scalable=no">
     `;
-    if (currentWebsite.includes('</head>')) {
-      return currentWebsite.replace('</head>', fixCSS + '</head>');
-    } else if (currentWebsite.includes('<body')) {
-      return currentWebsite.replace('<body', fixCSS + '<body');
+    
+    // Insert CSS and viewport meta tag
+    let modifiedHTML = currentWebsite;
+    
+    if (modifiedHTML.includes('</head>')) {
+      modifiedHTML = modifiedHTML.replace('</head>', fixCSS + '</head>');
+    } else if (modifiedHTML.includes('<head>')) {
+      modifiedHTML = modifiedHTML.replace('<head>', '<head>' + fixCSS);
+    } else if (modifiedHTML.includes('<body')) {
+      modifiedHTML = modifiedHTML.replace('<body', fixCSS + '<body');
     } else {
-      return fixCSS + currentWebsite;
+      modifiedHTML = fixCSS + modifiedHTML;
     }
+    
+    return modifiedHTML;
   })() : ''} 
   title="Mobile Website Preview" 
   className="w-full h-full bg-white border-0 pointer-events-none" 
