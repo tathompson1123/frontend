@@ -268,46 +268,51 @@ const handleConnectExistingWebsite = async () => {
       feature="publish"
       onUpgradeClick={() => setCurrentView && setCurrentView('billing')}
     >
-      <button
-        onClick={async () => {
-          if (isPublished) return; // Do nothing if already published
-          
-          try {
-            const token = localStorage.getItem('token');
-            const response = await authFetch(`${apiUrl}/api/website/publish`, {
-              method: 'POST',
-              headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                html_content: websiteData.html_content,
-                pages: websiteData.pages
-              })
-            });
-            
-            if (response.ok) {
-              setIsPublished(true);
-              alert('✅ Website published successfully!');
-              
-              // Reload website data to get latest vercel_url
-              window.location.reload();
-            }
-          } catch (error) {
-            console.error('Publish error:', error);
-            alert('Failed to publish website');
-          }
-        }}
-        disabled={isPublished}
-        className={`px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${
-          isPublished
-            ? 'bg-gray-300 text-gray-600 cursor-default'
-            : 'bg-green-600 text-white hover:bg-green-700 hover:scale-105 animate-pulse'
-        }`}
-      >
-        <Send className="w-4 h-4" />
-        {isPublished ? 'Published ✓' : 'Publish Changes'}
-      </button>
+     <button
+  onClick={async () => {
+    if (isPublished) return; // Do nothing if already published
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await authFetch(`${apiUrl}/api/website/publish`, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          html_content: websiteData.html_content,
+          pages: websiteData.pages
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setIsPublished(true);
+        
+        // Update vercel URL if returned
+        if (data.url) {
+          setVercelUrl(data.url);
+        }
+        
+        alert('✅ Website published successfully!');
+        // Removed window.location.reload() - just update state!
+      }
+    } catch (error) {
+      console.error('Publish error:', error);
+      alert('Failed to publish website');
+    }
+  }}
+  disabled={isPublished}
+  className={`px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${
+    isPublished
+      ? 'bg-gray-300 text-gray-600 cursor-default'
+      : 'bg-green-600 text-white hover:bg-green-700 hover:scale-105 animate-pulse'
+  }`}
+>
+  <Send className="w-4 h-4" />
+  {isPublished ? 'Published ✓' : 'Publish Changes'}
+</button>
     </FeatureGate>
   </>
 )}
