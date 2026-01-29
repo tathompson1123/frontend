@@ -199,22 +199,38 @@ export default function WebsiteEditor() {
     }
   };
 
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      await fetch(`${apiUrl}/api/website`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          htmlContent: allPages['index.html'],
-          pages: allPages
-        })
-      });
-      
+ const handleSave = async () => {
+  setIsSaving(true);
+  try {
+    const token = localStorage.getItem('token');
+    
+    // Save to database
+    await fetch(`${apiUrl}/api/website/save`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        html_content: allPages['index.html'],
+        pages: allPages
+      })
+    });
+    
+    // Automatically publish (deploy to Vercel)
+    const publishResponse = await fetch(`${apiUrl}/api/website/publish`, {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        html_content: allPages['index.html'],
+        pages: allPages
+      })
+    });
+    
+    if (publishResponse.ok) {
       // Show success toast
       setShowSaveSuccess(true);
       
@@ -222,15 +238,18 @@ export default function WebsiteEditor() {
       setTimeout(() => {
         navigate('/dashboard?tab=website');
       }, 1500);
-      
-    } catch (error) {
-      console.error('Save error:', error);
-      alert('Failed to save website');
-      setIsSaving(false);
-      setShowSaveSuccess(false);
+    } else {
+      throw new Error('Publish failed');
     }
-  };
-
+    
+  } catch (error) {
+    console.error('Save error:', error);
+    alert('Failed to save and publish website');
+    setIsSaving(false);
+    setShowSaveSuccess(false);
+  }
+};
+  
   const getPageDisplayName = (filename) => {
     return filename
       .replace('.html', '')
