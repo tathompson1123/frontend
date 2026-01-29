@@ -1120,6 +1120,7 @@ if (distanceFromCenterY < snapThreshold) {
 
     setTimeout(addSectionResizers, 100);
 };
+  };
     
     if (iframe.contentDocument?.readyState === 'complete') {
       initEditor();
