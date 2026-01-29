@@ -281,21 +281,6 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         }
       }
 
-      if (eventHandlersRef.current) {
-  const { doc: oldDoc, handlers } = eventHandlersRef.current;
-  try {
-    oldDoc.removeEventListener('mousedown', handlers.mousedown);
-    oldDoc.removeEventListener('mousemove', handlers.mousemove);
-    oldDoc.removeEventListener('mouseup', handlers.mouseup);
-    oldDoc.removeEventListener('mouseover', handlers.mouseover);
-    oldDoc.removeEventListener('mouseout', handlers.mouseout);
-    oldDoc.removeEventListener('dblclick', handlers.dblclick);
-  } catch (e) {
-    // Ignore
-  }
-}
-
-// ADD THE SECTION RESIZERS FUNCTION HERE
 const addSectionResizers = () => {
   const doc = iframe.contentDocument;
   if (!doc) return;
