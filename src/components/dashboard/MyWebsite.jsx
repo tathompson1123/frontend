@@ -407,7 +407,6 @@ const handleConnectExistingWebsite = async () => {
         </div>
       </div>
       <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden">
-<iframe 
  <iframe 
   srcDoc={currentWebsite ? (() => {
     const fixCSS = `
