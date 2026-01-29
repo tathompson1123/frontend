@@ -26,9 +26,6 @@ export default function WebsiteEditor() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [lastSavedPages, setLastSavedPages] = useState(null);
   
   // AI Chat state
   const [messages, setMessages] = useState([]);
@@ -149,6 +146,10 @@ export default function WebsiteEditor() {
   const handleVisualUpdate = (updatedHTML) => {
     console.log('═══════════════════════════════════');
     console.log('📝 HANDLE VISUAL UPDATE');
+    console.log('  - Current historyIndex:', historyIndex);
+    console.log('  - Current history length:', history.length);
+    console.log('  - Current page:', currentPage);
+    console.log('  - Updated HTML length:', updatedHTML?.length);
     
     const newPages = {
       ...allPages,
@@ -156,18 +157,21 @@ export default function WebsiteEditor() {
     };
     
     setAllPages(newPages);
-    setHasUnsavedChanges(true);
     
+    // Add to history
     const newHistory = history.slice(0, historyIndex + 1);
     newHistory.push(newPages);
+    
+    console.log('  - New history length:', newHistory.length);
+    console.log('  - New historyIndex will be:', newHistory.length - 1);
     
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
     
-    console.log('✅ UPDATE COMPLETE - Changes marked as unsaved');
+    console.log('✅ UPDATE COMPLETE - History updated');
     console.log('═══════════════════════════════════');
   };
-
+  
   const handleUndo = () => {
     console.log('🔙 UNDO CLICKED');
     console.log('  - Current historyIndex:', historyIndex);
@@ -199,75 +203,31 @@ export default function WebsiteEditor() {
     setIsSaving(true);
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/website/save`, {
+      await fetch(`${apiUrl}/api/website`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          html_content: allPages['index.html'],
+          htmlContent: allPages['index.html'],
           pages: allPages
         })
       });
       
-      if (response.ok) {
-        setLastSavedPages(allPages);
-        setHasUnsavedChanges(false);
-        setShowSaveSuccess(true);
-        
-        setTimeout(() => {
-          setShowSaveSuccess(false);
-        }, 3000);
-      }
+      // Show success toast
+      setShowSaveSuccess(true);
+      
+      // Wait 1.5 seconds to show the success message, then navigate
+      setTimeout(() => {
+        navigate('/dashboard?tab=website');
+      }, 1500);
+      
     } catch (error) {
       console.error('Save error:', error);
-      alert('Failed to save changes');
-    } finally {
+      alert('Failed to save website');
       setIsSaving(false);
-    }
-  };
-
-  const handlePublish = async () => {
-    setIsPublishing(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/website/publish`, {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          html_content: allPages['index.html'],
-          pages: allPages
-        })
-      });
-      
-      const data = await response.json();
-      
-      if (response.ok) {
-        setLastSavedPages(allPages);
-        setHasUnsavedChanges(false);
-        alert(`✅ Website published successfully!\n\nLive at: ${data.url}`);
-      } else {
-        throw new Error(data.error || 'Publish failed');
-      }
-    } catch (error) {
-      console.error('Publish error:', error);
-      alert('Failed to publish website: ' + error.message);
-    } finally {
-      setIsPublishing(false);
-    }
-  };
-
-  const handleBackToDashboard = () => {
-    if (hasUnsavedChanges) {
-      if (confirm('You have unsaved changes. Are you sure you want to leave?')) {
-        navigate('/dashboard?tab=website');
-      }
-    } else {
-      navigate('/dashboard?tab=website');
+      setShowSaveSuccess(false);
     }
   };
 
@@ -290,58 +250,149 @@ export default function WebsiteEditor() {
               <Check className="w-5 h-5 text-green-500" />
             </div>
             <div>
-              <p className="font-semibold">Changes Saved!</p>
-              <p className="text-sm text-green-100">Click "Publish Changes" to go live</p>
+              <p className="font-semibold">Changes Saved Successfully!</p>
+              <p className="text-sm text-green-100">Returning to dashboard...</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
-        <div className="flex items-center gap-6 flex-1 overflow-x-auto">
+     {/* Header */}
+<header className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+  <div className="flex items-center gap-6 flex-1 overflow-x-auto">
+    <button
+      type="button"
+      onClick={() => navigate('/dashboard?tab=website')}
+      className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition flex-shrink-0"
+    >
+      <ArrowLeft className="w-5 h-5" />
+      <span className="font-medium hidden md:inline">Back</span>
+    </button>
+    
+    <div className="h-6 w-px bg-gray-300 hidden md:block" />
+    
+    {/* Desktop - Full Controls */}
+    <div className="hidden lg:flex items-center gap-4 flex-1">
+      <h1 className="text-lg font-bold text-gray-900">Editing:</h1>
+      
+      {/* Page Tabs */}
+      <div className="flex gap-2">
+        {Object.keys(allPages).map((pageName) => (
           <button
-            type="button"
-            onClick={handleBackToDashboard}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition flex-shrink-0"
+            key={pageName}
+            onClick={() => setCurrentPage(pageName)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+              currentPage === pageName
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium hidden md:inline">Back</span>
+            {getPageDisplayName(pageName)}
           </button>
-          
-          <div className="h-6 w-px bg-gray-300 hidden md:block" />
-          
-          {/* Desktop - Full Controls */}
-          <div className="hidden lg:flex items-center gap-4 flex-1">
-            <h1 className="text-lg font-bold text-gray-900">Editing:</h1>
-            
-            {/* Page Tabs */}
-            <div className="flex gap-2">
+        ))}
+      </div>
+      
+      {/* Device Preview Toggle */}
+      <div className="h-6 w-px bg-gray-300" />
+      <div className="flex gap-2">
+        <button 
+          type="button" 
+          onClick={() => setDevicePreview('desktop')} 
+          className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+            devicePreview === 'desktop' 
+              ? 'bg-purple-600 text-white' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Monitor className="w-4 h-4" />
+          <span>Desktop</span>
+        </button>
+        <button 
+          type="button" 
+          onClick={() => setDevicePreview('mobile')} 
+          className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+            devicePreview === 'mobile' 
+              ? 'bg-purple-600 text-white' 
+              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          }`}
+        >
+          <Smartphone className="w-4 h-4" />
+          <span>Mobile</span>
+        </button>
+      </div>
+    </div>
+
+    {/* Mobile - Compact Logo + Menu */}
+    <div className="flex lg:hidden items-center gap-4 flex-1">
+      <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
+      
+      <button
+        type="button"
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="ml-auto p-2 hover:bg-gray-100 rounded-lg"
+      >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <button
+    type="button"
+    onClick={handleSave}
+    disabled={isSaving}
+    className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50 flex-shrink-0 ml-4"
+  >
+    {isSaving ? (
+      <>
+        <Loader2 className="w-4 h-4 animate-spin" />
+        <span className="hidden md:inline">Saving...</span>
+      </>
+    ) : (
+      <>
+        <Save className="w-4 h-4" />
+        <span className="hidden md:inline">Save Changes</span>
+      </>
+    )}
+  </button>
+</header>
+
+      {/* Mobile Dropdown Menu */}
+      {isMobileMenuOpen && (
+        <div className="lg:hidden bg-white border-b border-gray-200 p-4 space-y-4 z-10">
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-2 block">PAGE</label>
+            <div className="flex flex-wrap gap-2">
               {Object.keys(allPages).map((pageName) => (
                 <button
                   key={pageName}
-                  onClick={() => setCurrentPage(pageName)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  onClick={() => {
+                    setCurrentPage(pageName);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                     currentPage === pageName
                       ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      : 'bg-gray-100 text-gray-700'
                   }`}
                 >
                   {getPageDisplayName(pageName)}
                 </button>
               ))}
             </div>
-            
-            {/* Device Preview Toggle */}
-            <div className="h-6 w-px bg-gray-300" />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-gray-600 mb-2 block">PREVIEW</label>
             <div className="flex gap-2">
               <button 
                 type="button" 
                 onClick={() => setDevicePreview('desktop')} 
-                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+                className={`flex-1 px-3 py-2 rounded text-sm flex items-center justify-center gap-2 ${
                   devicePreview === 'desktop' 
                     ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-600'
                 }`}
               >
                 <Monitor className="w-4 h-4" />
@@ -350,258 +401,220 @@ export default function WebsiteEditor() {
               <button 
                 type="button" 
                 onClick={() => setDevicePreview('mobile')} 
-                className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
+                className={`flex-1 px-3 py-2 rounded text-sm flex items-center justify-center gap-2 ${
                   devicePreview === 'mobile' 
                     ? 'bg-purple-600 text-white' 
-                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-600'
                 }`}
               >
                 <Smartphone className="w-4 h-4" />
                 <span>Mobile</span>
               </button>
             </div>
-
-            {/* Undo/Redo */}
-            <div className="h-6 w-px bg-gray-300" />
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleUndo}
-                disabled={historyIndex <= 0}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                title="Undo (Ctrl+Z)"
-              >
-                <Undo2 className="w-4 h-4" />
-              </button>
-              <button
-                type="button"
-                onClick={handleRedo}
-                disabled={historyIndex >= history.length - 1}
-                className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
-                title="Redo (Ctrl+Y)"
-              >
-                <Redo2 className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile - Compact Logo + Menu */}
-          <div className="flex lg:hidden items-center gap-4 flex-1">
-            <h1 className="text-lg font-bold text-gray-900 flex-shrink-0">Editor</h1>
-            
-            <button
-              type="button"
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="ml-auto p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3 ml-4 flex-shrink-0">
-          {/* Save Button - Only show when there are unsaved changes */}
-          {hasUnsavedChanges && (
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving}
-              className="px-4 lg:px-6 py-2 bg-gray-600 text-white rounded-lg font-semibold hover:bg-gray-700 transition flex items-center gap-2 disabled:opacity-50"
-            >
-              {isSaving ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="hidden md:inline">Saving...</span>
-                </>
-              ) : (
-                <>
-                  <Save className="w-4 h-4" />
-                  <span className="hidden md:inline">Save</span>
-                </>
-              )}
-            </button>
-          )}
-
-          {/* Publish Button - Green when changes exist, gray when published */}
-          <button
-            type="button"
-            onClick={handlePublish}
-            disabled={isPublishing || !hasUnsavedChanges}
-            className={`px-4 lg:px-6 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 ${
-              hasUnsavedChanges
-                ? 'bg-green-600 text-white hover:bg-green-700 hover:shadow-lg'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {isPublishing ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="hidden md:inline">Publishing...</span>
-              </>
-            ) : (
-              <>
-                <Send className="w-4 h-4" />
-                <span className="hidden md:inline">
-                  {hasUnsavedChanges ? 'Publish Changes' : 'Published ✓'}
-                </span>
-              </>
-            )}
-          </button>
-        </div>
-      </header>
-
-      {/* Mobile Menu Dropdown */}
-      {isMobileMenuOpen && (
-        <div className="lg:hidden bg-white border-b border-gray-200 p-4 space-y-4">
-          {/* Page Selection */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Current Page</label>
-            <select
-              value={currentPage}
-              onChange={(e) => setCurrentPage(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg"
-            >
-              {Object.keys(allPages).map((pageName) => (
-                <option key={pageName} value={pageName}>
-                  {getPageDisplayName(pageName)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Device Preview */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Preview</label>
-            <div className="flex gap-2">
-              <button 
-                onClick={() => setDevicePreview('desktop')} 
-                className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 ${
-                  devicePreview === 'desktop' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                <Monitor className="w-4 h-4" />
-                Desktop
-              </button>
-              <button 
-                onClick={() => setDevicePreview('mobile')} 
-                className={`flex-1 px-3 py-2 rounded flex items-center justify-center gap-2 ${
-                  devicePreview === 'mobile' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                <Smartphone className="w-4 h-4" />
-                Mobile
-              </button>
-            </div>
-          </div>
-
-          {/* Undo/Redo */}
-          <div className="flex gap-2">
-            <button
-              onClick={handleUndo}
-              disabled={historyIndex <= 0}
-              className="flex-1 px-3 py-2 bg-gray-100 rounded-lg disabled:opacity-30 flex items-center justify-center gap-2"
-            >
-              <Undo2 className="w-4 h-4" />
-              Undo
-            </button>
-            <button
-              onClick={handleRedo}
-              disabled={historyIndex >= history.length - 1}
-              className="flex-1 px-3 py-2 bg-gray-100 rounded-lg disabled:opacity-30 flex items-center justify-center gap-2"
-            >
-              <Redo2 className="w-4 h-4" />
-              Redo
-            </button>
           </div>
         </div>
       )}
-
-      {/* Main Content - Visual Editor */}
-      <main className="flex-1 overflow-hidden">
-       <VisualEditor
-  htmlContent={allPages[currentPage] || ''}
-  onUpdate={handleVisualUpdate}
-  currentPage={currentPage}
-/>
-      </main>
-
-      {/* AI Chat Widget */}
-      {isAIChatOpen && (
-        <div className="fixed bottom-4 right-4 w-96 h-[500px] bg-white rounded-xl shadow-2xl border border-gray-200 flex flex-col z-50">
-          {/* Chat Header */}
-          <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-t-xl flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5" />
-              <h3 className="font-semibold">AI Editor Assistant</h3>
-            </div>
-            <button onClick={() => setIsAIChatOpen(false)} className="hover:bg-white/20 p-1 rounded">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Chat Messages */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-3">
-            {messages.map((msg, i) => (
-              <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] rounded-lg p-3 ${
-                  msg.role === 'user' 
-                    ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white' 
-                    : 'bg-gray-100 text-gray-900'
-                }`}>
-                  <p className="text-sm whitespace-pre-line">{msg.content}</p>
-                </div>
-              </div>
-            ))}
-            {isAIThinking && (
-              <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg p-3">
-                  <div className="flex gap-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+     
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-gradient-to-br from-gray-100 to-gray-200">
+        
+       {/* Centered Preview */}
+<div className="bg-white rounded-xl shadow-2xl overflow-hidden" style={{ 
+  width: devicePreview === 'desktop' ? '100%' : '375px',
+  height: devicePreview === 'desktop' ? '100%' : '667px'
+}}>
+  {devicePreview === 'desktop' ? (
+    allPages[currentPage] ? (
+      <VisualEditor 
+        htmlContent={allPages[currentPage]}
+        onUpdate={handleVisualUpdate}
+        currentPage={currentPage}
+        onUndo={handleUndo}
+        onRedo={handleRedo}
+        canUndo={historyIndex > 0}
+        canRedo={historyIndex < history.length - 1}
+      />
+    ) : (
+      <div className="flex items-center justify-center h-full">
+        <div className="text-gray-500">Loading page content...</div>
+      </div>
+    )
+  ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+              <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+                <div className="relative w-full h-full bg-white rounded-[2.5rem] overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                      </svg>
+                      <span>100%</span>
+                    </div>
+                  </div>
+                  <div className="absolute top-[92px] left-0 right-0 bottom-0 overflow-y-auto overflow-x-hidden">
+                    <iframe
+                      key={currentPage + '-mobile'}
+                      srcDoc={allPages[currentPage]}
+                      title={`${currentPage} Mobile Preview`}
+                      className="border-none"
+                      style={{ 
+                        width: '375px',
+                        height: '100%',
+                        minHeight: '100%'
+                      }}
+                      ref={(iframe) => {
+                        if (iframe && iframe.contentWindow) {
+                          iframe.onload = () => {
+                            try {
+                              const iframeDoc = iframe.contentWindow.document;
+                              
+                              let viewport = iframeDoc.querySelector('meta[name="viewport"]');
+                              if (!viewport) {
+                                viewport = iframeDoc.createElement('meta');
+                                viewport.name = 'viewport';
+                                iframeDoc.head.appendChild(viewport);
+                              }
+                              viewport.content = 'width=375, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no';
+                              
+                              const style = iframeDoc.createElement('style');
+                              style.textContent = `
+                                html {
+                                  width: 375px !important;
+                                  overflow-x: hidden !important;
+                                }
+                                body {
+                                  width: 375px !important;
+                                  min-width: 375px !important;
+                                  max-width: 375px !important;
+                                  overflow-x: hidden !important;
+                                  margin: 0 !important;
+                                  padding: 0 !important;
+                                }
+                                * {
+                                  max-width: 375px !important;
+                                  box-sizing: border-box !important;
+                                }
+                                img {
+                                  max-width: 100% !important;
+                                  height: auto !important;
+                                }
+                              `;
+                              iframeDoc.head.appendChild(style);
+                              
+                              iframeDoc.addEventListener('click', (e) => {
+                                const link = e.target.closest('a');
+                                if (link) {
+                                  const href = link.getAttribute('href');
+                                  
+                                  if (href && href.startsWith('#')) {
+                                    return;
+                                  }
+                                  
+                                  if (href && href.endsWith('.html') && allPages[href]) {
+                                    e.preventDefault();
+                                    setCurrentPage(href);
+                                    return;
+                                  }
+                                  
+                                  e.preventDefault();
+                                }
+                              }, true);
+                            } catch (err) {
+                              console.log('Could not access iframe:', err);
+                            }
+                          };
+                        }
+                      }}
+                    />
                   </div>
                 </div>
+                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
+        </div>
 
-          {/* Chat Input */}
-          <div className="p-4 border-t border-gray-200">
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Tell me what to change..."
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                disabled={isAIThinking}
-              />
+        {/* AI Chat Widget */}
+        {!isAIChatOpen ? (
+          <button
+            onClick={() => setIsAIChatOpen(true)}
+            className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-110 transition-all z-50 flex items-center gap-2"
+          >
+            <Sparkles className="w-6 h-6" />
+            <span className="font-semibold">AI Assistant</span>
+          </button>
+        ) : (
+          <div className="fixed bottom-8 right-8 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
+            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-2xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5 text-purple-600" />
+                <h3 className="font-bold text-gray-900">AI Assistant</h3>
+              </div>
               <button
-                onClick={handleSendMessage}
-                disabled={isAIThinking || !inputMessage.trim()}
-                className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50"
+                onClick={() => setIsAIChatOpen(false)}
+                className="p-1 hover:bg-white rounded-full transition"
               >
-                <Send className="w-5 h-5" />
+                <X className="w-5 h-5 text-gray-600" />
               </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* AI Chat Toggle Button */}
-      {!isAIChatOpen && (
-        <button
-          onClick={() => setIsAIChatOpen(true)}
-          className="fixed bottom-4 right-4 w-14 h-14 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-full shadow-2xl hover:shadow-3xl transition-all flex items-center justify-center z-40"
-          title="Open AI Assistant"
-        >
-          <Sparkles className="w-6 h-6" />
-        </button>
-      )}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {messages.map((message, index) => (
+                <div
+                  key={index}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[85%] rounded-lg px-3 py-2 ${
+                      message.role === 'user'
+                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                        : 'bg-gray-100 text-gray-900'
+                    }`}
+                  >
+                    <p className="text-xs whitespace-pre-wrap">{message.content}</p>
+                  </div>
+                </div>
+              ))}
+
+              {isAIThinking && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-100 rounded-lg px-3 py-2 flex items-center gap-2">
+                    <Loader2 className="w-3 h-3 animate-spin text-purple-600" />
+                    <p className="text-xs text-gray-600">AI is thinking...</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 border-t border-gray-200 rounded-b-2xl">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Ask AI to make changes..."
+                  className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                  disabled={isAIThinking}
+                />
+                <button
+                  type="button"
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim() || isAIThinking}
+                  className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Send className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                💡 Try: "Make the button blue"
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
