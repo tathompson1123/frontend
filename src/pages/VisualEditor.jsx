@@ -898,9 +898,9 @@ if (nonDraggable.includes(el.tagName) || isBackground) {
         if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'EM' || 
             el.tagName === 'B' || el.tagName === 'I' || el.tagName === 'U') {
           const parent = el.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
-          if (parent && !parent.classList?.contains('hero') && 
-              !parent.classList?.contains('background') && 
-              !parent.classList?.contains('bg-') &&
+          if (parent && 
+    !parent.classList?.contains('background') && 
+    !parent.classList?.contains('bg-') &&
               parent.tagName !== 'SECTION' &&
               parent.tagName !== 'HEADER' &&
               parent.tagName !== 'FOOTER') {
@@ -1392,10 +1392,9 @@ if (distanceFromCenterY < snapThreshold) {
         
         if (nonDraggable.includes(target.tagName)) return;
         
-        const isBackground = target.classList?.contains('hero') || 
-                           target.classList?.contains('background') ||
-                           target.classList?.contains('bg-');
-        if (isBackground) return;
+        const isBackground = target.classList?.contains('background') ||
+                   target.classList?.contains('bg-');
+if (isBackground) return;
         
         if (['SPAN', 'STRONG', 'EM', 'B', 'I', 'U'].includes(target.tagName)) {
           const parent = target.closest('p, h1, h2, h3, h4, h5, h6, a, button, div, li');
