@@ -539,7 +539,6 @@ export default function WebsiteEditor() {
       </div>
       </div>
     </div>
-  </div>
 )}
         </div>
 
