@@ -1495,37 +1495,39 @@ if (isBackground) return;
     };
  }, [currentPage, reloadKey, isMobileView]);
 
+   const applyPositionsForView = (doc, isMobile) => {
+    const prefix = isMobile ? 'mobile' : 'desktop';
+    console.log('🎯 applyPositionsForView called, prefix:', prefix);
+    
+    doc.querySelectorAll('[data-desktop-left], [data-mobile-left]').forEach(el => {
+      const left = el.dataset[`${prefix}Left`];
+      const top = el.dataset[`${prefix}Top`];
+      const width = el.dataset[`${prefix}Width`];
+      const height = el.dataset[`${prefix}Height`];
+      
+      if (left !== undefined) {
+        el.style.position = 'absolute';
+        el.style.left = left + 'px';
+        el.style.top = (top || 0) + 'px';
+        if (width) el.style.width = width + 'px';
+        if (height) el.style.height = height + 'px';
+        el.style.margin = '0';
+        el.style.zIndex = '1000';
+      } else {
+        // No position for this view - reset to natural layout
+        el.style.position = '';
+        el.style.left = '';
+        el.style.top = '';
+        el.style.width = '';
+        el.style.height = '';
+        el.style.margin = '';
+        el.style.zIndex = '';
+      }
+    });
+  };
+
   const prepareElementForDrag = (elem, doc) => {
   const computed = window.getComputedStyle(elem);
-  const applyPositionsForView = (doc, isMobile) => {
-  const prefix = isMobile ? 'mobile' : 'desktop';
-  
-  doc.querySelectorAll('[data-desktop-left], [data-mobile-left]').forEach(el => {
-    const left = el.dataset[`${prefix}Left`];
-    const top = el.dataset[`${prefix}Top`];
-    const width = el.dataset[`${prefix}Width`];
-    const height = el.dataset[`${prefix}Height`];
-    
-    if (left !== undefined) {
-      el.style.position = 'absolute';
-      el.style.left = left + 'px';
-      el.style.top = (top || 0) + 'px';
-      if (width) el.style.width = width + 'px';
-      if (height) el.style.height = height + 'px';
-      el.style.margin = '0';
-      el.style.zIndex = '1000';
-    } else {
-      // No position for this view - reset to natural layout
-      el.style.position = '';
-      el.style.left = '';
-      el.style.top = '';
-      el.style.width = '';
-      el.style.height = '';
-      el.style.margin = '';
-      el.style.zIndex = '';
-    }
-  });
-};
   
   if (computed.position === 'static' || computed.position === 'relative' || !elem.style.position) {
     const rect = elem.getBoundingClientRect();
