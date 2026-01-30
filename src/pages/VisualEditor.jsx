@@ -96,7 +96,7 @@ if (isMobileView) {
   doc.body.classList.remove('editor-mobile-mode');
 }
       
-   style.textContent = `
+style.textContent = `
   * { box-sizing: border-box; }
   html, body { 
     position: relative !important; 
@@ -114,9 +114,7 @@ if (isMobileView) {
   }
   .editor-mobile-mode div,
   .editor-mobile-mode section,
-  .editor-mobile-mode header,
   .editor-mobile-mode footer,
-  .editor-mobile-mode nav,
   .editor-mobile-mode main,
   .editor-mobile-mode article,
   .editor-mobile-mode aside {
@@ -134,6 +132,72 @@ if (isMobileView) {
     display: flex !important;
     flex-direction: column !important;
   }
+  
+  /* MOBILE HEADER - Keep horizontal, add hamburger */
+  .editor-mobile-mode header,
+  .editor-mobile-mode nav,
+  .editor-mobile-mode header > div,
+  .editor-mobile-mode nav > div {
+    flex-direction: row !important;
+    width: 100% !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+  }
+  
+  /* Hide nav links */
+  .editor-mobile-mode header nav,
+  .editor-mobile-mode header ul,
+  .editor-mobile-mode header menu,
+  .editor-mobile-mode nav ul,
+  .editor-mobile-mode nav menu,
+  .editor-mobile-mode header a:not(.logo):not([class*="logo"]):not([class*="brand"]),
+  .editor-mobile-mode nav > a:not(.logo):not([class*="logo"]):not([class*="brand"]) {
+    display: none !important;
+  }
+  
+  /* Center the logo */
+  .editor-mobile-mode header .logo,
+  .editor-mobile-mode header [class*="logo"],
+  .editor-mobile-mode header [class*="brand"],
+  .editor-mobile-mode header img:first-of-type,
+  .editor-mobile-mode nav .logo,
+  .editor-mobile-mode nav [class*="logo"],
+  .editor-mobile-mode nav [class*="brand"] {
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin: 0 !important;
+  }
+  
+  /* Add hamburger menu icon */
+  .editor-mobile-mode header::before,
+  .editor-mobile-mode nav::before {
+    content: '' !important;
+    display: block !important;
+    width: 24px !important;
+    height: 2px !important;
+    background: currentColor !important;
+    box-shadow: 0 8px 0 currentColor, 0 16px 0 currentColor !important;
+    position: absolute !important;
+    left: 16px !important;
+    top: 50% !important;
+    transform: translateY(-8px) !important;
+  }
+  
+  /* Hide CTA buttons in header for mobile */
+  .editor-mobile-mode header button,
+  .editor-mobile-mode header [class*="btn"],
+  .editor-mobile-mode header [class*="cta"],
+  .editor-mobile-mode nav button,
+  .editor-mobile-mode nav [class*="btn"],
+  .editor-mobile-mode nav [class*="cta"] {
+    display: none !important;
+  }
+
+  /* Editor selection styles */
   .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
   .editor-selected:active { cursor: grabbing !important; }
   .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
@@ -149,7 +213,7 @@ if (isMobileView) {
   .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
   .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
   
-  /* Section Height Adjuster Styles - ADD THESE */
+  /* Section Height Adjuster Styles */
   .section-height-adjuster {
     position: absolute !important;
     bottom: -20px !important;
