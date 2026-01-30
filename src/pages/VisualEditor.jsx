@@ -457,44 +457,40 @@ const addSectionResizers = () => {
   doc.querySelectorAll('.section-height-adjuster').forEach(el => el.remove());
   
   // Find all major sections
-  const sections = doc.querySelectorAll('section, .section, [class*="section"], main > div, body > div');
+  const sections = doc.querySelectorAll('section, .section, [class*="hero"], main > div, body > div');
   
-  sections.forEach((section, index) => {
+  sections.forEach((section) => {
     if (section.classList.contains('section-height-adjuster')) return;
-    if (section.offsetHeight < 50) return; // Skip tiny sections
+    if (section.offsetHeight < 50) return;
     
-    // Create adjuster
     const adjuster = doc.createElement('div');
     adjuster.className = 'section-height-adjuster';
     adjuster.innerHTML = `
       <div class="adjuster-line"></div>
       <div class="adjuster-handle">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
           <path d="M7 10l5 5 5-5z"/>
         </svg>
       </div>
-      <div class="adjuster-tooltip">Adjust section height or double click to remove any extra space above.</div>
+      <div class="adjuster-tooltip">Drag to adjust height</div>
     `;
     
     section.style.position = 'relative';
     section.appendChild(adjuster);
     
-    // Handle dragging
     const handle = adjuster.querySelector('.adjuster-handle');
     const tooltip = adjuster.querySelector('.adjuster-tooltip');
     
     let isDragging = false;
     let startY = 0;
-    let startHeight = 0;
+    let startPaddingBottom = 0;
     
     handle.addEventListener('mouseenter', () => {
       tooltip.style.display = 'block';
     });
     
     handle.addEventListener('mouseleave', () => {
-      if (!isDragging) {
-        tooltip.style.display = 'none';
-      }
+      if (!isDragging) tooltip.style.display = 'none';
     });
     
     handle.addEventListener('mousedown', (e) => {
@@ -502,8 +498,8 @@ const addSectionResizers = () => {
       e.stopPropagation();
       isDragging = true;
       startY = e.clientY;
-      startHeight = section.offsetHeight;
-      handle.style.cursor = 'ns-resize';
+      const computed = window.getComputedStyle(section);
+      startPaddingBottom = parseFloat(computed.paddingBottom) || 0;
       tooltip.style.display = 'none';
     });
     
@@ -511,22 +507,25 @@ const addSectionResizers = () => {
       if (!isDragging) return;
       e.preventDefault();
       const deltaY = e.clientY - startY;
-      const newHeight = Math.max(100, startHeight + deltaY);
-      section.style.height = newHeight + 'px';
-      section.style.minHeight = newHeight + 'px';
+      const newPadding = Math.max(20, startPaddingBottom + deltaY);
+      section.style.paddingBottom = newPadding + 'px';
     });
     
     doc.addEventListener('mouseup', () => {
       if (isDragging) {
         isDragging = false;
-        handle.style.cursor = 'pointer';
-        
-        // Trigger save
-        if (onUpdate) {
-          onUpdate(doc.documentElement.outerHTML);
-        }
+        saveChanges();
       }
     });
+    
+    handle.addEventListener('dblclick', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      section.style.paddingBottom = '40px';
+      saveChanges();
+    });
+  });
+};
     
     // Double click to auto-adjust
     handle.addEventListener('dblclick', (e) => {
