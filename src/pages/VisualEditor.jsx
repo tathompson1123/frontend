@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, currentPage, isMobileView }) {
-  console.log('🔵 VisualEditor rendered');
+  console.log('🔵 VisualEditor rendered, isMobileView:', isMobileView);
   const selectedElementsRef = useRef([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
   const [reloadKey, setReloadKey] = useState(0);
@@ -30,6 +30,15 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
   const isSavingRef = useRef(false);
   
   const [initialHtml, setInitialHtml] = useState(htmlContent || '<html><body><h1>Loading...</h1></body></html>');
+
+  useEffect(() => {
+    console.log('🟢 VisualEditor MOUNTED, isMobileView:', isMobileView);
+    eventHandlersRef.current = null;
+    
+    return () => {
+      console.log('🔴 VisualEditor UNMOUNTING, isMobileView:', isMobileView);
+    };
+  }, []);
 
   const [elementProps, setElementProps] = useState({
     width: '',
