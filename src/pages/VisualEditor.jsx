@@ -98,98 +98,139 @@ style.textContent = `
     max-width: 100% !important;
   }
   
-  /* Mobile stacking styles */
-  .editor-mobile-mode {
-    max-width: 375px !important;
-  }
-  .editor-mobile-mode * {
-    max-width: 100% !important;
-  }
-  .editor-mobile-mode div,
-  .editor-mobile-mode section,
-  .editor-mobile-mode footer,
-  .editor-mobile-mode main,
-  .editor-mobile-mode article,
-  .editor-mobile-mode aside {
-    flex-direction: column !important;
-    width: 100% !important;
-    min-width: 0 !important;
-  }
-  .editor-mobile-mode img,
-  .editor-mobile-mode video {
-    max-width: 100% !important;
-    height: auto !important;
-  }
-  .editor-mobile-mode [class*="flex-row"],
-  .editor-mobile-mode [class*="grid-cols"] {
-    display: flex !important;
-    flex-direction: column !important;
-  }
-  
-  /* MOBILE HEADER - Keep horizontal, add hamburger */
-  .editor-mobile-mode header,
-  .editor-mobile-mode nav,
-  .editor-mobile-mode header > div,
-  .editor-mobile-mode nav > div {
-    flex-direction: row !important;
-    width: 100% !important;
-    position: relative !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 12px 16px !important;
-  }
-  
-  /* Hide nav links */
-  .editor-mobile-mode header nav,
-  .editor-mobile-mode header ul,
-  .editor-mobile-mode header menu,
-  .editor-mobile-mode nav ul,
-  .editor-mobile-mode nav menu,
-  .editor-mobile-mode header a:not(.logo):not([class*="logo"]):not([class*="brand"]),
-  .editor-mobile-mode nav > a:not(.logo):not([class*="logo"]):not([class*="brand"]) {
-    display: none !important;
-  }
-  
-  /* Center the logo */
-  .editor-mobile-mode header .logo,
-  .editor-mobile-mode header [class*="logo"],
-  .editor-mobile-mode header [class*="brand"],
-  .editor-mobile-mode header img:first-of-type,
-  .editor-mobile-mode nav .logo,
-  .editor-mobile-mode nav [class*="logo"],
-  .editor-mobile-mode nav [class*="brand"] {
-    position: absolute !important;
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    margin: 0 !important;
-  }
-  
-  /* Add hamburger menu icon */
-  .editor-mobile-mode header::before,
-  .editor-mobile-mode nav::before {
-    content: '' !important;
-    display: block !important;
-    width: 24px !important;
-    height: 2px !important;
-    background: currentColor !important;
-    box-shadow: 0 8px 0 currentColor, 0 16px 0 currentColor !important;
-    position: absolute !important;
-    left: 16px !important;
-    top: 50% !important;
-    transform: translateY(-8px) !important;
-  }
-  
-  /* Hide CTA buttons in header for mobile */
-  .editor-mobile-mode header button,
-  .editor-mobile-mode header [class*="btn"],
-  .editor-mobile-mode header [class*="cta"],
-  .editor-mobile-mode nav button,
-  .editor-mobile-mode nav [class*="btn"],
-  .editor-mobile-mode nav [class*="cta"] {
-    display: none !important;
-  }
+ /* Mobile stacking styles */
+.editor-mobile-mode {
+  max-width: 375px !important;
+}
+.editor-mobile-mode * {
+  max-width: 100% !important;
+}
 
+/* Only stack MAJOR layout containers, not everything */
+.editor-mobile-mode > div,
+.editor-mobile-mode section > div,
+.editor-mobile-mode main > div,
+.editor-mobile-mode article > div,
+.editor-mobile-mode footer > div {
+  flex-direction: column !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* Keep marquee/banner horizontal */
+.editor-mobile-mode [class*="marquee"],
+.editor-mobile-mode [class*="banner"],
+.editor-mobile-mode [class*="ticker"],
+.editor-mobile-mode [class*="scroll"],
+.editor-mobile-mode [class*="animate"],
+.editor-mobile-mode [class*="overflow-hidden"] > div {
+  flex-direction: row !important;
+  flex-wrap: nowrap !important;
+  overflow: hidden !important;
+}
+
+/* Hero section - keep text visible and stacked */
+.editor-mobile-mode [class*="hero"],
+.editor-mobile-mode [class*="hero"] > div {
+  flex-direction: column !important;
+  align-items: center !important;
+  text-align: center !important;
+  padding: 20px !important;
+}
+
+.editor-mobile-mode [class*="hero"] h1,
+.editor-mobile-mode [class*="hero"] h2,
+.editor-mobile-mode [class*="hero"] p,
+.editor-mobile-mode [class*="hero"] span,
+.editor-mobile-mode [class*="hero"] a {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  position: relative !important;
+  width: auto !important;
+  max-width: 100% !important;
+}
+
+.editor-mobile-mode img,
+.editor-mobile-mode video {
+  max-width: 100% !important;
+  height: auto !important;
+}
+
+/* Grid layouts - stack on mobile */
+.editor-mobile-mode [class*="grid-cols"] {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Flex rows with multiple children - stack */
+.editor-mobile-mode [class*="flex-row"] {
+  flex-direction: column !important;
+}
+
+/* MOBILE HEADER - Keep horizontal, add hamburger */
+.editor-mobile-mode header,
+.editor-mobile-mode nav,
+.editor-mobile-mode header > div,
+.editor-mobile-mode nav > div {
+  flex-direction: row !important;
+  width: 100% !important;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 12px 16px !important;
+}
+
+/* Hide nav links */
+.editor-mobile-mode header nav,
+.editor-mobile-mode header ul,
+.editor-mobile-mode header menu,
+.editor-mobile-mode nav ul,
+.editor-mobile-mode nav menu,
+.editor-mobile-mode header a:not(.logo):not([class*="logo"]):not([class*="brand"]),
+.editor-mobile-mode nav > a:not(.logo):not([class*="logo"]):not([class*="brand"]) {
+  display: none !important;
+}
+
+/* Center the logo */
+.editor-mobile-mode header .logo,
+.editor-mobile-mode header [class*="logo"],
+.editor-mobile-mode header [class*="brand"],
+.editor-mobile-mode header img:first-of-type,
+.editor-mobile-mode nav .logo,
+.editor-mobile-mode nav [class*="logo"],
+.editor-mobile-mode nav [class*="brand"] {
+  position: absolute !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  margin: 0 !important;
+}
+
+/* Add hamburger menu icon */
+.editor-mobile-mode header::before,
+.editor-mobile-mode nav::before {
+  content: '' !important;
+  display: block !important;
+  width: 24px !important;
+  height: 2px !important;
+  background: currentColor !important;
+  box-shadow: 0 8px 0 currentColor, 0 16px 0 currentColor !important;
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-8px) !important;
+}
+
+/* Hide CTA buttons in header for mobile */
+.editor-mobile-mode header button,
+.editor-mobile-mode header [class*="btn"],
+.editor-mobile-mode header [class*="cta"],
+.editor-mobile-mode nav button,
+.editor-mobile-mode nav [class*="btn"],
+.editor-mobile-mode nav [class*="cta"] {
+  display: none !important;
+}
   /* Editor selection styles */
   .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
   .editor-selected:active { cursor: grabbing !important; }
