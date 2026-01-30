@@ -479,6 +479,7 @@ export default function WebsiteEditor() {
       canUndo={historyIndex > 0}
       canRedo={historyIndex < history.length - 1}
     />
+      </div> 
   ) : (
     <div className="flex items-center justify-center h-full">
       <div className="text-gray-500">Loading page content...</div>
