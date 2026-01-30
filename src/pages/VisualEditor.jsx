@@ -729,7 +729,7 @@ style.textContent = `
     margin: 8px !important;
   }
 /* Reset ALL inline positioned elements in mobile */
-.editor-mobile-mode * {
+.editor-mobile-mode *:not(.editor-selected):not(.editor-dragging) {
   position: static !important;
   left: auto !important;
   top: auto !important;
@@ -737,10 +737,12 @@ style.textContent = `
   bottom: auto !important;
 }
 
-/* Re-enable positioning only for specific elements that need it */
+/* Re-enable positioning for editor controls and dragging elements */
 .editor-mobile-mode .section-height-adjuster,
 .editor-mobile-mode .resize-handle,
-.editor-mobile-mode .drag-placeholder {
+.editor-mobile-mode .drag-placeholder,
+.editor-mobile-mode .editor-selected,
+.editor-mobile-mode .editor-dragging {
   position: absolute !important;
 }
 `;
