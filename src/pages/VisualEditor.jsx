@@ -559,7 +559,17 @@ if (isMobileView) {
 } else {
   doc.body.classList.remove('editor-mobile-mode');
 }
+      
 applyPositionsForView(doc, isMobileView);
+      console.log('🔍 Elements with position data:', 
+  doc.querySelectorAll('[data-desktop-left], [data-mobile-left]').length
+);
+doc.querySelectorAll('[data-desktop-left], [data-mobile-left]').forEach(el => {
+  console.log('  -', el.tagName, {
+    desktopLeft: el.dataset.desktopLeft,
+    mobileLeft: el.dataset.mobileLeft
+  });
+});
 
 style.textContent = `
   * { box-sizing: border-box; }
