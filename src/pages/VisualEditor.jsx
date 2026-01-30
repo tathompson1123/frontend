@@ -728,13 +728,21 @@ style.textContent = `
     width: auto !important;
     margin: 8px !important;
   }
-  .editor-mobile-mode [style*="position: absolute"] {
-    position: relative !important;
-    left: auto !important;
-    top: auto !important;
-    width: auto !important;
-    transform: none !important;
-  }
+/* Reset ALL inline positioned elements in mobile */
+.editor-mobile-mode * {
+  position: static !important;
+  left: auto !important;
+  top: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+}
+
+/* Re-enable positioning only for specific elements that need it */
+.editor-mobile-mode .section-height-adjuster,
+.editor-mobile-mode .resize-handle,
+.editor-mobile-mode .drag-placeholder {
+  position: absolute !important;
+}
 `;
 
       const preventDefaultActions = (e) => {
