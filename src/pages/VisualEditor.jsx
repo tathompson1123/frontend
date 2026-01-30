@@ -1336,8 +1336,8 @@ if (distanceFromCenterY < snapThreshold) {
         </div>
       </div>
 
-      <div className="flex-1 relative">
-        <iframe 
+     <div className="flex-1 relative overflow-hidden">
+  <iframe
   ref={iframeRef} 
   srcDoc={initialHtml}
   key={`${currentPage}-${reloadKey}`}
