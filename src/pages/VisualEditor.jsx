@@ -845,17 +845,14 @@ const createResizeHandles = (element) => {
       const findDraggableElement = (el) => {
         const nonDraggable = ['HTML', 'BODY', 'HEAD', 'SCRIPT', 'STYLE', 'META', 'LINK'];
         
-        const isBackground = el.classList?.contains('hero') || 
-                             el.classList?.contains('background') ||
-                             el.classList?.contains('bg-') ||
-                             el.tagName === 'SECTION' ||
-                             el.tagName === 'HEADER' ||
-                             el.tagName === 'FOOTER' ||
-                             el.tagName === 'MAIN';
-        
-        if (nonDraggable.includes(el.tagName) || isBackground) {
-          return null;
-        }
+        const isBackground = el.tagName === 'SECTION' ||
+                     el.tagName === 'HEADER' ||
+                     el.tagName === 'FOOTER' ||
+                     el.tagName === 'MAIN';
+
+if (nonDraggable.includes(el.tagName) || isBackground) {
+  return null;
+}
         
         if (el.tagName === 'SPAN' || el.tagName === 'STRONG' || el.tagName === 'EM' || 
             el.tagName === 'B' || el.tagName === 'I' || el.tagName === 'U') {
