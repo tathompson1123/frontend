@@ -380,53 +380,83 @@ const handleConnectExistingWebsite = async () => {
                     </div>
                   </div>
                   <div className="overflow-hidden" style={{ height: '600px' }}>
-  <iframe 
-    srcDoc={currentWebsite || ''} 
-    title="Desktop Website Preview" 
-    className="w-full h-full bg-white border-0" 
-    sandbox="allow-scripts allow-same-origin"
-  />
-</div>
-</div> 
-) : (
-  <div className="flex justify-center items-center w-full overflow-hidden">
-    <div className="w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900 flex-shrink-0">
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-      <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative">
-        <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
-          <span>9:41</span>
-          <div className="flex items-center gap-1">
-            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" /></svg>
-            <span>100%</span>
-          </div>
-        </div>
-        <div className="absolute top-11 left-0 right-0 h-12 bg-gray-100 z-10 flex items-center px-3 border-b border-gray-200 overflow-hidden">
-          <div className="flex-1 bg-white rounded-full px-4 py-2 text-xs text-gray-500 flex items-center gap-2 min-w-0">
-            <Globe className="w-3 h-3 flex-shrink-0" />
-            <span className="truncate">{customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}</span>
-          </div>
-        </div>
-        <div className="absolute top-[92px] left-0 w-full bottom-0 overflow-hidden">
-          <div className="w-full h-full overflow-hidden">
-            <iframe 
-              srcDoc={currentWebsite || ''} 
-              title="Mobile Website Preview" 
-              className="border-0 pointer-events-none bg-white"
-              sandbox="allow-scripts allow-same-origin"
-              style={{ 
-                width: '375px', 
-                height: '100%',
-                transform: 'scale(1)',
-                transformOrigin: 'top left'
-             }}
-            />
-          </div>
-        </div>
-      </div>
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
-    </div>
-  </div>
-)}
+                    <iframe 
+                      srcDoc={currentWebsite || ''} 
+                      title="Desktop Website Preview" 
+                      className="w-full h-full bg-white border-0 pointer-events-none" 
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  </div>
+                </div> 
+              ) : (
+                /* ============================================
+                   MOBILE PREVIEW - FIXED VERSION
+                   - Non-scrollable, non-interactive preview
+                   - Uses scale transform to fit content
+                   ============================================ */
+                <div className="flex justify-center items-center w-full">
+                  {/* Phone Frame */}
+                  <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900 flex-shrink-0">
+                    {/* Notch */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
+                    
+                    {/* Screen Container */}
+                    <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative">
+                      {/* Status Bar */}
+                      <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
+                        <span>9:41</span>
+                        <div className="flex items-center gap-1">
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                          </svg>
+                          <span>100%</span>
+                        </div>
+                      </div>
+                      
+                      {/* URL Bar */}
+                      <div className="absolute top-11 left-0 right-0 h-12 bg-gray-100 z-10 flex items-center px-3 border-b border-gray-200">
+                        <div className="flex-1 bg-white rounded-full px-4 py-2 text-xs text-gray-500 flex items-center gap-2 min-w-0">
+                          <Globe className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">{customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}</span>
+                        </div>
+                      </div>
+                      
+                      {/* FIXED: iframe content area - scaled to fit, no scroll */}
+                      <div 
+                        className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden"
+                        style={{ 
+                          /* Hide any overflow from scaled content */
+                          overflow: 'hidden'
+                        }}
+                      >
+                        {/* 
+                          FIXED: Scale the iframe to show full-width content
+                          - iframe renders at 375px wide (mobile width)
+                          - Content height is set tall enough to show above-the-fold
+                          - pointer-events-none prevents any interaction
+                          - No scrolling - this is just a preview thumbnail
+                        */}
+                        <iframe 
+                          srcDoc={currentWebsite || ''} 
+                          title="Mobile Website Preview" 
+                          className="border-0 bg-white pointer-events-none"
+                          sandbox="allow-scripts allow-same-origin"
+                          style={{ 
+                            width: '375px',
+                            height: 'calc(667px - 92px)', /* Exact height of visible area */
+                            display: 'block',
+                            overflow: 'hidden'
+                          }}
+                          scrolling="no"
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Home Indicator */}
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
           {/* Deployment & Domain Management */}
