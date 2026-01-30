@@ -1245,10 +1245,10 @@ if (distanceFromCenterY < snapThreshold) {
   }
 });
           
-          setGuides({ 
-            vertical: detectedGuides.vertical.slice(0, 1),
-            horizontal: detectedGuides.horizontal.slice(0, 1) 
-          });
+        //  setGuides({ 
+        //    vertical: detectedGuides.vertical.slice(0, 1),
+         //   horizontal: detectedGuides.horizontal.slice(0, 1) 
+       //   });
           
           const deltaX = newLeft - firstElement.startLeft;
           const deltaY = newTop - firstElement.startTop;
