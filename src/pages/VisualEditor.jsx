@@ -1338,12 +1338,18 @@ if (distanceFromCenterY < snapThreshold) {
 
       <div className="flex-1 relative">
         <iframe 
-          ref={iframeRef} 
-          srcDoc={initialHtml}
-          key={`${currentPage}-${reloadKey}`}
-          className="w-full h-full border-none"
-          title="Visual Editor"
-        />
+  ref={iframeRef} 
+  srcDoc={initialHtml}
+  key={`${currentPage}-${reloadKey}`}
+  className="w-full h-full border-none"
+  title="Visual Editor"
+  style={{ 
+    width: '100%',
+    height: '100%',
+    display: 'block',
+    overflow: 'hidden'
+  }}
+/>
         
 {guides.vertical.map((guide, i) => {
   const iframeRect = iframeRef.current?.getBoundingClientRect();
