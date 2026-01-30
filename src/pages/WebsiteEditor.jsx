@@ -471,14 +471,15 @@ export default function WebsiteEditor() {
   allPages[currentPage] ? (
     <div className="w-full h-full overflow-hidden">
     <VisualEditor 
-      htmlContent={allPages[currentPage]}
-      onUpdate={handleVisualUpdate}
-      currentPage={currentPage}
-      onUndo={handleUndo}
-      onRedo={handleRedo}
-      canUndo={historyIndex > 0}
-      canRedo={historyIndex < history.length - 1}
-    />
+  htmlContent={allPages[currentPage]}
+  onUpdate={handleVisualUpdate}
+  currentPage={currentPage}
+  isMobileView={devicePreview === 'mobile'}
+  onUndo={handleUndo}
+  onRedo={handleRedo}
+  canUndo={historyIndex > 0}
+  canRedo={historyIndex < history.length - 1}
+/>
       </div> 
   ) : (
     <div className="flex items-center justify-center h-full">
@@ -522,15 +523,16 @@ export default function WebsiteEditor() {
         }}
       >
         {allPages[currentPage] ? (
-          <VisualEditor 
-            htmlContent={allPages[currentPage]}
-            onUpdate={handleVisualUpdate}
-            currentPage={currentPage}
-            onUndo={handleUndo}
-            onRedo={handleRedo}
-            canUndo={historyIndex > 0}
-            canRedo={historyIndex < history.length - 1}
-          />
+         <VisualEditor 
+  htmlContent={allPages[currentPage]}
+  onUpdate={handleVisualUpdate}
+  currentPage={currentPage}
+  isMobileView={devicePreview === 'mobile'}
+  onUndo={handleUndo}
+  onRedo={handleRedo}
+  canUndo={historyIndex > 0}
+  canRedo={historyIndex < history.length - 1}
+/>
         ) : (
           <div className="flex items-center justify-center h-full p-8">
             <div className="text-gray-500">Loading page content...</div>
