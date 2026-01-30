@@ -559,6 +559,29 @@ if (isMobileView) {
 } else {
   doc.body.classList.remove('editor-mobile-mode');
 }
+
+      // ADD THIS: Clean old inline positions that don't have data attributes
+doc.querySelectorAll('[style*="position: absolute"]').forEach(el => {
+  // Skip editor elements
+  if (el.classList.contains('resize-handle') || 
+      el.classList.contains('drag-placeholder') ||
+      el.classList.contains('section-height-adjuster')) {
+    return;
+  }
+  
+  // If element has inline position but NO data attributes, it's old - reset it
+  if (!el.dataset.desktopLeft && !el.dataset.mobileLeft) {
+    console.log('🧹 Cleaning old inline position from:', el.tagName, el.className);
+    el.style.position = '';
+    el.style.left = '';
+    el.style.top = '';
+    el.style.width = '';
+    el.style.height = '';
+    el.style.margin = '';
+    el.style.zIndex = '';
+  }
+});
+
       
 applyPositionsForView(doc, isMobileView);
       console.log('🔍 Elements with position data:', 
