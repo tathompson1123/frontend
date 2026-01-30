@@ -13,7 +13,7 @@ import {
   X
 } from 'lucide-react';
 
-const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, currentPage }) {
+const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, currentPage, isMobileView }) {
   console.log('🔵 VisualEditor rendered');
   const selectedElementsRef = useRef([]);
   const [guides, setGuides] = useState({ vertical: [], horizontal: [] });
@@ -89,9 +89,51 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         currentDoc.head.appendChild(style);
       }
       
-     style.textContent = `
+      // Apply mobile mode class
+if (isMobileView) {
+  doc.body.classList.add('editor-mobile-mode');
+} else {
+  doc.body.classList.remove('editor-mobile-mode');
+}
+      
+   style.textContent = `
   * { box-sizing: border-box; }
-  body { position: relative !important; min-height: 100vh; }
+  html, body { 
+    position: relative !important; 
+    min-height: 100vh;
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+  
+  /* Mobile stacking styles */
+  .editor-mobile-mode {
+    max-width: 375px !important;
+  }
+  .editor-mobile-mode * {
+    max-width: 100% !important;
+  }
+  .editor-mobile-mode div,
+  .editor-mobile-mode section,
+  .editor-mobile-mode header,
+  .editor-mobile-mode footer,
+  .editor-mobile-mode nav,
+  .editor-mobile-mode main,
+  .editor-mobile-mode article,
+  .editor-mobile-mode aside {
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .editor-mobile-mode img,
+  .editor-mobile-mode video {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .editor-mobile-mode [class*="flex-row"],
+  .editor-mobile-mode [class*="grid-cols"] {
+    display: flex !important;
+    flex-direction: column !important;
+  }
   .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
   .editor-selected:active { cursor: grabbing !important; }
   .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
@@ -1532,13 +1574,14 @@ if (distanceFromCenterY < snapThreshold) {
       )}
     </div>
   );
-  }, (prevProps, nextProps) => {
+ }, (prevProps, nextProps) => {
   const htmlChanged = prevProps.htmlContent !== nextProps.htmlContent;
   const pageChanged = prevProps.currentPage !== nextProps.currentPage;
+  const mobileChanged = prevProps.isMobileView !== nextProps.isMobileView;
   
-  console.log('🔍 Memo comparison:', { htmlChanged, pageChanged });
+  console.log('🔍 Memo comparison:', { htmlChanged, pageChanged, mobileChanged });
   
-  return !htmlChanged && !pageChanged;
+  return !htmlChanged && !pageChanged && !mobileChanged;
 });
 
 export default VisualEditor;
