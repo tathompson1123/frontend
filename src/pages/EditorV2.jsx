@@ -18,47 +18,53 @@ export default function EditorV2() {
     loadPageData();
   }, []);
 
-  const loadPageData = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/website`, {
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
+ const loadPageData = async () => {
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${apiUrl}/api/website`, {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
 
-      if (response.ok) {
-        const data = await response.json();
-        
-        // Check if we have JSON page_data or need to create new
-        if (data.page_data) {
-          // Existing structured data
-          setPageData(data.page_data);
-          setPages(data.pages || [{ id: 'index', name: 'Home' }]);
-          setCurrentPageId(data.pages?.[0]?.id || 'index');
-        } else {
-          // No structured data - create default page
-          const newPage = createDefaultPage();
-          setPageData(newPage);
-          setPages([{ id: newPage.id, name: newPage.name }]);
-          setCurrentPageId(newPage.id);
+    if (response.ok) {
+      const data = await response.json();
+      
+      // Check if we have page_data in the website object
+      if (data.website?.page_data) {
+        // Parse if it's a string
+        let pageData = data.website.page_data;
+        if (typeof pageData === 'string') {
+          pageData = JSON.parse(pageData);
         }
+        
+        setPageData(pageData);
+        setPages([{ id: pageData.id || 'index', name: pageData.name || 'Home' }]);
+        setCurrentPageId(pageData.id || 'index');
+        console.log('✅ Loaded page_data with', pageData.sections?.length, 'sections');
       } else {
-        // No website yet - create default
+        // No page_data - create default page
+        console.log('⚠️ No page_data found, creating default');
         const newPage = createDefaultPage();
         setPageData(newPage);
         setPages([{ id: newPage.id, name: newPage.name }]);
         setCurrentPageId(newPage.id);
       }
-    } catch (error) {
-      console.error('Error loading page data:', error);
+    } else {
+      // No website yet - create default
       const newPage = createDefaultPage();
       setPageData(newPage);
       setPages([{ id: newPage.id, name: newPage.name }]);
       setCurrentPageId(newPage.id);
-    } finally {
-      setIsLoading(false);
     }
-  };
-
+  } catch (error) {
+    console.error('Error loading page data:', error);
+    const newPage = createDefaultPage();
+    setPageData(newPage);
+    setPages([{ id: newPage.id, name: newPage.name }]);
+    setCurrentPageId(newPage.id);
+  } finally {
+    setIsLoading(false);
+  }
+};
   const createDefaultPage = () => {
     const page = createPage('Home', 'index');
     // Add a default hero section
