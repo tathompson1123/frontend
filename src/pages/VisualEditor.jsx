@@ -1659,21 +1659,22 @@ if (isBackground) return;
       
       const html = doc.documentElement.outerHTML;
       
-      const cleanedHTML = html
-        .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
-        .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
-        .replace(/\s*class="([^"]*)"/g, (match, classes) => {
-          const cleaned = classes
-            .replace(/\s*editor-selected\s*/g, ' ')
-            .replace(/\s*editor-hover\s*/g, ' ')
-            .replace(/\s*editor-dragging\s*/g, ' ')
-            .replace(/\s*drag-placeholder\s*/g, ' ')
-            .replace(/\s*resize-handle\s*/g, ' ')
-            .replace(/\s*resize-[nesw]{1,2}\s*/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-          return cleaned ? ` class="${cleaned}"` : '';
-        })
+     const cleanedHTML = html
+  .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
+  .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
+  .replace(/\s*class="([^"]*)"/g, (match, classes) => {
+    const cleaned = classes
+      .replace(/\s*editor-selected\s*/g, ' ')
+      .replace(/\s*editor-hover\s*/g, ' ')
+      .replace(/\s*editor-dragging\s*/g, ' ')
+      .replace(/\s*drag-placeholder\s*/g, ' ')
+      .replace(/\s*resize-handle\s*/g, ' ')
+      .replace(/\s*resize-[nesw]{1,2}\s*/g, ' ')
+      .replace(/\s*editor-mobile-mode\s*/g, ' ')  // ADD THIS LINE
+      .replace(/\s+/g, ' ')
+      .trim();
+    return cleaned ? ` class="${cleaned}"` : '';
+  })
         .replace(/\s+class=""\s*/g, ' ')
         .replace(/\s+data-has-placeholder="[^"]*"/g, '')
         .replace(/\s+data-placeholder-id="[^"]*"/g, '')
