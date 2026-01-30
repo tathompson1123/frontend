@@ -270,24 +270,24 @@ style.textContent = `
   .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
 
   /* Section height adjuster */
-  .section-height-adjuster {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
+ /* Section gap adjuster */
+  .section-gap-adjuster {
+    position: relative;
     height: 20px;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: ns-resize;
     z-index: 100;
+    margin: -10px 0;
   }
-  .section-height-adjuster:hover .adjuster-line {
+  .section-gap-adjuster:hover .gap-adjuster-line,
+  .section-gap-adjuster.dragging .gap-adjuster-line {
     opacity: 1;
   }
-  .adjuster-line {
+  .gap-adjuster-line {
     position: absolute;
-    bottom: 0;
+    top: 50%;
     left: 0;
     right: 0;
     height: 2px;
@@ -295,11 +295,11 @@ style.textContent = `
     opacity: 0;
     transition: opacity 0.2s;
   }
-  .adjuster-handle {
-    width: 40px;
-    height: 16px;
+  .gap-adjuster-handle {
+    width: 36px;
+    height: 20px;
     background: #8b5cf6;
-    border-radius: 8px;
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -309,20 +309,21 @@ style.textContent = `
     transition: opacity 0.2s;
     z-index: 101;
   }
-  .section-height-adjuster:hover .adjuster-handle {
+  .section-gap-adjuster:hover .gap-adjuster-handle,
+  .section-gap-adjuster.dragging .gap-adjuster-handle {
     opacity: 1;
   }
-  .adjuster-tooltip {
+  .gap-adjuster-tooltip {
     display: none;
     position: absolute;
-    top: -40px;
+    top: -30px;
     left: 50%;
     transform: translateX(-50%);
     background: #1f2937;
     color: white;
-    padding: 6px 12px;
-    border-radius: 6px;
-    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 11px;
     white-space: nowrap;
     z-index: 102;
   }
@@ -512,36 +513,45 @@ const addSectionResizers = () => {
   if (!doc) return;
   
   // Remove existing resizers
-  doc.querySelectorAll('.section-height-adjuster').forEach(el => el.remove());
+  doc.querySelectorAll('.section-gap-adjuster').forEach(el => el.remove());
   
-  // Find all major sections
-  const sections = doc.querySelectorAll('section, .section, [class*="hero"], main > div, body > div');
+  // Find all major sections (direct children of body or main)
+  const mainContainer = doc.querySelector('main') || doc.body;
+  const sections = Array.from(mainContainer.children).filter(el => {
+    const tag = el.tagName.toUpperCase();
+    return ['SECTION', 'DIV', 'HEADER', 'FOOTER'].includes(tag) &&
+           !el.classList.contains('section-gap-adjuster') &&
+           el.offsetHeight > 50;
+  });
   
-  sections.forEach((section) => {
-    if (section.classList.contains('section-height-adjuster')) return;
-    if (section.offsetHeight < 50) return;
+  // Add adjuster BETWEEN each pair of sections
+  for (let i = 0; i < sections.length - 1; i++) {
+    const sectionAbove = sections[i];
+    const sectionBelow = sections[i + 1];
     
     const adjuster = doc.createElement('div');
-    adjuster.className = 'section-height-adjuster';
+    adjuster.className = 'section-gap-adjuster';
     adjuster.innerHTML = `
-      <div class="adjuster-line"></div>
-      <div class="adjuster-handle">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M7 10l5 5 5-5z"/>
+      <div class="gap-adjuster-line"></div>
+      <div class="gap-adjuster-handle">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 5l-7 7h14l-7-7z"/>
+          <path d="M12 19l7-7H5l7 7z"/>
         </svg>
       </div>
-      <div class="adjuster-tooltip">Drag to adjust height</div>
+      <div class="gap-adjuster-tooltip">Drag to adjust gap</div>
     `;
     
-    section.style.position = 'relative';
-    section.appendChild(adjuster);
+    // Insert after the section above
+    sectionAbove.parentNode.insertBefore(adjuster, sectionBelow);
     
-    const handle = adjuster.querySelector('.adjuster-handle');
-    const tooltip = adjuster.querySelector('.adjuster-tooltip');
+    const handle = adjuster.querySelector('.gap-adjuster-handle');
+    const tooltip = adjuster.querySelector('.gap-adjuster-tooltip');
     
     let isDragging = false;
     let startY = 0;
-    let startPaddingBottom = 0;
+    let startMarginBottom = 0;
+    let startMarginTop = 0;
     
     handle.addEventListener('mouseenter', () => {
       tooltip.style.display = 'block';
@@ -556,33 +566,44 @@ const addSectionResizers = () => {
       e.stopPropagation();
       isDragging = true;
       startY = e.clientY;
-      const computed = window.getComputedStyle(section);
-      startPaddingBottom = parseFloat(computed.paddingBottom) || 0;
+      
+      const computedAbove = window.getComputedStyle(sectionAbove);
+      const computedBelow = window.getComputedStyle(sectionBelow);
+      startMarginBottom = parseFloat(computedAbove.marginBottom) || 0;
+      startMarginTop = parseFloat(computedBelow.marginTop) || 0;
+      
       tooltip.style.display = 'none';
+      adjuster.classList.add('dragging');
     });
     
     doc.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       e.preventDefault();
+      
       const deltaY = e.clientY - startY;
-      const newPadding = Math.max(20, startPaddingBottom + deltaY);
-      section.style.paddingBottom = newPadding + 'px';
+      
+      // Adjust the gap by changing marginBottom of section above
+      const newMargin = Math.max(0, startMarginBottom + deltaY);
+      sectionAbove.style.marginBottom = newMargin + 'px';
     });
     
     doc.addEventListener('mouseup', () => {
       if (isDragging) {
         isDragging = false;
+        adjuster.classList.remove('dragging');
         saveChanges();
       }
     });
     
+    // Double click to remove gap
     handle.addEventListener('dblclick', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      section.style.paddingBottom = '40px';
+      sectionAbove.style.marginBottom = '0px';
+      sectionBelow.style.marginTop = '0px';
       saveChanges();
     });
-  });
+  }
 };
 
      let style = doc.getElementById('editor-styles');
@@ -1701,6 +1722,7 @@ if (isBackground) return;
      const cleanedHTML = html
   .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
   .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
+  .replace(/<div[^>]*class="[^"]*section-gap-adjuster[^"]*"[^>]*>[\s\S]*?<\/div>/g, '')
   .replace(/\s*class="([^"]*)"/g, (match, classes) => {
     const cleaned = classes
       .replace(/\s*editor-selected\s*/g, ' ')
