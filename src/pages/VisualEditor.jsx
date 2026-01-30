@@ -111,6 +111,29 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         style.id = 'editor-styles';
         currentDoc.head.appendChild(style);
       }
+     // If mobile view, reset any desktop drag positions
+if (isMobileView) {
+  doc.querySelectorAll('[style*="position: absolute"]').forEach(el => {
+    // Skip editor controls
+    if (el.classList.contains('resize-handle') || 
+        el.classList.contains('drag-placeholder') ||
+        el.classList.contains('section-height-adjuster')) {
+      return;
+    }
+    
+    // Check if left value is too large for mobile (> 400px means desktop position)
+    const left = parseFloat(el.style.left);
+    if (left > 400) {
+      console.log('🔧 Resetting desktop position for:', el.tagName, el.className);
+      el.style.position = '';
+      el.style.left = '';
+      el.style.top = '';
+      el.style.width = '';
+      el.style.zIndex = '';
+      el.style.margin = '';
+    }
+  });
+}
       
 style.textContent = `
   * { box-sizing: border-box; }
