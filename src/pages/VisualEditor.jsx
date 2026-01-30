@@ -365,10 +365,11 @@ style.textContent = `
     console.log('🔄 Setting up editor for page:', currentPage);
     console.log('🔍 Current event handlers:', eventHandlersRef.current?.currentPage);
     
-    if (eventHandlersRef.current?.currentPage === currentPage) {
-      console.log('⏭️ Editor already set up for this page, skipping');
-      return;
-    }
+   if (eventHandlersRef.current?.currentPage === currentPage && 
+    eventHandlersRef.current?.isMobileView === isMobileView) {
+  console.log('⏭️ Editor already set up for this page/view, skipping');
+  return;
+}
     
     let retryCount = 0;
     const maxRetries = 20;
@@ -1420,6 +1421,7 @@ if (distanceFromCenterY < snapThreshold) {
       eventHandlersRef.current = {
         doc,
         currentPage,
+        isMobileView,
         handlers: {
           mousedown: handleMouseDown,
           mousemove: handleMouseMove,
@@ -1463,7 +1465,7 @@ if (distanceFromCenterY < snapThreshold) {
         }
       }
     };
-  }, [currentPage, reloadKey]);
+ }, [currentPage, reloadKey, isMobileView]);
 
   const prepareElementForDrag = (elem, doc) => {
   const computed = window.getComputedStyle(elem);
