@@ -269,6 +269,64 @@ style.textContent = `
   .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
   .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
 
+  /* Section height adjuster */
+  .section-height-adjuster {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: ns-resize;
+    z-index: 100;
+  }
+  .section-height-adjuster:hover .adjuster-line {
+    opacity: 1;
+  }
+  .adjuster-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #8b5cf6;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .adjuster-handle {
+    width: 40px;
+    height: 16px;
+    background: #8b5cf6;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    cursor: ns-resize;
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 101;
+  }
+  .section-height-adjuster:hover .adjuster-handle {
+    opacity: 1;
+  }
+  .adjuster-tooltip {
+    display: none;
+    position: absolute;
+    top: -40px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1f2937;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 102;
+  }
+
  /* Trust banner - MUST be last to override */
   .editor-mobile-mode .trust-banner {
     display: flex !important;
