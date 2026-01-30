@@ -113,7 +113,7 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
       }
      // If mobile view, reset any desktop drag positions
 if (isMobileView) {
-  doc.querySelectorAll('[style*="position: absolute"]').forEach(el => {
+  currentDoc.querySelectorAll('[style*="position: absolute"]').forEach(el => {  // ✅ use currentDoc
     // Skip editor controls
     if (el.classList.contains('resize-handle') || 
         el.classList.contains('drag-placeholder') ||
@@ -749,17 +749,6 @@ style.textContent = `
     width: auto !important;
     margin: 8px !important;
   }
-/* Reset desktop drag positions in mobile - only target elements with large left values */
-.editor-mobile-mode h1[style*="left"],
-.editor-mobile-mode h2[style*="left"],
-.editor-mobile-mode p[style*="left"],
-.editor-mobile-mode a[style*="left"],
-.editor-mobile-mode button[style*="left"],
-.editor-mobile-mode div[style*="left"]:not(.resize-handle):not(.drag-placeholder):not(.section-height-adjuster) {
-  left: auto !important;
-  top: auto !important;
-  position: relative !important;
-}
 `;
 
       const preventDefaultActions = (e) => {
