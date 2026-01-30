@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageEditor from '../editor-v2/components/editor/PageEditor';
-import { createPage, SECTION_TEMPLATES } from '../editor-v2/utils/schema';
-import { renderPageToHtml } from '../editor-v2/utils/htmlRenderer';
+import PageEditor from '../components/editor/PageEditor';
+import { createPage, SECTION_TEMPLATES } from '../utils/schema';
+import { renderPageToHtml } from '../utils/htmlRenderer';
 
 export default function EditorV2() {
   const navigate = useNavigate();
@@ -13,7 +13,6 @@ export default function EditorV2() {
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Load existing page data or create new
   useEffect(() => {
     loadPageData();
   }, []);
@@ -28,21 +27,17 @@ export default function EditorV2() {
       if (response.ok) {
         const data = await response.json();
         
-        // Check if we have JSON page_data or need to create new
         if (data.page_data) {
-          // Existing structured data
           setPageData(data.page_data);
           setPages(data.pages || [{ id: 'index', name: 'Home' }]);
           setCurrentPageId(data.pages?.[0]?.id || 'index');
         } else {
-          // No structured data - create default page
           const newPage = createDefaultPage();
           setPageData(newPage);
           setPages([{ id: newPage.id, name: newPage.name }]);
           setCurrentPageId(newPage.id);
         }
       } else {
-        // No website yet - create default
         const newPage = createDefaultPage();
         setPageData(newPage);
         setPages([{ id: newPage.id, name: newPage.name }]);
@@ -61,7 +56,6 @@ export default function EditorV2() {
 
   const createDefaultPage = () => {
     const page = createPage('Home', 'index');
-    // Add a default hero section
     page.sections.push(SECTION_TEMPLATES.hero.create());
     return page;
   };
@@ -69,8 +63,6 @@ export default function EditorV2() {
   const handleSave = async (data) => {
     try {
       const token = localStorage.getItem('token');
-      
-      // Generate HTML from schema
       const html = renderPageToHtml(data);
       
       const response = await fetch(`${apiUrl}/api/website/save-v2`, {
@@ -102,7 +94,6 @@ export default function EditorV2() {
 
   const handlePageChange = (pageId) => {
     setCurrentPageId(pageId);
-    // TODO: Load different page data if multi-page
   };
 
   if (isLoading) {
