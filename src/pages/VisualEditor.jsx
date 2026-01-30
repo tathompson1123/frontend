@@ -728,22 +728,16 @@ style.textContent = `
     width: auto !important;
     margin: 8px !important;
   }
-/* Reset ALL inline positioned elements in mobile */
-.editor-mobile-mode *:not(.editor-selected):not(.editor-dragging) {
-  position: static !important;
+/* Reset desktop drag positions in mobile - only target elements with large left values */
+.editor-mobile-mode h1[style*="left"],
+.editor-mobile-mode h2[style*="left"],
+.editor-mobile-mode p[style*="left"],
+.editor-mobile-mode a[style*="left"],
+.editor-mobile-mode button[style*="left"],
+.editor-mobile-mode div[style*="left"]:not(.resize-handle):not(.drag-placeholder):not(.section-height-adjuster) {
   left: auto !important;
   top: auto !important;
-  right: auto !important;
-  bottom: auto !important;
-}
-
-/* Re-enable positioning for editor controls and dragging elements */
-.editor-mobile-mode .section-height-adjuster,
-.editor-mobile-mode .resize-handle,
-.editor-mobile-mode .drag-placeholder,
-.editor-mobile-mode .editor-selected,
-.editor-mobile-mode .editor-dragging {
-  position: absolute !important;
+  position: relative !important;
 }
 `;
 
