@@ -1579,93 +1579,91 @@ if (isBackground) return;
 };
 
   const saveChanges = () => {
-    console.log('🔴 saveChanges() CALLED');
-    if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
-    
-    updateTimeoutRef.current = setTimeout(() => {
-      console.log('⏰ saveChanges timeout fired');
-      if (iframeRef.current?.contentDocument) {
-        const doc = iframeRef.current.contentDocument;
+  console.log('🔴 saveChanges() CALLED');
+  if (updateTimeoutRef.current) clearTimeout(updateTimeoutRef.current);
+  
+  updateTimeoutRef.current = setTimeout(() => {
+    console.log('⏰ saveChanges timeout fired');
+    if (iframeRef.current?.contentDocument) {
+      const doc = iframeRef.current.contentDocument;
+      
+      // Convert inline positions to data attributes for current view
+      doc.querySelectorAll('[style*="position: absolute"]').forEach(el => {
+        // Skip editor elements
+        if (el.classList.contains('resize-handle') || 
+            el.classList.contains('drag-placeholder') ||
+            el.classList.contains('section-height-adjuster')) {
+          return;
+        }
         
-        const html = doc.documentElement.outerHTML;
+        const left = parseFloat(el.style.left);
+        const top = parseFloat(el.style.top);
+        const width = parseFloat(el.style.width);
+        const height = parseFloat(el.style.height);
         
-       // Convert inline positions to data attributes for current view
-    doc.querySelectorAll('[style*="position: absolute"]').forEach(el => {
-      // Skip editor elements
-      if (el.classList.contains('resize-handle') || 
-          el.classList.contains('drag-placeholder') ||
-          el.classList.contains('section-height-adjuster')) {
-        return;
+        const prefix = isMobileView ? 'mobile' : 'desktop';
+        
+        if (!isNaN(left)) {
+          el.dataset[`${prefix}Left`] = Math.round(left);
+          el.dataset[`${prefix}Top`] = Math.round(top || 0);
+          if (!isNaN(width)) el.dataset[`${prefix}Width`] = Math.round(width);
+          if (!isNaN(height)) el.dataset[`${prefix}Height`] = Math.round(height);
+        }
+      });
+      
+      // Clean up inline position styles but keep data attributes
+      doc.querySelectorAll('[data-desktop-left], [data-mobile-left]').forEach(el => {
+        el.style.position = '';
+        el.style.left = '';
+        el.style.top = '';
+        el.style.width = '';
+        el.style.height = '';
+        el.style.margin = '';
+        el.style.zIndex = '';
+      });
+      
+      const html = doc.documentElement.outerHTML;
+      
+      const cleanedHTML = html
+        .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
+        .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
+        .replace(/\s*class="([^"]*)"/g, (match, classes) => {
+          const cleaned = classes
+            .replace(/\s*editor-selected\s*/g, ' ')
+            .replace(/\s*editor-hover\s*/g, ' ')
+            .replace(/\s*editor-dragging\s*/g, ' ')
+            .replace(/\s*drag-placeholder\s*/g, ' ')
+            .replace(/\s*resize-handle\s*/g, ' ')
+            .replace(/\s*resize-[nesw]{1,2}\s*/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          return cleaned ? ` class="${cleaned}"` : '';
+        })
+        .replace(/\s+class=""\s*/g, ' ')
+        .replace(/\s+data-has-placeholder="[^"]*"/g, '')
+        .replace(/\s+data-placeholder-id="[^"]*"/g, '')
+        .replace(/\s+data-is-resize-handle="[^"]*"/g, '');
+      
+      // Re-apply positions for current view after saving
+      applyPositionsForView(doc, isMobileView);
+      
+      if (cleanedHTML !== lastSavedHtmlRef.current) {
+        console.log('💾 Saving changes - HTML actually changed');
+        lastSavedHtmlRef.current = cleanedHTML;
+        lastHtmlContentRef.current = cleanedHTML;
+        isSavingRef.current = true;
+        onUpdate(cleanedHTML);
+        
+        setTimeout(() => {
+          isSavingRef.current = false;
+          console.log('✅ Save flag reset');
+        }, 100);
+      } else {
+        console.log('⏭️ Skipping save - HTML unchanged');
       }
-      
-      const left = parseFloat(el.style.left);
-      const top = parseFloat(el.style.top);
-      const width = parseFloat(el.style.width);
-      const height = parseFloat(el.style.height);
-      
-      const prefix = isMobileView ? 'mobile' : 'desktop';
-      
-      if (!isNaN(left)) {
-        el.dataset[`${prefix}Left`] = Math.round(left);
-        el.dataset[`${prefix}Top`] = Math.round(top || 0);
-        if (!isNaN(width)) el.dataset[`${prefix}Width`] = Math.round(width);
-        if (!isNaN(height)) el.dataset[`${prefix}Height`] = Math.round(height);
-      }
-    });
-    
-    // Clean up inline position styles but keep data attributes
-    doc.querySelectorAll('[data-desktop-left], [data-mobile-left]').forEach(el => {
-      el.style.position = '';
-      el.style.left = '';
-      el.style.top = '';
-      el.style.width = '';
-      el.style.height = '';
-      el.style.margin = '';
-      el.style.zIndex = '';
-    });
-    
-    const html = doc.documentElement.outerHTML;
-    
-    const cleanedHTML = html
-      .replace(/<div[^>]*class="[^"]*drag-placeholder[^"]*"[^>]*><\/div>/g, '')
-      .replace(/<div[^>]*class="[^"]*resize-handle[^"]*"[^>]*><\/div>/g, '')
-      .replace(/\s*class="([^"]*)"/g, (match, classes) => {
-        const cleaned = classes
-          .replace(/\s*editor-selected\s*/g, ' ')
-          .replace(/\s*editor-hover\s*/g, ' ')
-          .replace(/\s*editor-dragging\s*/g, ' ')
-          .replace(/\s*drag-placeholder\s*/g, ' ')
-          .replace(/\s*resize-handle\s*/g, ' ')
-          .replace(/\s*resize-[nesw]{1,2}\s*/g, ' ')
-          .replace(/\s+/g, ' ')
-          .trim();
-        return cleaned ? ` class="${cleaned}"` : '';
-      })
-      .replace(/\s+class=""\s*/g, ' ')
-      .replace(/\s+data-has-placeholder="[^"]*"/g, '')
-      .replace(/\s+data-placeholder-id="[^"]*"/g, '')
-      .replace(/\s+data-is-resize-handle="[^"]*"/g, '');
-    
-    // Re-apply positions for current view after saving
-    applyPositionsForView(doc, isMobileView);
-    
-    if (cleanedHTML !== lastSavedHtmlRef.current) {
-      console.log('💾 Saving changes - HTML actually changed');
-      lastSavedHtmlRef.current = cleanedHTML;
-      lastHtmlContentRef.current = cleanedHTML;
-      isSavingRef.current = true;
-      onUpdate(cleanedHTML);
-      
-      setTimeout(() => {
-        isSavingRef.current = false;
-        console.log('✅ Save flag reset');
-      }, 100);
-    } else {
-      console.log('⏭️ Skipping save - HTML unchanged');
     }
-  }
-}, 300);
-
+  }, 300);
+};
   const loadProps = (el) => {
     const s = window.getComputedStyle(el);
     setElementProps({
