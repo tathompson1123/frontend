@@ -516,7 +516,7 @@ export default function WebsiteEditor() {
         className="bg-white shadow-2xl" 
         style={{ 
           width: '375px',
-          minHeight: '100%'
+          height: '100%' 
         }}
       >
         {allPages[currentPage] ? (
