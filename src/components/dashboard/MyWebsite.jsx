@@ -418,14 +418,14 @@ const handleConnectExistingWebsite = async () => {
                 height: '100%',
                 transform: 'scale(1)',
                 transformOrigin: 'top left'
-              }}
+             }}
             />
           </div>
         </div>
       </div>
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
     </div>
-  <</div>
+  </div>
 )}
             </div>
           </div>
