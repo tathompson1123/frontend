@@ -353,13 +353,6 @@ style.textContent = `
     width: auto !important;
     margin: 8px !important;
   }
- .editor-mobile-mode [style*="position: absolute"] {
-    position: relative !important;
-    left: auto !important;
-    top: auto !important;
-    width: auto !important;
-    transform: none !important;
-  }
 `;
       
       lastHtmlContentRef.current = htmlContent;
