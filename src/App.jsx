@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard';
 import PricingPage from './pages/PricingPage';
 import WebsiteEditor from './pages/WebsiteEditor';
 import PublicBookingPage from './pages/PublicBookingPage';
+import EditorV2 from './pages/EditorV2';  // ADD THIS
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/editor" element={<WebsiteEditor />} />
+        <Route path="/editor-v2" element={<EditorV2 />} />  {/* ADD THIS */}
         <Route path="/book/:businessId" element={<PublicBookingPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
