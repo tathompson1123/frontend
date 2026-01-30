@@ -584,24 +584,6 @@ const addSectionResizers = () => {
     });
   });
 };
-    
-    // Double click to auto-adjust
-    handle.addEventListener('dblclick', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      
-      // Remove extra padding/margin from section
-      section.style.paddingTop = '20px';
-      section.style.paddingBottom = '20px';
-      section.style.height = 'auto';
-      section.style.minHeight = 'auto';
-      
-      if (onUpdate) {
-        onUpdate(doc.documentElement.outerHTML);
-      }
-    });
-  });
-};
 
      let style = doc.getElementById('editor-styles');
 if (!style) {
