@@ -89,13 +89,6 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
         currentDoc.head.appendChild(style);
       }
       
-      // Apply mobile mode class
-if (isMobileView) {
-  doc.body.classList.add('editor-mobile-mode');
-} else {
-  doc.body.classList.remove('editor-mobile-mode');
-}
-      
 style.textContent = `
   * { box-sizing: border-box; }
   html, body { 
@@ -484,31 +477,137 @@ const addSectionResizers = () => {
   });
 };
 
-      let style = doc.getElementById('editor-styles');
-      if (!style) {
-        style = doc.createElement('style');
-        style.id = 'editor-styles';
-        doc.head.appendChild(style);
-      }
-      
-      style.textContent = `
-        * { box-sizing: border-box; }
-        body { position: relative !important; min-height: 100vh; }
-        .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
-        .editor-selected:active { cursor: grabbing !important; }
-        .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
-        .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
-        .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto !important; }
-        .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
-        .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
-        .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
-        .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
-        .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
-        .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
-        .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
-        .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
-        .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
-      `;
+     let style = doc.getElementById('editor-styles');
+if (!style) {
+  style = doc.createElement('style');
+  style.id = 'editor-styles';
+  doc.head.appendChild(style);
+}
+
+// Apply mobile mode class
+if (isMobileView) {
+  doc.body.classList.add('editor-mobile-mode');
+} else {
+  doc.body.classList.remove('editor-mobile-mode');
+}
+
+style.textContent = `
+  * { box-sizing: border-box; }
+  html, body { 
+    position: relative !important; 
+    min-height: 100vh;
+    overflow-x: hidden !important;
+    max-width: 100% !important;
+  }
+  
+  /* Mobile stacking styles */
+  .editor-mobile-mode {
+    max-width: 375px !important;
+  }
+  .editor-mobile-mode * {
+    max-width: 100% !important;
+  }
+  .editor-mobile-mode div,
+  .editor-mobile-mode section,
+  .editor-mobile-mode footer,
+  .editor-mobile-mode main,
+  .editor-mobile-mode article,
+  .editor-mobile-mode aside {
+    flex-direction: column !important;
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+  .editor-mobile-mode img,
+  .editor-mobile-mode video {
+    max-width: 100% !important;
+    height: auto !important;
+  }
+  .editor-mobile-mode [class*="flex-row"],
+  .editor-mobile-mode [class*="grid-cols"] {
+    display: flex !important;
+    flex-direction: column !important;
+  }
+  
+  /* MOBILE HEADER - Keep horizontal, add hamburger */
+  .editor-mobile-mode header,
+  .editor-mobile-mode nav,
+  .editor-mobile-mode header > div,
+  .editor-mobile-mode nav > div {
+    flex-direction: row !important;
+    width: 100% !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 12px 16px !important;
+  }
+  
+  /* Hide nav links */
+  .editor-mobile-mode header nav,
+  .editor-mobile-mode header ul,
+  .editor-mobile-mode header menu,
+  .editor-mobile-mode nav ul,
+  .editor-mobile-mode nav menu,
+  .editor-mobile-mode header a:not(.logo):not([class*="logo"]):not([class*="brand"]),
+  .editor-mobile-mode nav > a:not(.logo):not([class*="logo"]):not([class*="brand"]) {
+    display: none !important;
+  }
+  
+  /* Center the logo */
+  .editor-mobile-mode header .logo,
+  .editor-mobile-mode header [class*="logo"],
+  .editor-mobile-mode header [class*="brand"],
+  .editor-mobile-mode header img:first-of-type,
+  .editor-mobile-mode nav .logo,
+  .editor-mobile-mode nav [class*="logo"],
+  .editor-mobile-mode nav [class*="brand"] {
+    position: absolute !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    margin: 0 !important;
+  }
+  
+  /* Add hamburger menu icon */
+  .editor-mobile-mode header::before,
+  .editor-mobile-mode nav::before {
+    content: '' !important;
+    display: block !important;
+    width: 24px !important;
+    height: 2px !important;
+    background: currentColor !important;
+    box-shadow: 0 8px 0 currentColor, 0 16px 0 currentColor !important;
+    position: absolute !important;
+    left: 16px !important;
+    top: 50% !important;
+    transform: translateY(-8px) !important;
+  }
+  
+  /* Hide CTA buttons in header for mobile */
+  .editor-mobile-mode header button,
+  .editor-mobile-mode header [class*="btn"],
+  .editor-mobile-mode header [class*="cta"],
+  .editor-mobile-mode nav button,
+  .editor-mobile-mode nav [class*="btn"],
+  .editor-mobile-mode nav [class*="cta"] {
+    display: none !important;
+  }
+
+  /* Editor selection styles */
+  .editor-selected { outline: 3px solid #8b5cf6 !important; outline-offset: 2px !important; cursor: grab !important; }
+  .editor-selected:active { cursor: grabbing !important; }
+  .editor-hover { outline: 2px dashed #3b82f6 !important; outline-offset: 2px !important; }
+  .editor-dragging { opacity: 0.8 !important; cursor: grabbing !important; }
+  .resize-handle { position: absolute; background: #8b5cf6; border: 2px solid white; border-radius: 50%; width: 12px; height: 12px; z-index: 10000; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: auto !important; }
+  .resize-handle:hover { background: #7c3aed; transform: scale(1.2); }
+  .resize-nw { top: -6px; left: -6px; cursor: nw-resize; }
+  .resize-ne { top: -6px; right: -6px; cursor: ne-resize; }
+  .resize-sw { bottom: -6px; left: -6px; cursor: sw-resize; }
+  .resize-se { bottom: -6px; right: -6px; cursor: se-resize; }
+  .resize-n { top: -6px; left: 50%; transform: translateX(-50%); cursor: n-resize; }
+  .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
+  .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
+  .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+`;
 
       const preventDefaultActions = (e) => {
         e.preventDefault();
