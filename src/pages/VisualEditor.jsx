@@ -222,6 +222,39 @@ style.textContent = `
   .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
   .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
   .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+
+  /* Trust banner - MUST be last to override */
+  .editor-mobile-mode .trust-banner,
+  .editor-mobile-mode .trust-banner div,
+  .editor-mobile-mode .trust-banner span,
+  .editor-mobile-mode .trust-banner p,
+  .editor-mobile-mode [class*="trust"],
+  .editor-mobile-mode [class*="marquee"],
+  .editor-mobile-mode [class*="banner"]:not(header):not(nav) {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    width: auto !important;
+    display: inline-flex !important;
+  }
+  
+  /* Hero text must be visible */
+  .editor-mobile-mode .hero h1,
+  .editor-mobile-mode .hero h2,
+  .editor-mobile-mode .hero p,
+  .editor-mobile-mode .hero a,
+  .editor-mobile-mode .hero button,
+  .editor-mobile-mode .hero span {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: auto !important;
+  }
+`;
   
   /* Section Height Adjuster Styles */
   .section-height-adjuster {
@@ -624,6 +657,38 @@ style.textContent = `
   .resize-s { bottom: -6px; left: 50%; transform: translateX(-50%); cursor: s-resize; }
   .resize-w { top: 50%; left: -6px; transform: translateY(-50%); cursor: w-resize; }
   .resize-e { top: 50%; right: -6px; transform: translateY(-50%); cursor: e-resize; }
+       
+/* Trust banner - MUST be last to override */
+  .editor-mobile-mode .trust-banner,
+  .editor-mobile-mode .trust-banner div,
+  .editor-mobile-mode .trust-banner span,
+  .editor-mobile-mode .trust-banner p,
+  .editor-mobile-mode [class*="trust"],
+  .editor-mobile-mode [class*="marquee"],
+  .editor-mobile-mode [class*="banner"]:not(header):not(nav) {
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    width: auto !important;
+    display: inline-flex !important;
+  }
+  
+  /* Hero text must be visible */
+  .editor-mobile-mode .hero h1,
+  .editor-mobile-mode .hero h2,
+  .editor-mobile-mode .hero p,
+  .editor-mobile-mode .hero a,
+  .editor-mobile-mode .hero button,
+  .editor-mobile-mode .hero span {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+    width: auto !important;
+  }
 `;
 
       const preventDefaultActions = (e) => {
