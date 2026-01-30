@@ -353,6 +353,11 @@ style.textContent = `
     width: auto !important;
     margin: 8px !important;
   }
+  .editor-mobile-mode .hero img {
+    max-width: 80% !important;
+    height: auto !important;
+    margin: 20px auto !important;
+  }
 `;
       
       lastHtmlContentRef.current = htmlContent;
