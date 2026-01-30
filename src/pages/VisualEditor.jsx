@@ -83,13 +83,27 @@ const VisualEditor = memo(function VisualEditor({ htmlContent, onUpdate, current
       setModalVisible(false);  // FIXED
       dragStateRef.current = null;
     } 
-    else if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
-      console.log('⚠️ EXTERNAL CHANGE DETECTED - Reloading iframe content');
-      const currentDoc = iframeRef.current.contentDocument;
-      const parser = new DOMParser();
-      const newDoc = parser.parseFromString(htmlContent, 'text/html');
-      
-      currentDoc.body.innerHTML = newDoc.body.innerHTML;
+   else if (isExternalChange && !isFirstLoad && iframeRef.current?.contentDocument) {
+  console.log('⚠️ EXTERNAL CHANGE DETECTED - Reloading iframe content');
+  const currentDoc = iframeRef.current.contentDocument;
+  
+  // Remove all drag placeholders and reset positions
+  currentDoc.querySelectorAll('.drag-placeholder').forEach(el => el.remove());
+  currentDoc.querySelectorAll('[data-has-placeholder]').forEach(el => {
+    el.style.position = '';
+    el.style.left = '';
+    el.style.top = '';
+    el.style.width = '';
+    el.style.zIndex = '';
+    el.style.margin = '';
+    delete el.dataset.hasPlaceholder;
+    delete el.dataset.placeholderId;
+  });
+  
+  const parser = new DOMParser();
+  const newDoc = parser.parseFromString(htmlContent, 'text/html');
+  
+  currentDoc.body.innerHTML = newDoc.body.innerHTML;
       
       let style = currentDoc.getElementById('editor-styles');
       if (!style) {
@@ -316,10 +330,12 @@ style.textContent = `
     width: auto !important;
     margin: 8px !important;
   }
-  .editor-mobile-mode .hero img {
-    max-width: 80% !important;
-    height: auto !important;
-    margin: 20px auto !important;
+ .editor-mobile-mode [style*="position: absolute"] {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    transform: none !important;
   }
 `;
       
@@ -712,10 +728,12 @@ style.textContent = `
     width: auto !important;
     margin: 8px !important;
   }
-  .editor-mobile-mode .hero img {
-    max-width: 80% !important;
-    height: auto !important;
-    margin: 20px auto !important;
+  .editor-mobile-mode [style*="position: absolute"] {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: auto !important;
+    transform: none !important;
   }
 `;
 
