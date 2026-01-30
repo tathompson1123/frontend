@@ -425,11 +425,10 @@ const handleConnectExistingWebsite = async () => {
       </div>
       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
     </div>
-  </div>
-)
+  <</div>
+)}
             </div>
           </div>
-
           {/* Deployment & Domain Management */}
           <div className="grid md:grid-cols-2 gap-4 flex-1 min-h-0">
         {/* Deployment Status */}
