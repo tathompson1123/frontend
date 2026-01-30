@@ -98,59 +98,12 @@ style.textContent = `
     max-width: 100% !important;
   }
   
- /* Mobile stacking styles */
+/* Mobile stacking styles */
 .editor-mobile-mode {
   max-width: 375px !important;
 }
-.editor-mobile-mode * {
-  max-width: 100% !important;
-}
 
-/* Only stack MAJOR layout containers, not everything */
-.editor-mobile-mode > div,
-.editor-mobile-mode section > div,
-.editor-mobile-mode main > div,
-.editor-mobile-mode article > div,
-.editor-mobile-mode footer > div {
-  flex-direction: column !important;
-  width: 100% !important;
-  min-width: 0 !important;
-}
-
-/* Keep marquee/banner horizontal */
-.editor-mobile-mode [class*="marquee"],
-.editor-mobile-mode [class*="banner"],
-.editor-mobile-mode [class*="ticker"],
-.editor-mobile-mode [class*="scroll"],
-.editor-mobile-mode [class*="animate"],
-.editor-mobile-mode [class*="overflow-hidden"] > div {
-  flex-direction: row !important;
-  flex-wrap: nowrap !important;
-  overflow: hidden !important;
-}
-
-/* Hero section - keep text visible and stacked */
-.editor-mobile-mode [class*="hero"],
-.editor-mobile-mode [class*="hero"] > div {
-  flex-direction: column !important;
-  align-items: center !important;
-  text-align: center !important;
-  padding: 20px !important;
-}
-
-.editor-mobile-mode [class*="hero"] h1,
-.editor-mobile-mode [class*="hero"] h2,
-.editor-mobile-mode [class*="hero"] p,
-.editor-mobile-mode [class*="hero"] span,
-.editor-mobile-mode [class*="hero"] a {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-  position: relative !important;
-  width: auto !important;
-  max-width: 100% !important;
-}
-
+/* Images and videos responsive */
 .editor-mobile-mode img,
 .editor-mobile-mode video {
   max-width: 100% !important;
@@ -161,11 +114,34 @@ style.textContent = `
 .editor-mobile-mode [class*="grid-cols"] {
   display: flex !important;
   flex-direction: column !important;
+  gap: 16px !important;
 }
 
-/* Flex rows with multiple children - stack */
-.editor-mobile-mode [class*="flex-row"] {
+/* Large flex containers - stack */
+.editor-mobile-mode [class*="flex"][class*="gap-8"],
+.editor-mobile-mode [class*="flex"][class*="gap-10"],
+.editor-mobile-mode [class*="flex"][class*="gap-12"],
+.editor-mobile-mode [class*="flex"][class*="justify-between"] {
   flex-direction: column !important;
+  align-items: center !important;
+}
+
+/* Ensure all text is visible */
+.editor-mobile-mode h1,
+.editor-mobile-mode h2,
+.editor-mobile-mode h3,
+.editor-mobile-mode p,
+.editor-mobile-mode span,
+.editor-mobile-mode a {
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+}
+
+/* Sections should be full width */
+.editor-mobile-mode section {
+  width: 100% !important;
+  padding-left: 16px !important;
+  padding-right: 16px !important;
 }
 
 /* MOBILE HEADER - Keep horizontal, add hamburger */
