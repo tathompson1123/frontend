@@ -469,6 +469,7 @@ export default function WebsiteEditor() {
 }}>
   {devicePreview === 'desktop' ? (
   allPages[currentPage] ? (
+    <div className="w-full h-full overflow-hidden">
     <VisualEditor 
       htmlContent={allPages[currentPage]}
       onUpdate={handleVisualUpdate}
@@ -511,7 +512,7 @@ export default function WebsiteEditor() {
     </div>
 
     {/* Mobile Content - Scrollable Editor */}
-    <div className="flex-1 overflow-auto flex justify-center p-8 bg-gradient-to-br from-gray-100 to-gray-200">
+    <div className="flex-1 min-h-0 overflow-hidden flex justify-center items-start p-4 bg-gradient-to-br from-gray-100 to-gray-200">
       <div 
         className="bg-white shadow-2xl" 
         style={{ 
