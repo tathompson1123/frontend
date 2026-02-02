@@ -10,10 +10,11 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [showEditWebsite, setShowEditWebsite] = useState(false);
   const [showDomainSetup, setShowDomainSetup] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
-  const [websiteForm, setWebsiteForm] = useState({
-    businessName: user.businessName || '', businessType: '', tagline: '', services: '',
-    yearsInBusiness: '', certifications: '', description: '', uniqueSellingPoints: '', targetCustomer: ''
-  });
+const [websiteForm, setWebsiteForm] = useState({
+  businessName: user.businessName || '', businessType: '', tagline: '', services: '',
+  yearsInBusiness: '', certifications: '', description: '', uniqueSellingPoints: '', targetCustomer: '',
+  phone: '', email: '', city: '', state: '',
+});
 
   // Domain setup state
   const [vercelUrl, setVercelUrl] = useState('');
@@ -45,6 +46,30 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     }
   }, [websiteData]);
 
+// Pre-fill form from saved business info when modal opens
+useEffect(() => {
+  if (showEditWebsite) {
+    const fetchBizInfo = async () => {
+      try {
+        const response = await authFetch(`${apiUrl}/api/business-info`);
+        const data = await response.json();
+        if (data.businessInfo) {
+          setWebsiteForm(prev => ({
+            ...prev,
+            phone: prev.phone || data.businessInfo.phone || '',
+            email: prev.email || data.businessInfo.email || '',
+            city: prev.city || data.businessInfo.city || '',
+            state: prev.state || data.businessInfo.state || '',
+          }));
+        }
+      } catch (err) {
+        console.log('Could not pre-fill business info:', err);
+      }
+    };
+    fetchBizInfo();
+  }
+}, [showEditWebsite]);
+  
  const handleRegenerateWebsite = (e) => {
   e.preventDefault();
   
@@ -1192,6 +1217,34 @@ const handleConnectExistingWebsite = async () => {
                   </div>
                 </div>
               </div>
+
+              {/* Contact & Location - NEW */}
+<div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
+  <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-green-600">📍</span> Contact & Location</h3>
+  <p className="text-xs text-gray-500 mb-4">This info appears on your website and auto-saves to Business Settings</p>
+  <div className="space-y-4">
+    <div className="grid md:grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Business Phone</label>
+        <input type="tel" value={websiteForm.phone} onChange={(e) => setWebsiteForm({ ...websiteForm, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">Business Email</label>
+        <input type="email" value={websiteForm.email} onChange={(e) => setWebsiteForm({ ...websiteForm, email: e.target.value })} placeholder="contact@mybusiness.com" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+      </div>
+    </div>
+    <div className="grid md:grid-cols-2 gap-4">
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">City</label>
+        <input type="text" value={websiteForm.city} onChange={(e) => setWebsiteForm({ ...websiteForm, city: e.target.value })} placeholder="e.g., Seattle" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+      </div>
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-2">State</label>
+        <input type="text" value={websiteForm.state} onChange={(e) => setWebsiteForm({ ...websiteForm, state: e.target.value })} placeholder="e.g., WA" maxLength="2" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none uppercase" />
+      </div>
+    </div>
+  </div>
+</div>
 
               <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
                 <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-purple-600">🔧</span> Services & Expertise</h3>
