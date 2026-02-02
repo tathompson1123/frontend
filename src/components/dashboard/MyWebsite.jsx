@@ -76,12 +76,6 @@ const handleRegenerateWebsite = (e) => {
   navigate('/generate', { state: { formData: websiteForm } });
 };
   
-  // Store that we should trigger completion after generation
-  sessionStorage.setItem('trigger-onboarding-step-1', 'true');
-  
-  navigate('/loading', { state: { formData: websiteForm } });
-};
-
   const deployWebsite = async () => {
     setIsDeploying(true);
     try {
