@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 export default function GoogleBusiness({ apiUrl, user, authFetch }) {
-  const [activeTab, setActiveTab] = useState('reply-generator');
+  const [activeTab, setActiveTab] = useState('review-requests');
   
   // Review Generator State
   const [reviewCustomerName, setReviewCustomerName] = useState('');
@@ -30,7 +30,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   useEffect(() => {
   fetchStats();
   fetchUserReviewLink();
-  loadReviewConfig(); // Add this
+  loadReviewConfig();
   if (activeTab === 'review-requests') {
     fetchReviewRequests();
   }
@@ -62,7 +62,6 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
       return;
     }
 
-    // Validate it's a Google review link (g.page or google.com)
     const link = reviewLink.toLowerCase();
     if (!link.includes('g.page') && !link.includes('google.com')) {
       alert('Please enter a valid Google review link (should contain g.page or google.com)');
@@ -216,23 +215,10 @@ const saveReviewConfig = async () => {
         <p className="text-gray-600 mt-1">Manage reviews and automate customer feedback</p>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs - Review Requests first, AI Reply Generator second */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
           <div className="flex">
-            <button
-              onClick={() => setActiveTab('reply-generator')}
-              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
-                activeTab === 'reply-generator'
-                  ? 'border-purple-600 text-purple-600 bg-purple-50'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                <span>AI Reply Generator</span>
-              </div>
-            </button>
             <button
               onClick={() => setActiveTab('review-requests')}
               className={`px-6 py-4 font-semibold transition-all border-b-2 ${
@@ -244,6 +230,19 @@ const saveReviewConfig = async () => {
               <div className="flex items-center gap-2">
                 <Send className="w-5 h-5" />
                 <span>Review Requests</span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab('reply-generator')}
+              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+                activeTab === 'reply-generator'
+                  ? 'border-purple-600 text-purple-600 bg-purple-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                <span>AI Reply Generator</span>
               </div>
             </button>
           </div>
