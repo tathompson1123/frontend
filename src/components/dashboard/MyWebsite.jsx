@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Zap, ShoppingCart, CreditCard } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
-export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView }) {
+export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
   const [isPublished, setIsPublished] = useState(false);
   const [devicePreview, setDevicePreview] = useState('desktop');
