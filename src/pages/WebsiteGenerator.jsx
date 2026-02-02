@@ -164,20 +164,20 @@ export default function WebsiteGenerator() {
           setGeneratedWebsite(data.html);
           
           // Auto-save if logged in
-          if (token) {
-            fetch(`${apiUrl}/api/website`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-              },
-              body: JSON.stringify({
-                htmlContent: data.html,
-                pages: data.pages || { 'index.html': data.html }
-              })
-            }).then(() => console.log('✅ Website auto-saved'))
-              .catch(err => console.error('⚠️ Could not auto-save:', err));
-          }
+         // if (token) {
+           // fetch(`${apiUrl}/api/website`, {
+             // method: 'POST',
+             // headers: {
+               // 'Content-Type': 'application/json',
+               // 'Authorization': `Bearer ${token}`
+            //  },
+            //  body: JSON.stringify({
+              //  htmlContent: data.html,
+               // pages: data.pages || { 'index.html': data.html }
+            //  })
+          //  }).then(() => console.log('✅ Website auto-saved'))
+           //   .catch(err => console.error('⚠️ Could not auto-save:', err));
+        //  }
           
           setIsGenerating(false);
           setError(null);
