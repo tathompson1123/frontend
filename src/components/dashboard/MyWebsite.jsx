@@ -70,32 +70,57 @@ useEffect(() => {
   }
 }, [showEditWebsite]);
   
-const handleRegenerateWebsite = (e) => {
+const handleRegenerateWebsite = async (e) => {
   e.preventDefault();
-  sessionStorage.setItem('trigger-onboarding-step-1', 'true');
-  navigate('/generate', { state: { formData: websiteForm } });
-};
+  setIsRegenerating(true);
   
-  const deployWebsite = async () => {
-    setIsDeploying(true);
-    try {
-      const response = await authFetch(`${apiUrl}/api/website/deploy`, {
-        method: 'POST'
-      });
+  try {
+    const token = localStorage.getItem('token');
+    const response = await fetch(`${apiUrl}/api/generate-v2`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        businessName: websiteForm.businessName,
+        businessType: websiteForm.businessType,
+        tagline: websiteForm.tagline,
+        services: websiteForm.services,
+        yearsInBusiness: websiteForm.yearsInBusiness,
+        certifications: websiteForm.certifications,
+        description: websiteForm.description,
+        uniqueSellingPoints: websiteForm.uniqueSellingPoints,
+        targetCustomer: websiteForm.targetCustomer,
+        phone: websiteForm.phone,
+        email: websiteForm.email,
+        city: websiteForm.city,
+        state: websiteForm.state,
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (data.success && data.html) {
+      setCurrentWebsite(data.html);
+      setShowEditWebsite(false);
+      setIsRegenerating(false);
       
-      if (response.ok) {
-        const data = await response.json();
-        setVercelUrl(data.url);
-      } else {
-        alert('Failed to deploy website. Please try again.');
-      }
-    } catch (error) {
-      console.error('Deploy error:', error);
-      alert('Failed to deploy website');
-    } finally {
-      setIsDeploying(false);
+      // Trigger onboarding step completion
+      sessionStorage.setItem('trigger-onboarding-step-1', 'true');
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 1 } }));
+      
+      // Refresh page to show new website
+      window.location.reload();
+    } else {
+      throw new Error(data.error || 'Generation failed');
     }
-  };
+  } catch (error) {
+    console.error('Generation error:', error);
+    alert('Failed to generate website. Please try again.');
+    setIsRegenerating(false);
+  }
+};
 
   // After your other functions (deployWebsite, etc.)
 
