@@ -102,14 +102,20 @@ const handleRegenerateWebsite = async (e) => {
     
     const data = await response.json();
     
-    if (data.success && data.html) {
-      setCurrentWebsite(data.html);
-      setShowEditWebsite(false);
-      setIsRegenerating(false);
-      
-      // Trigger onboarding step completion
-      sessionStorage.setItem('trigger-onboarding-step-1', 'true');
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 1 } }));
+   if (data.success && data.html) {
+  setCurrentWebsite(data.html);
+  setShowEditWebsite(false);
+  setIsRegenerating(false);
+  
+  // Refresh parent's data instead of page reload
+  if (refreshWebsiteData) {
+    await refreshWebsiteData();
+  }
+  
+  // Trigger onboarding
+  sessionStorage.setItem('trigger-onboarding-step-1', 'true');
+  window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 1 } }));
+}
       
       // Refresh page to show new website
       window.location.reload();
