@@ -70,9 +70,12 @@ useEffect(() => {
   }
 }, [showEditWebsite]);
   
-const handleRegenerateWebsite = async (e) => {
+const handleRegenerateWebsite = (e) => {
   e.preventDefault();
-  setIsRegenerating(true);
+  sessionStorage.setItem('trigger-onboarding-step-1', 'true');
+  setShowEditWebsite(false);
+  navigate('/generate', { state: { formData: websiteForm, isRegeneration: true } });
+};
   
   try {
     const token = localStorage.getItem('token');
