@@ -70,8 +70,11 @@ useEffect(() => {
   }
 }, [showEditWebsite]);
   
- const handleRegenerateWebsite = (e) => {
+const handleRegenerateWebsite = (e) => {
   e.preventDefault();
+  sessionStorage.setItem('trigger-onboarding-step-1', 'true');
+  navigate('/generate', { state: { formData: websiteForm } });
+};
   
   // Store that we should trigger completion after generation
   sessionStorage.setItem('trigger-onboarding-step-1', 'true');
