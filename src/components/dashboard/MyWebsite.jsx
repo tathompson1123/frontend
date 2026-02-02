@@ -34,7 +34,7 @@ const [websiteForm, setWebsiteForm] = useState({
   const [showConnectWebsite, setShowConnectWebsite] = useState(false);
   const [existingWebsiteUrl, setExistingWebsiteUrl] = useState('');
 
-  uuseEffect(() => {
+  useEffect(() => {
   if (websiteData) {
     setCurrentWebsite(websiteData.html_content);
     setIsPublished(websiteData.is_published || false);
