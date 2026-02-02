@@ -116,7 +116,7 @@ console.log('🔍 Has token:', !!token);
       return;
     }
     
-    const response = await fetch(`${apiUrl}/api/website/generate`, {
+    const response = await fetch(`${apiUrl}/api/generate-v2`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
