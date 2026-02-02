@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, Circle, ChevronRight, ChevronLeft, Sparkles, X } from 'lucide-react';
 
 export default function OnboardingWidget({ user, setCurrentView, isMinimized, setIsMinimized, apiUrl, authFetch }) {
-  const [completedSteps, setCompletedSteps] = useState({});
+  const [completedSteps, setCompletedSteps] = useState(user?.onboarding_steps_completed || {});
   const [hasWebsite, setHasWebsite] = useState(false);
 
   // Don't render until user data is loaded
