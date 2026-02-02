@@ -24,6 +24,14 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
     }
   }, [completedSteps]);
 
+  useEffect(() => {
+  console.log('🔍 Widget Debug:', {
+    completedSteps,
+    completedCount: Object.values(completedSteps).filter(Boolean).length,
+    userOnboardingSteps: user?.onboarding_steps_completed
+  });
+}, [completedSteps, user]);
+
   // Check for actual completion status
   useEffect(() => {
     const checkCompletionStatus = async () => {
