@@ -34,17 +34,17 @@ const [websiteForm, setWebsiteForm] = useState({
   const [showConnectWebsite, setShowConnectWebsite] = useState(false);
   const [existingWebsiteUrl, setExistingWebsiteUrl] = useState('');
 
-  useEffect(() => {
-    if (websiteData) {
-      setCurrentWebsite(websiteData.html_content);
-      setIsPublished(websiteData.is_published || false);
-      setCustomDomain(websiteData.custom_domain || '');
-      setVercelUrl(websiteData.vercel_url || '');
-      if (websiteData.custom_domain) {
-        setDomainStatus(websiteData.domain_verified ? 'verified' : 'pending');
-      }
+  uuseEffect(() => {
+  if (websiteData) {
+    setCurrentWebsite(websiteData.html_content);
+    setIsPublished(websiteData.is_published || false);
+    setCustomDomain(websiteData.custom_domain || '');
+    setVercelUrl(websiteData.vercel_url || '');
+    if (websiteData.custom_domain) {
+      setDomainStatus(websiteData.domain_verified ? 'verified' : 'pending');
     }
-  }, [websiteData]);
+  }
+}, [websiteData]);
 
 // Pre-fill form from saved business info when modal opens
 useEffect(() => {
@@ -69,7 +69,7 @@ useEffect(() => {
     fetchBizInfo();
   }
 }, [showEditWebsite]);
-  
+
 const handleRegenerateWebsite = (e) => {
   e.preventDefault();
   sessionStorage.setItem('trigger-onboarding-step-1', 'true');
