@@ -281,6 +281,16 @@ useEffect(() => {
     fetchInitialData();
   }, []);
 
+  const refreshWebsiteData = async () => {
+  try {
+    const response = await authFetch(`${apiUrl}/api/website`);
+    const data = await response.json();
+    setWebsiteData(data.website || null);
+  } catch (error) {
+    console.error('Error refreshing website:', error);
+  }
+};
+
   // Listen for user updates from localStorage
 useEffect(() => {
   const handleStorageChange = () => {
@@ -478,6 +488,7 @@ useEffect(() => {
               websiteData={websiteData}
               authFetch={authFetch}
               setCurrentView={setCurrentView}
+              refreshWebsiteData={refreshWebsiteData}
             />
           )}
 
