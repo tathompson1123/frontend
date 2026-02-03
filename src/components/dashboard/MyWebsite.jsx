@@ -304,7 +304,7 @@ const handleConnectExistingWebsite = async () => {
   <>
     <button 
       type="button" 
-      onClick={() => navigate('/editor-v2')} 
+      onClick={() => navigate('/editor')}
       className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
     >
       <Edit className="w-4 h-4" />
