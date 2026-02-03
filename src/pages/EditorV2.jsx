@@ -1,97 +1,711 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import PageEditor from '../editor-v2/components/editor/PageEditor';
-import { createPage, SECTION_TEMPLATES } from '../editor-v2/utils/schema';
-import { renderPageToHtml } from '../editor-v2/utils/htmlRenderer';
+import { 
+  ArrowLeft, 
+  Save, 
+  Eye, 
+  ChevronUp, 
+  ChevronDown, 
+  Trash2, 
+  GripVertical,
+  Plus,
+  Monitor,
+  Tablet,
+  Smartphone,
+  X,
+  Settings,
+  Palette,
+  Layout,
+  Type,
+  Image,
+  Phone,
+  Mail,
+  MapPin,
+  Clock,
+  Star,
+  MessageSquare,
+  Zap
+} from 'lucide-react';
 
+// ============================================
+// TEMPLATE DEFINITIONS
+// Maps template IDs to their editable fields
+// ============================================
+const TEMPLATE_DEFINITIONS = {
+  'trust-banner-scroll': {
+    name: 'Trust Banner (Scrolling)',
+    icon: Star,
+    category: 'trust',
+    fields: {
+      reviews: {
+        type: 'array',
+        label: 'Reviews',
+        itemFields: {
+          text: { type: 'textarea', label: 'Review Text' },
+          author: { type: 'text', label: 'Author Name' },
+          rating: { type: 'number', label: 'Rating (1-5)', min: 1, max: 5 }
+        }
+      }
+    }
+  },
+  'nav-sticky-dark': {
+    name: 'Navigation (Dark)',
+    icon: Layout,
+    category: 'nav',
+    fields: {
+      logo: { type: 'text', label: 'Logo Text' },
+      ctaText: { type: 'text', label: 'CTA Button Text' },
+      ctaLink: { type: 'text', label: 'CTA Button Link' },
+      links: {
+        type: 'array',
+        label: 'Navigation Links',
+        itemFields: {
+          text: { type: 'text', label: 'Link Text' },
+          url: { type: 'text', label: 'Link URL' }
+        }
+      }
+    }
+  },
+  'hero-fullscreen-dark': {
+    name: 'Hero (Fullscreen Dark)',
+    icon: Zap,
+    category: 'hero',
+    fields: {
+      headline: { type: 'text', label: 'Headline' },
+      highlightText: { type: 'text', label: 'Highlighted Text' },
+      subtitle: { type: 'textarea', label: 'Subtitle' },
+      ctaText: { type: 'text', label: 'Primary Button Text' },
+      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaText2: { type: 'text', label: 'Secondary Button Text' },
+      ctaLink2: { type: 'text', label: 'Secondary Button Link' },
+      backgroundImage: { type: 'image', label: 'Background Image URL' }
+    }
+  },
+  'hero-gradient': {
+    name: 'Hero (Gradient)',
+    icon: Zap,
+    category: 'hero',
+    fields: {
+      headline: { type: 'text', label: 'Headline' },
+      highlightText: { type: 'text', label: 'Highlighted Text' },
+      subtitle: { type: 'textarea', label: 'Subtitle' },
+      ctaText: { type: 'text', label: 'Primary Button Text' },
+      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaText2: { type: 'text', label: 'Secondary Button Text' },
+      ctaLink2: { type: 'text', label: 'Secondary Button Link' }
+    }
+  },
+  'features-icon-row': {
+    name: 'Features (Icon Row)',
+    icon: Star,
+    category: 'features',
+    fields: {
+      features: {
+        type: 'array',
+        label: 'Features',
+        itemFields: {
+          icon: { type: 'text', label: 'Icon (emoji)' },
+          title: { type: 'text', label: 'Title' },
+          text: { type: 'textarea', label: 'Description' }
+        }
+      }
+    }
+  },
+  'services-cards-3col': {
+    name: 'Services (3 Column Cards)',
+    icon: Layout,
+    category: 'services',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      ctaText: { type: 'text', label: 'CTA Button Text' },
+      ctaLink: { type: 'text', label: 'CTA Button Link' },
+      services: {
+        type: 'array',
+        label: 'Services',
+        itemFields: {
+          name: { type: 'text', label: 'Service Name' },
+          description: { type: 'textarea', label: 'Description' },
+          price: { type: 'text', label: 'Price' },
+          image: { type: 'image', label: 'Image URL' },
+          link: { type: 'text', label: 'Link' }
+        }
+      }
+    }
+  },
+  'benefits-numbered': {
+    name: 'Benefits (Numbered)',
+    icon: Star,
+    category: 'benefits',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      benefits: {
+        type: 'array',
+        label: 'Benefits',
+        itemFields: {
+          title: { type: 'text', label: 'Benefit Title' },
+          description: { type: 'textarea', label: 'Description' }
+        }
+      }
+    }
+  },
+  'gallery-mixed-grid': {
+    name: 'Gallery (Mixed Grid)',
+    icon: Image,
+    category: 'gallery',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      items: {
+        type: 'array',
+        label: 'Gallery Items',
+        itemFields: {
+          image: { type: 'image', label: 'Image URL' },
+          title: { type: 'text', label: 'Title' },
+          caption: { type: 'text', label: 'Caption' },
+          large: { type: 'checkbox', label: 'Large Size' }
+        }
+      }
+    }
+  },
+  'testimonials-3col': {
+    name: 'Testimonials (3 Column)',
+    icon: MessageSquare,
+    category: 'testimonials',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      testimonials: {
+        type: 'array',
+        label: 'Testimonials',
+        itemFields: {
+          quote: { type: 'textarea', label: 'Quote' },
+          author: { type: 'text', label: 'Author Name' },
+          role: { type: 'text', label: 'Role/Title' },
+          rating: { type: 'number', label: 'Rating (1-5)', min: 1, max: 5 }
+        }
+      }
+    }
+  },
+  'cta-gradient-full': {
+    name: 'CTA (Full Width Gradient)',
+    icon: Zap,
+    category: 'cta',
+    fields: {
+      badge: { type: 'text', label: 'Badge Text' },
+      headline: { type: 'text', label: 'Headline' },
+      subtitle: { type: 'textarea', label: 'Subtitle' },
+      ctaText: { type: 'text', label: 'Primary Button Text' },
+      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaText2: { type: 'text', label: 'Secondary Button Text' },
+      ctaLink2: { type: 'text', label: 'Secondary Button Link' },
+      features: {
+        type: 'array',
+        label: 'Feature List',
+        itemFields: {
+          text: { type: 'text', label: 'Feature Text' }
+        }
+      }
+    }
+  },
+  'contact-split': {
+    name: 'Contact (Split Layout)',
+    icon: Phone,
+    category: 'contact',
+    fields: {
+      formTitle: { type: 'text', label: 'Form Title' },
+      formSubtitle: { type: 'textarea', label: 'Form Subtitle' },
+      submitText: { type: 'text', label: 'Submit Button Text' },
+      phone: { type: 'text', label: 'Phone Number' },
+      phoneClean: { type: 'text', label: 'Phone (digits only)' },
+      email: { type: 'text', label: 'Email Address' },
+      hours: { type: 'textarea', label: 'Business Hours' },
+      serviceArea: { type: 'text', label: 'Service Area' },
+      businessName: { type: 'text', label: 'Business Name' },
+      highlights: {
+        type: 'array',
+        label: 'Highlights',
+        itemFields: {
+          text: { type: 'text', label: 'Highlight Text' }
+        }
+      }
+    }
+  },
+  'footer-4col-dark': {
+    name: 'Footer (4 Column Dark)',
+    icon: Layout,
+    category: 'footer',
+    fields: {
+      logo: { type: 'text', label: 'Logo/Business Name' },
+      tagline: { type: 'text', label: 'Tagline' },
+      phone: { type: 'text', label: 'Phone' },
+      email: { type: 'text', label: 'Email' },
+      hours: { type: 'textarea', label: 'Hours' },
+      services: {
+        type: 'array',
+        label: 'Services List',
+        itemFields: {
+          text: { type: 'text', label: 'Service Name' }
+        }
+      }
+    }
+  }
+};
+
+// Available templates for adding new sections
+const AVAILABLE_TEMPLATES = [
+  { id: 'trust-banner-scroll', category: 'Trust' },
+  { id: 'nav-sticky-dark', category: 'Navigation' },
+  { id: 'hero-fullscreen-dark', category: 'Hero' },
+  { id: 'hero-gradient', category: 'Hero' },
+  { id: 'features-icon-row', category: 'Features' },
+  { id: 'services-cards-3col', category: 'Services' },
+  { id: 'benefits-numbered', category: 'Benefits' },
+  { id: 'gallery-mixed-grid', category: 'Gallery' },
+  { id: 'testimonials-3col', category: 'Testimonials' },
+  { id: 'cta-gradient-full', category: 'CTA' },
+  { id: 'contact-split', category: 'Contact' },
+  { id: 'footer-4col-dark', category: 'Footer' }
+];
+
+// ============================================
+// FIELD EDITOR COMPONENT
+// ============================================
+function FieldEditor({ field, value, onChange, fieldKey }) {
+  if (field.type === 'text') {
+    return (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(fieldKey, e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+      </div>
+    );
+  }
+
+  if (field.type === 'textarea') {
+    return (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+        <textarea
+          value={value || ''}
+          onChange={(e) => onChange(fieldKey, e.target.value)}
+          rows={3}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+      </div>
+    );
+  }
+
+  if (field.type === 'number') {
+    return (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+        <input
+          type="number"
+          value={value || ''}
+          min={field.min}
+          max={field.max}
+          onChange={(e) => onChange(fieldKey, parseInt(e.target.value) || 0)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+      </div>
+    );
+  }
+
+  if (field.type === 'image') {
+    return (
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(fieldKey, e.target.value)}
+          placeholder="https://..."
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+        />
+        {value && (
+          <img src={value} alt="Preview" className="mt-2 max-h-32 rounded-lg object-cover" />
+        )}
+      </div>
+    );
+  }
+
+  if (field.type === 'checkbox') {
+    return (
+      <div className="mb-4 flex items-center gap-2">
+        <input
+          type="checkbox"
+          checked={value || false}
+          onChange={(e) => onChange(fieldKey, e.target.checked)}
+          className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+        />
+        <label className="text-sm font-medium text-gray-700">{field.label}</label>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+// ============================================
+// ARRAY FIELD EDITOR
+// ============================================
+function ArrayFieldEditor({ field, value = [], onChange, fieldKey }) {
+  const items = Array.isArray(value) ? value : [];
+
+  const addItem = () => {
+    const newItem = {};
+    Object.keys(field.itemFields).forEach(key => {
+      newItem[key] = '';
+    });
+    onChange(fieldKey, [...items, newItem]);
+  };
+
+  const updateItem = (index, itemKey, itemValue) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [itemKey]: itemValue };
+    onChange(fieldKey, newItems);
+  };
+
+  const removeItem = (index) => {
+    const newItems = items.filter((_, i) => i !== index);
+    onChange(fieldKey, newItems);
+  };
+
+  const moveItem = (index, direction) => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= items.length) return;
+    const newItems = [...items];
+    [newItems[index], newItems[newIndex]] = [newItems[newIndex], newItems[index]];
+    onChange(fieldKey, newItems);
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-2">{field.label}</label>
+      <div className="space-y-3">
+        {items.map((item, index) => (
+          <div key={index} className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs font-semibold text-gray-500">Item {index + 1}</span>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => moveItem(index, 'up')}
+                  disabled={index === 0}
+                  className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => moveItem(index, 'down')}
+                  disabled={index === items.length - 1}
+                  className="p-1 text-gray-400 hover:text-gray-600 disabled:opacity-30"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => removeItem(index)}
+                  className="p-1 text-red-400 hover:text-red-600"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+            {Object.entries(field.itemFields).map(([itemKey, itemField]) => (
+              <FieldEditor
+                key={itemKey}
+                field={itemField}
+                value={item[itemKey]}
+                onChange={(_, val) => updateItem(index, itemKey, val)}
+                fieldKey={itemKey}
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={addItem}
+        className="mt-2 flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700"
+      >
+        <Plus className="w-4 h-4" /> Add Item
+      </button>
+    </div>
+  );
+}
+
+// ============================================
+// SECTION CARD COMPONENT
+// ============================================
+function SectionCard({ section, index, isSelected, onSelect, onMoveUp, onMoveDown, onDelete, totalSections }) {
+  const templateDef = TEMPLATE_DEFINITIONS[section.template] || { 
+    name: section.template, 
+    icon: Layout,
+    category: 'unknown'
+  };
+  const IconComponent = templateDef.icon;
+
+  return (
+    <div
+      onClick={onSelect}
+      className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
+        isSelected 
+          ? 'border-purple-500 bg-purple-50' 
+          : 'border-gray-200 bg-white hover:border-gray-300'
+      }`}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg ${isSelected ? 'bg-purple-100' : 'bg-gray-100'}`}>
+            <IconComponent className={`w-5 h-5 ${isSelected ? 'text-purple-600' : 'text-gray-600'}`} />
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-900">{templateDef.name}</h3>
+            <p className="text-xs text-gray-500">Section {index + 1}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
+            disabled={index === 0}
+            className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded"
+          >
+            <ChevronUp className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
+            disabled={index === totalSections - 1}
+            className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded"
+          >
+            <ChevronDown className="w-4 h-4" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="p-1.5 text-gray-400 hover:text-red-600 rounded"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// ADD SECTION MODAL
+// ============================================
+function AddSectionModal({ isOpen, onClose, onAdd }) {
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+
+  if (!isOpen) return null;
+
+  const categories = [...new Set(AVAILABLE_TEMPLATES.map(t => t.category))];
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[80vh] overflow-hidden">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-lg font-semibold">Add Section</h2>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 overflow-y-auto max-h-[60vh]">
+          {categories.map(category => (
+            <div key={category} className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-2">{category}</h3>
+              <div className="grid grid-cols-2 gap-2">
+                {AVAILABLE_TEMPLATES.filter(t => t.category === category).map(template => {
+                  const def = TEMPLATE_DEFINITIONS[template.id];
+                  const Icon = def?.icon || Layout;
+                  return (
+                    <button
+                      key={template.id}
+                      onClick={() => setSelectedTemplate(template.id)}
+                      className={`p-3 rounded-lg border-2 text-left transition ${
+                        selectedTemplate === template.id
+                          ? 'border-purple-500 bg-purple-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Icon className="w-4 h-4 text-gray-600" />
+                        <span className="text-sm font-medium">{def?.name || template.id}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={() => { onAdd(selectedTemplate); onClose(); }}
+            disabled={!selectedTemplate}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+          >
+            Add Section
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// MAIN EDITOR COMPONENT
+// ============================================
 export default function EditorV2() {
   const navigate = useNavigate();
   const [pageData, setPageData] = useState(null);
-  const [pages, setPages] = useState([]);
-  const [currentPageId, setCurrentPageId] = useState(null);
+  const [selectedSectionIndex, setSelectedSectionIndex] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [devicePreview, setDevicePreview] = useState('desktop');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState('');
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Load existing page data or create new
+  // ============================================
+  // LOAD PAGE DATA
+  // ============================================
   useEffect(() => {
     loadPageData();
   }, []);
 
- const loadPageData = async () => {
-  try {
-    const token = localStorage.getItem('token');
-    const response = await fetch(`${apiUrl}/api/website`, {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
+  const loadPageData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${apiUrl}/api/website`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
 
-    if (response.ok) {
-      const data = await response.json();
-      
-      // Check if we have page_data in the website object
-      if (data.website?.page_data) {
-        // Parse if it's a string
-        let pageData = data.website.page_data;
-        if (typeof pageData === 'string') {
-          pageData = JSON.parse(pageData);
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.website?.page_data) {
+          let pd = data.website.page_data;
+          if (typeof pd === 'string') {
+            pd = JSON.parse(pd);
+          }
+          setPageData(pd);
+          console.log('✅ Loaded V2 schema with', pd.sections?.length, 'sections');
+        } else {
+          // No page_data - create empty schema
+          setPageData({ meta: {}, theme: {}, sections: [] });
         }
         
-        setPageData(pageData);
-        setPages([{ id: pageData.id || 'index', name: pageData.name || 'Home' }]);
-        setCurrentPageId(pageData.id || 'index');
-        console.log('✅ Loaded page_data with', pageData.sections?.length, 'sections');
-      } else {
-        // No page_data - create default page
-        console.log('⚠️ No page_data found, creating default');
-        const newPage = createDefaultPage();
-        setPageData(newPage);
-        setPages([{ id: newPage.id, name: newPage.name }]);
-        setCurrentPageId(newPage.id);
+        // Also load preview HTML
+        if (data.website?.html_content) {
+          setPreviewHtml(data.website.html_content);
+        }
       }
-    } else {
-      // No website yet - create default
-      const newPage = createDefaultPage();
-      setPageData(newPage);
-      setPages([{ id: newPage.id, name: newPage.name }]);
-      setCurrentPageId(newPage.id);
+    } catch (error) {
+      console.error('Error loading page data:', error);
+      setPageData({ meta: {}, theme: {}, sections: [] });
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error('Error loading page data:', error);
-    const newPage = createDefaultPage();
-    setPageData(newPage);
-    setPages([{ id: newPage.id, name: newPage.name }]);
-    setCurrentPageId(newPage.id);
-  } finally {
-    setIsLoading(false);
-  }
-};
-  const createDefaultPage = () => {
-    const page = createPage('Home', 'index');
-    // Add a default hero section
-    page.sections.push(SECTION_TEMPLATES.hero.create());
-    return page;
   };
 
-  const handleSave = async (data) => {
+  // ============================================
+  // UPDATE SECTION CONTENT
+  // ============================================
+  const updateSectionContent = useCallback((sectionIndex, fieldKey, value) => {
+    setPageData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev));
+      if (!newData.sections[sectionIndex].content) {
+        newData.sections[sectionIndex].content = {};
+      }
+      newData.sections[sectionIndex].content[fieldKey] = value;
+      return newData;
+    });
+  }, []);
+
+  // ============================================
+  // MOVE SECTION
+  // ============================================
+  const moveSection = useCallback((index, direction) => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= pageData.sections.length) return;
+
+    setPageData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev));
+      const [removed] = newData.sections.splice(index, 1);
+      newData.sections.splice(newIndex, 0, removed);
+      return newData;
+    });
+
+    setSelectedSectionIndex(newIndex);
+  }, [pageData]);
+
+  // ============================================
+  // DELETE SECTION
+  // ============================================
+  const deleteSection = useCallback((index) => {
+    if (!confirm('Delete this section?')) return;
+    
+    setPageData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev));
+      newData.sections.splice(index, 1);
+      return newData;
+    });
+
+    setSelectedSectionIndex(null);
+  }, []);
+
+  // ============================================
+  // ADD SECTION
+  // ============================================
+  const addSection = useCallback((templateId) => {
+    if (!templateId) return;
+
+    const newSection = {
+      id: `s${Date.now()}`,
+      template: templateId,
+      content: {}
+    };
+
+    setPageData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev));
+      newData.sections.push(newSection);
+      return newData;
+    });
+
+    setSelectedSectionIndex(pageData.sections.length);
+  }, [pageData]);
+
+  // ============================================
+  // SAVE
+  // ============================================
+  const handleSave = async () => {
+    setIsSaving(true);
     try {
       const token = localStorage.getItem('token');
       
-      // Generate HTML from schema
-      const html = renderPageToHtml(data);
-      
-      const response = await fetch(`${apiUrl}/api/website/save-v2`, {
+      // Call backend to re-render and save
+      const response = await fetch(`${apiUrl}/api/website/save-schema`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({
-          page_data: data,
-          html_content: html
-        })
+        body: JSON.stringify({ page_data: pageData })
       });
 
       if (response.ok) {
+        const data = await response.json();
+        if (data.html) {
+          setPreviewHtml(data.html);
+        }
         console.log('✅ Saved successfully');
       } else {
         throw new Error('Save failed');
@@ -99,18 +713,14 @@ export default function EditorV2() {
     } catch (error) {
       console.error('Save error:', error);
       alert('Failed to save. Please try again.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  const handleBack = () => {
-    navigate('/dashboard');
-  };
-
-  const handlePageChange = (pageId) => {
-    setCurrentPageId(pageId);
-    // TODO: Load different page data if multi-page
-  };
-
+  // ============================================
+  // RENDER
+  // ============================================
   if (isLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">
@@ -122,14 +732,201 @@ export default function EditorV2() {
     );
   }
 
+  const selectedSection = selectedSectionIndex !== null ? pageData?.sections[selectedSectionIndex] : null;
+  const selectedTemplateDef = selectedSection ? TEMPLATE_DEFINITIONS[selectedSection.template] : null;
+
   return (
-    <PageEditor
-      initialData={pageData}
-      onSave={handleSave}
-      onBack={handleBack}
-      pages={pages}
-      currentPageId={currentPageId}
-      onPageChange={handlePageChange}
-    />
+    <div className="h-screen flex flex-col bg-gray-100">
+      {/* ============================================ */}
+      {/* HEADER */}
+      {/* ============================================ */}
+      <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-20">
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back to Dashboard</span>
+          </button>
+        </div>
+
+        {/* Device Preview */}
+        <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
+          <button
+            onClick={() => setDevicePreview('desktop')}
+            className={`p-2 rounded-md transition ${
+              devicePreview === 'desktop'
+                ? 'bg-white shadow text-purple-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Monitor className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setDevicePreview('tablet')}
+            className={`p-2 rounded-md transition ${
+              devicePreview === 'tablet'
+                ? 'bg-white shadow text-purple-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Tablet className="w-5 h-5" />
+          </button>
+          <button
+            onClick={() => setDevicePreview('mobile')}
+            className={`p-2 rounded-md transition ${
+              devicePreview === 'mobile'
+                ? 'bg-white shadow text-purple-600'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <Smartphone className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => window.open(previewHtml ? URL.createObjectURL(new Blob([previewHtml], { type: 'text/html' })) : '#', '_blank')}
+            className="flex items-center gap-2 px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+          >
+            <Eye className="w-4 h-4" />
+            Preview
+          </button>
+
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" />
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </button>
+        </div>
+      </header>
+
+      {/* ============================================ */}
+      {/* MAIN CONTENT */}
+      {/* ============================================ */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* ============================================ */}
+        {/* LEFT SIDEBAR - Section List */}
+        {/* ============================================ */}
+        <aside className="w-80 bg-white border-r border-gray-200 flex flex-col">
+          <div className="p-4 border-b border-gray-200">
+            <h2 className="font-semibold text-gray-900">Sections</h2>
+            <p className="text-sm text-gray-500">{pageData?.sections?.length || 0} sections</p>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {pageData?.sections?.map((section, index) => (
+              <SectionCard
+                key={section.id}
+                section={section}
+                index={index}
+                isSelected={selectedSectionIndex === index}
+                onSelect={() => setSelectedSectionIndex(index)}
+                onMoveUp={() => moveSection(index, 'up')}
+                onMoveDown={() => moveSection(index, 'down')}
+                onDelete={() => deleteSection(index)}
+                totalSections={pageData.sections.length}
+              />
+            ))}
+          </div>
+
+          <div className="p-4 border-t border-gray-200">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Add Section
+            </button>
+          </div>
+        </aside>
+
+        {/* ============================================ */}
+        {/* CENTER - Preview */}
+        {/* ============================================ */}
+        <main className="flex-1 overflow-auto p-8 bg-gray-200">
+          <div
+            className={`mx-auto bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300 ${
+              devicePreview === 'desktop'
+                ? 'w-full max-w-none'
+                : devicePreview === 'tablet'
+                ? 'w-[768px]'
+                : 'w-[375px]'
+            }`}
+            style={{ minHeight: '100vh' }}
+          >
+            {previewHtml ? (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-full min-h-screen border-0"
+                title="Website Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-96 text-gray-500">
+                <p>Save changes to see preview</p>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* ============================================ */}
+        {/* RIGHT SIDEBAR - Section Editor */}
+        {/* ============================================ */}
+        <aside className="w-96 bg-white border-l border-gray-200 flex flex-col">
+          {selectedSection && selectedTemplateDef ? (
+            <>
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="font-semibold text-gray-900">{selectedTemplateDef.name}</h2>
+                <p className="text-sm text-gray-500">Edit section content</p>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto p-4">
+                {Object.entries(selectedTemplateDef.fields || {}).map(([fieldKey, field]) => {
+                  if (field.type === 'array') {
+                    return (
+                      <ArrayFieldEditor
+                        key={fieldKey}
+                        field={field}
+                        value={selectedSection.content?.[fieldKey]}
+                        onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
+                        fieldKey={fieldKey}
+                      />
+                    );
+                  }
+                  return (
+                    <FieldEditor
+                      key={fieldKey}
+                      field={field}
+                      value={selectedSection.content?.[fieldKey]}
+                      onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
+                      fieldKey={fieldKey}
+                    />
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-gray-500 p-8">
+              <div className="text-center">
+                <Edit3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>Select a section to edit its content</p>
+              </div>
+            </div>
+          )}
+        </aside>
+      </div>
+
+      {/* Add Section Modal */}
+      <AddSectionModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAdd={addSection}
+      />
+    </div>
   );
 }
