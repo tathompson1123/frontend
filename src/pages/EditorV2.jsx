@@ -450,9 +450,9 @@ function SectionCard({ section, index, isSelected, onSelect, onMoveUp, onMoveDow
     <div
       onClick={onSelect}
       className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
-        isSelected 
-          ? 'border-purple-500 bg-purple-50' 
-          : 'border-gray-200 bg-white hover:border-gray-300'
+        isSelected
+          ? 'border-purple-500 bg-purple-50 shadow-lg ring-2 ring-purple-200'
+          : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
       }`}
     >
       <div className="flex items-center justify-between">
@@ -686,6 +686,38 @@ export default function EditorV2() {
   }, [pageData]);
 
   // ============================================
+  // LIVE PREVIEW - Debounced auto-update
+  // ============================================
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (pageData && pageData.sections?.length > 0 && !isLoading) {
+        try {
+          const token = localStorage.getItem('token');
+          const response = await fetch(`${apiUrl}/api/website/save-schema`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ page_data: pageData })
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.html) {
+              setPreviewHtml(data.html);
+            }
+          }
+        } catch (error) {
+          console.error('Live preview update error:', error);
+        }
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [pageData, isLoading]);
+
+  // ============================================
   // SAVE
   // ============================================
   const handleSave = async () => {
@@ -882,9 +914,12 @@ export default function EditorV2() {
         <aside className="w-96 bg-white border-l border-gray-200 flex flex-col">
           {selectedSection && selectedTemplateDef ? (
             <>
-              <div className="p-4 border-b border-gray-200">
-                <h2 className="font-semibold text-gray-900">{selectedTemplateDef.name}</h2>
-                <p className="text-sm text-gray-500">Edit section content</p>
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+                <div className="flex items-center gap-2 mb-1">
+                  {selectedTemplateDef.icon && <selectedTemplateDef.icon className="w-5 h-5 text-purple-600" />}
+                  <h2 className="font-semibold text-gray-900">{selectedTemplateDef.name}</h2>
+                </div>
+                <p className="text-sm text-purple-600 font-medium">Editing Section {selectedSectionIndex + 1}</p>
               </div>
               
               <div className="flex-1 overflow-y-auto p-4">
