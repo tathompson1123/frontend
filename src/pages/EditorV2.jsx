@@ -585,6 +585,7 @@ export default function EditorV2() {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${apiUrl}/api/website`, {
+        cache: 'no-store',
         headers: { 'Authorization': `Bearer ${token}` }
       });
 
