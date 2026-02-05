@@ -24,7 +24,8 @@ import {
   Clock,
   Star,
   MessageSquare,
-  Zap
+  Zap,
+  Edit3
 } from 'lucide-react';
 
 // ============================================
