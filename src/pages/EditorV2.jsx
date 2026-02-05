@@ -587,6 +587,7 @@ export default function EditorV2() {
   const [devicePreview, setDevicePreview] = useState('desktop');
   const [showAddModal, setShowAddModal] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
+  const [isEditingSection, setIsEditingSection] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -860,83 +861,61 @@ export default function EditorV2() {
       {/* ============================================ */}
       <div className="flex-1 flex overflow-hidden">
         {/* ============================================ */}
-        {/* LEFT SIDEBAR - Section List */}
+        {/* LEFT SIDEBAR - Section List OR Editor */}
         {/* ============================================ */}
         <aside className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="font-semibold text-gray-900">Sections</h2>
-            <p className="text-sm text-gray-500">{pageData?.sections?.length || 0} sections</p>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 space-y-2">
-            {pageData?.sections?.map((section, index) => (
-              <SectionCard
-                key={section.id}
-                section={section}
-                index={index}
-                isSelected={selectedSectionIndex === index}
-                onSelect={() => setSelectedSectionIndex(index)}
-                onMoveUp={() => moveSection(index, 'up')}
-                onMoveDown={() => moveSection(index, 'down')}
-                onDelete={() => deleteSection(index)}
-                totalSections={pageData.sections.length}
-              />
-            ))}
-          </div>
-
-          <div className="p-4 border-t border-gray-200">
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
-            >
-              <Plus className="w-4 h-4" />
-              Add Section
-            </button>
-          </div>
-        </aside>
-
-        {/* ============================================ */}
-        {/* CENTER - Preview */}
-        {/* ============================================ */}
-        <main className="flex-1 overflow-auto p-8 bg-gray-200">
-          <div
-            className={`mx-auto bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300 ${
-              devicePreview === 'desktop'
-                ? 'w-full max-w-none'
-                : devicePreview === 'tablet'
-                ? 'w-[768px]'
-                : 'w-[375px]'
-            }`}
-            style={{ minHeight: '100vh' }}
-          >
-            {previewHtml ? (
-              <iframe
-                srcDoc={previewHtml}
-                className="w-full h-full min-h-screen border-0"
-                title="Website Preview"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-96 text-gray-500">
-                <p>Save changes to see preview</p>
-              </div>
-            )}
-          </div>
-        </main>
-
-        {/* ============================================ */}
-        {/* RIGHT SIDEBAR - Section Editor */}
-        {/* ============================================ */}
-        <aside className="w-96 bg-white border-l border-gray-200 flex flex-col">
-          {selectedSection && selectedTemplateDef ? (
+          {!isEditingSection ? (
             <>
+              {/* Section List Mode */}
+              <div className="p-4 border-b border-gray-200">
+                <h2 className="font-semibold text-gray-900">Sections</h2>
+                <p className="text-sm text-gray-500">{pageData?.sections?.length || 0} sections</p>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {pageData?.sections?.map((section, index) => (
+                  <SectionCard
+                    key={section.id}
+                    section={section}
+                    index={index}
+                    isSelected={selectedSectionIndex === index}
+                    onSelect={() => { setSelectedSectionIndex(index); setIsEditingSection(true); }}
+                    onMoveUp={() => moveSection(index, 'up')}
+                    onMoveDown={() => moveSection(index, 'down')}
+                    onDelete={() => deleteSection(index)}
+                    totalSections={pageData.sections.length}
+                  />
+                ))}
+              </div>
+
+              <div className="p-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Section
+                </button>
+              </div>
+            </>
+          ) : selectedSection && selectedTemplateDef ? (
+            <>
+              {/* Section Editor Mode */}
               <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+                <button
+                  onClick={() => setIsEditingSection(false)}
+                  className="flex items-center gap-2 text-gray-700 hover:text-purple-600 transition mb-3"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-sm font-medium">Back to Sections</span>
+                </button>
                 <div className="flex items-center gap-2 mb-1">
                   {selectedTemplateDef.icon && <selectedTemplateDef.icon className="w-5 h-5 text-purple-600" />}
                   <h2 className="font-semibold text-gray-900">{selectedTemplateDef.name}</h2>
                 </div>
                 <p className="text-sm text-purple-600 font-medium">Editing Section {selectedSectionIndex + 1}</p>
               </div>
-              
+
               <div className="flex-1 overflow-y-auto p-4">
                 {Object.entries(selectedTemplateDef.fields || {}).map(([fieldKey, field]) => {
                   if (field.type === 'array') {
@@ -966,11 +945,39 @@ export default function EditorV2() {
             <div className="flex-1 flex items-center justify-center text-gray-500 p-8">
               <div className="text-center">
                 <Edit3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Select a section to edit its content</p>
+                <p>Select a section to edit</p>
               </div>
             </div>
           )}
         </aside>
+
+        {/* ============================================ */}
+        {/* CENTER - Preview */}
+        {/* ============================================ */}
+        <main className="flex-1 overflow-auto p-8 bg-gray-200">
+          <div
+            className={`mx-auto bg-white shadow-xl rounded-lg overflow-hidden transition-all duration-300 ${
+              devicePreview === 'desktop'
+                ? 'w-full max-w-none'
+                : devicePreview === 'tablet'
+                ? 'w-[768px]'
+                : 'w-[375px]'
+            }`}
+            style={{ minHeight: '100vh' }}
+          >
+            {previewHtml ? (
+              <iframe
+                srcDoc={previewHtml}
+                className="w-full h-full min-h-screen border-0"
+                title="Website Preview"
+              />
+            ) : (
+              <div className="flex items-center justify-center h-96 text-gray-500">
+                <p>Save changes to see preview</p>
+              </div>
+            )}
+          </div>
+        </main>
       </div>
 
       {/* Add Section Modal */}
