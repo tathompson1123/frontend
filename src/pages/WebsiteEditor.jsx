@@ -63,23 +63,26 @@ export default function WebsiteEditor() {
     try {
       const token = localStorage.getItem('token');
       const response = await fetch(`${apiUrl}/api/website`, {
+        cache: 'no-store',
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       const data = await response.json();
-      
+
       if (data.website) {
         let pages;
         if (data.website.pages) {
           pages = data.website.pages;
-          setAllPages(pages);
-          setCurrentPage('index.html');
         } else {
-          pages = { 'index.html': data.website.html_content };
-          setAllPages(pages);
-          setCurrentPage('index.html');
+          pages = {};
         }
+        // html_content is always the freshest main page — override pages in case they're stale
+        if (data.website.html_content) {
+          pages['index.html'] = data.website.html_content;
+        }
+        setAllPages(pages);
+        setCurrentPage('index.html');
         
         setHistory([pages]);
         setHistoryIndex(0);
