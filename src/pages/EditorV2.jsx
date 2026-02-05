@@ -206,6 +206,20 @@ const TEMPLATE_DEFINITIONS = {
       }
     }
   },
+  'content-block': {
+    name: 'Content Block',
+    icon: Type,
+    category: 'content',
+    fields: {
+      heading: { type: 'text', label: 'Heading (optional)' },
+      text: { type: 'textarea', label: 'Text Content (optional)' },
+      imageUrl: { type: 'text', label: 'Image URL (optional)' },
+      imageAlt: { type: 'text', label: 'Image Alt Text' },
+      buttonText: { type: 'text', label: 'Button Text (optional)' },
+      buttonLink: { type: 'text', label: 'Button Link' },
+      align: { type: 'text', label: 'Alignment (left/center/right)' }
+    }
+  },
   'contact-split': {
     name: 'Contact (Split Layout)',
     icon: Phone,
@@ -262,6 +276,7 @@ const AVAILABLE_TEMPLATES = [
   { id: 'gallery-mixed-grid', category: 'Gallery' },
   { id: 'testimonials-3col', category: 'Testimonials' },
   { id: 'cta-gradient-full', category: 'CTA' },
+  { id: 'content-block', category: 'Content' },
   { id: 'contact-split', category: 'Contact' },
   { id: 'footer-4col-dark', category: 'Footer' }
 ];
