@@ -588,6 +588,9 @@ export default function EditorV2() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [previewHtml, setPreviewHtml] = useState('');
   const [isEditingSection, setIsEditingSection] = useState(false);
+  const [showGoogleImportModal, setShowGoogleImportModal] = useState(false);
+  const [googleUrl, setGoogleUrl] = useState('');
+  const [importingReviews, setImportingReviews] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -700,6 +703,53 @@ export default function EditorV2() {
 
     setSelectedSectionIndex(pageData.sections.length);
   }, [pageData]);
+
+  // ============================================
+  // IMPORT GOOGLE REVIEWS
+  // ============================================
+  const importGoogleReviews = async () => {
+    if (!googleUrl.trim()) {
+      alert('Please enter a Google Business Profile URL');
+      return;
+    }
+
+    setImportingReviews(true);
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`${apiUrl}/api/google-business/import-google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ googleUrl })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Failed to import reviews');
+        return;
+      }
+
+      if (data.reviews && data.reviews.length > 0) {
+        // Update the selected section with imported reviews
+        updateSectionContent(selectedSectionIndex, 'reviews', data.reviews);
+        setShowGoogleImportModal(false);
+        setGoogleUrl('');
+        alert(`Successfully imported ${data.reviews.length} reviews!`);
+      } else {
+        alert(data.message || 'No reviews found');
+      }
+
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Failed to import reviews. Please try again.');
+    } finally {
+      setImportingReviews(false);
+    }
+  };
 
   // ============================================
   // LIVE PREVIEW - Debounced auto-update
@@ -920,13 +970,23 @@ export default function EditorV2() {
                 {Object.entries(selectedTemplateDef.fields || {}).map(([fieldKey, field]) => {
                   if (field.type === 'array') {
                     return (
-                      <ArrayFieldEditor
-                        key={fieldKey}
-                        field={field}
-                        value={selectedSection.content?.[fieldKey]}
-                        onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
-                        fieldKey={fieldKey}
-                      />
+                      <div key={fieldKey}>
+                        {fieldKey === 'reviews' && (
+                          <button
+                            onClick={() => setShowGoogleImportModal(true)}
+                            className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                          >
+                            <Star className="w-4 h-4" />
+                            Import from Google Business
+                          </button>
+                        )}
+                        <ArrayFieldEditor
+                          field={field}
+                          value={selectedSection.content?.[fieldKey]}
+                          onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
+                          fieldKey={fieldKey}
+                        />
+                      </div>
                     );
                   }
                   return (
@@ -986,6 +1046,58 @@ export default function EditorV2() {
         onClose={() => setShowAddModal(false)}
         onAdd={addSection}
       />
+
+      {/* Google Import Modal */}
+      {showGoogleImportModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Import Google Reviews</h2>
+              <button onClick={() => setShowGoogleImportModal(false)} className="p-1 hover:bg-gray-100 rounded">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Google Business Profile URL or Place ID
+              </label>
+              <input
+                type="text"
+                value={googleUrl}
+                onChange={(e) => setGoogleUrl(e.target.value)}
+                placeholder="https://maps.google.com/maps?cid=... or Place ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                onKeyPress={(e) => e.key === 'Enter' && importGoogleReviews()}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Paste your Google Business Profile link or Place ID to import your real reviews.
+              </p>
+            </div>
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+              <button
+                onClick={() => setShowGoogleImportModal(false)}
+                className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={importGoogleReviews}
+                disabled={importingReviews}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {importingReviews ? (
+                  <>Importing...</>
+                ) : (
+                  <>
+                    <Star className="w-4 h-4" />
+                    Import Reviews
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
