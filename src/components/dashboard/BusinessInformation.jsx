@@ -584,10 +584,55 @@ export default function BusinessInformation({
                     </label>
                   </div>
                   {hours[day].open ? (
-                    <div className="flex items-center gap-4 flex-1">
-                      <input type="time" value={hours[day].start} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], start: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <div className="flex items-center gap-2 flex-1">
+                      <div className="flex items-center gap-1">
+                        <input type="time" value={hours[day].start} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], start: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHours = { ...hours };
+                            days.forEach(d => { if (newHours[d].open) newHours[d].start = hours[day].start; });
+                            setHours(newHours);
+                          }}
+                          className="p-1.5 text-xs text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                          title="Apply to all open days"
+                        >
+                          All
+                        </button>
+                      </div>
                       <span className="text-gray-500 font-medium">to</span>
-                      <input type="time" value={hours[day].end} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], end: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                      <div className="flex items-center gap-1">
+                        <input type="time" value={hours[day].end} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], end: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newHours = { ...hours };
+                            days.forEach(d => { if (newHours[d].open) newHours[d].end = hours[day].end; });
+                            setHours(newHours);
+                          }}
+                          className="p-1.5 text-xs text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                          title="Apply to all open days"
+                        >
+                          All
+                        </button>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newHours = { ...hours };
+                          days.forEach(d => {
+                            if (newHours[d].open) {
+                              newHours[d].start = hours[day].start;
+                              newHours[d].end = hours[day].end;
+                            }
+                          });
+                          setHours(newHours);
+                        }}
+                        className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 rounded transition-colors font-medium"
+                        title="Apply both times to all open days"
+                      >
+                        Apply to all
+                      </button>
                     </div>
                   ) : (
                     <div className="flex-1"><span className="text-gray-500 italic">Closed</span></div>
