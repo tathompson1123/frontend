@@ -341,9 +341,15 @@ useEffect(() => {
   />
 )}
 
-{user && Object.keys(user).length > 0 && !user?.onboarding_completed && (
-  <OnboardingWidget 
-    user={user} 
+{user && Object.keys(user).length > 0 && (() => {
+  // Only hide widget if ALL 5 steps are actually complete
+  const steps = user?.onboarding_steps_completed || {};
+  const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
+  const actuallyComplete = validStepKeys.filter(key => steps[key]).length === 5;
+  return !actuallyComplete;
+})() && (
+  <OnboardingWidget
+    user={user}
     setCurrentView={setCurrentView}
     isMinimized={widgetMinimized}
     setIsMinimized={setWidgetMinimized}
