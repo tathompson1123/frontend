@@ -34,6 +34,52 @@ const [websiteForm, setWebsiteForm] = useState({
   const [showConnectWebsite, setShowConnectWebsite] = useState(false);
   const [existingWebsiteUrl, setExistingWebsiteUrl] = useState('');
 
+  // Business settings gate
+  const [businessSettingsComplete, setBusinessSettingsComplete] = useState(null); // null = loading, true/false = result
+  const [missingSettings, setMissingSettings] = useState([]);
+
+  // Check if business settings are complete
+  useEffect(() => {
+    const checkBusinessSettings = async () => {
+      try {
+        const [businessInfoRes, servicesRes, employeesRes] = await Promise.all([
+          authFetch(`${apiUrl}/api/business-info`),
+          authFetch(`${apiUrl}/api/services`),
+          authFetch(`${apiUrl}/api/employees`)
+        ]);
+
+        const businessInfo = await businessInfoRes.json();
+        const servicesData = await servicesRes.json();
+        const employeesData = await employeesRes.json();
+
+        const info = businessInfo?.businessInfo || {};
+        const services = servicesData?.services || [];
+        const employees = employeesData?.employees || [];
+
+        const missing = [];
+        if (!info.phone || !info.email) missing.push('Contact info (phone & email)');
+        if (!info.address || !info.city || !info.state || !info.zip_code) missing.push('Business location');
+        if (!((info.service_area_type === 'zipcodes' && info.service_zip_codes?.length > 0) ||
+              (info.service_area_type === 'radius' && info.center_zip_code && info.service_radius > 0))) {
+          missing.push('Service area');
+        }
+        if (services.length === 0) missing.push('At least one service');
+        if (employees.length === 0) missing.push('At least one team member');
+
+        setMissingSettings(missing);
+        setBusinessSettingsComplete(missing.length === 0);
+      } catch (error) {
+        console.error('Error checking business settings:', error);
+        setBusinessSettingsComplete(false);
+        setMissingSettings(['Unable to verify business settings']);
+      }
+    };
+
+    if (apiUrl && authFetch) {
+      checkBusinessSettings();
+    }
+  }, [apiUrl, authFetch]);
+
   useEffect(() => {
   if (websiteData) {
     setCurrentWebsite(websiteData.html_content);
@@ -290,6 +336,62 @@ const handleConnectExistingWebsite = async () => {
       alert('Failed to remove domain');
     }
   };
+
+  // Show loading state while checking business settings
+  if (businessSettingsComplete === null) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+      </div>
+    );
+  }
+
+  // Show gate if business settings are incomplete
+  if (!businessSettingsComplete && !currentWebsite) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
+          <p className="text-gray-600 mt-1">Generate your AI-powered website</p>
+        </div>
+
+        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-8 text-center">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-amber-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Complete Your Business Settings First</h3>
+          <p className="text-gray-600 mb-4 max-w-lg mx-auto">
+            Your website is generated using information from your Business Settings.
+            Please complete the following before generating your website:
+          </p>
+
+          <div className="bg-white rounded-xl p-4 mb-6 max-w-md mx-auto text-left">
+            <p className="text-sm font-semibold text-gray-700 mb-2">Missing information:</p>
+            <ul className="space-y-1">
+              {missingSettings.map((item, idx) => (
+                <li key={idx} className="flex items-center gap-2 text-sm text-red-600">
+                  <X className="w-4 h-4" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <button
+            onClick={() => setCurrentView('business-settings')}
+            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 mx-auto"
+          >
+            Go to Business Settings
+            <ArrowRight className="w-5 h-5" />
+          </button>
+
+          <p className="text-xs text-gray-500 mt-4">
+            Your contact info, services, team, and location will appear on your generated website.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
