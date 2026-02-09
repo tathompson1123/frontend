@@ -111,9 +111,9 @@ const handleRegenerateWebsite = async (e) => {
         await refreshWebsiteData();
       }
       
-      // Trigger onboarding step completion
-      sessionStorage.setItem('trigger-onboarding-step-1', 'true');
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 1 } }));
+      // Trigger onboarding step 2 completion (website generated)
+      sessionStorage.setItem('trigger-onboarding-step-2', 'true');
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 2 } }));
     } else {
       throw new Error(data.error || 'Generation failed');
     }
@@ -145,9 +145,9 @@ const handleConnectExistingWebsite = async () => {
       setShowConnectWebsite(false);
       alert('✅ Website connected! You can now manage it from your dashboard.');
       
-      // Trigger step 1 completion
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-        detail: { step: 1 } 
+      // Trigger step 2 completion (website connected/generated)
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', {
+        detail: { step: 2 }
       }));
     } else {
       const error = await response.json();
@@ -338,14 +338,18 @@ const handleConnectExistingWebsite = async () => {
       if (response.ok) {
         const data = await response.json();
         setIsPublished(true);
-        
+
         // Update vercel URL if returned
         if (data.url) {
           setVercelUrl(data.url);
         }
-        
+
+        // Trigger onboarding step 3 completion (website published)
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', {
+          detail: { step: 3 }
+        }));
+
         alert('✅ Website published successfully!');
-        // Removed window.location.reload() - just update state!
       }
     } catch (error) {
       console.error('Publish error:', error);

@@ -86,7 +86,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
         }
         
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-          detail: { step: 5 } 
+          detail: { step: 4 } 
         }));
       } else {
         const error = await response.json();
@@ -153,7 +153,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
       if (response.ok) {
         alert('✅ Configuration saved successfully!');
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-          detail: { step: 5 } 
+          detail: { step: 4 } 
         }));
       } else {
         const error = await response.json();
@@ -200,7 +200,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
         
         onDeploymentChange();
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-          detail: { step: 5 } 
+          detail: { step: 4 } 
         }));
       } else {
         const error = await response.json();

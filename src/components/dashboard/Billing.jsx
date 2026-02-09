@@ -11,6 +11,13 @@ export default function Billing({ user, apiUrl, authFetch }) {
 
   useEffect(() => {
     setCurrentPlan(user?.plan || null);
+
+    // Trigger onboarding step 5 completion when user has a paid plan
+    if (user?.plan && user.plan !== 'free') {
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', {
+        detail: { step: 5 }
+      }));
+    }
   }, [user]);
 
   const handleUpgrade = async (planId) => {

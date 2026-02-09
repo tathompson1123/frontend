@@ -156,6 +156,16 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, []);
 
+  // Re-validate when business info is updated
+  useEffect(() => {
+    const handleBusinessInfoUpdate = () => {
+      console.log('📋 Business info updated - re-validating...');
+      validateBusinessSettings();
+    };
+    window.addEventListener('business-info-updated', handleBusinessInfoUpdate);
+    return () => window.removeEventListener('business-info-updated', handleBusinessInfoUpdate);
+  }, []);
+
   // Load completed steps from user data
   useEffect(() => {
     if (user?.onboarding_steps_completed) {

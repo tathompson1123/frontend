@@ -77,9 +77,6 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
       const data = await response.json();
       if (data.success) {
         alert('✅ Google review link saved! Your review automation is now active.');
-        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { 
-        detail: { step: 4 } 
-      }));
       } else {
         alert('Failed to save: ' + (data.error || 'Unknown error'));
       }
