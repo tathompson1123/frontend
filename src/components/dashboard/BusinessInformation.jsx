@@ -79,10 +79,13 @@ export default function BusinessInformation({
       const hoursObj = {};
       const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
       businessHours.forEach(day => {
-        const dayName = dayNames[day.day_of_week];
-        hoursObj[dayName] = { open: day.is_open, start: day.open_time || '09:00', end: day.close_time || '17:00' };
+        // Handle both day_name (string) and day_of_week (number) formats
+        const dayName = day.day_name || dayNames[day.day_of_week];
+        if (dayName) {
+          hoursObj[dayName] = { open: day.is_open, start: day.open_time || '09:00', end: day.close_time || '17:00' };
+        }
       });
-      setHours(hoursObj);
+      setHours(prev => ({ ...prev, ...hoursObj }));
     }
   }, [businessHours]);
 
@@ -153,9 +156,8 @@ export default function BusinessInformation({
   const handleSaveAll = async () => {
     setIsSaving(true);
     try {
-      const dayMapping = { sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6 };
       const hoursArray = Object.entries(hours).map(([dayName, dayData]) => ({
-        day_of_week: dayMapping[dayName],
+        day_name: dayName,
         is_open: dayData.open,
         open_time: dayData.open ? dayData.start : null,
         close_time: dayData.open ? dayData.end : null

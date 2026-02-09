@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Clock, Save } from 'lucide-react';
 
-export default function BusinessHours({ businessHours, setBusinessHours, apiUrl, user }) {
+export default function BusinessHours({ businessHours, setBusinessHours, apiUrl, user, authFetch }) {
   const [hours, setHours] = useState({
     monday: { open: true, start: '09:00', end: '17:00' },
     tuesday: { open: true, start: '09:00', end: '17:00' },
@@ -16,17 +16,19 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
   useEffect(() => {
     if (businessHours && businessHours.length > 0) {
       const hoursObj = {};
-      const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      
+
       businessHours.forEach(day => {
-        const dayName = dayNames[day.day_of_week];
-        hoursObj[dayName] = {
-          open: day.is_open,
-          start: day.open_time || '09:00',
-          end: day.close_time || '17:00'
-        };
+        // Handle both day_name (string) and day_of_week (number) formats
+        const dayName = day.day_name || ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'][day.day_of_week];
+        if (dayName) {
+          hoursObj[dayName] = {
+            open: day.is_open,
+            start: day.open_time || '09:00',
+            end: day.close_time || '17:00'
+          };
+        }
       });
-      setHours(hoursObj);
+      setHours(prev => ({ ...prev, ...hoursObj }));
     }
   }, [businessHours]);
 
@@ -34,32 +36,19 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
     setIsSaving(true);
     try {
       // Convert hours object to array format that server expects
-      const dayMapping = {
-        sunday: 0,
-        monday: 1,
-        tuesday: 2,
-        wednesday: 3,
-        thursday: 4,
-        friday: 5,
-        saturday: 6
-      };
-
       const hoursArray = Object.entries(hours).map(([dayName, dayData]) => ({
-        day_of_week: dayMapping[dayName],
+        day_name: dayName,
         is_open: dayData.open,
         open_time: dayData.open ? dayData.start : null,
         close_time: dayData.open ? dayData.end : null
       }));
 
-      console.log('Sending hours data:', { userId: user.id, hours: hoursArray });
+      console.log('Sending hours data:', hoursArray);
 
-      const response = await fetch(`${apiUrl}/api/business-hours`, {
+      const response = await authFetch(`${apiUrl}/api/business-hours`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          hours: hoursArray
-        })
+        body: JSON.stringify({ hours: hoursArray })
       });
 
       if (!response.ok) {
