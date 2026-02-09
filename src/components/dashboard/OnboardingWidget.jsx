@@ -12,17 +12,12 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
   });
   const [isValidating, setIsValidating] = useState(true);
 
-  // Don't render until user data is loaded
-  if (!user || Object.keys(user).length === 0) {
-    return null;
-  }
-
   // 5-Step Onboarding Flow
   const steps = [
     {
       id: 1,
       label: 'Complete business settings',
-      view: 'business-info',
+      view: 'business-settings',
       key: 'step1',
       description: 'Add contact info, location, services & team'
     },
@@ -99,6 +94,9 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
       if (allComplete && !completedSteps.step1) {
         // Auto-complete step 1
         await markStepComplete(1);
+      } else if (!allComplete && completedSteps.step1) {
+        // Un-complete step 1 if validation fails but it was marked complete
+        await markStepIncomplete(1);
       }
 
       return validation;
@@ -133,6 +131,40 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event('user-updated'));
+    } catch (error) {
+      console.error('Error saving step progress:', error);
+    }
+  };
+
+  // Mark a step as incomplete (for re-validation)
+  const markStepIncomplete = async (stepNumber) => {
+    const updatedSteps = { ...completedSteps };
+    delete updatedSteps[`step${stepNumber}`];
+    setCompletedSteps(updatedSteps);
+
+    try {
+      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentStep: stepNumber,
+          completedSteps: updatedSteps
+        })
+      });
+
+      // Update localStorage
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
+      const completedCount = validStepKeys.filter(key => updatedSteps[key]).length;
+      const updatedUser = {
+        ...currentUser,
+        onboarding_steps_completed: updatedSteps,
+        onboarding_current_step: stepNumber,
+        onboarding_completed: completedCount === 5
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      window.dispatchEvent(new Event('user-updated'));
+      console.log('📋 Step', stepNumber, 'marked incomplete - validation failed');
     } catch (error) {
       console.error('Error saving step progress:', error);
     }
@@ -242,6 +274,11 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
       window.dispatchEvent(new Event('user-updated'));
     }
   }, [completedCount]);
+
+  // Don't render until user data is loaded (must be AFTER all hooks)
+  if (!user || Object.keys(user).length === 0) {
+    return null;
+  }
 
   // Hide widget when all complete
   if (completedCount === 5) {
@@ -419,7 +456,7 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
                     )}
                     <button
                       onClick={() => {
-                        setCurrentView('business-info');
+                        setCurrentView('business-settings');
                         // Trigger re-validation after a delay
                         setTimeout(validateBusinessSettings, 1000);
                       }}

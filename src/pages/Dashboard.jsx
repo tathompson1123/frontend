@@ -345,7 +345,9 @@ useEffect(() => {
   // Only hide widget if ALL 5 steps are actually complete
   const steps = user?.onboarding_steps_completed || {};
   const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
-  const actuallyComplete = validStepKeys.filter(key => steps[key]).length === 5;
+  const completedCount = validStepKeys.filter(key => steps[key]).length;
+  const actuallyComplete = completedCount === 5;
+  console.log('🎯 OnboardingWidget check:', { steps, completedCount, actuallyComplete, shouldShow: !actuallyComplete });
   return !actuallyComplete;
 })() && (
   <OnboardingWidget
