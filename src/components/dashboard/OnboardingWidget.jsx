@@ -228,19 +228,20 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
     checkCompletionStatus();
   }, [apiUrl, authFetch]);
 
+  // Only count the 5 valid steps (ignore old step6 data from previous flow)
+  const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
+  const completedCount = validStepKeys.filter(key => completedSteps[key]).length;
+  const progressPercentage = (completedCount / steps.length) * 100;
+
   // Mark onboarding complete when all 5 steps done
   useEffect(() => {
-    const completedCount = Object.values(completedSteps).filter(Boolean).length;
     if (completedCount === 5) {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const updatedUser = { ...currentUser, onboarding_completed: true };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event('user-updated'));
     }
-  }, [completedSteps]);
-
-  const completedCount = Object.values(completedSteps).filter(Boolean).length;
-  const progressPercentage = (completedCount / steps.length) * 100;
+  }, [completedCount]);
 
   // Hide widget when all complete
   if (completedCount === 5) {

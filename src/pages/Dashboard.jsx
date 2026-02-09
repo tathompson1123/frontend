@@ -69,10 +69,12 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   useEffect(() => {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   const completedSteps = currentUser.onboarding_steps_completed || {};
-  const completedCount = Object.keys(completedSteps).filter(key => completedSteps[key]).length;
-  
-  // If marked complete but not all steps done, fix it
-  if (currentUser.onboarding_completed && completedCount < 6) {
+  // Only count valid 5 steps (ignore old step6 from previous flow)
+  const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
+  const completedCount = validStepKeys.filter(key => completedSteps[key]).length;
+
+  // If marked complete but not all 5 steps done, fix it
+  if (currentUser.onboarding_completed && completedCount < 5) {
     const updatedUser = {
       ...currentUser,
       onboarding_completed: false
@@ -156,35 +158,36 @@ useEffect(() => {
       [`step${step}`]: true
     };
     
-    // Count completed steps
-    const completedCount = Object.keys(updatedSteps).filter(key => updatedSteps[key]).length;
-    
+    // Count completed steps (only valid 5 steps)
+    const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
+    const completedCount = validStepKeys.filter(key => updatedSteps[key]).length;
+
     // Save to backend
     try {
       await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          currentStep: step < 6 ? step + 1 : step,
+          currentStep: step < 5 ? step + 1 : step,
           completedSteps: updatedSteps
         })
       });
-      
+
       // Update local storage
       const updatedUser = {
         ...currentUser,
         onboarding_steps_completed: updatedSteps,
-        onboarding_current_step: step < 6 ? step + 1 : step,
-        // Mark onboarding complete when all 6 steps are done
-        onboarding_completed: completedCount === 6
+        onboarding_current_step: step < 5 ? step + 1 : step,
+        // Mark onboarding complete when all 5 steps are done
+        onboarding_completed: completedCount === 5
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      
+
       // Notify components that user was updated
       window.dispatchEvent(new Event('user-updated'));
-      
+
       // Show onboarding wizard to guide to next step (only if not all done)
-      if (completedCount < 6) {
+      if (completedCount < 5) {
         // Optional: trigger wizard
       }
     } catch (error) {
