@@ -1,202 +1,250 @@
 import { useState, useEffect } from 'react';
-import { CheckCircle, Circle, ChevronRight, ChevronLeft, Sparkles, X } from 'lucide-react';
+import { CheckCircle, Circle, ChevronRight, ChevronLeft, Sparkles, AlertCircle, Phone, MapPin, Briefcase, Users, Globe } from 'lucide-react';
 
 export default function OnboardingWidget({ user, setCurrentView, isMinimized, setIsMinimized, apiUrl, authFetch }) {
   const [completedSteps, setCompletedSteps] = useState(user?.onboarding_steps_completed || {});
-  const [hasWebsite, setHasWebsite] = useState(false);
+  const [businessValidation, setBusinessValidation] = useState({
+    contactInfo: false,
+    location: false,
+    serviceArea: false,
+    services: false,
+    team: false
+  });
+  const [isValidating, setIsValidating] = useState(true);
 
   // Don't render until user data is loaded
   if (!user || Object.keys(user).length === 0) {
     return null;
   }
 
-  useEffect(() => {
-    const completedCount = Object.values(completedSteps).filter(Boolean).length;
-    if (completedCount === 6) {
-      // Mark onboarding as complete
+  // 5-Step Onboarding Flow
+  const steps = [
+    {
+      id: 1,
+      label: 'Complete business settings',
+      view: 'business-info',
+      key: 'step1',
+      description: 'Add contact info, location, services & team'
+    },
+    {
+      id: 2,
+      label: 'Generate your website',
+      view: 'website',
+      key: 'step2',
+      description: 'Create your AI-powered website',
+      requiresStep1: true
+    },
+    {
+      id: 3,
+      label: 'Publish your website',
+      view: 'website',
+      key: 'step3',
+      description: 'Make your site live'
+    },
+    {
+      id: 4,
+      label: 'Deploy an AI agent',
+      view: 'ai-agents',
+      key: 'step4',
+      description: 'Add chat or lead automation'
+    },
+    {
+      id: 5,
+      label: 'Select a plan',
+      view: 'billing',
+      key: 'step5',
+      description: 'Choose your subscription'
+    },
+  ];
+
+  // Validate business settings for step 1
+  const validateBusinessSettings = async () => {
+    if (!apiUrl || !authFetch) return;
+
+    setIsValidating(true);
+
+    try {
+      // Fetch all required data in parallel
+      const [businessInfoRes, servicesRes, employeesRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/business-info`),
+        authFetch(`${apiUrl}/api/services`),
+        authFetch(`${apiUrl}/api/employees`)
+      ]);
+
+      const businessInfo = await businessInfoRes.json();
+      const servicesData = await servicesRes.json();
+      const employeesData = await employeesRes.json();
+
+      const info = businessInfo?.businessInfo || {};
+      const services = servicesData?.services || [];
+      const employees = employeesData?.employees || [];
+
+      // Validate each requirement
+      const validation = {
+        contactInfo: Boolean(info.phone && info.email),
+        location: Boolean(info.address && info.city && info.state && info.zip_code),
+        serviceArea: Boolean(
+          (info.service_area_type === 'zipcodes' && info.service_zip_codes?.length > 0) ||
+          (info.service_area_type === 'radius' && info.center_zip_code && info.service_radius > 0)
+        ),
+        services: services.length > 0,
+        team: employees.length > 0
+      };
+
+      setBusinessValidation(validation);
+
+      // Check if all business settings are complete
+      const allComplete = Object.values(validation).every(Boolean);
+
+      if (allComplete && !completedSteps.step1) {
+        // Auto-complete step 1
+        await markStepComplete(1);
+      }
+
+      return validation;
+    } catch (error) {
+      console.error('Error validating business settings:', error);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Mark a step as complete
+  const markStepComplete = async (stepNumber) => {
+    const updatedSteps = { ...completedSteps, [`step${stepNumber}`]: true };
+    setCompletedSteps(updatedSteps);
+
+    try {
+      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currentStep: stepNumber,
+          completedSteps: updatedSteps
+        })
+      });
+
+      // Update localStorage
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
       const updatedUser = {
         ...currentUser,
-        onboarding_completed: true
+        onboarding_steps_completed: updatedSteps,
+        onboarding_current_step: stepNumber + 1
       };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event('user-updated'));
+    } catch (error) {
+      console.error('Error saving step progress:', error);
     }
-  }, [completedSteps]);
+  };
 
+  // Initial validation on mount
   useEffect(() => {
-  console.log('🔍 Widget Debug:', {
-    completedSteps,
-    completedCount: Object.values(completedSteps).filter(Boolean).length,
-    userOnboardingSteps: user?.onboarding_steps_completed
-  });
-}, [completedSteps, user]);
-
-  // Check for actual completion status
-  useEffect(() => {
-    const checkCompletionStatus = async () => {
-      try {
-        // Check if website exists
-        const websiteResponse = await authFetch(`${apiUrl}/api/website`);
-        const websiteData = await websiteResponse.json();
-        
-        const websiteExists = websiteData.success && websiteData.website?.html_content;
-        setHasWebsite(websiteExists);
-
-        // Auto-complete step 1 if website exists
-        if (websiteExists && !completedSteps.step1) {
-          const updatedSteps = { ...completedSteps, step1: true };
-          setCompletedSteps(updatedSteps);
-          
-          // Save to backend
-          await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              currentStep: 2,
-              completedSteps: updatedSteps
-            })
-          });
-
-          // Update localStorage
-          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-          const updatedUser = {
-            ...currentUser,
-            onboarding_steps_completed: updatedSteps,
-            onboarding_current_step: 2
-          };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          window.dispatchEvent(new Event('user-updated'));
-        }
-      } catch (error) {
-        console.error('Error checking completion status:', error);
-      }
-    };
-
     if (apiUrl && authFetch) {
-      checkCompletionStatus();
+      validateBusinessSettings();
     }
   }, [apiUrl, authFetch]);
 
+  // Re-validate when user navigates back from business info
   useEffect(() => {
-    // Load completed steps from user data
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        validateBusinessSettings();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Load completed steps from user data
+  useEffect(() => {
     if (user?.onboarding_steps_completed) {
       setCompletedSteps(user.onboarding_steps_completed);
     }
   }, [user]);
 
   // Listen for step completion events
- useEffect(() => {
-  const handleStepComplete = async (event) => {
-    const { step } = event.detail;
-    
-    console.log('🎉 Onboarding step completed:', step);
-    
-    const updatedSteps = {
-      ...completedSteps,
-      [`step${step}`]: true
+  useEffect(() => {
+    const handleStepComplete = async (event) => {
+      const { step } = event.detail;
+      console.log('🎉 Onboarding step completed:', step);
+      await markStepComplete(step);
     };
-    
-    setCompletedSteps(updatedSteps);
-    
-    // SAVE TO BACKEND - This was missing!
-    try {
-      await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          currentStep: step,
-          completedSteps: updatedSteps
-        })
-      });
-      
-      console.log('✅ Saved onboarding progress to backend');
-      
-      // Update localStorage
+
+    window.addEventListener('onboarding-step-complete', handleStepComplete);
+    return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
+  }, [completedSteps, apiUrl, authFetch]);
+
+  // Check website and agent status
+  useEffect(() => {
+    const checkCompletionStatus = async () => {
+      if (!apiUrl || !authFetch) return;
+
+      try {
+        // Check website status
+        const websiteRes = await authFetch(`${apiUrl}/api/website`);
+        const websiteData = await websiteRes.json();
+
+        const hasWebsite = websiteData.success && websiteData.website?.html_content;
+        const isPublished = websiteData.website?.is_published;
+
+        // Auto-complete step 2 if website generated
+        if (hasWebsite && !completedSteps.step2) {
+          await markStepComplete(2);
+        }
+
+        // Auto-complete step 3 if website published
+        if (isPublished && !completedSteps.step3) {
+          await markStepComplete(3);
+        }
+
+        // Check agent deployment
+        const [chatRes, leadRes] = await Promise.all([
+          authFetch(`${apiUrl}/api/agents/website/status`),
+          authFetch(`${apiUrl}/api/agents/leadform/status`)
+        ]);
+
+        const chatData = await chatRes.json();
+        const leadData = await leadRes.json();
+
+        if ((chatData.isDeployed || leadData.isDeployed) && !completedSteps.step4) {
+          await markStepComplete(4);
+        }
+      } catch (error) {
+        console.error('Error checking completion status:', error);
+      }
+    };
+
+    checkCompletionStatus();
+  }, [apiUrl, authFetch]);
+
+  // Mark onboarding complete when all 5 steps done
+  useEffect(() => {
+    const completedCount = Object.values(completedSteps).filter(Boolean).length;
+    if (completedCount === 5) {
       const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-      const updatedUser = {
-        ...currentUser,
-        onboarding_steps_completed: updatedSteps,
-        onboarding_current_step: step
-      };
+      const updatedUser = { ...currentUser, onboarding_completed: true };
       localStorage.setItem('user', JSON.stringify(updatedUser));
       window.dispatchEvent(new Event('user-updated'));
-      
-    } catch (error) {
-      console.error('Error saving onboarding progress:', error);
     }
-  };
-
-  window.addEventListener('onboarding-step-complete', handleStepComplete);
-  return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
-}, [completedSteps, apiUrl, authFetch]);
-
-  const steps = [
-    { id: 1, label: 'Generate your website', view: 'website', key: 'step1' },
-    { id: 2, label: 'Publish your website', view: 'website', key: 'step2' },
-    { id: 3, label: 'Add a customer or lead', view: 'customers-leads', key: 'step3' },
-    { id: 4, label: 'Create a booking', view: 'booking-calendar', key: 'step4' },
-    { id: 5, label: 'Deploy an AI agent', view: 'ai-agents', key: 'step5' },
-    { id: 6, label: 'Select a plan', view: 'billing', key: 'step6' },
-  ];
+  }, [completedSteps]);
 
   const completedCount = Object.values(completedSteps).filter(Boolean).length;
   const progressPercentage = (completedCount / steps.length) * 100;
 
-  if (completedCount === 6) {
+  // Hide widget when all complete
+  if (completedCount === 5) {
     return null;
   }
 
-  // Add this around line 90 in OnboardingWidget.jsx, after the other useEffects
-
-useEffect(() => {
-  const checkAgentDeployment = async () => {
-    if (!apiUrl || !authFetch) return;
-    
-    try {
-      // Check if any agent is deployed
-      const chatResponse = await authFetch(`${apiUrl}/api/agents/website/status`);
-      const leadResponse = await authFetch(`${apiUrl}/api/agents/leadform/status`);
-      
-      const chatData = await chatResponse.json();
-      const leadData = await leadResponse.json();
-      
-      const anyAgentDeployed = chatData.isDeployed || leadData.isDeployed;
-      
-      // If any agent is deployed and step 5 isn't marked complete, mark it
-      if (anyAgentDeployed && !completedSteps.step5) {
-        console.log('🤖 Agent detected as deployed - marking step 5 complete');
-        
-        const updatedSteps = { ...completedSteps, step5: true };
-        setCompletedSteps(updatedSteps);
-        
-        // Save to backend
-        await authFetch(`${apiUrl}/api/auth/onboarding/progress`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            currentStep: 5,
-            completedSteps: updatedSteps
-          })
-        });
-        
-        // Update localStorage
-        const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
-        const updatedUser = {
-          ...currentUser,
-          onboarding_steps_completed: updatedSteps,
-          onboarding_current_step: 5
-        };
-        localStorage.setItem('user', JSON.stringify(updatedUser));
-        window.dispatchEvent(new Event('user-updated'));
-      }
-    } catch (error) {
-      console.error('Error checking agent deployment:', error);
-    }
-  };
-  
-  checkAgentDeployment();
-}, [apiUrl, authFetch, completedSteps.step5]);
+  // Business validation checklist for step 1
+  const validationItems = [
+    { key: 'contactInfo', label: 'Contact info', icon: Phone },
+    { key: 'location', label: 'Location', icon: MapPin },
+    { key: 'serviceArea', label: 'Service area', icon: Globe },
+    { key: 'services', label: 'Services', icon: Briefcase },
+    { key: 'team', label: 'Team members', icon: Users },
+  ];
 
   return (
     <aside className={`fixed top-0 right-0 h-full bg-white shadow-xl transition-all duration-300 z-50 ${isMinimized ? 'w-16' : 'w-72'}`}>
@@ -288,33 +336,90 @@ useEffect(() => {
         <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
           {steps.map((step) => {
             const isCompleted = completedSteps[step.key];
-            
+            const isStep1 = step.id === 1;
+            const isLocked = step.requiresStep1 && !completedSteps.step1;
+
             return (
-              <button
-                key={step.id}
-                onClick={() => setCurrentView(step.view)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
-                  isCompleted
-                    ? 'bg-green-50 text-green-900 hover:bg-green-100'
-                    : 'text-gray-700 hover:bg-gray-100'
-                }`}
-              >
-                {isCompleted ? (
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                ) : (
-                  <Circle className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                )}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`text-xs font-bold ${isCompleted ? 'text-green-600' : 'text-gray-400'}`}>
-                      {step.id}
-                    </span>
-                    <span className={`text-sm font-medium truncate ${isCompleted ? 'line-through' : ''}`}>
-                      {step.label}
-                    </span>
+              <div key={step.id}>
+                <button
+                  onClick={() => !isLocked && setCurrentView(step.view)}
+                  disabled={isLocked}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
+                    isCompleted
+                      ? 'bg-green-50 text-green-900 hover:bg-green-100'
+                      : isLocked
+                      ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {isCompleted ? (
+                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                  ) : isLocked ? (
+                    <AlertCircle className="w-5 h-5 text-gray-300 flex-shrink-0" />
+                  ) : (
+                    <Circle className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-bold ${
+                        isCompleted ? 'text-green-600' : isLocked ? 'text-gray-300' : 'text-gray-400'
+                      }`}>
+                        {step.id}
+                      </span>
+                      <span className={`text-sm font-medium truncate ${isCompleted ? 'line-through' : ''}`}>
+                        {step.label}
+                      </span>
+                    </div>
+                    {step.description && !isCompleted && (
+                      <p className="text-xs text-gray-500 mt-0.5 truncate">{step.description}</p>
+                    )}
+                    {isLocked && (
+                      <p className="text-xs text-amber-600 mt-0.5">Complete step 1 first</p>
+                    )}
                   </div>
-                </div>
-              </button>
+                </button>
+
+                {/* Step 1 Validation Checklist */}
+                {isStep1 && !isCompleted && (
+                  <div className="ml-8 mt-2 mb-3 space-y-1.5 border-l-2 border-purple-200 pl-3">
+                    {isValidating ? (
+                      <p className="text-xs text-gray-400 italic">Checking...</p>
+                    ) : (
+                      validationItems.map((item) => {
+                        const Icon = item.icon;
+                        const isValid = businessValidation[item.key];
+                        return (
+                          <div
+                            key={item.key}
+                            className={`flex items-center gap-2 text-xs ${
+                              isValid ? 'text-green-600' : 'text-gray-500'
+                            }`}
+                          >
+                            {isValid ? (
+                              <CheckCircle className="w-3.5 h-3.5" />
+                            ) : (
+                              <Circle className="w-3.5 h-3.5" />
+                            )}
+                            <Icon className="w-3 h-3" />
+                            <span className={isValid ? 'line-through' : ''}>{item.label}</span>
+                          </div>
+                        );
+                      })
+                    )}
+                    <button
+                      onClick={() => {
+                        setCurrentView('business-info');
+                        // Trigger re-validation after a delay
+                        setTimeout(validateBusinessSettings, 1000);
+                      }}
+                      className="mt-2 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                    >
+                      <span>Go to Business Settings</span>
+                      <ChevronRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
