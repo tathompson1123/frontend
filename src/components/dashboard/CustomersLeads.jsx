@@ -42,6 +42,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [newTableName, setNewTableName] = useState('');
   const [editingTableName, setEditingTableName] = useState(null);
   const [newRecord, setNewRecord] = useState({});
+  const [showConvertModal, setShowConvertModal] = useState(false);
+  const [convertingLead, setConvertingLead] = useState(null);
+  const [isConverting, setIsConverting] = useState(false);
 
   // Get current leads from active table
   const getCurrentLeads = () => {
@@ -540,6 +543,43 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
+  const convertLeadToCustomer = async () => {
+    if (!convertingLead) return;
+
+    setIsConverting(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/leads/${convertingLead.id}/convert`, {
+        method: 'POST',
+        body: JSON.stringify({
+          notes: convertingLead.notes || ''
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Add new customer to list
+        setCustomers([...customers, data.customer]);
+        // Remove lead from current table
+        const currentLeads = getCurrentLeads();
+        setCurrentLeads(currentLeads.filter(l => l.id !== convertingLead.id));
+        // Close modal
+        setShowConvertModal(false);
+        setConvertingLead(null);
+        // Switch to customers tab
+        setActiveTab('customers');
+        alert('Lead converted to customer successfully!');
+      } else {
+        const error = await response.json();
+        alert('Failed to convert: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error converting lead:', error);
+      alert('Failed to convert lead');
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   const currentLeads = getCurrentLeads();
   const filteredLeads = currentLeads.filter(lead =>
     lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -787,6 +827,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               setSelectedLead={setSelectedLead}
               loadSmsConversation={loadSmsConversation}
               setShowSmsModal={setShowSmsModal}
+              setConvertingLead={setConvertingLead}
+              setShowConvertModal={setShowConvertModal}
             />
           ) : (
             <CustomersTable
@@ -1143,12 +1185,66 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           </div>
         </div>
       )}
+
+      {/* Convert to Customer Modal */}
+      {showConvertModal && convertingLead && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
+            <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+              <h2 className="text-xl font-bold">Convert to Customer</h2>
+              <p className="text-purple-100 mt-1">{convertingLead.name}</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-2">Lead Information</h3>
+                <div className="space-y-1 text-sm text-gray-600">
+                  <p><span className="font-medium">Name:</span> {convertingLead.name}</p>
+                  <p><span className="font-medium">Email:</span> {convertingLead.email || '-'}</p>
+                  <p><span className="font-medium">Phone:</span> {convertingLead.phone || '-'}</p>
+                  <p><span className="font-medium">Source:</span> {convertingLead.source || 'manual'}</p>
+                </div>
+              </div>
+
+              <p className="text-sm text-gray-600">
+                This will create a new customer record and mark the lead as converted.
+              </p>
+            </div>
+
+            <div className="flex gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => {
+                  setShowConvertModal(false);
+                  setConvertingLead(null);
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={convertLeadToCustomer}
+                disabled={isConverting}
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {isConverting ? (
+                  <>Converting...</>
+                ) : (
+                  <>
+                    <Users className="w-4 h-4" />
+                    Convert
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // LeadsTable component
-function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead, setSelectedLead, loadSmsConversation, setShowSmsModal }) {
+function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead, setSelectedLead, loadSmsConversation, setShowSmsModal, setConvertingLead, setShowConvertModal }) {
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
@@ -1233,8 +1329,19 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
                     <MessageCircle className="w-4 h-4" />
                   </button>
                 )}
-                
-                <button onClick={() => deleteLead(lead.id)} className="p-1 text-red-600 hover:bg-red-50 rounded">
+
+                <button
+                  onClick={() => {
+                    setConvertingLead(lead);
+                    setShowConvertModal(true);
+                  }}
+                  className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                  title="Convert to Customer"
+                >
+                  <Users className="w-4 h-4" />
+                </button>
+
+                <button onClick={() => deleteLead(lead.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete Lead">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>

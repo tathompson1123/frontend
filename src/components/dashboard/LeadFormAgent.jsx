@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles, MessageCircle, AlertCircle, Settings, Phone } from 'lucide-react';
+import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles, MessageCircle, AlertCircle, Settings, Phone, ChevronDown, ChevronUp, Plus, Trash2, Brain } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
@@ -23,16 +23,108 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
   const [isDeploying, setIsDeploying] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState(null);
   const [areaCode, setAreaCode] = useState('');
+  const [showTraining, setShowTraining] = useState(false);
+  const [isSavingTraining, setIsSavingTraining] = useState(false);
+  const [trainingData, setTrainingData] = useState({
+    responseTone: 'friendly',
+    agentName: '',
+    businessContext: '',
+    servicesInfo: '',
+    faqs: [],
+    commonObjections: []
+  });
 
   useEffect(() => {
     if (!apiUrl) return;
-    
+
     console.log('🔍 API URL:', apiUrl);
     loadAgentConfig();
     loadStats();
     checkContactForm();
     loadPhoneNumber();
+    loadTrainingData();
   }, [apiUrl]);
+
+  const loadTrainingData = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/training`);
+      if (response.ok) {
+        const data = await response.json();
+        setTrainingData({
+          responseTone: data.responseTone || 'friendly',
+          agentName: data.agentName || '',
+          businessContext: data.businessContext || '',
+          servicesInfo: data.servicesInfo || '',
+          faqs: data.faqs || [],
+          commonObjections: data.commonObjections || []
+        });
+      }
+    } catch (error) {
+      console.error('Error loading training data:', error);
+    }
+  };
+
+  const saveTrainingData = async () => {
+    setIsSavingTraining(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/lead-form/training`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trainingData)
+      });
+
+      if (response.ok) {
+        alert('✅ AI training data saved successfully!');
+      } else {
+        alert('Failed to save training data');
+      }
+    } catch (error) {
+      console.error('Error saving training data:', error);
+      alert('Failed to save training data');
+    } finally {
+      setIsSavingTraining(false);
+    }
+  };
+
+  const addFaq = () => {
+    setTrainingData({
+      ...trainingData,
+      faqs: [...trainingData.faqs, { question: '', answer: '' }]
+    });
+  };
+
+  const removeFaq = (index) => {
+    setTrainingData({
+      ...trainingData,
+      faqs: trainingData.faqs.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateFaq = (index, field, value) => {
+    const updated = [...trainingData.faqs];
+    updated[index][field] = value;
+    setTrainingData({ ...trainingData, faqs: updated });
+  };
+
+  const addObjection = () => {
+    setTrainingData({
+      ...trainingData,
+      commonObjections: [...trainingData.commonObjections, { objection: '', response: '' }]
+    });
+  };
+
+  const removeObjection = (index) => {
+    setTrainingData({
+      ...trainingData,
+      commonObjections: trainingData.commonObjections.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateObjection = (index, field, value) => {
+    const updated = [...trainingData.commonObjections];
+    updated[index][field] = value;
+    setTrainingData({ ...trainingData, commonObjections: updated });
+  };
 
   const loadPhoneNumber = async () => {
     try {
@@ -523,9 +615,202 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
         </div>
       </div>
 
+      {/* AI Training Section */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <button
+          onClick={() => setShowTraining(!showTraining)}
+          className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
+              <Brain className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left">
+              <h3 className="text-lg font-semibold text-gray-900">AI Training & Customization</h3>
+              <p className="text-sm text-gray-600">Teach your AI how to respond to leads</p>
+            </div>
+          </div>
+          {showTraining ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
+
+        {showTraining && (
+          <div className="p-6 pt-0 space-y-6 border-t border-gray-200">
+            {/* Response Tone */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Response Tone</label>
+              <div className="grid grid-cols-3 gap-3">
+                {['formal', 'friendly', 'casual'].map(tone => (
+                  <button
+                    key={tone}
+                    onClick={() => setTrainingData({ ...trainingData, responseTone: tone })}
+                    className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium capitalize ${
+                      trainingData.responseTone === tone
+                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-700'
+                    }`}
+                  >
+                    {tone}
+                  </button>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {trainingData.responseTone === 'formal' && 'Professional, polished responses suitable for corporate clients'}
+                {trainingData.responseTone === 'friendly' && 'Warm and approachable while maintaining professionalism'}
+                {trainingData.responseTone === 'casual' && 'Relaxed, conversational tone like texting a friend'}
+              </p>
+            </div>
+
+            {/* Agent Name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Agent Name (for SMS)</label>
+              <input
+                type="text"
+                value={trainingData.agentName}
+                onChange={(e) => setTrainingData({ ...trainingData, agentName: e.target.value })}
+                placeholder="e.g., Kurt, Sarah, Alex"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">The name the AI will use when introducing itself</p>
+            </div>
+
+            {/* Business Context */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Business Context</label>
+              <textarea
+                value={trainingData.businessContext}
+                onChange={(e) => setTrainingData({ ...trainingData, businessContext: e.target.value })}
+                rows="3"
+                placeholder="Describe your business, what makes you unique, your target customers, etc."
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              />
+              <p className="text-xs text-gray-500 mt-1">Help the AI understand your business to give better responses</p>
+            </div>
+
+            {/* Services Info */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Services & Pricing</label>
+              <textarea
+                value={trainingData.servicesInfo}
+                onChange={(e) => setTrainingData({ ...trainingData, servicesInfo: e.target.value })}
+                rows="4"
+                placeholder="List your services and pricing, e.g.:&#10;- Basic Wash: $50&#10;- Full Detail: $200&#10;- Ceramic Coating: $800+"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+              />
+              <p className="text-xs text-gray-500 mt-1">The AI will reference this when asked about services or pricing</p>
+            </div>
+
+            {/* FAQs */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">Frequently Asked Questions</label>
+                <button
+                  onClick={addFaq}
+                  className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> Add FAQ
+                </button>
+              </div>
+
+              {trainingData.faqs.length === 0 ? (
+                <p className="text-sm text-gray-500 italic py-4 text-center bg-gray-50 rounded-lg">
+                  No FAQs added yet. Add common questions your customers ask.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {trainingData.faqs.map((faq, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4 relative">
+                      <button
+                        onClick={() => removeFaq(index)}
+                        className="absolute top-2 right-2 p-1 text-red-500 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <div className="space-y-2 pr-8">
+                        <input
+                          type="text"
+                          value={faq.question}
+                          onChange={(e) => updateFaq(index, 'question', e.target.value)}
+                          placeholder="Question, e.g., How long does a detail take?"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                        <textarea
+                          value={faq.answer}
+                          onChange={(e) => updateFaq(index, 'answer', e.target.value)}
+                          placeholder="Answer the AI should give..."
+                          rows="2"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Common Objections */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">Objection Handling</label>
+                <button
+                  onClick={addObjection}
+                  className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
+                >
+                  <Plus className="w-4 h-4" /> Add Objection
+                </button>
+              </div>
+
+              {trainingData.commonObjections.length === 0 ? (
+                <p className="text-sm text-gray-500 italic py-4 text-center bg-gray-50 rounded-lg">
+                  No objections added. Add common concerns and how to address them.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {trainingData.commonObjections.map((obj, index) => (
+                    <div key={index} className="bg-gray-50 rounded-lg p-4 relative">
+                      <button
+                        onClick={() => removeObjection(index)}
+                        className="absolute top-2 right-2 p-1 text-red-500 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                      <div className="space-y-2 pr-8">
+                        <input
+                          type="text"
+                          value={obj.objection}
+                          onChange={(e) => updateObjection(index, 'objection', e.target.value)}
+                          placeholder="Objection, e.g., That's too expensive"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                        <textarea
+                          value={obj.response}
+                          onChange={(e) => updateObjection(index, 'response', e.target.value)}
+                          placeholder="How to respond to this objection..."
+                          rows="2"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Save Button */}
+            <button
+              onClick={saveTrainingData}
+              disabled={isSavingTraining}
+              className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              <Brain className="w-5 h-5" />
+              {isSavingTraining ? 'Saving...' : 'Save AI Training'}
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* How It Works */}
       <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl border border-green-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ How It Works</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">How It Works</h3>
         <p className="text-gray-700 mb-4">
           The Lead Form Agent automatically responds when someone submits a contact form on your website.
         </p>
