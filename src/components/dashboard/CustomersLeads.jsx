@@ -467,6 +467,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           setShowAddModal(false);
           setNewRecord({});
           alert('Lead added successfully!');
+          // Mark onboarding step 5 complete
+          window.dispatchEvent(new CustomEvent('onboarding-step-complete', {
+            detail: { step: 5 }
+          }));
         } else {
           alert(`Failed to add lead: ${data.error || 'Unknown error'}`);
         }
@@ -491,6 +495,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           setShowAddModal(false);
           setNewRecord({});
           alert('Customer added successfully!');
+          // Mark onboarding step 5 complete
+          window.dispatchEvent(new CustomEvent('onboarding-step-complete', {
+            detail: { step: 5 }
+          }));
         } else {
           alert(`Failed to add customer: ${data.error || 'Unknown error'}`);
         }
