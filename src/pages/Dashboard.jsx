@@ -550,9 +550,15 @@ useEffect(() => {
           )}
 
           {currentView === 'settings' && (
-            <SettingsPage 
+            <SettingsPage
               user={user}
+              apiUrl={apiUrl}
               authFetch={authFetch}
+              onUserUpdate={(updatedUser) => {
+                const merged = { ...user, ...updatedUser };
+                localStorage.setItem('user', JSON.stringify(merged));
+                setUser(merged);
+              }}
             />
           )}
         </div>
