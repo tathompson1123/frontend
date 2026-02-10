@@ -311,7 +311,7 @@ function WidgetStylePanel({ widget, onUpdate, onDelete, onDuplicate }) {
                     onClick={() => updateContent('alignment', align)}
                     className={`flex-1 px-3 py-2 rounded-lg text-sm capitalize ${
                       widget.content?.alignment === align
-                        ? 'bg-purple-100 text-purple-700 border-2 border-purple-500'
+                        ? 'bg-amber-100 text-amber-700 border-2 border-amber-500'
                         : 'bg-gray-100 text-gray-700'
                     }`}
                   >

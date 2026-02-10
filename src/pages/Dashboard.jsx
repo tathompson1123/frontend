@@ -24,7 +24,7 @@ import Overview from '../components/dashboard/Overview';
 import MyWebsite from '../components/dashboard/MyWebsite';
 import BookingCalendar from '../components/dashboard/BookingCalendar';
 import CustomersLeads from '../components/dashboard/CustomersLeads';
-import AIAgents from '../components/dashboard/AIAgents';
+import AIAgentBuilder from '../components/dashboard/AIAgentBuilder';
 import GoogleBusiness from '../components/dashboard/GoogleBusiness';
 import BusinessInformation from '../components/dashboard/BusinessInformation';
 import MarketResearch from '../components/dashboard/MarketResearch';
@@ -483,7 +483,7 @@ useEffect(() => {
           )}
 
           {currentView === 'ai-agents' && (
-            <AIAgents
+            <AIAgentBuilder
               user={user}
               setCurrentView={setCurrentView}
               apiUrl={apiUrl}

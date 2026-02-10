@@ -77,7 +77,7 @@ export default function TextWidget({ widget, devicePreview, isEditing, onUpdate 
       onDoubleClick={handleDoubleClick}
       onBlur={handleBlur}
       onKeyDown={handleKeyDown}
-      className={`outline-none ${isEditingText ? 'ring-2 ring-purple-400 rounded px-1' : ''}`}
+      className={`outline-none ${isEditingText ? 'ring-2 ring-amber-400 rounded px-1' : ''}`}
     >
       {content.text || 'Click to edit text'}
     </Tag>

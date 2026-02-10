@@ -367,7 +367,7 @@ export default function PageEditor({
               <select
                 value={currentPageId || ''}
                 onChange={(e) => onPageChange?.(e.target.value)}
-                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:border-purple-500"
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm font-medium focus:outline-none focus:border-amber-500"
               >
                 {pages.map((page) => (
                   <option key={page.id} value={page.id}>
@@ -384,7 +384,7 @@ export default function PageEditor({
               onClick={() => setDevicePreview('desktop')}
               className={`p-2 rounded-md transition ${
                 devicePreview === 'desktop'
-                  ? 'bg-white shadow text-purple-600'
+                  ? 'bg-white shadow text-amber-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               title="Desktop"
@@ -395,7 +395,7 @@ export default function PageEditor({
               onClick={() => setDevicePreview('tablet')}
               className={`p-2 rounded-md transition ${
                 devicePreview === 'tablet'
-                  ? 'bg-white shadow text-purple-600'
+                  ? 'bg-white shadow text-amber-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               title="Tablet"
@@ -406,7 +406,7 @@ export default function PageEditor({
               onClick={() => setDevicePreview('mobile')}
               className={`p-2 rounded-md transition ${
                 devicePreview === 'mobile'
-                  ? 'bg-white shadow text-purple-600'
+                  ? 'bg-white shadow text-amber-600'
                   : 'text-gray-500 hover:text-gray-700'
               }`}
               title="Mobile"
@@ -447,7 +447,7 @@ export default function PageEditor({
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
               {isSaving ? 'Saving...' : 'Save'}
@@ -470,7 +470,7 @@ export default function PageEditor({
                   onClick={() => setSidebarTab('widgets')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition ${
                     sidebarTab === 'widgets'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
+                      ? 'text-amber-600 border-b-2 border-amber-600'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -481,7 +481,7 @@ export default function PageEditor({
                   onClick={() => setSidebarTab('sections')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition ${
                     sidebarTab === 'sections'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
+                      ? 'text-amber-600 border-b-2 border-amber-600'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -492,7 +492,7 @@ export default function PageEditor({
                   onClick={() => setSidebarTab('style')}
                   className={`flex-1 px-4 py-3 text-sm font-medium transition ${
                     sidebarTab === 'style'
-                      ? 'text-purple-600 border-b-2 border-purple-600'
+                      ? 'text-amber-600 border-b-2 border-amber-600'
                       : 'text-gray-500 hover:text-gray-700'
                   }`}
                 >
@@ -583,7 +583,7 @@ export default function PageEditor({
                   <p className="text-lg mb-4">No sections yet</p>
                   <button
                     onClick={() => addSection('hero')}
-                    className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
+                    className="px-6 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition"
                   >
                     Add Your First Section
                   </button>
@@ -592,7 +592,7 @@ export default function PageEditor({
                 <div className="py-8 flex justify-center">
                   <button
                     onClick={() => addSection('blank')}
-                    className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-purple-400 hover:text-purple-600 transition"
+                    className="flex items-center gap-2 px-4 py-2 border-2 border-dashed border-gray-300 text-gray-500 rounded-lg hover:border-amber-400 hover:text-amber-600 transition"
                   >
                     <Plus className="w-5 h-5" />
                     Add Section
@@ -609,7 +609,7 @@ export default function PageEditor({
       {/* ============================================ */}
       <DragOverlay>
         {draggedWidget && (
-          <div className="bg-white p-4 rounded-lg shadow-xl border-2 border-purple-500 opacity-90">
+          <div className="bg-white p-4 rounded-lg shadow-xl border-2 border-amber-500 opacity-90">
             <span className="text-2xl mr-2">{draggedWidget.icon}</span>
             <span className="font-medium">{draggedWidget.name}</span>
           </div>

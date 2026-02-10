@@ -146,7 +146,7 @@ const generateWebsite = async (formData) => {
           <p className="text-gray-600 mb-6">{error}</p>
           <button
             onClick={() => navigate('/dashboard?tab=website')}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition"
+            className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition"
           >
             Back to Dashboard
           </button>
@@ -164,22 +164,22 @@ const generateWebsite = async (formData) => {
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Website Complete! 🎉</h2>
           <p className="text-gray-600 mb-6">Redirecting to your dashboard...</p>
-          <Loader2 className="w-8 h-8 animate-spin text-purple-600 mx-auto" />
+          <Loader2 className="w-8 h-8 animate-spin text-amber-600 mx-auto" />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-blue-50 to-pink-50 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
         {/* Main Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8 md:p-12">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="flex items-center justify-center gap-3 mb-4">
-              <Sparkles className="w-8 h-8 text-purple-600" />
-              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <Sparkles className="w-8 h-8 text-amber-600" />
+              <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-amber-600 to-blue-600 bg-clip-text text-transparent">
                 Building Your Website
               </h1>
             </div>
@@ -192,11 +192,11 @@ const generateWebsite = async (formData) => {
           <div className="flex justify-center mb-8">
             <div className="relative">
               {/* Outer spinning ring */}
-              <div className="w-32 h-32 border-8 border-purple-200 border-t-purple-600 rounded-full animate-spin"></div>
+              <div className="w-32 h-32 border-8 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
               {/* Inner circle with percentage */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="text-center">
-                  <div className="text-3xl font-bold text-purple-600">{Math.round(progress)}%</div>
+                  <div className="text-3xl font-bold text-amber-600">{Math.round(progress)}%</div>
                   <div className="text-xs text-gray-500">Complete</div>
                 </div>
               </div>
@@ -207,7 +207,7 @@ const generateWebsite = async (formData) => {
           <div className="mb-8">
             <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
               <div 
-                className="h-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all duration-300 ease-out"
+                className="h-full bg-gradient-to-r from-amber-600 to-blue-600 transition-all duration-300 ease-out"
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
@@ -216,7 +216,7 @@ const generateWebsite = async (formData) => {
           {/* Current Step */}
           <div className="mb-6">
             <div className="flex items-center gap-3 justify-center text-lg font-semibold text-gray-700">
-              <Loader2 className="w-5 h-5 animate-spin text-purple-600" />
+              <Loader2 className="w-5 h-5 animate-spin text-amber-600" />
               <span>{steps[currentStep]?.label || 'Processing...'}</span>
             </div>
           </div>
@@ -230,14 +230,14 @@ const generateWebsite = async (formData) => {
                   index < currentStep 
                     ? 'text-green-600' 
                     : index === currentStep 
-                    ? 'text-purple-600 font-semibold' 
+                    ? 'text-amber-600 font-semibold' 
                     : 'text-gray-400'
                 }`}
               >
                 {index < currentStep ? (
                   <Check className="w-4 h-4 flex-shrink-0" />
                 ) : index === currentStep ? (
-                  <div className="w-4 h-4 border-2 border-purple-600 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
+                  <div className="w-4 h-4 border-2 border-amber-600 border-t-transparent rounded-full animate-spin flex-shrink-0"></div>
                 ) : (
                   <div className="w-4 h-4 border-2 border-gray-300 rounded-full flex-shrink-0"></div>
                 )}

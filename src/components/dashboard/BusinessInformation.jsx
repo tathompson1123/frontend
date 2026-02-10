@@ -419,7 +419,7 @@ export default function BusinessInformation({
       {activeTab === 'info' && (
         <div className="space-y-6">
           <div className="flex justify-end">
-            <button type="button" onClick={handleSaveAll} disabled={isSaving} className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">
+            <button type="button" onClick={handleSaveAll} disabled={isSaving} className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">
               <Save className="w-5 h-5" />
               {isSaving ? 'Saving...' : 'Save All Changes'}
             </button>
@@ -433,11 +433,11 @@ export default function BusinessInformation({
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Business Phone Number</label>
-                <input type="tel" value={businessInfo.phone} onChange={(e) => setBusinessInfo({ ...businessInfo, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                <input type="tel" value={businessInfo.phone} onChange={(e) => setBusinessInfo({ ...businessInfo, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Business Email</label>
-                <input type="email" value={businessInfo.email} onChange={(e) => setBusinessInfo({ ...businessInfo, email: e.target.value })} placeholder="contact@business.com" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                <input type="email" value={businessInfo.email} onChange={(e) => setBusinessInfo({ ...businessInfo, email: e.target.value })} placeholder="contact@business.com" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
               </div>
             </div>
           </div>
@@ -450,20 +450,20 @@ export default function BusinessInformation({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                <input type="text" value={businessInfo.address} onChange={(e) => setBusinessInfo({ ...businessInfo, address: e.target.value })} placeholder="123 Main Street" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                <input type="text" value={businessInfo.address} onChange={(e) => setBusinessInfo({ ...businessInfo, address: e.target.value })} placeholder="123 Main Street" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
               </div>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
-                  <input type="text" value={businessInfo.city} onChange={(e) => setBusinessInfo({ ...businessInfo, city: e.target.value })} placeholder="Seattle" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                  <input type="text" value={businessInfo.city} onChange={(e) => setBusinessInfo({ ...businessInfo, city: e.target.value })} placeholder="Seattle" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">State</label>
-                  <input type="text" value={businessInfo.state} onChange={(e) => setBusinessInfo({ ...businessInfo, state: e.target.value })} placeholder="WA" maxLength="2" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none uppercase" />
+                  <input type="text" value={businessInfo.state} onChange={(e) => setBusinessInfo({ ...businessInfo, state: e.target.value })} placeholder="WA" maxLength="2" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none uppercase" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Zip Code</label>
-                  <input type="text" value={businessInfo.zipCode} onChange={(e) => setBusinessInfo({ ...businessInfo, zipCode: e.target.value })} placeholder="98001" maxLength="5" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                  <input type="text" value={businessInfo.zipCode} onChange={(e) => setBusinessInfo({ ...businessInfo, zipCode: e.target.value })} placeholder="98001" maxLength="5" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                 </div>
               </div>
             </div>
@@ -481,11 +481,11 @@ export default function BusinessInformation({
               <label className="block text-sm font-medium text-gray-700 mb-3">How would you like to define your service area?</label>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="areaType" value="zipcodes" checked={businessInfo.serviceAreaType === 'zipcodes'} onChange={(e) => setBusinessInfo({ ...businessInfo, serviceAreaType: e.target.value })} className="w-4 h-4 text-purple-600" />
+                  <input type="radio" name="areaType" value="zipcodes" checked={businessInfo.serviceAreaType === 'zipcodes'} onChange={(e) => setBusinessInfo({ ...businessInfo, serviceAreaType: e.target.value })} className="w-4 h-4 text-amber-600" />
                   <span className="font-medium">Specific Zip Codes</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="radio" name="areaType" value="radius" checked={businessInfo.serviceAreaType === 'radius'} onChange={(e) => setBusinessInfo({ ...businessInfo, serviceAreaType: e.target.value })} className="w-4 h-4 text-purple-600" />
+                  <input type="radio" name="areaType" value="radius" checked={businessInfo.serviceAreaType === 'radius'} onChange={(e) => setBusinessInfo({ ...businessInfo, serviceAreaType: e.target.value })} className="w-4 h-4 text-amber-600" />
                   <span className="font-medium">Radius from Location</span>
                 </label>
               </div>
@@ -495,8 +495,8 @@ export default function BusinessInformation({
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Service Zip Codes</label>
                 <div className="flex gap-2 mb-4">
-                  <input type="text" value={newZipCode} onChange={(e) => setNewZipCode(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addZipCode()} placeholder="Enter zip code" maxLength="5" className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
-                  <button type="button" onClick={addZipCode} className="bg-purple-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center gap-2">
+                  <input type="text" value={newZipCode} onChange={(e) => setNewZipCode(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && addZipCode()} placeholder="Enter zip code" maxLength="5" className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                  <button type="button" onClick={addZipCode} className="bg-amber-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-amber-700 transition flex items-center gap-2">
                     <Plus className="w-4 h-4" />
                     Add
                   </button>
@@ -504,9 +504,9 @@ export default function BusinessInformation({
                 {businessInfo.serviceZipCodes.length > 0 ? (
                   <div className="flex flex-wrap gap-2">
                     {businessInfo.serviceZipCodes.map(zipCode => (
-                      <div key={zipCode} className="bg-purple-100 text-purple-800 px-4 py-2 rounded-full font-medium flex items-center gap-2">
+                      <div key={zipCode} className="bg-amber-100 text-amber-800 px-4 py-2 rounded-full font-medium flex items-center gap-2">
                         {zipCode}
-                        <button onClick={() => removeZipCode(zipCode)} className="hover:bg-purple-200 rounded-full p-1 transition">
+                        <button onClick={() => removeZipCode(zipCode)} className="hover:bg-amber-200 rounded-full p-1 transition">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
@@ -522,7 +522,7 @@ export default function BusinessInformation({
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Center Zip Code</label>
-                  <input type="text" value={businessInfo.centerZipCode} onChange={(e) => setBusinessInfo({ ...businessInfo, centerZipCode: e.target.value })} placeholder="98001" maxLength="5" className="w-full md:w-64 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                  <input type="text" value={businessInfo.centerZipCode} onChange={(e) => setBusinessInfo({ ...businessInfo, centerZipCode: e.target.value })} placeholder="98001" maxLength="5" className="w-full md:w-64 px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   <p className="text-sm text-gray-500 mt-1">Usually your business zip code</p>
                 </div>
                 <div className="bg-gray-100 rounded-lg p-4 border-2 border-gray-200">
@@ -538,7 +538,7 @@ export default function BusinessInformation({
                     {isLoadingMap && (
                       <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
                         <div className="text-center">
-                          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-purple-600 mx-auto mb-2"></div>
+                          <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-amber-600 mx-auto mb-2"></div>
                           <p className="text-gray-600">Loading map...</p>
                         </div>
                       </div>
@@ -560,8 +560,8 @@ export default function BusinessInformation({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Service Radius: <span className="text-purple-600 font-bold">{businessInfo.serviceRadius} miles</span></label>
-                  <input type="range" min="5" max="100" step="5" value={businessInfo.serviceRadius} onChange={(e) => setBusinessInfo({ ...businessInfo, serviceRadius: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-purple-600" />
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Service Radius: <span className="text-amber-600 font-bold">{businessInfo.serviceRadius} miles</span></label>
+                  <input type="range" min="5" max="100" step="5" value={businessInfo.serviceRadius} onChange={(e) => setBusinessInfo({ ...businessInfo, serviceRadius: parseInt(e.target.value) })} className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-amber-600" />
                   <div className="flex justify-between text-xs text-gray-500 mt-1">
                     <span>5 miles</span>
                     <span>100 miles</span>
@@ -581,14 +581,14 @@ export default function BusinessInformation({
                 <div className="flex items-center gap-6">
                   <div className="w-32">
                     <label className="flex items-center gap-3 cursor-pointer">
-                      <input type="checkbox" checked={hours[day].open} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], open: e.target.checked } })} className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+                      <input type="checkbox" checked={hours[day].open} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], open: e.target.checked } })} className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
                       <span className="font-semibold text-gray-900">{dayLabels[day]}</span>
                     </label>
                   </div>
                   {hours[day].open ? (
                     <div className="flex items-center gap-2 flex-1">
                       <div className="flex items-center gap-1">
-                        <input type="time" value={hours[day].start} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], start: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                        <input type="time" value={hours[day].start} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], start: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                         <button
                           type="button"
                           onClick={() => {
@@ -596,7 +596,7 @@ export default function BusinessInformation({
                             days.forEach(d => { if (newHours[d].open) newHours[d].start = hours[day].start; });
                             setHours(newHours);
                           }}
-                          className="p-1.5 text-xs text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                          className="p-1.5 text-xs text-amber-600 hover:bg-amber-100 rounded transition-colors"
                           title="Apply to all open days"
                         >
                           All
@@ -604,7 +604,7 @@ export default function BusinessInformation({
                       </div>
                       <span className="text-gray-500 font-medium">to</span>
                       <div className="flex items-center gap-1">
-                        <input type="time" value={hours[day].end} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], end: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                        <input type="time" value={hours[day].end} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], end: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                         <button
                           type="button"
                           onClick={() => {
@@ -612,7 +612,7 @@ export default function BusinessInformation({
                             days.forEach(d => { if (newHours[d].open) newHours[d].end = hours[day].end; });
                             setHours(newHours);
                           }}
-                          className="p-1.5 text-xs text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                          className="p-1.5 text-xs text-amber-600 hover:bg-amber-100 rounded transition-colors"
                           title="Apply to all open days"
                         >
                           All
@@ -630,7 +630,7 @@ export default function BusinessInformation({
                           });
                           setHours(newHours);
                         }}
-                        className="ml-2 px-2 py-1 text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 rounded transition-colors font-medium"
+                        className="ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-700 hover:bg-amber-200 rounded transition-colors font-medium"
                         title="Apply both times to all open days"
                       >
                         Apply to all
@@ -672,7 +672,7 @@ export default function BusinessInformation({
             <button
               type="button"
               onClick={() => setShowAddService(true)}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+              className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
             >
               <Plus className="w-5 h-5" />
               Add Service
@@ -687,7 +687,7 @@ export default function BusinessInformation({
               <button
                 type="button"
                 onClick={() => setShowAddService(true)}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
               >
                 Create First Service
               </button>
@@ -763,7 +763,7 @@ export default function BusinessInformation({
                       onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })}
                       placeholder="e.g., Ceramic Coating, Paint Correction"
                       required
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                     />
                   </div>
                   <div>
@@ -773,7 +773,7 @@ export default function BusinessInformation({
                       onChange={(e) => setServiceForm({ ...serviceForm, description: e.target.value })}
                       placeholder="Describe what's included in this service..."
                       rows={3}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                     />
                   </div>
                   <div className="grid md:grid-cols-2 gap-4">
@@ -787,7 +787,7 @@ export default function BusinessInformation({
                         onChange={(e) => setServiceForm({ ...serviceForm, durationHours: e.target.value })}
                         placeholder="2"
                         required
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                       />
                     </div>
                     <div>
@@ -800,7 +800,7 @@ export default function BusinessInformation({
                         onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })}
                         placeholder="150.00"
                         required
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                       />
                     </div>
                   </div>
@@ -826,7 +826,7 @@ export default function BusinessInformation({
                         <div>
                           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                           <label className="cursor-pointer">
-                            <span className="text-purple-600 hover:text-purple-700 font-medium">Upload a file</span>
+                            <span className="text-amber-600 hover:text-amber-700 font-medium">Upload a file</span>
                             <input type="file" accept="image/*,video/*" onChange={handleMediaUpload} className="hidden" />
                           </label>
                           <p className="text-xs text-gray-500 mt-2">PNG, JPG, MP4 up to 10MB</p>
@@ -853,7 +853,7 @@ export default function BusinessInformation({
                     <button
                       type="submit"
                       disabled={isSavingService}
-                      className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                      className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
                     >
                       {isSavingService ? 'Saving...' : (editingService ? 'Update Service' : 'Create Service')}
                     </button>
@@ -877,7 +877,7 @@ export default function BusinessInformation({
               <button
                 type="button"
                 onClick={() => setShowGroupsModal(true)}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                className="bg-gradient-to-r from-indigo-600 to-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
               >
                 <Users className="w-5 h-5" />
                 Groups
@@ -892,7 +892,7 @@ export default function BusinessInformation({
                     workHours: { startTime: '09:00', endTime: '17:00' }
                   });
                 }}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
                 Add Employee
@@ -915,7 +915,7 @@ export default function BusinessInformation({
                     workHours: { startTime: '09:00', endTime: '17:00' }
                   });
                 }}
-                className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
               >
                 Add First Employee
               </button>
@@ -935,8 +935,8 @@ export default function BusinessInformation({
                           {employee.active ? 'Active' : 'Inactive'}
                         </span>
                       </div>
-                      {employee.email && <p className="text-sm text-gray-600">{employee.email}</p>}
-                      {employee.phone && <p className="text-sm text-gray-600">{employee.phone}</p>}
+                      <p className="text-sm text-gray-600">{employee.email || <span className="text-gray-400 italic">No email</span>}</p>
+                      <p className="text-sm text-gray-600">{employee.phone || <span className="text-gray-400 italic">No phone</span>}</p>
                       {employee.work_hours && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
                           <p className="text-xs font-semibold text-gray-700 mb-2">Work Schedule:</p>
@@ -973,15 +973,15 @@ export default function BusinessInformation({
                 <form onSubmit={handleSaveEmployee} className="space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Name *</label>
-                    <input type="text" value={employeeForm.name} onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={employeeForm.name} onChange={(e) => setEmployeeForm({ ...employeeForm, name: e.target.value })} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Email</label>
-                    <input type="email" value={employeeForm.email} onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="email" value={employeeForm.email} onChange={(e) => setEmployeeForm({ ...employeeForm, email: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Phone</label>
-                    <input type="tel" value={employeeForm.phone} onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="tel" value={employeeForm.phone} onChange={(e) => setEmployeeForm({ ...employeeForm, phone: e.target.value })} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Calendar Color *</label>
@@ -989,7 +989,7 @@ export default function BusinessInformation({
                     <div className="flex items-center gap-4">
                       <input type="color" value={employeeForm.color} onChange={(e) => setEmployeeForm({ ...employeeForm, color: e.target.value })} className="w-20 h-12 rounded-lg border-2 border-gray-200 cursor-pointer" />
                       <div className="flex-1">
-                        <input type="text" value={employeeForm.color} onChange={(e) => setEmployeeForm({ ...employeeForm, color: e.target.value })} placeholder="#3b82f6" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none font-mono text-sm" />
+                        <input type="text" value={employeeForm.color} onChange={(e) => setEmployeeForm({ ...employeeForm, color: e.target.value })} placeholder="#3b82f6" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none font-mono text-sm" />
                       </div>
                       <div className="flex gap-2 flex-wrap">
                         {colorPalette.slice(0, 8).map(color => (
@@ -1027,16 +1027,16 @@ export default function BusinessInformation({
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">Start Time *</label>
-                      <input type="time" value={employeeForm.workHours.startTime} onChange={(e) => setEmployeeForm({ ...employeeForm, workHours: { ...employeeForm.workHours, startTime: e.target.value } })} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                      <input type="time" value={employeeForm.workHours.startTime} onChange={(e) => setEmployeeForm({ ...employeeForm, workHours: { ...employeeForm.workHours, startTime: e.target.value } })} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">End Time *</label>
-                      <input type="time" value={employeeForm.workHours.endTime} onChange={(e) => setEmployeeForm({ ...employeeForm, workHours: { ...employeeForm.workHours, endTime: e.target.value } })} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                      <input type="time" value={employeeForm.workHours.endTime} onChange={(e) => setEmployeeForm({ ...employeeForm, workHours: { ...employeeForm.workHours, endTime: e.target.value } })} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                     </div>
                   </div>
                   <div className="flex gap-4">
                     <button type="button" onClick={() => { setShowAddEmployee(false); setEditingEmployee(null); }} className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors">Cancel</button>
-                    <button type="submit" disabled={isSavingEmployee} className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50">
+                    <button type="submit" disabled={isSavingEmployee} className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50">
                       {isSavingEmployee ? 'Saving...' : (editingEmployee ? 'Update Employee' : 'Add Employee')}
                     </button>
                   </div>
@@ -1054,7 +1054,7 @@ export default function BusinessInformation({
                     <p className="text-sm text-gray-600 mt-1">Manage crews and team groupings</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button type="button" onClick={() => { setShowCreateGroupModal(true); setGroupForm({ name: '', selectedEmployees: [] }); setEditingGroup(null); }} className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
+                    <button type="button" onClick={() => { setShowCreateGroupModal(true); setGroupForm({ name: '', selectedEmployees: [] }); setEditingGroup(null); }} className="px-4 py-2 bg-gradient-to-r from-indigo-600 to-amber-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2">
                       <Plus className="w-4 h-4" />
                       Create Group
                     </button>
@@ -1069,7 +1069,7 @@ export default function BusinessInformation({
                       <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">No groups yet</h3>
                       <p className="text-gray-600 mb-6">Create your first team group or crew</p>
-                      <button type="button" onClick={() => { setShowCreateGroupModal(true); setGroupForm({ name: '', selectedEmployees: [] }); setEditingGroup(null); }} className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
+                      <button type="button" onClick={() => { setShowCreateGroupModal(true); setGroupForm({ name: '', selectedEmployees: [] }); setEditingGroup(null); }} className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-amber-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
                         Create First Group
                       </button>
                     </div>
@@ -1166,7 +1166,7 @@ export default function BusinessInformation({
                   </div>
                   <div className="flex gap-4 pt-4 border-t border-gray-200">
                     <button type="button" onClick={() => { setShowCreateGroupModal(false); setEditingGroup(null); setGroupForm({ name: '', selectedEmployees: [] }); }} className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors">Cancel</button>
-                    <button type="submit" className="flex-1 bg-gradient-to-r from-indigo-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
+                    <button type="submit" className="flex-1 bg-gradient-to-r from-indigo-600 to-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all">
                       {editingGroup ? 'Update Group' : 'Create Group'}
                     </button>
                   </div>

@@ -234,7 +234,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
             </span>
           </div>
           <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-bold">
-            Save $377/mo (84% OFF)
+            Save ${(447 - 69.95).toFixed(2)}/mo (84% OFF)
           </div>
         </div>
       </div>
@@ -305,7 +305,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
                 {plan.savings && !showAnnual && (
                   <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
                     <div className="text-sm font-bold text-green-900 mb-2">
-                      💰 You Save $377/month
+                      💰 You Save ${(plan.savings.total - plan.price).toFixed(2)}/month
                     </div>
                     {plan.savings.breakdown.map((item, idx) => (
                       <div key={idx} className="flex justify-between text-xs text-green-700 mb-1">

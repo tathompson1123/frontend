@@ -138,7 +138,7 @@ const EmployeesPage = ({ userId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
       </div>
     );
   }
@@ -156,7 +156,7 @@ const EmployeesPage = ({ userId }) => {
           </div>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+            className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold"
           >
             <Plus className="w-5 h-5" />
             Add Employee
@@ -186,7 +186,7 @@ const EmployeesPage = ({ userId }) => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   placeholder="John Smith"
                   required
                 />
@@ -219,7 +219,7 @@ const EmployeesPage = ({ userId }) => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   placeholder="john@example.com"
                 />
               </div>
@@ -232,7 +232,7 @@ const EmployeesPage = ({ userId }) => {
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                   placeholder="(555) 123-4567"
                 />
               </div>
@@ -251,7 +251,7 @@ const EmployeesPage = ({ userId }) => {
                     key={service.id}
                     className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition ${
                       formData.serviceIds.includes(service.id)
-                        ? 'border-purple-600 bg-purple-50'
+                        ? 'border-amber-600 bg-amber-50'
                         : 'border-gray-200 hover:border-gray-300'
                     }`}
                   >
@@ -259,7 +259,7 @@ const EmployeesPage = ({ userId }) => {
                       type="checkbox"
                       checked={formData.serviceIds.includes(service.id)}
                       onChange={() => toggleService(service.id)}
-                      className="w-5 h-5 text-purple-600 rounded"
+                      className="w-5 h-5 text-amber-600 rounded"
                     />
                     <span className="font-medium">{service.name}</span>
                   </label>
@@ -270,7 +270,7 @@ const EmployeesPage = ({ userId }) => {
             <div className="flex gap-3 pt-4">
               <button
                 type="submit"
-                className="flex-1 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+                className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold"
               >
                 {editingEmployee ? 'Update Employee' : 'Add Employee'}
               </button>
@@ -289,8 +289,8 @@ const EmployeesPage = ({ userId }) => {
       {/* Employees Grid */}
       {employees.length === 0 ? (
         <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-          <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Users className="w-10 h-10 text-purple-600" />
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Users className="w-10 h-10 text-amber-600" />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No team members yet</h3>
           <p className="text-gray-600 mb-6">
@@ -298,7 +298,7 @@ const EmployeesPage = ({ userId }) => {
           </p>
           <button
             onClick={() => setShowForm(true)}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+            className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold"
           >
             Add Your First Employee
           </button>
@@ -360,7 +360,7 @@ const EmployeesPage = ({ userId }) => {
               <div className="pt-4 border-t border-gray-200 flex gap-2">
                 <button
                   onClick={() => handleEdit(employee)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition font-semibold"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition font-semibold"
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit

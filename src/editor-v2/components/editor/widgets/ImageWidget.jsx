@@ -57,7 +57,7 @@ export default function ImageWidget({ widget, devicePreview, isEditing, onUpdate
       <>
         <div
           onClick={handleImageClick}
-          className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition"
+          className="w-full h-48 bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition"
         >
           <Upload className="w-10 h-10 text-gray-400 mb-2" />
           <p className="text-gray-500 font-medium">Click to add image</p>
@@ -133,7 +133,7 @@ function ImageUploadModal({ imageUrl, setImageUrl, onUrlSubmit, onFileUpload, on
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Upload from computer
           </label>
-          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition">
+          <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-amber-400 hover:bg-amber-50 transition">
             <Upload className="w-8 h-8 text-gray-400 mb-2" />
             <span className="text-sm text-gray-500">Click to upload</span>
             <input
@@ -165,13 +165,13 @@ function ImageUploadModal({ imageUrl, setImageUrl, onUrlSubmit, onFileUpload, on
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 placeholder="https://example.com/image.jpg"
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500"
                 onKeyDown={(e) => e.key === 'Enter' && onUrlSubmit()}
               />
             </div>
             <button
               onClick={onUrlSubmit}
-              className="px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition"
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition"
             >
               Add
             </button>

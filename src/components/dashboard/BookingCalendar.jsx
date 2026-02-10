@@ -474,7 +474,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         });
                         setShowCreateBookingModal(true);
                       }}
-                      className="px-2 py-1.5 bg-purple-600 text-white text-xs font-medium rounded hover:bg-purple-700 transition"
+                      className="px-2 py-1.5 bg-amber-600 text-white text-xs font-medium rounded hover:bg-amber-700 transition"
                     >
                       Edit
                     </button>
@@ -564,7 +564,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             <button
               type="button"
               onClick={() => setShowCreateBookingModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-amber-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
             >
               <Plus className="w-5 h-5" />
               Create Booking
@@ -864,9 +864,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 </div>
               </div>
 
-              <div className="bg-purple-50 rounded-xl p-4">
+              <div className="bg-amber-50 rounded-xl p-4">
                 <div className="flex items-center gap-2 mb-4">
-                  <Briefcase className="w-5 h-5 text-purple-600" />
+                  <Briefcase className="w-5 h-5 text-amber-600" />
                   <h3 className="font-bold text-gray-900">Service Details</h3>
                 </div>
                 {selectedBooking.items && selectedBooking.items.length > 0 ? (
@@ -882,7 +882,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         <p className="font-bold text-gray-900">${parseFloat(item.price).toFixed(2)}</p>
                       </div>
                     ))}
-                    <div className="pt-3 border-t border-purple-200 flex justify-between items-center">
+                    <div className="pt-3 border-t border-amber-200 flex justify-between items-center">
                       <span className="font-bold text-gray-900">Total</span>
                       <span className="text-xl font-bold text-gray-900">
                         ${parseFloat(selectedBooking.total_amount).toFixed(2)}
@@ -1326,9 +1326,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 </div>
               </div>
 
-              <div className="bg-purple-50 rounded-xl p-4">
+              <div className="bg-amber-50 rounded-xl p-4">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-purple-600" />
+                  <FileText className="w-5 h-5 text-amber-600" />
                   Job Notes (optional)
                 </h3>
                 <textarea
@@ -1336,7 +1336,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   onChange={(e) => setNewBooking({ ...newBooking, notes: e.target.value })}
                   placeholder="Add any notes about this booking..."
                   rows={4}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 resize-none"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 resize-none"
                 />
               </div>
 
@@ -1361,7 +1361,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   type="button"
                   onClick={handleCreateBooking}
                   disabled={creatingBooking}
-                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-amber-600 text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {creatingBooking ? 'Saving...' : isEditingBooking ? 'Save Changes' : 'Create Booking'}
                 </button>

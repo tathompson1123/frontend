@@ -252,7 +252,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
           
           <button
             onClick={() => window.location.reload()}
-            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition"
+            className="w-full bg-gradient-to-r from-blue-600 to-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition"
           >
             Book Another Service
           </button>
@@ -263,7 +263,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
 
   if (loading && !services.length) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-amber-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600 text-lg">Loading booking information...</p>
@@ -273,7 +273,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 py-12 px-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-amber-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
@@ -488,7 +488,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
             {selectedDate && selectedTime && (
               <button
                 onClick={() => setStep(3)}
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition flex items-center justify-center"
+                className="w-full bg-gradient-to-r from-blue-600 to-amber-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition flex items-center justify-center"
               >
                 Continue to Team Selection
                 <ArrowRight className="w-5 h-5 ml-2" />
@@ -607,7 +607,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
                           onChange={() => setSelectedGroup(group.id)}
                           className="w-4 h-4 text-blue-600"
                         />
-                        <Users className="w-5 h-5 ml-3 text-purple-600" />
+                        <Users className="w-5 h-5 ml-3 text-amber-600" />
                         <span className="ml-3 font-medium text-gray-900">{group.name}</span>
                         <span className="ml-2 text-sm text-gray-500">({group.employee_ids?.length || 0} members)</span>
                       </label>
@@ -620,7 +620,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
             <button
               onClick={() => setStep(4)}
               disabled={assignmentType === 'employee' && !selectedEmployee || assignmentType === 'group' && !selectedGroup}
-              className="w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-blue-600 to-amber-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
               Continue to Contact Info
               <ArrowRight className="w-5 h-5 ml-2" />

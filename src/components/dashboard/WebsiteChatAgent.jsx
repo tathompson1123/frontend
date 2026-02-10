@@ -179,15 +179,15 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
                 View in CRM →
               </button>
             </div>
-            <div className="bg-purple-50 rounded-lg p-4">
-              <div className="flex items-center gap-2 text-purple-600 mb-2">
+            <div className="bg-amber-50 rounded-lg p-4">
+              <div className="flex items-center gap-2 text-amber-600 mb-2">
                 <Calendar className="w-5 h-5" />
                 <span className="text-sm font-medium">Bookings</span>
               </div>
               <p className="text-2xl font-bold text-gray-900">{stats.bookingsCreated}</p>
               <button
                 onClick={() => setCurrentView('booking-calendar')}
-                className="text-xs text-purple-600 hover:text-purple-700 font-medium mt-1"
+                className="text-xs text-amber-600 hover:text-amber-700 font-medium mt-1"
               >
                 View Calendar →
               </button>
@@ -306,7 +306,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
                   className={`w-full px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
                     isDeployed
                       ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                      : 'bg-gradient-to-r from-amber-600 to-blue-600 text-white hover:shadow-lg'
                   }`}
                 >
                   <Rocket className="w-5 h-5" />
@@ -327,7 +327,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
       </div>
 
       {/* How It Works */}
-      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl border border-blue-200 p-6">
+      <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-xl border border-blue-200 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">✨ How It Works</h3>
         <p className="text-gray-700 mb-4">
           The AI chat agent automatically integrates with your published website. No code installation needed!

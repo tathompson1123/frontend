@@ -46,7 +46,7 @@ function SectionTemplateItem({ templateKey, template, onAdd }) {
       {...attributes}
       {...listeners}
       onClick={onAdd}
-      className={`p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-purple-400 hover:shadow-md transition flex items-center gap-3 ${
+      className={`p-4 bg-white border border-gray-200 rounded-lg cursor-pointer hover:border-amber-400 hover:shadow-md transition flex items-center gap-3 ${
         isDragging ? 'opacity-50 shadow-lg' : ''
       }`}
     >

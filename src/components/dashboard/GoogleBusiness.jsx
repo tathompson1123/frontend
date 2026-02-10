@@ -37,7 +37,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
 }, [activeTab]);
 
   const [reviewConfig, setReviewConfig] = useState({
-  messageTemplate: "Hi {name}! Thank you for choosing {business}. We'd love to hear about your experience! Could you take a moment to leave us a review?",
+  messageTemplate: "Hi {{name}}! Thank you for choosing {{business}}. We'd love to hear about your experience! Could you take a moment to leave us a review?",
   incentive: "$10 off your next service",
   incentiveEnabled: true,
   autoSendEnabled: true,
@@ -220,7 +220,7 @@ const saveReviewConfig = async () => {
               onClick={() => setActiveTab('review-requests')}
               className={`px-6 py-4 font-semibold transition-all border-b-2 ${
                 activeTab === 'review-requests'
-                  ? 'border-purple-600 text-purple-600 bg-purple-50'
+                  ? 'border-amber-600 text-amber-600 bg-amber-50'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
@@ -233,7 +233,7 @@ const saveReviewConfig = async () => {
               onClick={() => setActiveTab('reply-generator')}
               className={`px-6 py-4 font-semibold transition-all border-b-2 ${
                 activeTab === 'reply-generator'
-                  ? 'border-purple-600 text-purple-600 bg-purple-50'
+                  ? 'border-amber-600 text-amber-600 bg-amber-50'
                   : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
@@ -261,7 +261,7 @@ const saveReviewConfig = async () => {
                       value={reviewCustomerName}
                       onChange={(e) => setReviewCustomerName(e.target.value)}
                       placeholder="John Smith"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition"
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition"
                     />
                   </div>
 
@@ -297,7 +297,7 @@ const saveReviewConfig = async () => {
                       onChange={(e) => setReviewText(e.target.value)}
                       placeholder="Paste the customer's review here..."
                       rows={5}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none transition resize-none"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none transition resize-none"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Copy the review from Google Business Profile and paste it here
@@ -308,7 +308,7 @@ const saveReviewConfig = async () => {
                     type="button"
                     onClick={handleGenerateReviewReply}
                     disabled={!reviewText.trim() || isGeneratingReply}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+                    className="w-full bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                   >
                     {isGeneratingReply ? (
                       <>
@@ -325,12 +325,12 @@ const saveReviewConfig = async () => {
                 </div>
 
                 {generatedReply && (
-                  <div className="p-6 bg-gradient-to-r from-purple-50 to-blue-50 border-2 border-purple-200 rounded-xl">
+                  <div className="p-6 bg-gradient-to-r from-amber-50 to-blue-50 border-2 border-amber-200 rounded-xl">
                     <div className="flex items-center gap-2 mb-4">
-                      <MessageSquare className="w-6 h-6 text-purple-600" />
+                      <MessageSquare className="w-6 h-6 text-amber-600" />
                       <h4 className="font-bold text-gray-900 text-lg">Your AI-Generated Reply</h4>
                     </div>
-                    <div className="bg-white p-4 rounded-lg mb-4 border border-purple-100">
+                    <div className="bg-white p-4 rounded-lg mb-4 border border-amber-100">
                       <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">{generatedReply}</p>
                     </div>
                     <div className="flex gap-3">
@@ -341,7 +341,7 @@ const saveReviewConfig = async () => {
                           setCopied(true);
                           setTimeout(() => setCopied(false), 2000);
                         }}
-                        className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition flex items-center justify-center gap-2"
+                        className="flex-1 bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-700 transition flex items-center justify-center gap-2"
                       >
                         {copied ? (
                           <>
@@ -358,7 +358,7 @@ const saveReviewConfig = async () => {
                       <button
                         type="button"
                         onClick={handleGenerateReviewReply}
-                        className="flex-1 bg-white border-2 border-purple-600 text-purple-600 px-6 py-3 rounded-lg font-semibold hover:bg-purple-50 transition flex items-center justify-center gap-2"
+                        className="flex-1 bg-white border-2 border-amber-600 text-amber-600 px-6 py-3 rounded-lg font-semibold hover:bg-amber-50 transition flex items-center justify-center gap-2"
                       >
                         <RefreshCw className="w-5 h-5" />
                         Regenerate
@@ -379,13 +379,13 @@ const saveReviewConfig = async () => {
                     <p className="text-3xl font-bold text-blue-600">{repliesGeneratedToday}</p>
                     <p className="text-xs text-blue-700 mt-1">replies generated</p>
                   </div>
-                  <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                  <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
                     <div className="flex items-center gap-2 mb-2">
-                      <TrendingUp className="w-5 h-5 text-purple-600" />
-                      <p className="text-sm font-medium text-purple-900">This Week</p>
+                      <TrendingUp className="w-5 h-5 text-amber-600" />
+                      <p className="text-sm font-medium text-amber-900">This Week</p>
                     </div>
-                    <p className="text-3xl font-bold text-purple-600">{repliesGeneratedWeek}</p>
-                    <p className="text-xs text-purple-700 mt-1">replies generated</p>
+                    <p className="text-3xl font-bold text-amber-600">{repliesGeneratedWeek}</p>
+                    <p className="text-xs text-amber-700 mt-1">replies generated</p>
                   </div>
                   <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
                     <div className="flex items-center gap-2 mb-2">
@@ -439,8 +439,8 @@ const saveReviewConfig = async () => {
                     </div>
                     <div className="bg-white rounded-lg p-5 border border-green-200">
                       <div className="flex items-start gap-3">
-                        <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                          <MessageSquare className="w-5 h-5 text-purple-600" />
+                        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+                          <MessageSquare className="w-5 h-5 text-amber-600" />
                         </div>
                         <div>
                           <h4 className="font-bold text-gray-900 mb-2">Turns Negatives into Positives</h4>
@@ -454,7 +454,7 @@ const saveReviewConfig = async () => {
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-xl p-8 shadow-lg text-white">
+                <div className="bg-gradient-to-br from-amber-600 to-blue-600 rounded-xl p-8 shadow-lg text-white">
                   <h3 className="text-2xl font-bold mb-6">Impact by the Numbers</h3>
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
@@ -492,7 +492,7 @@ const saveReviewConfig = async () => {
             <div className="space-y-6">
               {/* Setup Section */}
               {!reviewLink && (
-                <div className="bg-gradient-to-r from-blue-50 to-purple-50 border-2 border-blue-300 rounded-xl p-6">
+                <div className="bg-gradient-to-r from-blue-50 to-amber-50 border-2 border-blue-300 rounded-xl p-6">
                   <div className="flex items-start gap-4">
                     <div className="flex-shrink-0">
                       <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center">
@@ -514,7 +514,7 @@ const saveReviewConfig = async () => {
               <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-3">
-                    <LinkIcon className="w-6 h-6 text-purple-600" />
+                    <LinkIcon className="w-6 h-6 text-amber-600" />
                     <h3 className="text-lg font-bold text-gray-900">Google Review Link Setup</h3>
                   </div>
                   <button
@@ -577,7 +577,7 @@ const saveReviewConfig = async () => {
                       value={reviewLink}
                       onChange={(e) => setReviewLink(e.target.value)}
                       placeholder="https://g.page/r/... or https://search.google.com/local/writereview?placeid=..."
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-200 focus:outline-none text-sm"
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-amber-500 focus:ring-2 focus:ring-amber-200 focus:outline-none text-sm"
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       This is the link customers will click to leave a review
@@ -613,7 +613,7 @@ const saveReviewConfig = async () => {
                     type="button"
                     onClick={handleSaveReviewLink}
                     disabled={savingReviewLink || !reviewLink.trim()}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    className="w-full bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-4 rounded-lg font-semibold text-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {savingReviewLink ? (
                       <>
@@ -662,7 +662,7 @@ const saveReviewConfig = async () => {
             placeholder="Enter your review request message..."
           />
           <p className="text-xs text-gray-500 mt-2">
-            Available variables: <code className="bg-gray-100 px-1 rounded">{'{name}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{business}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{service}'}</code>
+            Available variables: <code className="bg-gray-100 px-1 rounded">{'{{name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{business}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{service}}'}</code>
           </p>
         </div>
 
@@ -671,9 +671,9 @@ const saveReviewConfig = async () => {
           <p className="text-xs font-medium text-gray-700 mb-2">Preview:</p>
           <p className="text-sm text-gray-900">
             {reviewConfig.messageTemplate
-              .replace('{name}', 'John')
-              .replace('{business}', user.businessName || 'Your Business')
-              .replace('{service}', 'HVAC Maintenance')}
+              .replace('{{name}}', 'John')
+              .replace('{{business}}', user.businessName || 'Your Business')
+              .replace('{{service}}', 'HVAC Maintenance')}
           </p>
           {reviewConfig.incentiveEnabled && reviewConfig.incentive && (
             <div className="mt-3 pt-3 border-t border-gray-300">
@@ -764,7 +764,7 @@ const saveReviewConfig = async () => {
         )}
 
         {/* Stats Box */}
-        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
+        <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-lg p-4 border border-blue-200">
           <p className="text-sm font-medium text-gray-900 mb-3">💡 Pro Tips:</p>
           <ul className="space-y-2 text-xs text-gray-700">
             <li>• SMS sent automatically 2 hours after service (optimal timing)</li>
@@ -779,9 +779,9 @@ const saveReviewConfig = async () => {
 
     {/* Timeline Section */}
     {reviewConfig.autoSendEnabled && (
-      <div className="mt-6 p-5 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border border-purple-200">
+      <div className="mt-6 p-5 bg-gradient-to-r from-amber-50 to-blue-50 rounded-lg border border-amber-200">
         <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-purple-600" />
+          <Calendar className="w-5 h-5 text-amber-600" />
           Your Review Request Timeline
         </h4>
         <div className="space-y-3">
@@ -811,7 +811,7 @@ const saveReviewConfig = async () => {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Mail className="w-4 h-4 text-purple-600" />
+                <Mail className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-gray-900">Email (Step 2)</span>
               </div>
               <p className="text-xs text-gray-600">
@@ -826,7 +826,7 @@ const saveReviewConfig = async () => {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Mail className="w-4 h-4 text-purple-600" />
+                <Mail className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-gray-900">Reminder Email (Step 3)</span>
               </div>
               <p className="text-xs text-gray-600">Friendly reminder about the reward</p>
@@ -839,7 +839,7 @@ const saveReviewConfig = async () => {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Mail className="w-4 h-4 text-purple-600" />
+                <Mail className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-gray-900">Urgency Email (Step 4)</span>
               </div>
               <p className="text-xs text-gray-600">Creating urgency - "Don't miss out!"</p>
@@ -852,7 +852,7 @@ const saveReviewConfig = async () => {
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
-                <Mail className="w-4 h-4 text-purple-600" />
+                <Mail className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-gray-900">Final Email (Step 5)</span>
               </div>
               <p className="text-xs text-gray-600">Last chance - offer expires soon!</p>
@@ -901,12 +901,12 @@ const saveReviewConfig = async () => {
                     {reviewRequests.filter((r) => r.status === 'sent' && !r.review_completed).length}
                   </p>
                 </div>
-                <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200">
+                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
                   <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-5 h-5 text-purple-600" />
-                    <p className="text-sm font-medium text-purple-900">Success Rate</p>
+                    <TrendingUp className="w-5 h-5 text-amber-600" />
+                    <p className="text-sm font-medium text-amber-900">Success Rate</p>
                   </div>
-                  <p className="text-3xl font-bold text-purple-600">
+                  <p className="text-3xl font-bold text-amber-600">
                     {reviewRequests.filter((r) => r.status === 'sent').length > 0
                       ? Math.round(
                           (reviewRequests.filter((r) => r.review_completed).length /
@@ -934,7 +934,7 @@ const saveReviewConfig = async () => {
                       onClick={() => setFilterStatus(filter.value)}
                       className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
                         filterStatus === filter.value
-                          ? 'bg-purple-600 text-white'
+                          ? 'bg-amber-600 text-white'
                           : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                       }`}
                     >
@@ -947,7 +947,7 @@ const saveReviewConfig = async () => {
               {/* Requests List */}
               {isLoadingRequests ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-purple-600" />
+                  <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
                   <span className="ml-3 text-gray-600">Loading review requests...</span>
                 </div>
               ) : filteredRequests.length === 0 ? (
@@ -1041,7 +1041,7 @@ const saveReviewConfig = async () => {
                               </div>
                             )}
                             {request.email_sent && (
-                              <div className="flex items-center gap-1 text-purple-600">
+                              <div className="flex items-center gap-1 text-amber-600">
                                 <Mail className="w-4 h-4" />
                                 <span>Email Sent</span>
                               </div>
@@ -1058,7 +1058,7 @@ const saveReviewConfig = async () => {
                         {request.incentive_code && (
                           <div className="text-right">
                             <p className="text-xs text-gray-500 mb-1">Incentive Code</p>
-                            <p className="font-mono font-bold text-purple-600 text-lg">
+                            <p className="font-mono font-bold text-amber-600 text-lg">
                               {request.incentive_code}
                             </p>
   </div>
@@ -1075,9 +1075,9 @@ const saveReviewConfig = async () => {
 
       {/* How It Works - Only show on Reply Generator tab */}
       {activeTab === 'reply-generator' && (
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8 border-2 border-blue-200">
+        <div className="bg-gradient-to-r from-blue-50 to-amber-50 rounded-xl p-8 border-2 border-blue-200">
           <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-amber-600 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-2xl">💡</span>
             </div>
             <div className="flex-1">

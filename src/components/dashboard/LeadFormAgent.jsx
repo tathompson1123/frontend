@@ -345,8 +345,8 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
       <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
       <p className="text-xs text-gray-600 mt-1">This month</p>
     </div>
-    <div className="bg-purple-50 rounded-lg p-4">
-      <div className="flex items-center gap-2 text-purple-600 mb-2">
+    <div className="bg-amber-50 rounded-lg p-4">
+      <div className="flex items-center gap-2 text-amber-600 mb-2">
         <MessageCircle className="w-5 h-5" />
         <span className="text-sm font-medium">SMS Sent</span>
       </div>
@@ -411,8 +411,8 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
 
   <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
     <div className="flex items-center gap-3">
-      <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-        <Clock className="w-5 h-5 text-purple-600" />
+      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+        <Clock className="w-5 h-5 text-amber-600" />
       </div>
       <div>
         <p className="font-medium text-gray-900">AI Conversation Follow-up</p>
@@ -457,7 +457,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
   <div>
     <div className="flex items-center justify-between mb-4">
       <h3 className="text-lg font-semibold text-gray-900">Initial SMS Template</h3>
-      <span className="text-xs text-gray-500">Max 160 characters recommended</span>
+      <span className="text-xs text-gray-500">160 chars = 1 SMS, 320 max = 2 SMS</span>
     </div>
     <textarea
       value={agentConfig.smsTemplate}
@@ -467,7 +467,9 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
       maxLength="320"
     />
     <div className="mt-2">
-      <span className="text-xs text-gray-500">{agentConfig.smsTemplate.length} / 320 characters</span>
+      <span className={`text-xs ${agentConfig.smsTemplate.length > 160 ? 'text-orange-600' : 'text-gray-500'}`}>
+        {agentConfig.smsTemplate.length} / 160 characters {agentConfig.smsTemplate.length > 160 && '(will send as 2 SMS)'}
+      </span>
     </div>
     <p className="text-xs text-gray-500 mt-2">
       {`Available variables: {{name}}, {{phone}}, {{service}}, {{message}}`}
@@ -535,7 +537,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                   className={`w-full px-6 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 transition-all ${
                     isDeployed
                       ? 'bg-green-100 text-green-700 cursor-not-allowed'
-                      : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:shadow-lg'
+                      : 'bg-gradient-to-r from-amber-600 to-blue-600 text-white hover:shadow-lg'
                   }`}
                 >
                   <Rocket className="w-5 h-5" />
@@ -622,7 +624,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
           className="w-full p-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-blue-600 rounded-lg flex items-center justify-center">
               <Brain className="w-5 h-5 text-white" />
             </div>
             <div className="text-left">
@@ -645,7 +647,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                     onClick={() => setTrainingData({ ...trainingData, responseTone: tone })}
                     className={`px-4 py-3 rounded-lg border-2 transition-all text-sm font-medium capitalize ${
                       trainingData.responseTone === tone
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
+                        ? 'border-amber-500 bg-amber-50 text-amber-700'
                         : 'border-gray-200 hover:border-gray-300 text-gray-700'
                     }`}
                   >
@@ -668,7 +670,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                 value={trainingData.agentName}
                 onChange={(e) => setTrainingData({ ...trainingData, agentName: e.target.value })}
                 placeholder="e.g., Kurt, Sarah, Alex"
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">The name the AI will use when introducing itself</p>
             </div>
@@ -681,7 +683,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                 onChange={(e) => setTrainingData({ ...trainingData, businessContext: e.target.value })}
                 rows="3"
                 placeholder="Describe your business, what makes you unique, your target customers, etc."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               />
               <p className="text-xs text-gray-500 mt-1">Help the AI understand your business to give better responses</p>
             </div>
@@ -694,7 +696,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                 onChange={(e) => setTrainingData({ ...trainingData, servicesInfo: e.target.value })}
                 rows="4"
                 placeholder="List your services and pricing, e.g.:&#10;- Basic Wash: $50&#10;- Full Detail: $200&#10;- Ceramic Coating: $800+"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent font-mono text-sm"
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent font-mono text-sm"
               />
               <p className="text-xs text-gray-500 mt-1">The AI will reference this when asked about services or pricing</p>
             </div>
@@ -705,7 +707,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                 <label className="block text-sm font-medium text-gray-700">Frequently Asked Questions</label>
                 <button
                   onClick={addFaq}
-                  className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
+                  className="px-3 py-1 text-sm bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors flex items-center gap-1"
                 >
                   <Plus className="w-4 h-4" /> Add FAQ
                 </button>
@@ -731,14 +733,14 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                           value={faq.question}
                           onChange={(e) => updateFaq(index, 'question', e.target.value)}
                           placeholder="Question, e.g., How long does a detail take?"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                         />
                         <textarea
                           value={faq.answer}
                           onChange={(e) => updateFaq(index, 'answer', e.target.value)}
                           placeholder="Answer the AI should give..."
                           rows="2"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -753,7 +755,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                 <label className="block text-sm font-medium text-gray-700">Objection Handling</label>
                 <button
                   onClick={addObjection}
-                  className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors flex items-center gap-1"
+                  className="px-3 py-1 text-sm bg-amber-100 text-amber-700 rounded-lg hover:bg-amber-200 transition-colors flex items-center gap-1"
                 >
                   <Plus className="w-4 h-4" /> Add Objection
                 </button>
@@ -779,14 +781,14 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
                           value={obj.objection}
                           onChange={(e) => updateObjection(index, 'objection', e.target.value)}
                           placeholder="Objection, e.g., That's too expensive"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                         />
                         <textarea
                           value={obj.response}
                           onChange={(e) => updateObjection(index, 'response', e.target.value)}
                           placeholder="How to respond to this objection..."
                           rows="2"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                         />
                       </div>
                     </div>
@@ -799,7 +801,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
             <button
               onClick={saveTrainingData}
               disabled={isSavingTraining}
-              className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+              className="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
             >
               <Brain className="w-5 h-5" />
               {isSavingTraining ? 'Saving...' : 'Save AI Training'}

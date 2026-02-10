@@ -212,15 +212,15 @@ export default function WebsiteGenerator() {
   // Preview screen
   if (generatedWebsite) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-amber-50">
         <nav className="bg-white shadow-sm sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               <div className="flex items-center gap-2">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-blue-600 rounded-lg flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-white" />
                 </div>
-                <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-blue-600 bg-clip-text text-transparent">
                   SORCE
                 </span>
               </div>
@@ -295,7 +295,7 @@ export default function WebsiteGenerator() {
                     setShowSignupModal(true);
                   }
                 }}
-                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-5 rounded-xl font-bold text-xl hover:shadow-2xl transition-all mb-8"
+                className="w-full bg-gradient-to-r from-amber-600 to-blue-600 text-white px-8 py-5 rounded-xl font-bold text-xl hover:shadow-2xl transition-all mb-8"
               >
                 Get My Website Free
               </button>
@@ -323,9 +323,9 @@ export default function WebsiteGenerator() {
                 ))}
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-xl p-6 border-2 border-purple-200">
+              <div className="bg-gradient-to-br from-amber-50 to-blue-50 rounded-xl p-6 border-2 border-amber-200">
                 <div className="flex items-center gap-2 mb-3">
-                  <Sparkles className="w-5 h-5 text-purple-600" />
+                  <Sparkles className="w-5 h-5 text-amber-600" />
                   <h4 className="font-bold text-gray-900">Want to grow faster?</h4>
                 </div>
                 <p className="text-sm text-gray-700 mb-4">
@@ -333,7 +333,7 @@ export default function WebsiteGenerator() {
                 </p>
                 <button
                   onClick={() => navigate('/pricing')}
-                  className="w-full bg-white text-purple-600 border-2 border-purple-600 px-4 py-3 rounded-lg font-semibold hover:bg-purple-50 transition-all"
+                  className="w-full bg-white text-amber-600 border-2 border-amber-600 px-4 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-all"
                 >
                   View Growth Plans
                 </button>
@@ -360,15 +360,15 @@ export default function WebsiteGenerator() {
 
   // ===== GENERATION FORM =====
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-amber-50 to-pink-50">
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-br from-amber-600 to-blue-600 rounded-lg flex items-center justify-center">
                 <Sparkles className="w-6 h-6 text-white" />
               </div>
-              <span className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <span className="text-2xl font-bold bg-gradient-to-r from-amber-600 to-blue-600 bg-clip-text text-transparent">
                 SORCE
               </span>
             </div>
@@ -403,7 +403,7 @@ export default function WebsiteGenerator() {
                     onChange={handleInputChange}
                     placeholder="e.g., Mike's Plumbing Service"
                     required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
@@ -413,7 +413,7 @@ export default function WebsiteGenerator() {
                     value={formData.businessType}
                     onChange={handleInputChange}
                     required
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                   >
                     <option value="">Select a business type...</option>
                     <option value="plumbing">Plumbing</option>
@@ -443,7 +443,7 @@ export default function WebsiteGenerator() {
                     value={formData.tagline}
                     onChange={handleInputChange}
                     placeholder="e.g., Quality Service Since 1995"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -465,7 +465,7 @@ export default function WebsiteGenerator() {
                       value={formData.phone}
                       onChange={handleInputChange}
                       placeholder="(555) 123-4567"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
@@ -476,7 +476,7 @@ export default function WebsiteGenerator() {
                       value={formData.email}
                       onChange={handleInputChange}
                       placeholder="contact@mybusiness.com"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                     />
                   </div>
                 </div>
@@ -489,7 +489,7 @@ export default function WebsiteGenerator() {
                       value={formData.city}
                       onChange={handleInputChange}
                       placeholder="e.g., Seattle"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                     />
                   </div>
                   <div>
@@ -501,7 +501,7 @@ export default function WebsiteGenerator() {
                       onChange={handleInputChange}
                       placeholder="e.g., WA"
                       maxLength="2"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors uppercase"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors uppercase"
                     />
                   </div>
                 </div>
@@ -509,9 +509,9 @@ export default function WebsiteGenerator() {
             </div>
 
             {/* === SERVICES & EXPERTISE === */}
-            <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
+            <div className="bg-amber-50 rounded-lg p-4 border-2 border-amber-200">
               <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                <span className="text-purple-600">🔧</span> Services & Expertise
+                <span className="text-amber-600">🔧</span> Services & Expertise
               </h3>
               <div className="space-y-4">
                 <div>
@@ -522,7 +522,7 @@ export default function WebsiteGenerator() {
                     value={formData.services}
                     onChange={handleInputChange}
                     placeholder="e.g., Emergency repairs, drain cleaning, water heater installation"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
                 <div>
@@ -533,7 +533,7 @@ export default function WebsiteGenerator() {
                     onChange={handleInputChange}
                     placeholder="Tell us about your business, what makes you special, your experience..."
                     rows={4}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -555,7 +555,7 @@ export default function WebsiteGenerator() {
               </button>
               <button
                 type="submit"
-                className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center space-x-2"
+                className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center space-x-2"
               >
                 <Wand2 className="w-5 h-5" />
                 <span>Generate Website</span>

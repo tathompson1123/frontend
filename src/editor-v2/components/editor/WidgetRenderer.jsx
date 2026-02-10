@@ -117,7 +117,7 @@ function PricingWidget({ widget }) {
   const content = widget.content || {};
   
   return (
-    <div className={`p-6 rounded-xl border-2 ${content.highlighted ? 'border-purple-500 shadow-lg' : 'border-gray-200'}`}>
+    <div className={`p-6 rounded-xl border-2 ${content.highlighted ? 'border-amber-500 shadow-lg' : 'border-gray-200'}`}>
       <h3 className="text-xl font-bold text-center mb-2">{content.title}</h3>
       <div className="text-center mb-4">
         <span className="text-4xl font-bold">{content.price}</span>
@@ -131,7 +131,7 @@ function PricingWidget({ widget }) {
           </li>
         ))}
       </ul>
-      <button className="w-full py-2 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700">
+      <button className="w-full py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700">
         {content.buttonText}
       </button>
     </div>

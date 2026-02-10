@@ -101,7 +101,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
       total: weekBookings.length,
       fromChat: weekBookings.filter(b => b.source === 'website_chat').length,
       fromLeadForms: weekBookings.filter(b => b.source === 'lead_form').length,
-      manualEntry: weekBookings.filter(b => !b.source || b.source === 'manual').length,
+      manualEntry: weekBookings.filter(b => !b.source || (b.source !== 'website_chat' && b.source !== 'lead_form')).length,
       revenue: weekRevenue
     },
     reviewSystem: {
@@ -128,7 +128,9 @@ export default function Overview({ bookings, services, employees, setCurrentView
       {/* Week Navigation */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">This Week's Performance</h2>
+          <h2 className="text-xl font-bold text-gray-900">
+            {weekOffset === 0 ? "This Week's Performance" : `Week of ${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+          </h2>
           <div className="flex items-center gap-4">
             <button
               onClick={() => setWeekOffset(weekOffset - 1)}
@@ -139,13 +141,16 @@ export default function Overview({ bookings, services, employees, setCurrentView
             <span className="font-semibold text-gray-700 min-w-[200px] text-center">
               {formatDateRange()}
             </span>
-            <button
-              onClick={() => setWeekOffset(weekOffset + 1)}
-              disabled={weekOffset >= 0}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              <ArrowRight className="w-5 h-5 text-gray-600" />
-            </button>
+            {weekOffset < 0 ? (
+              <button
+                onClick={() => setWeekOffset(weekOffset + 1)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <ArrowRight className="w-5 h-5 text-gray-600" />
+              </button>
+            ) : (
+              <div className="w-9 h-9" />
+            )}
           </div>
         </div>
 
@@ -162,9 +167,11 @@ export default function Overview({ bookings, services, employees, setCurrentView
               <div className="text-xs text-gray-500 mt-1">+{weekCustomers.length} new customers</div>
             </div>
             <div>
-              <div className="text-sm text-gray-600 mb-1">Conversion Rate</div>
-              <div className="text-3xl font-bold text-gray-900">{completionRate}%</div>
-              <div className="text-xs text-gray-500 mt-1">{weekCompleted} completed jobs</div>
+              <div className="text-sm text-gray-600 mb-1">Lead Conversion Rate</div>
+              <div className="text-3xl font-bold text-gray-900">
+                {totalLeads > 0 ? ((weekBookings.length / totalLeads) * 100).toFixed(1) : '0'}%
+              </div>
+              <div className="text-xs text-gray-500 mt-1">{weekBookings.length} bookings from {totalLeads} leads</div>
             </div>
             <div>
               <div className="text-sm text-gray-600 mb-1">Revenue This Week</div>
@@ -205,7 +212,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Added to "Follow Up" List</span>
-                <span className="font-bold text-purple-600">{weekStats.websiteChat.followUpLeads} leads</span>
+                <span className="font-bold text-amber-600">{weekStats.websiteChat.followUpLeads} leads</span>
               </div>
             </div>
 
@@ -219,10 +226,10 @@ export default function Overview({ bookings, services, employees, setCurrentView
           </div>
 
           {/* Lead Form Submissions */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-purple-300 transition-all">
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-amber-300 transition-all">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-purple-600" />
+              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                <Sparkles className="w-5 h-5 text-amber-600" />
               </div>
               <h3 className="font-bold text-gray-900">Lead Form Submissions</h3>
             </div>
@@ -241,8 +248,8 @@ export default function Overview({ bookings, services, employees, setCurrentView
                 <span className="font-bold text-orange-600">{weekStats.leadForms.smsConversions}</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">AI Qualification Success</span>
-                <span className="font-bold text-purple-600">{weekStats.leadForms.qualificationSuccess} qualified</span>
+                <span className="text-sm text-gray-600">AI Qualified</span>
+                <span className="font-bold text-amber-600 whitespace-nowrap">{weekStats.leadForms.qualificationSuccess}</span>
               </div>
             </div>
 
@@ -279,7 +286,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Manual Entry</span>
-                <span className="font-bold text-purple-600">{weekStats.newBookings.manualEntry}</span>
+                <span className="font-bold text-amber-600">{weekStats.newBookings.manualEntry}</span>
               </div>
             </div>
 
@@ -316,7 +323,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600">Response Rate</span>
-                <span className="font-bold text-purple-600">{weekStats.reviewSystem.responseRate}%</span>
+                <span className="font-bold text-amber-600">{weekStats.reviewSystem.responseRate}%</span>
               </div>
             </div>
 
@@ -370,9 +377,9 @@ export default function Overview({ bookings, services, employees, setCurrentView
           <button
             type="button"
             onClick={() => setCurrentView('customers-leads')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 transition-all text-left group"
+            className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-left group"
           >
-            <Users className="w-8 h-8 text-purple-600 mb-3 group-hover:scale-110 transition-transform" />
+            <Users className="w-8 h-8 text-amber-600 mb-3 group-hover:scale-110 transition-transform" />
             <h3 className="font-semibold text-gray-900 mb-1">Customers & Leads</h3>
             <p className="text-sm text-gray-600">{customers.length} customers, {leads.length} leads</p>
           </button>

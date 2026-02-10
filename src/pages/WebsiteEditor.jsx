@@ -316,7 +316,7 @@ export default function WebsiteEditor() {
             onClick={() => setCurrentPage(pageName)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
               currentPage === pageName
-                ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                ? 'bg-gradient-to-r from-amber-600 to-blue-600 text-white shadow-lg'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -333,7 +333,7 @@ export default function WebsiteEditor() {
           onClick={() => setDevicePreview('desktop')} 
           className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
             devicePreview === 'desktop' 
-              ? 'bg-purple-600 text-white' 
+              ? 'bg-amber-600 text-white' 
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
@@ -345,7 +345,7 @@ export default function WebsiteEditor() {
           onClick={() => setDevicePreview('mobile')} 
           className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
             devicePreview === 'mobile' 
-              ? 'bg-purple-600 text-white' 
+              ? 'bg-amber-600 text-white' 
               : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
@@ -377,7 +377,7 @@ export default function WebsiteEditor() {
   <button
     type="button"
     onClick={() => setShowVersionHistory(true)}
-    className="px-4 lg:px-6 py-2 bg-white border-2 border-purple-600 text-purple-600 rounded-lg font-semibold hover:bg-purple-50 transition flex items-center gap-2"
+    className="px-4 lg:px-6 py-2 bg-white border-2 border-amber-600 text-amber-600 rounded-lg font-semibold hover:bg-amber-50 transition flex items-center gap-2"
   >
     <Clock className="w-4 h-4" />
     <span className="hidden md:inline">History</span>
@@ -388,7 +388,7 @@ export default function WebsiteEditor() {
     type="button"
     onClick={handleSave}
     disabled={isSaving}
-    className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50"
+    className="px-4 lg:px-6 py-2 bg-gradient-to-r from-amber-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2 disabled:opacity-50"
   >
     {isSaving ? (
       <>
@@ -420,7 +420,7 @@ export default function WebsiteEditor() {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                     currentPage === pageName
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white shadow-lg'
+                      ? 'bg-gradient-to-r from-amber-600 to-blue-600 text-white shadow-lg'
                       : 'bg-gray-100 text-gray-700'
                   }`}
                 >
@@ -438,7 +438,7 @@ export default function WebsiteEditor() {
                 onClick={() => setDevicePreview('desktop')} 
                 className={`flex-1 px-3 py-2 rounded text-sm flex items-center justify-center gap-2 ${
                   devicePreview === 'desktop' 
-                    ? 'bg-purple-600 text-white' 
+                    ? 'bg-amber-600 text-white' 
                     : 'bg-gray-100 text-gray-600'
                 }`}
               >
@@ -450,7 +450,7 @@ export default function WebsiteEditor() {
                 onClick={() => setDevicePreview('mobile')} 
                 className={`flex-1 px-3 py-2 rounded text-sm flex items-center justify-center gap-2 ${
                   devicePreview === 'mobile' 
-                    ? 'bg-purple-600 text-white' 
+                    ? 'bg-amber-600 text-white' 
                     : 'bg-gray-100 text-gray-600'
                 }`}
               >
@@ -494,7 +494,7 @@ export default function WebsiteEditor() {
     {/* Mobile Editor Header - Dropdown Menu*/}
     <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center gap-4 shadow-sm">
       <div className="flex items-center gap-2">
-        <Smartphone className="w-5 h-5 text-purple-600" />
+        <Smartphone className="w-5 h-5 text-amber-600" />
         <span className="font-semibold text-gray-900">Mobile View</span>
       </div>
       
@@ -502,7 +502,7 @@ export default function WebsiteEditor() {
       <select
         value={currentPage}
         onChange={(e) => setCurrentPage(e.target.value)}
-        className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium focus:border-purple-500 focus:outline-none bg-white"
+        className="flex-1 px-3 py-2 border-2 border-gray-300 rounded-lg text-sm font-medium focus:border-amber-500 focus:outline-none bg-white"
       >
         {Object.keys(allPages).map((pageName) => (
           <option key={pageName} value={pageName}>
@@ -551,16 +551,16 @@ export default function WebsiteEditor() {
         {!isAIChatOpen ? (
           <button
             onClick={() => setIsAIChatOpen(true)}
-            className="fixed bottom-8 right-8 bg-gradient-to-r from-purple-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-110 transition-all z-50 flex items-center gap-2"
+            className="fixed bottom-8 right-8 bg-gradient-to-r from-amber-600 to-blue-600 text-white p-4 rounded-full shadow-2xl hover:shadow-xl hover:scale-110 transition-all z-50 flex items-center gap-2"
           >
             <Sparkles className="w-6 h-6" />
             <span className="font-semibold">AI Assistant</span>
           </button>
         ) : (
           <div className="fixed bottom-8 right-8 w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 border border-gray-200">
-            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50 rounded-t-2xl flex items-center justify-between">
+            <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-blue-50 rounded-t-2xl flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-purple-600" />
+                <Sparkles className="w-5 h-5 text-amber-600" />
                 <h3 className="font-bold text-gray-900">AI Assistant</h3>
               </div>
               <button
@@ -580,7 +580,7 @@ export default function WebsiteEditor() {
                   <div
                     className={`max-w-[85%] rounded-lg px-3 py-2 ${
                       message.role === 'user'
-                        ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
+                        ? 'bg-gradient-to-r from-amber-600 to-blue-600 text-white'
                         : 'bg-gray-100 text-gray-900'
                     }`}
                   >
@@ -592,7 +592,7 @@ export default function WebsiteEditor() {
               {isAIThinking && (
                 <div className="flex justify-start">
                   <div className="bg-gray-100 rounded-lg px-3 py-2 flex items-center gap-2">
-                    <Loader2 className="w-3 h-3 animate-spin text-purple-600" />
+                    <Loader2 className="w-3 h-3 animate-spin text-amber-600" />
                     <p className="text-xs text-gray-600">AI is thinking...</p>
                   </div>
                 </div>
@@ -607,14 +607,14 @@ export default function WebsiteEditor() {
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="Ask AI to make changes..."
-                  className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                  className="flex-1 px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                   disabled={isAIThinking}
                 />
                 <button
                   type="button"
                   onClick={handleSendMessage}
                   disabled={!inputMessage.trim() || isAIThinking}
-                  className="px-3 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="px-3 py-2 bg-gradient-to-r from-amber-600 to-blue-600 text-white rounded-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Send className="w-4 h-4" />
                 </button>

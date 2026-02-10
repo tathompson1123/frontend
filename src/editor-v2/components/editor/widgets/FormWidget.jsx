@@ -19,14 +19,14 @@ export default function FormWidget({ widget, isEditing }) {
           
           {field.type === 'textarea' ? (
             <textarea
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500"
               rows={4}
               placeholder={field.placeholder}
               disabled={isEditing}
             />
           ) : field.type === 'select' ? (
             <select
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500"
               disabled={isEditing}
             >
               <option value="">Select...</option>
@@ -37,7 +37,7 @@ export default function FormWidget({ widget, isEditing }) {
           ) : (
             <input
               type={field.type || 'text'}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500"
               placeholder={field.placeholder}
               disabled={isEditing}
             />
@@ -47,7 +47,7 @@ export default function FormWidget({ widget, isEditing }) {
       
       <button
         type="submit"
-        className="w-full py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition"
+        className="w-full py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition"
         disabled={isEditing}
       >
         {content.submitText || 'Submit'}

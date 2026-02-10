@@ -128,7 +128,7 @@ export default function ButtonWidget({ widget, devicePreview, isEditing, onUpdat
             // In edit mode, just select - don't navigate
           }
         }}
-        className={`outline-none ${isEditingText ? 'ring-2 ring-purple-400' : ''}`}
+        className={`outline-none ${isEditingText ? 'ring-2 ring-amber-400' : ''}`}
       >
         {content.text || 'Click Here'}
       </button>

@@ -300,7 +300,7 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
 <div className="p-4 border-b border-gray-200 flex items-center justify-between">
   {!isMinimized && (
     <div className="flex items-center gap-2">
-      <Sparkles className="w-5 h-5 text-purple-600" />
+      <Sparkles className="w-5 h-5 text-amber-600" />
       <h2 className="font-bold text-gray-900">Get Started</h2>
     </div>
   )}
@@ -315,18 +315,18 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
       
       {/* Progress Bar */}
       {!isMinimized && (
-        <div className="px-4 py-3 bg-gradient-to-r from-purple-50 to-blue-50">
+        <div className="px-4 py-3 bg-gradient-to-r from-amber-50 to-blue-50">
           <div className="flex items-center justify-between mb-2">
             <span className="text-sm font-medium text-gray-700">
               {completedCount} of {steps.length} complete
             </span>
-            <span className="text-sm font-bold text-purple-600">
+            <span className="text-sm font-bold text-amber-600">
               {Math.round(progressPercentage)}%
             </span>
           </div>
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
             <div 
-              className="h-full bg-gradient-to-r from-purple-600 to-blue-600 transition-all duration-500"
+              className="h-full bg-gradient-to-r from-amber-600 to-blue-600 transition-all duration-500"
               style={{ width: `${progressPercentage}%` }}
             ></div>
           </div>
@@ -364,7 +364,7 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
               </defs>
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-bold text-purple-600">{completedCount}</span>
+              <span className="text-xs font-bold text-amber-600">{completedCount}</span>
             </div>
           </div>
           {steps.map((step) => (
@@ -429,7 +429,7 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
 
                 {/* Step 1 Validation Checklist */}
                 {isStep1 && !isCompleted && (
-                  <div className="ml-8 mt-2 mb-3 space-y-1.5 border-l-2 border-purple-200 pl-3">
+                  <div className="ml-8 mt-2 mb-3 space-y-1.5 border-l-2 border-amber-200 pl-3">
                     {isValidating ? (
                       <p className="text-xs text-gray-400 italic">Checking...</p>
                     ) : (
@@ -460,7 +460,7 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
                         // Trigger re-validation after a delay
                         setTimeout(validateBusinessSettings, 1000);
                       }}
-                      className="mt-2 text-xs text-purple-600 hover:text-purple-700 font-medium flex items-center gap-1"
+                      className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1"
                     >
                       <span>Go to Business Settings</span>
                       <ChevronRight className="w-3 h-3" />

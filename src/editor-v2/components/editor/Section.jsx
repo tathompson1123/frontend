@@ -199,7 +199,7 @@ export default function Section({
       <div
         className={`absolute -top-3 left-4 px-2 py-0.5 text-xs font-medium rounded transition-opacity ${
           isSelected
-            ? 'bg-purple-600 text-white opacity-100'
+            ? 'bg-amber-600 text-white opacity-100'
             : 'bg-gray-800 text-white opacity-0 group-hover:opacity-100'
         }`}
       >
@@ -210,7 +210,7 @@ export default function Section({
       <div
         className={`absolute inset-0 pointer-events-none transition-all ${
           isSelected
-            ? 'ring-2 ring-purple-500 ring-inset'
+            ? 'ring-2 ring-amber-500 ring-inset'
             : 'ring-0 group-hover:ring-2 group-hover:ring-blue-300 group-hover:ring-inset'
         }`}
       />

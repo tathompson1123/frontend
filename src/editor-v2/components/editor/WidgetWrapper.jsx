@@ -53,7 +53,7 @@ export default function WidgetWrapper({
       <div
         className={`absolute inset-0 pointer-events-none rounded transition-all ${
           isSelected
-            ? 'ring-2 ring-purple-500'
+            ? 'ring-2 ring-amber-500'
             : 'ring-0 group-hover:ring-2 group-hover:ring-blue-300'
         }`}
       />

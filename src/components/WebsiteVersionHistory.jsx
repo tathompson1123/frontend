@@ -82,7 +82,7 @@ export default function WebsiteVersionHistory({ apiUrl, authFetch, onRestore, on
         <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-              <Clock className="w-6 h-6 text-purple-600" />
+              <Clock className="w-6 h-6 text-amber-600" />
               Version History
             </h2>
             <p className="text-sm text-gray-600 mt-1">
@@ -103,7 +103,7 @@ export default function WebsiteVersionHistory({ apiUrl, authFetch, onRestore, on
           <div className="w-1/3 border-r border-gray-200 overflow-y-auto">
             {loading ? (
               <div className="p-8 text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mx-auto"></div>
                 <p className="text-sm text-gray-600 mt-4">Loading versions...</p>
               </div>
             ) : versions.length === 0 ? (
@@ -120,7 +120,7 @@ export default function WebsiteVersionHistory({ apiUrl, authFetch, onRestore, on
                   <div
                     key={version.id}
                     className={`p-4 hover:bg-gray-50 cursor-pointer transition ${
-                      previewVersion?.id === version.id ? 'bg-purple-50 border-l-4 border-purple-600' : ''
+                      previewVersion?.id === version.id ? 'bg-amber-50 border-l-4 border-amber-600' : ''
                     }`}
                     onClick={() => setPreviewVersion(version)}
                   >
@@ -198,7 +198,7 @@ export default function WebsiteVersionHistory({ apiUrl, authFetch, onRestore, on
                       <button
                         onClick={() => handleRestore(previewVersion.id)}
                         disabled={restoring}
-                        className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+                        className="w-full bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         <RotateCcw className="w-5 h-5" />
                         {restoring ? 'Restoring...' : 'Restore This Version'}

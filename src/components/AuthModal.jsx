@@ -84,7 +84,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, onSucce
                 placeholder="Full Name"
                 value={formData.fullName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
               />
               <input
                 type="text"
@@ -92,7 +92,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, onSucce
                 placeholder="Business Name"
                 value={formData.businessName}
                 onChange={handleInputChange}
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
               />
             </>
           )}
@@ -104,7 +104,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, onSucce
             value={formData.email}
             onChange={handleInputChange}
             required
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
           />
           
           <input
@@ -114,7 +114,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, onSucce
             value={formData.password}
             onChange={handleInputChange}
             required
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
           />
           
           {error && (
@@ -126,7 +126,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, onSucce
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+            className="w-full bg-gradient-to-r from-amber-600 to-blue-600 text-white py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
           >
             {loading ? 'Please wait...' : (mode === 'signup' ? 'Sign Up' : 'Log In')}
           </button>
@@ -138,7 +138,7 @@ export default function AuthModal({ isOpen, onClose, mode, onModeChange, onSucce
               onModeChange(mode === 'signup' ? 'login' : 'signup');
               setError('');
             }}
-            className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+            className="text-amber-600 hover:text-amber-700 text-sm font-medium"
           >
             {mode === 'signup' ? 'Already have an account? Log in' : "Don't have an account? Sign up"}
           </button>

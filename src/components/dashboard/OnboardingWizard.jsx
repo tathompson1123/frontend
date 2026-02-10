@@ -152,13 +152,13 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
     <div className="fixed inset-0 bg-black bg-opacity-60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl">
+        <div className="sticky top-0 bg-gradient-to-r from-amber-600 via-blue-600 to-indigo-600 text-white p-6 rounded-t-2xl">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-3">
               <Sparkles className="w-8 h-8" />
               <div>
                 <h2 className="text-2xl font-bold">Welcome to Your Dashboard!</h2>
-                <p className="text-purple-100 text-sm">Let's get you set up in 6 easy steps</p>
+                <p className="text-amber-100 text-sm">Let's get you set up in 6 easy steps</p>
               </div>
             </div>
             <button
@@ -192,7 +192,7 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
             ))}
           </div>
 
-          <p className="text-sm text-purple-100 mt-2">
+          <p className="text-sm text-amber-100 mt-2">
             Step {currentStep} of 6 • {Object.values(completedSteps).filter(Boolean).length} steps completed
           </p>
         </div>
@@ -347,7 +347,7 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
 
               <button
                 onClick={() => handleGoToStep(currentStep)}
-                className="mt-6 w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+                className="mt-6 w-full bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
               >
                 Go to {currentStepData.title}
                 <ArrowRight className="w-5 h-5" />
@@ -370,7 +370,7 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
                     onClick={() => setCurrentStep(step.number)}
                     className={`p-4 rounded-lg border-2 transition-all text-left ${
                       isCurrent
-                        ? 'border-purple-600 bg-purple-50'
+                        ? 'border-amber-600 bg-amber-50'
                         : isCompleted
                         ? 'border-green-500 bg-green-50'
                         : 'border-gray-200 bg-white hover:border-gray-300'
@@ -391,7 +391,7 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
                         )}
                       </div>
                       <div>
-                        <p className={`font-semibold text-sm ${isCurrent ? 'text-purple-600' : isCompleted ? 'text-green-600' : 'text-gray-900'}`}>
+                        <p className={`font-semibold text-sm ${isCurrent ? 'text-amber-600' : isCompleted ? 'text-green-600' : 'text-gray-900'}`}>
                           {step.title}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">{step.description}</p>
@@ -428,7 +428,7 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
               {currentStep < 6 ? (
                 <button
                   onClick={handleNext}
-                  className="px-8 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2"
+                  className="px-8 py-3 bg-gradient-to-r from-amber-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition flex items-center gap-2"
                 >
                   Next Step
                   <ArrowRight className="w-5 h-5" />

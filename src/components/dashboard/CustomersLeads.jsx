@@ -1190,9 +1190,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       {showConvertModal && convertingLead && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4">
-            <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white p-6 rounded-t-2xl">
+            <div className="bg-gradient-to-r from-amber-600 to-blue-600 text-white p-6 rounded-t-2xl">
               <h2 className="text-xl font-bold">Convert to Customer</h2>
-              <p className="text-purple-100 mt-1">{convertingLead.name}</p>
+              <p className="text-amber-100 mt-1">{convertingLead.name}</p>
             </div>
 
             <div className="p-6 space-y-4">
@@ -1224,7 +1224,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               <button
                 onClick={convertLeadToCustomer}
                 disabled={isConverting}
-                className="flex-1 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-2 bg-gradient-to-r from-amber-600 to-blue-600 text-white rounded-lg hover:from-amber-700 hover:to-blue-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
               >
                 {isConverting ? (
                   <>Converting...</>
@@ -1335,7 +1335,7 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
                     setConvertingLead(lead);
                     setShowConvertModal(true);
                   }}
-                  className="p-1 text-purple-600 hover:bg-purple-50 rounded"
+                  className="p-1 text-amber-600 hover:bg-amber-50 rounded"
                   title="Convert to Customer"
                 >
                   <Users className="w-4 h-4" />
@@ -1439,7 +1439,7 @@ function getStatusColor(status) {
     new: 'bg-yellow-100 text-yellow-700',
     contacted_email: 'bg-blue-100 text-blue-700',
     contacted_sms: 'bg-green-100 text-green-700',
-    qualified: 'bg-purple-100 text-purple-700',
+    qualified: 'bg-amber-100 text-amber-700',
     converted: 'bg-emerald-100 text-emerald-700',
     not_interested: 'bg-gray-100 text-gray-700',
   };
@@ -1448,7 +1448,7 @@ function getStatusColor(status) {
 
 function getSourceColor(source) {
   const colors = {
-    ai_chat_agent: 'bg-purple-100 text-purple-700',
+    ai_chat_agent: 'bg-amber-100 text-amber-700',
     lead_form: 'bg-blue-100 text-blue-700',
     manual: 'bg-gray-100 text-gray-700',
   };

@@ -40,7 +40,7 @@ function DraggableWidget({ item }) {
       ref={setNodeRef}
       {...attributes}
       {...listeners}
-      className={`p-3 bg-white border border-gray-200 rounded-lg cursor-grab hover:border-purple-400 hover:shadow-md transition ${
+      className={`p-3 bg-white border border-gray-200 rounded-lg cursor-grab hover:border-amber-400 hover:shadow-md transition ${
         isDragging ? 'opacity-50 shadow-lg' : ''
       }`}
     >

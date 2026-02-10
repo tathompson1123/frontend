@@ -91,7 +91,7 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
           type="button"
           onClick={handleSaveHours}
           disabled={isSaving}
-          className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
+          className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50"
         >
           <Save className="w-5 h-5" />
           {isSaving ? 'Saving...' : 'Save Hours'}
@@ -111,7 +111,7 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
                       ...hours,
                       [day]: { ...hours[day], open: e.target.checked }
                     })}
-                    className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
                   />
                   <span className="font-semibold text-gray-900">{dayLabels[day]}</span>
                 </label>
@@ -128,7 +128,7 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
                         ...hours,
                         [day]: { ...hours[day], start: e.target.value }
                       })}
-                      className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                      className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                     />
                   </div>
 
@@ -141,7 +141,7 @@ export default function BusinessHours({ businessHours, setBusinessHours, apiUrl,
                       ...hours,
                       [day]: { ...hours[day], end: e.target.value }
                     })}
-                    className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                    className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                   />
                 </div>
               ) : (

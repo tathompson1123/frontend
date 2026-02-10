@@ -1824,20 +1824,20 @@ if (isBackground) return;
       <div className="absolute top-4 left-4 z-50 flex items-center gap-3">
 
         <div className="relative group">
-          <button className="p-2 bg-purple-600 text-white rounded-lg shadow-lg hover:shadow-xl transition">
+          <button className="p-2 bg-amber-600 text-white rounded-lg shadow-lg hover:shadow-xl transition">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
           
-          <div className="absolute left-0 top-12 w-80 bg-purple-600 text-white px-4 py-3 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-50">
+          <div className="absolute left-0 top-12 w-80 bg-amber-600 text-white px-4 py-3 rounded-lg shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 pointer-events-none z-50">
             <div className="text-sm font-medium space-y-1">
               <p>💡 <strong>Click</strong> to select</p>
               <p>🖱️ <strong>Drag</strong> to move (auto-snap)</p>
               <p>✏️ <strong>Double-click</strong> to edit text</p>
               <p>⌨️ <strong>Shift+Click</strong> for multi-select</p>
             </div>
-            <div className="absolute -top-2 left-4 w-4 h-4 bg-purple-600 transform rotate-45"></div>
+            <div className="absolute -top-2 left-4 w-4 h-4 bg-amber-600 transform rotate-45"></div>
           </div>
         </div>
       </div>
@@ -1914,13 +1914,13 @@ if (isBackground) return;
 
       {modalVisible && selectedElementsRef.current.length > 0 && (
         <div 
-          className="fixed bg-white rounded-xl shadow-2xl border-2 border-purple-500 w-80 z-50"
+          className="fixed bg-white rounded-xl shadow-2xl border-2 border-amber-500 w-80 z-50"
           style={{
             top: '80px',
             left: '20px'
           }}
         >
-          <div className="p-3 border-b bg-gradient-to-r from-purple-600 to-blue-600 flex justify-between items-center rounded-t-xl">
+          <div className="p-3 border-b bg-gradient-to-r from-amber-600 to-blue-600 flex justify-between items-center rounded-t-xl">
             <div className="text-white">
               <h3 className="font-semibold text-sm">
                 {selectedElementsRef.current.length === 1 ? `Edit ${selectedElementsRef.current[0].tagName}` : `${selectedElementsRef.current.length} Elements`}
@@ -1945,7 +1945,7 @@ if (isBackground) return;
                 value={elementProps.fontSize} 
                 onChange={(e) => updateProp('fontSize', e.target.value)} 
                 placeholder="16px"
-                className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-purple-500 focus:outline-none" 
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none" 
               />
             </div>
             
@@ -1954,14 +1954,14 @@ if (isBackground) return;
               <div className="flex gap-2">
                 <button 
                   onClick={() => updateProp('fontWeight', elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'normal' : 'bold')} 
-                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.fontWeight === 'bold' || elementProps.fontWeight === '700' ? 'bg-amber-100 border-amber-500' : 'border-gray-200 hover:bg-gray-50'}`}
                   title="Bold"
                 >
                   <Bold className="w-4 h-4 mx-auto" />
                 </button>
                 <button 
                   onClick={() => updateProp('fontStyle', elementProps.fontStyle === 'italic' ? 'normal' : 'italic')} 
-                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.fontStyle === 'italic' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.fontStyle === 'italic' ? 'bg-amber-100 border-amber-500' : 'border-gray-200 hover:bg-gray-50'}`}
                   title="Italic"
                 >
                   <Italic className="w-4 h-4 mx-auto" />
@@ -1974,21 +1974,21 @@ if (isBackground) return;
               <div className="flex gap-2">
                 <button 
                   onClick={() => updateProp('textAlign', 'left')} 
-                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.textAlign === 'left' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.textAlign === 'left' ? 'bg-amber-100 border-amber-500' : 'border-gray-200 hover:bg-gray-50'}`}
                   title="Align Left"
                 >
                   <AlignLeft className="w-4 h-4 mx-auto" />
                 </button>
                 <button 
                   onClick={() => updateProp('textAlign', 'center')} 
-                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.textAlign === 'center' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.textAlign === 'center' ? 'bg-amber-100 border-amber-500' : 'border-gray-200 hover:bg-gray-50'}`}
                   title="Align Center"
                 >
                   <AlignCenter className="w-4 h-4 mx-auto" />
                 </button>
                 <button 
                   onClick={() => updateProp('textAlign', 'right')} 
-                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.textAlign === 'right' ? 'bg-purple-100 border-purple-500' : 'border-gray-200 hover:bg-gray-50'}`}
+                  className={`flex-1 p-2 border-2 rounded-lg transition ${elementProps.textAlign === 'right' ? 'bg-amber-100 border-amber-500' : 'border-gray-200 hover:bg-gray-50'}`}
                   title="Align Right"
                 >
                   <AlignRight className="w-4 h-4 mx-auto" />

@@ -341,7 +341,7 @@ const handleConnectExistingWebsite = async () => {
   if (businessSettingsComplete === null) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader className="w-8 h-8 text-purple-600 animate-spin" />
+        <Loader className="w-8 h-8 text-amber-600 animate-spin" />
       </div>
     );
   }
@@ -379,7 +379,7 @@ const handleConnectExistingWebsite = async () => {
 
           <button
             onClick={() => setCurrentView('business-settings')}
-            className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 mx-auto"
+            className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-amber-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 mx-auto"
           >
             Go to Business Settings
             <ArrowRight className="w-5 h-5" />
@@ -407,7 +407,7 @@ const handleConnectExistingWebsite = async () => {
     <button 
       type="button" 
       onClick={() => navigate('/editor-v2')}
-      className="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-purple-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+      className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-amber-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
     >
       <Edit className="w-4 h-4" />
       Edit Website
@@ -474,7 +474,7 @@ const handleConnectExistingWebsite = async () => {
   <button 
     type="button" 
     onClick={() => setShowEditWebsite(true)} 
-    className="bg-white border-2 border-purple-600 text-purple-600 px-6 py-2 rounded-lg font-semibold hover:bg-purple-50 transition-all flex items-center gap-2"
+    className="bg-white border-2 border-amber-600 text-amber-600 px-6 py-2 rounded-lg font-semibold hover:bg-amber-50 transition-all flex items-center gap-2"
   >
     <RefreshCw className="w-4 h-4" />
     Generate New
@@ -506,7 +506,7 @@ const handleConnectExistingWebsite = async () => {
                 <button 
                   type="button" 
                   onClick={() => setDevicePreview('desktop')} 
-                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 transition ${devicePreview === 'desktop' ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
+                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 transition ${devicePreview === 'desktop' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
                 >
                   <Monitor className="w-4 h-4" />
                   <span className="hidden sm:inline">Desktop</span>
@@ -514,7 +514,7 @@ const handleConnectExistingWebsite = async () => {
                 <button 
                   type="button" 
                   onClick={() => setDevicePreview('mobile')} 
-                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 transition ${devicePreview === 'mobile' ? 'bg-purple-600 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
+                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 transition ${devicePreview === 'mobile' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
                 >
                   <Smartphone className="w-4 h-4" />
                   <span className="hidden sm:inline">Mobile</span>
@@ -677,7 +677,7 @@ const handleConnectExistingWebsite = async () => {
         {/* Domain Management */}
             <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 flex flex-col">
               <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <Link className="w-5 h-5 text-purple-600" />
+                <Link className="w-5 h-5 text-amber-600" />
                 Domain & Hosting
               </h3>
               {customDomain ? (
@@ -726,9 +726,9 @@ const handleConnectExistingWebsite = async () => {
                   {/* Side by side domain options */}
                   <div className="grid md:grid-cols-2 gap-4 flex-1 overflow-auto">
                     {/* Buy Domain Option */}
-                    <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-4 border-2 border-purple-200 flex flex-col min-h-full">
+                    <div className="bg-gradient-to-br from-amber-50 to-pink-50 rounded-lg p-4 border-2 border-amber-200 flex flex-col min-h-full">
                       <div className="flex items-center gap-2 mb-3">
-                        <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
+                        <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center flex-shrink-0">
                           <ShoppingCart className="w-4 h-4 text-white" />
                         </div>
                         <div>
@@ -752,7 +752,7 @@ const handleConnectExistingWebsite = async () => {
                       </ul>
                       <div className="text-center mb-3">
                         <p className="text-xs text-gray-600">Annual Price</p>
-                        <p className="text-2xl font-bold text-purple-600">$15</p>
+                        <p className="text-2xl font-bold text-amber-600">$15</p>
                         <p className="text-xs text-gray-500">per year</p>
                       </div>
                       <button
@@ -760,7 +760,7 @@ const handleConnectExistingWebsite = async () => {
                           setDomainSetupMode('buy');
                           setShowDomainSetup(true);
                         }}
-                        className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2 text-sm"
+                        className="w-full bg-gradient-to-r from-amber-600 to-pink-600 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition flex items-center justify-center gap-2 text-sm"
                       >
                         <ShoppingCart className="w-4 h-4" />
                         Search & Buy Domain
@@ -824,7 +824,7 @@ const handleConnectExistingWebsite = async () => {
             <button 
               type="button" 
               onClick={() => setShowEditWebsite(true)} 
-              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center justify-center gap-2"
+              className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-8 py-3 rounded-lg font-semibold hover:shadow-lg transition-all inline-flex items-center justify-center gap-2"
             >
               <RefreshCw className="w-5 h-5" />
               Generate New Website
@@ -833,7 +833,7 @@ const handleConnectExistingWebsite = async () => {
             <button 
               type="button" 
               onClick={() => setShowConnectWebsite(true)} 
-              className="flex-1 bg-white border-2 border-purple-600 text-purple-600 px-8 py-3 rounded-lg font-semibold hover:bg-purple-50 transition-all inline-flex items-center justify-center gap-2"
+              className="flex-1 bg-white border-2 border-amber-600 text-amber-600 px-8 py-3 rounded-lg font-semibold hover:bg-amber-50 transition-all inline-flex items-center justify-center gap-2"
             >
               <Link className="w-5 h-5" />
               Connect Existing Website
@@ -868,9 +868,9 @@ const handleConnectExistingWebsite = async () => {
 
                 <div className="p-8 space-y-6">
                   {/* Search Domain */}
-                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+                  <div className="bg-gradient-to-br from-amber-50 to-pink-50 rounded-xl p-6 border-2 border-amber-200">
                     <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Globe className="w-5 h-5 text-purple-600" />
+                      <Globe className="w-5 h-5 text-amber-600" />
                       Search for your perfect domain
                     </h3>
                     <div className="flex gap-3">
@@ -880,12 +880,12 @@ const handleConnectExistingWebsite = async () => {
                         onChange={(e) => setDomainSearchQuery(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
                         onKeyPress={(e) => e.key === 'Enter' && searchDomains()}
                         placeholder="mybusiness"
-                        className="flex-1 px-4 py-3 border-2 border-purple-300 rounded-lg focus:border-purple-500 focus:outline-none text-lg"
+                        className="flex-1 px-4 py-3 border-2 border-amber-300 rounded-lg focus:border-amber-500 focus:outline-none text-lg"
                       />
                       <button
                         onClick={searchDomains}
                         disabled={isSearching || !domainSearchQuery.trim()}
-                        className="px-6 py-3 bg-purple-600 text-white rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center gap-2"
+                        className="px-6 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition disabled:opacity-50 flex items-center gap-2"
                       >
                         {isSearching ? (
                           <><Loader className="w-5 h-5 animate-spin" />Searching...</>
@@ -910,15 +910,15 @@ const handleConnectExistingWebsite = async () => {
                                 onClick={() => setSelectedDomain(domain)}
                                 className={`p-4 rounded-lg border-2 cursor-pointer transition ${
                                   selectedDomain?.name === domain.name
-                                    ? 'border-purple-600 bg-purple-50'
-                                    : 'border-gray-200 hover:border-purple-300 bg-white'
+                                    ? 'border-amber-600 bg-amber-50'
+                                    : 'border-gray-200 hover:border-amber-300 bg-white'
                                 }`}
                               >
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center gap-3">
                                     <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
                                       selectedDomain?.name === domain.name
-                                        ? 'border-purple-600 bg-purple-600'
+                                        ? 'border-amber-600 bg-amber-600'
                                         : 'border-gray-300'
                                     }`}>
                                       {selectedDomain?.name === domain.name && (
@@ -1116,7 +1116,7 @@ const handleConnectExistingWebsite = async () => {
                 <div className="p-8 space-y-6">
                   {!customDomain ? (
                     // Step 1: Enter Domain
-                    <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+                    <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-xl p-6 border-2 border-blue-200">
                       <div className="flex items-start gap-4 mb-4">
                         <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
                           1
@@ -1157,7 +1157,7 @@ const handleConnectExistingWebsite = async () => {
                   ) : (
                     <>
                       {/* Domain Confirmed */}
-                      <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl p-6 border-2 border-blue-200">
+                      <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-xl p-6 border-2 border-blue-200">
                         <div className="flex items-start gap-4">
                           <div className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
                             <Check className="w-6 h-6" />
@@ -1176,9 +1176,9 @@ const handleConnectExistingWebsite = async () => {
                       </div>
 
                       {/* Step 2: Update Nameservers */}
-                      <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl p-6 border-2 border-purple-200">
+                      <div className="bg-gradient-to-br from-amber-50 to-pink-50 rounded-xl p-6 border-2 border-amber-200">
                         <div className="flex items-start gap-4 mb-4">
-                          <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
+                          <div className="w-10 h-10 bg-amber-600 text-white rounded-full flex items-center justify-center font-bold flex-shrink-0">
                             2
                           </div>
                           <div>
@@ -1188,28 +1188,28 @@ const handleConnectExistingWebsite = async () => {
                         </div>
 
                         <div className="space-y-4">
-                          <div className="bg-white rounded-lg p-4 border border-purple-200">
+                          <div className="bg-white rounded-lg p-4 border border-amber-200">
                             <div className="space-y-2 mb-4">
-                              <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                <span className="font-mono text-purple-900 font-semibold flex-1">ns1.vercel-dns.com</span>
+                              <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                <span className="font-mono text-amber-900 font-semibold flex-1">ns1.vercel-dns.com</span>
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText('ns1.vercel-dns.com');
                                     alert('Copied!');
                                   }}
-                                  className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                                  className="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
                                 >
                                   Copy
                                 </button>
                               </div>
-                              <div className="flex items-center gap-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                                <span className="font-mono text-purple-900 font-semibold flex-1">ns2.vercel-dns.com</span>
+                              <div className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                                <span className="font-mono text-amber-900 font-semibold flex-1">ns2.vercel-dns.com</span>
                                 <button
                                   onClick={() => {
                                     navigator.clipboard.writeText('ns2.vercel-dns.com');
                                     alert('Copied!');
                                   }}
-                                  className="px-3 py-1 bg-purple-600 text-white text-xs rounded hover:bg-purple-700"
+                                  className="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700"
                                 >
                                   Copy
                                 </button>
@@ -1335,15 +1335,15 @@ const handleConnectExistingWebsite = async () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Business Name *</label>
-                    <input type="text" value={websiteForm.businessName} onChange={(e) => setWebsiteForm({ ...websiteForm, businessName: e.target.value })} required placeholder="e.g., Thompson's Auto Detailing" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={websiteForm.businessName} onChange={(e) => setWebsiteForm({ ...websiteForm, businessName: e.target.value })} required placeholder="e.g., Thompson's Auto Detailing" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Business Type *</label>
-                    <input type="text" value={websiteForm.businessType} onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })} required placeholder="e.g., Plumbing, Auto Detailing, Hair Salon" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={websiteForm.businessType} onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })} required placeholder="e.g., Plumbing, Auto Detailing, Hair Salon" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Tagline / Slogan</label>
-                    <input type="text" value={websiteForm.tagline || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, tagline: e.target.value })} placeholder="e.g., Quality Service Since 1995" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={websiteForm.tagline || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, tagline: e.target.value })} placeholder="e.g., Quality Service Since 1995" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                 </div>
               </div>
@@ -1356,40 +1356,40 @@ const handleConnectExistingWebsite = async () => {
     <div className="grid md:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">Business Phone</label>
-        <input type="tel" value={websiteForm.phone} onChange={(e) => setWebsiteForm({ ...websiteForm, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+        <input type="tel" value={websiteForm.phone} onChange={(e) => setWebsiteForm({ ...websiteForm, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">Business Email</label>
-        <input type="email" value={websiteForm.email} onChange={(e) => setWebsiteForm({ ...websiteForm, email: e.target.value })} placeholder="contact@mybusiness.com" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+        <input type="email" value={websiteForm.email} onChange={(e) => setWebsiteForm({ ...websiteForm, email: e.target.value })} placeholder="contact@mybusiness.com" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
       </div>
     </div>
     <div className="grid md:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">City</label>
-        <input type="text" value={websiteForm.city} onChange={(e) => setWebsiteForm({ ...websiteForm, city: e.target.value })} placeholder="e.g., Seattle" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+        <input type="text" value={websiteForm.city} onChange={(e) => setWebsiteForm({ ...websiteForm, city: e.target.value })} placeholder="e.g., Seattle" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
       </div>
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-2">State</label>
-        <input type="text" value={websiteForm.state} onChange={(e) => setWebsiteForm({ ...websiteForm, state: e.target.value })} placeholder="e.g., WA" maxLength="2" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none uppercase" />
+        <input type="text" value={websiteForm.state} onChange={(e) => setWebsiteForm({ ...websiteForm, state: e.target.value })} placeholder="e.g., WA" maxLength="2" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none uppercase" />
       </div>
     </div>
   </div>
 </div>
 
-              <div className="bg-purple-50 rounded-lg p-4 border-2 border-purple-200">
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-purple-600">🔧</span> Services & Expertise</h3>
+              <div className="bg-amber-50 rounded-lg p-4 border-2 border-amber-200">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-amber-600">🔧</span> Services & Expertise</h3>
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Services Offered *</label>
-                    <textarea value={websiteForm.services} onChange={(e) => setWebsiteForm({ ...websiteForm, services: e.target.value })} required placeholder="List your main services..." rows={5} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <textarea value={websiteForm.services} onChange={(e) => setWebsiteForm({ ...websiteForm, services: e.target.value })} required placeholder="List your main services..." rows={5} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Years in Business</label>
-                    <input type="number" value={websiteForm.yearsInBusiness || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, yearsInBusiness: e.target.value })} placeholder="e.g., 15" min="0" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="number" value={websiteForm.yearsInBusiness || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, yearsInBusiness: e.target.value })} placeholder="e.g., 15" min="0" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Certifications / Licenses</label>
-                    <input type="text" value={websiteForm.certifications || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, certifications: e.target.value })} placeholder="e.g., Licensed, Bonded, Insured" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={websiteForm.certifications || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, certifications: e.target.value })} placeholder="e.g., Licensed, Bonded, Insured" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                 </div>
               </div>
@@ -1399,22 +1399,22 @@ const handleConnectExistingWebsite = async () => {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Business Description *</label>
-                    <textarea value={websiteForm.description} onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })} required placeholder="Tell us about your business..." rows={6} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <textarea value={websiteForm.description} onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })} required placeholder="Tell us about your business..." rows={6} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">What Makes You Different?</label>
-                    <textarea value={websiteForm.uniqueSellingPoints || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, uniqueSellingPoints: e.target.value })} placeholder="List 3-5 key differentiators..." rows={4} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <textarea value={websiteForm.uniqueSellingPoints || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, uniqueSellingPoints: e.target.value })} placeholder="List 3-5 key differentiators..." rows={4} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Target Customer</label>
-                    <input type="text" value={websiteForm.targetCustomer || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, targetCustomer: e.target.value })} placeholder="e.g., Homeowners, Property managers" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none" />
+                    <input type="text" value={websiteForm.targetCustomer || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, targetCustomer: e.target.value })} placeholder="e.g., Homeowners, Property managers" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                   </div>
                 </div>
               </div>
 
               <div className="flex gap-4 pt-4 border-t-2 border-gray-200">
                 <button type="button" onClick={() => setShowEditWebsite(false)} className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors">Cancel</button>
-                <button type="submit" disabled={isRegenerating} className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                <button type="submit" disabled={isRegenerating} className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                   {isRegenerating ? <><RefreshCw className="w-5 h-5 animate-spin" />Generating...</> : <><RefreshCw className="w-5 h-5" />{currentWebsite ? 'Regenerate Website' : 'Generate Website'}</>}
                 </button>
               </div>
@@ -1449,7 +1449,7 @@ const handleConnectExistingWebsite = async () => {
                   value={existingWebsiteUrl}
                   onChange={(e) => setExistingWebsiteUrl(e.target.value)}
                   placeholder="https://yourbusiness.com"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
                 />
               </div>
 
@@ -1474,7 +1474,7 @@ const handleConnectExistingWebsite = async () => {
                 <button
                   onClick={handleConnectExistingWebsite}
                   disabled={!existingWebsiteUrl.trim()}
-                  className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
+                  className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
                 >
                   Connect Website
                 </button>

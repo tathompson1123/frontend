@@ -93,7 +93,7 @@ const ServicesPage = ({ userId }) => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
       </div>
     );
   }
@@ -111,7 +111,7 @@ const ServicesPage = ({ userId }) => {
           </div>
           <button
             onClick={() => setShowAddForm(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+            className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold"
           >
             <Plus className="w-5 h-5" />
             Add Service
@@ -140,7 +140,7 @@ const ServicesPage = ({ userId }) => {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="e.g., Lawn Mowing"
                 required
               />
@@ -156,7 +156,7 @@ const ServicesPage = ({ userId }) => {
                 step="0.5"
                 value={formData.durationHours}
                 onChange={(e) => setFormData({ ...formData, durationHours: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="2.5"
                 required
               />
@@ -175,7 +175,7 @@ const ServicesPage = ({ userId }) => {
                 step="0.01"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 placeholder="75.00"
                 required
               />
@@ -188,7 +188,7 @@ const ServicesPage = ({ userId }) => {
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-amber-500 focus:border-transparent"
                 rows="3"
                 placeholder="Brief description of this service"
               />
@@ -197,7 +197,7 @@ const ServicesPage = ({ userId }) => {
             <div className="col-span-2 flex gap-3">
               <button
                 type="submit"
-                className="flex-1 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+                className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold"
               >
                 {editingService ? 'Update Service' : 'Add Service'}
               </button>
@@ -216,8 +216,8 @@ const ServicesPage = ({ userId }) => {
       {/* Services List */}
       {services.length === 0 ? (
         <div className="bg-white rounded-xl shadow-lg p-12 text-center">
-          <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Plus className="w-10 h-10 text-purple-600" />
+          <div className="w-20 h-20 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Plus className="w-10 h-10 text-amber-600" />
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">No services yet</h3>
           <p className="text-gray-600 mb-6">
@@ -225,7 +225,7 @@ const ServicesPage = ({ userId }) => {
           </p>
           <button
             onClick={() => setShowAddForm(true)}
-            className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-semibold"
+            className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold"
           >
             Add Your First Service
           </button>
@@ -262,7 +262,7 @@ const ServicesPage = ({ userId }) => {
 
               <div className="space-y-3 mb-4">
                 <div className="flex items-center gap-2 text-gray-700">
-                  <Clock className="w-5 h-5 text-purple-600" />
+                  <Clock className="w-5 h-5 text-amber-600" />
                   <span className="font-semibold">{service.duration_hours} hours</span>
                 </div>
                 <div className="flex items-center gap-2 text-gray-700">
@@ -274,7 +274,7 @@ const ServicesPage = ({ userId }) => {
               <div className="pt-4 border-t border-gray-200 flex gap-2">
                 <button
                   onClick={() => handleEdit(service)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-purple-50 text-purple-600 rounded-lg hover:bg-purple-100 transition font-semibold"
+                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-amber-50 text-amber-600 rounded-lg hover:bg-amber-100 transition font-semibold"
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit

@@ -293,7 +293,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
           type="text"
           value={value || ''}
           onChange={(e) => onChange(fieldKey, e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
       </div>
     );
@@ -307,7 +307,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
           value={value || ''}
           onChange={(e) => onChange(fieldKey, e.target.value)}
           rows={3}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
       </div>
     );
@@ -323,7 +323,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
           min={field.min}
           max={field.max}
           onChange={(e) => onChange(fieldKey, parseInt(e.target.value) || 0)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
       </div>
     );
@@ -338,7 +338,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
           value={value || ''}
           onChange={(e) => onChange(fieldKey, e.target.value)}
           placeholder="https://..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
         />
         {value && (
           <img src={value} alt="Preview" className="mt-2 max-h-32 rounded-lg object-cover" />
@@ -354,7 +354,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
           type="checkbox"
           checked={value || false}
           onChange={(e) => onChange(fieldKey, e.target.checked)}
-          className="w-4 h-4 text-purple-600 rounded focus:ring-purple-500"
+          className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
         />
         <label className="text-sm font-medium text-gray-700">{field.label}</label>
       </div>
@@ -442,7 +442,7 @@ function ArrayFieldEditor({ field, value = [], onChange, fieldKey }) {
       </div>
       <button
         onClick={addItem}
-        className="mt-2 flex items-center gap-1 text-sm text-purple-600 hover:text-purple-700"
+        className="mt-2 flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700"
       >
         <Plus className="w-4 h-4" /> Add Item
       </button>
@@ -466,14 +466,14 @@ function SectionCard({ section, index, isSelected, onSelect, onMoveUp, onMoveDow
       onClick={onSelect}
       className={`p-4 rounded-lg border-2 cursor-pointer transition-all ${
         isSelected
-          ? 'border-purple-500 bg-purple-50 shadow-lg ring-2 ring-purple-200'
+          ? 'border-amber-500 bg-amber-50 shadow-lg ring-2 ring-amber-200'
           : 'border-gray-200 bg-white hover:border-gray-300 hover:shadow-md'
       }`}
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg ${isSelected ? 'bg-purple-100' : 'bg-gray-100'}`}>
-            <IconComponent className={`w-5 h-5 ${isSelected ? 'text-purple-600' : 'text-gray-600'}`} />
+          <div className={`p-2 rounded-lg ${isSelected ? 'bg-amber-100' : 'bg-gray-100'}`}>
+            <IconComponent className={`w-5 h-5 ${isSelected ? 'text-amber-600' : 'text-gray-600'}`} />
           </div>
           <div>
             <h3 className="font-medium text-gray-900">{templateDef.name}</h3>
@@ -540,7 +540,7 @@ function AddSectionModal({ isOpen, onClose, onAdd }) {
                       onClick={() => setSelectedTemplate(template.id)}
                       className={`p-3 rounded-lg border-2 text-left transition ${
                         selectedTemplate === template.id
-                          ? 'border-purple-500 bg-purple-50'
+                          ? 'border-amber-500 bg-amber-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
@@ -565,7 +565,7 @@ function AddSectionModal({ isOpen, onClose, onAdd }) {
           <button
             onClick={() => { onAdd(selectedTemplate); onClose(); }}
             disabled={!selectedTemplate}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50"
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
           >
             Add Section
           </button>
@@ -825,7 +825,7 @@ export default function EditorV2() {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-amber-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading editor...</p>
         </div>
       </div>
@@ -857,7 +857,7 @@ export default function EditorV2() {
             onClick={() => setDevicePreview('desktop')}
             className={`p-2 rounded-md transition ${
               devicePreview === 'desktop'
-                ? 'bg-white shadow text-purple-600'
+                ? 'bg-white shadow text-amber-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -867,7 +867,7 @@ export default function EditorV2() {
             onClick={() => setDevicePreview('tablet')}
             className={`p-2 rounded-md transition ${
               devicePreview === 'tablet'
-                ? 'bg-white shadow text-purple-600'
+                ? 'bg-white shadow text-amber-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -877,7 +877,7 @@ export default function EditorV2() {
             onClick={() => setDevicePreview('mobile')}
             className={`p-2 rounded-md transition ${
               devicePreview === 'mobile'
-                ? 'bg-white shadow text-purple-600'
+                ? 'bg-white shadow text-amber-600'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
@@ -898,7 +898,7 @@ export default function EditorV2() {
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
           >
             <Save className="w-4 h-4" />
             {isSaving ? 'Saving...' : 'Save Changes'}
@@ -941,7 +941,7 @@ export default function EditorV2() {
               <div className="p-4 border-t border-gray-200">
                 <button
                   onClick={() => setShowAddModal(true)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition"
                 >
                   <Plus className="w-4 h-4" />
                   Add Section
@@ -951,19 +951,19 @@ export default function EditorV2() {
           ) : selectedSection && selectedTemplateDef ? (
             <>
               {/* Section Editor Mode */}
-              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-blue-50">
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-blue-50">
                 <button
                   onClick={() => setIsEditingSection(false)}
-                  className="flex items-center gap-2 text-gray-700 hover:text-purple-600 transition mb-3"
+                  className="flex items-center gap-2 text-gray-700 hover:text-amber-600 transition mb-3"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span className="text-sm font-medium">Back to Sections</span>
                 </button>
                 <div className="flex items-center gap-2 mb-1">
-                  {selectedTemplateDef.icon && <selectedTemplateDef.icon className="w-5 h-5 text-purple-600" />}
+                  {selectedTemplateDef.icon && <selectedTemplateDef.icon className="w-5 h-5 text-amber-600" />}
                   <h2 className="font-semibold text-gray-900">{selectedTemplateDef.name}</h2>
                 </div>
-                <p className="text-sm text-purple-600 font-medium">Editing Section {selectedSectionIndex + 1}</p>
+                <p className="text-sm text-amber-600 font-medium">Editing Section {selectedSectionIndex + 1}</p>
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">

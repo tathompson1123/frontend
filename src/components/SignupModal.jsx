@@ -201,7 +201,7 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
                 onChange={handleInputChange}
                 required
                 placeholder="e.g., Mike's Plumbing"
-                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
               />
             </div>
           )}
@@ -217,7 +217,7 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
               onChange={handleInputChange}
               required
               placeholder="your@email.com"
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
             />
           </div>
           
@@ -233,7 +233,7 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
               required
               minLength={6}
               placeholder={mode === 'signup' ? 'Minimum 6 characters' : 'Your password'}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-purple-500 focus:outline-none transition-colors"
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
             />
           </div>
           
@@ -254,7 +254,7 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
+              className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
             >
               {loading 
                 ? 'Please wait...' 
@@ -269,7 +269,7 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
         <div className="mt-6 text-center">
           <button
             onClick={() => mode === 'signup' ? switchToLogin() : switchToSignup()}
-            className="text-purple-600 hover:text-purple-700 font-medium text-sm transition-colors"
+            className="text-amber-600 hover:text-amber-700 font-medium text-sm transition-colors"
           >
             {mode === 'signup' 
               ? 'Already have an account? Login' 

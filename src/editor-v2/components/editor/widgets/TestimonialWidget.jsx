@@ -36,8 +36,8 @@ export default function TestimonialWidget({ widget, isEditing, onUpdate }) {
             className="w-12 h-12 rounded-full object-cover"
           />
         ) : (
-          <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-            <span className="text-purple-600 font-bold text-lg">
+          <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+            <span className="text-amber-600 font-bold text-lg">
               {(content.author || 'A')[0].toUpperCase()}
             </span>
           </div>

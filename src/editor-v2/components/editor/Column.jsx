@@ -120,7 +120,7 @@ function DropZone({ sectionId, rowId, columnId, index }) {
       ref={setNodeRef}
       className={`h-2 my-1 rounded transition-all ${
         isOver
-          ? 'bg-purple-400 h-16 border-2 border-dashed border-purple-600'
+          ? 'bg-amber-400 h-16 border-2 border-dashed border-amber-600'
           : 'bg-transparent hover:bg-gray-200'
       }`}
     />
@@ -147,7 +147,7 @@ function EmptyColumnDropZone({ sectionId, rowId, columnId }) {
       ref={setNodeRef}
       className={`min-h-[100px] border-2 border-dashed rounded-lg flex items-center justify-center transition-all ${
         isOver
-          ? 'border-purple-500 bg-purple-50'
+          ? 'border-amber-500 bg-amber-50'
           : 'border-gray-300 bg-gray-50 hover:border-gray-400'
       }`}
     >
