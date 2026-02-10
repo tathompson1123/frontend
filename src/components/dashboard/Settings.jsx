@@ -216,7 +216,7 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
                     href="#billing"
                     onClick={(e) => {
                       e.preventDefault();
-                      window.dispatchEvent(new CustomEvent('navigate-to', { detail: 'billing' }));
+                      window.dispatchEvent(new CustomEvent('navigate-to-view', { detail: 'billing' }));
                     }}
                     className="px-4 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors"
                   >
