@@ -16,7 +16,9 @@ import {
   LogOut,
   Menu,
   X,
-  Bot
+  Bot,
+  FileText,
+  Wallet
 } from 'lucide-react';
 
 // Component imports
@@ -30,7 +32,9 @@ import BusinessInformation from '../components/dashboard/BusinessInformation';
 import MarketResearch from '../components/dashboard/MarketResearch';
 import Billing from '../components/dashboard/Billing';
 import SettingsPage from '../components/dashboard/Settings';
-import FeatureGate from '../components/dashboard/FeatureGate'; 
+import FeatureGate from '../components/dashboard/FeatureGate';
+import Invoices from '../components/dashboard/Invoices';
+import PaymentSettings from '../components/dashboard/PaymentSettings';
 
 // Helper function for authenticated API calls
 const authFetch = async (url, options = {}) => {
@@ -324,7 +328,9 @@ useEffect(() => {
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
+    { id: 'invoices', icon: FileText, label: 'Invoices' },
     { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
+    { id: 'payment-settings', icon: Wallet, label: 'Payment Settings' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
@@ -541,6 +547,22 @@ useEffect(() => {
     />
   </FeatureGate>
 )}
+          {currentView === 'invoices' && (
+            <Invoices
+              apiUrl={apiUrl}
+              user={user}
+              authFetch={authFetch}
+            />
+          )}
+
+          {currentView === 'payment-settings' && (
+            <PaymentSettings
+              apiUrl={apiUrl}
+              user={user}
+              authFetch={authFetch}
+            />
+          )}
+
           {currentView === 'billing' && (
             <Billing 
               user={user} 

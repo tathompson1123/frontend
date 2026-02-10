@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone } from 'lucide-react';
 
 export default function BusinessInformation({ 
   businessHours, 
@@ -66,6 +66,43 @@ export default function BusinessInformation({
   const [groups, setGroups] = useState([]);
   const [groupForm, setGroupForm] = useState({ name: '', selectedEmployees: [] });
   const [editingGroup, setEditingGroup] = useState(null);
+  const [invitingEmployeeId, setInvitingEmployeeId] = useState(null);
+
+  const handleSendInvite = async (employeeId) => {
+    setInvitingEmployeeId(employeeId);
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/${employeeId}/invite`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'Invite sent!');
+        fetchEmployees();
+      } else {
+        alert(data.error || 'Failed to send invite');
+      }
+    } catch (err) {
+      console.error('Error sending invite:', err);
+      alert('Failed to send invite');
+    } finally {
+      setInvitingEmployeeId(null);
+    }
+  };
+
+  const handleRevokeAccess = async (employeeId, employeeName) => {
+    if (!confirm(`Revoke mobile app access for ${employeeName}? They will need a new invite to log in again.`)) return;
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/${employeeId}/revoke`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        alert('Access revoked');
+        fetchEmployees();
+      }
+    } catch (err) {
+      console.error('Error revoking access:', err);
+    }
+  };
 
   const getNextColor = () => {
     const usedColors = employees.map(emp => emp.color);
@@ -960,6 +997,41 @@ export default function BusinessInformation({
                     <button type="button" onClick={() => handleEditEmployee(employee)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                       <Edit className="w-5 h-5" />
                     </button>
+                  </div>
+
+                  {/* Mobile App Access */}
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Smartphone className="w-4 h-4 text-gray-400" />
+                      <span className="text-xs font-medium text-gray-500">
+                        {employee.invite_status === 'accepted' ? (
+                          <span className="text-green-600">App Connected</span>
+                        ) : employee.invite_status === 'pending' ? (
+                          <span className="text-amber-600">Invite Pending</span>
+                        ) : (
+                          'No App Access'
+                        )}
+                      </span>
+                    </div>
+                    {employee.invite_status === 'accepted' ? (
+                      <button
+                        onClick={() => handleRevokeAccess(employee.id, employee.name)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition"
+                      >
+                        <ShieldOff className="w-3.5 h-3.5" />
+                        Revoke
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleSendInvite(employee.id)}
+                        disabled={invitingEmployeeId === employee.id || !employee.email}
+                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition disabled:opacity-50"
+                        title={!employee.email ? 'Add an email to send invite' : ''}
+                      >
+                        <Send className="w-3.5 h-3.5" />
+                        {invitingEmployeeId === employee.id ? 'Sending...' : employee.invite_status === 'pending' ? 'Resend' : 'Invite to App'}
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
