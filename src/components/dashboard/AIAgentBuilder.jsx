@@ -289,7 +289,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           } catch (e) { console.error('Auto-save failed:', e); }
           setAiMessages(prev => [...prev, {
             role: 'assistant',
-            content: data.message + "\n\n✅ Configuration updated & saved!"
+            content: data.message + "\n\n✅ Configuration saved! Anything else you want to add?"
           }]);
         } else {
           setAiMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
