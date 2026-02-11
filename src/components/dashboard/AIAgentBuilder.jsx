@@ -237,10 +237,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     const userMessage = previewInput.trim();
     setPreviewMessages(prev => [...prev, { role: 'user', content: userMessage }]);
     setPreviewInput('');
-    setIsPreviewLoading(true);
 
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/preview-chat`, {
+      // Fire API request in background while "reading" delay runs
+      const fetchPromise = authFetch(`${apiUrl}/api/agents/preview-chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -251,8 +251,21 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         })
       });
 
+      // 5-second "reading" delay — no typing indicator yet
+      await new Promise(r => setTimeout(r, 5000));
+
+      // NOW show typing indicator
+      setIsPreviewLoading(true);
+
+      const response = await fetchPromise;
+
       if (response.ok) {
         const data = await response.json();
+        // Human typing delay: 60-80 WPM
+        const replyLen = (data.reply || '').length;
+        const msPerChar = 150 + Math.random() * 50;
+        const typingMs = Math.min(Math.max(replyLen * msPerChar, 2000), 15000);
+        await new Promise(r => setTimeout(r, typingMs));
         setPreviewMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
       } else {
         setPreviewMessages(prev => [...prev, {
@@ -950,8 +963,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               )}
               {isPreviewLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 px-3 py-2 rounded-lg">
-                    <Loader2 className="w-4 h-4 text-gray-500 animate-spin" />
+                  <div className="bg-gray-100 px-4 py-3 rounded-lg flex gap-1">
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
                   </div>
                 </div>
               )}
