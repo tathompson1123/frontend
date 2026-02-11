@@ -26,6 +26,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   const [reviewLink, setReviewLink] = useState('');
   const [savingReviewLink, setSavingReviewLink] = useState(false);
   const [showLinkInfo, setShowLinkInfo] = useState(false);
+  const [reviewSettingsTab, setReviewSettingsTab] = useState('timeline');
 
   useEffect(() => {
   fetchStats();
@@ -630,13 +631,13 @@ const saveReviewConfig = async () => {
                 </div>
               </div>
 
-{/* Review Request Configuration */}
+{/* Review Request Settings — organized with sub-tabs */}
 {reviewLink && (
   <div className="bg-white border-2 border-gray-200 rounded-xl p-6">
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-between mb-4">
       <div>
         <h3 className="text-lg font-bold text-gray-900">Review Request Settings</h3>
-        <p className="text-sm text-gray-600 mt-1">Customize your review request message and incentive</p>
+        <p className="text-sm text-gray-600 mt-1">Customize your review automation</p>
       </div>
       <button
         onClick={saveReviewConfig}
@@ -647,183 +648,59 @@ const saveReviewConfig = async () => {
       </button>
     </div>
 
-    <div className="grid md:grid-cols-2 gap-6">
-      {/* Message Template */}
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Message Template
-          </label>
-          <textarea
-            value={reviewConfig.messageTemplate}
-            onChange={(e) => setReviewConfig({ ...reviewConfig, messageTemplate: e.target.value })}
-            rows="6"
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-            placeholder="Enter your review request message..."
-          />
-          <p className="text-xs text-gray-500 mt-2">
-            Available variables: <code className="bg-gray-100 px-1 rounded">{'{{name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{business}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{service}}'}</code>
-          </p>
-        </div>
-
-        {/* Preview */}
-        <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-          <p className="text-xs font-medium text-gray-700 mb-2">Preview:</p>
-          <p className="text-sm text-gray-900">
-            {reviewConfig.messageTemplate
-              .replace('{{name}}', 'John')
-              .replace('{{business}}', user.businessName || 'Your Business')
-              .replace('{{service}}', 'HVAC Maintenance')}
-          </p>
-          {reviewConfig.incentiveEnabled && reviewConfig.incentive && (
-            <div className="mt-3 pt-3 border-t border-gray-300">
-              <p className="text-xs font-medium text-gray-700 mb-1">Incentive:</p>
-              <p className="text-sm text-green-700 font-semibold">🎁 {reviewConfig.incentive}</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Incentive & Settings */}
-      <div className="space-y-4">
-        {/* Incentive Toggle */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">Offer Incentive</p>
-            <p className="text-sm text-gray-600">Encourage reviews with a reward</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={reviewConfig.incentiveEnabled}
-              onChange={(e) => setReviewConfig({ ...reviewConfig, incentiveEnabled: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-
-        {/* Incentive Text */}
-        {reviewConfig.incentiveEnabled && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Incentive Offer
-            </label>
-            <input
-              type="text"
-              value={reviewConfig.incentive}
-              onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="e.g., $10 off your next service"
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              💡 Examples: "$10 off next service", "15% discount on next booking", "Free service upgrade"
-            </p>
-          </div>
-        )}
-
-        {/* Auto-send Toggle */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-          <div>
-            <p className="font-medium text-gray-900">Auto-Send Requests</p>
-            <p className="text-sm text-gray-600">Automatically send after service completion</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              checked={reviewConfig.autoSendEnabled}
-              onChange={(e) => setReviewConfig({ ...reviewConfig, autoSendEnabled: e.target.checked })}
-              className="sr-only peer"
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          </label>
-        </div>
-
-        {/* Send Delay */}
-        {reviewConfig.autoSendEnabled && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              First Email Timing
-            </label>
-            <select
-              value={reviewConfig.sendDelay}
-              onChange={(e) => setReviewConfig({ ...reviewConfig, sendDelay: parseInt(e.target.value) })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="0">Immediately after service</option>
-              <option value="1">1 hour later</option>
-              <option value="6">6 hours later</option>
-              <option value="24">24 hours later (recommended)</option>
-              <option value="48">48 hours later</option>
-              <option value="72">3 days later</option>
-            </select>
-            <p className="text-xs text-gray-500 mt-2">
-              📱 SMS is always sent 2 hours after service for immediate impact. This setting controls when the first email is sent.
-            </p>
-          </div>
-        )}
-
-        {/* Stats Box */}
-        <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-lg p-4 border border-blue-200">
-          <p className="text-sm font-medium text-gray-900 mb-3">💡 Pro Tips:</p>
-          <ul className="space-y-2 text-xs text-gray-700">
-            <li>• SMS sent automatically 2 hours after service (optimal timing)</li>
-            <li>• Personalize with customer names for better response rates</li>
-            <li>• Send first email 24 hours after service for best results</li>
-            <li>• Keep incentives simple and easy to redeem</li>
-            <li>• Test different messages to see what works best</li>
-          </ul>
-        </div>
-      </div>
+    {/* Sub-tabs within Review Request Settings */}
+    <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
+      {[
+        { id: 'timeline', label: 'Timeline' },
+        { id: 'customization', label: 'Customization' },
+        { id: 'metrics', label: 'Metrics' },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => setReviewSettingsTab(tab.id)}
+          className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition ${
+            reviewSettingsTab === tab.id
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
     </div>
 
-    {/* Timeline Section */}
-    {reviewConfig.autoSendEnabled && (
-      <div className="mt-6 p-5 bg-gradient-to-r from-amber-50 to-blue-50 rounded-lg border border-amber-200">
+    {/* Timeline sub-tab */}
+    {reviewSettingsTab === 'timeline' && (
+      <div className="p-5 bg-gradient-to-r from-amber-50 to-blue-50 rounded-lg border border-amber-200">
         <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
           <Calendar className="w-5 h-5 text-amber-600" />
           Your Review Request Timeline
         </h4>
         <div className="space-y-3">
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
-              2 hours
-            </div>
+            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">2 hours</div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Phone className="w-4 h-4 text-blue-600" />
                 <span className="font-semibold text-gray-900">SMS (Step 1)</span>
               </div>
-              <p className="text-xs text-gray-600">
-                Strike while the iron is hot - immediate impact after service
-              </p>
+              <p className="text-xs text-gray-600">Strike while the iron is hot - immediate impact after service</p>
             </div>
           </div>
-          
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
-              {reviewConfig.sendDelay === 0 ? 'Immediately' : 
-               reviewConfig.sendDelay === 1 ? '1 hour' :
-               reviewConfig.sendDelay === 6 ? '6 hours' :
-               reviewConfig.sendDelay === 24 ? '24 hours' :
-               reviewConfig.sendDelay === 48 ? '48 hours' :
-               '3 days'}
+              {reviewConfig.sendDelay === 0 ? 'Immediately' : reviewConfig.sendDelay === 1 ? '1 hour' : reviewConfig.sendDelay === 6 ? '6 hours' : reviewConfig.sendDelay === 24 ? '24 hours' : reviewConfig.sendDelay === 48 ? '48 hours' : '3 days'}
             </div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Mail className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-gray-900">Email (Step 2)</span>
               </div>
-              <p className="text-xs text-gray-600">
-                Professional follow-up with incentive details
-              </p>
+              <p className="text-xs text-gray-600">Professional follow-up with incentive details</p>
             </div>
           </div>
-
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
-              +2 days
-            </div>
+            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">+2 days</div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Mail className="w-4 h-4 text-amber-600" />
@@ -832,11 +709,8 @@ const saveReviewConfig = async () => {
               <p className="text-xs text-gray-600">Friendly reminder about the reward</p>
             </div>
           </div>
-
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
-              +4 days
-            </div>
+            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">+4 days</div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Mail className="w-4 h-4 text-amber-600" />
@@ -845,11 +719,8 @@ const saveReviewConfig = async () => {
               <p className="text-xs text-gray-600">Creating urgency - "Don't miss out!"</p>
             </div>
           </div>
-
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
-              +6 days
-            </div>
+            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">+6 days</div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Mail className="w-4 h-4 text-amber-600" />
@@ -859,7 +730,6 @@ const saveReviewConfig = async () => {
             </div>
           </div>
         </div>
-
         <div className="mt-4 p-3 bg-white rounded border border-green-300">
           <p className="text-xs text-green-800 flex items-center gap-2">
             <CheckCircle className="w-4 h-4" />
@@ -869,55 +739,136 @@ const saveReviewConfig = async () => {
       </div>
     )}
 
+    {/* Customization sub-tab */}
+    {reviewSettingsTab === 'customization' && (
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Message Template</label>
+            <textarea
+              value={reviewConfig.messageTemplate}
+              onChange={(e) => setReviewConfig({ ...reviewConfig, messageTemplate: e.target.value })}
+              rows="6"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              placeholder="Enter your review request message..."
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Available variables: <code className="bg-gray-100 px-1 rounded">{'{{name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{business}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{service}}'}</code>
+            </p>
+          </div>
+          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+            <p className="text-xs font-medium text-gray-700 mb-2">Preview:</p>
+            <p className="text-sm text-gray-900">
+              {reviewConfig.messageTemplate
+                .replace('{{name}}', 'John')
+                .replace('{{business}}', user.businessName || 'Your Business')
+                .replace('{{service}}', 'HVAC Maintenance')}
+            </p>
+            {reviewConfig.incentiveEnabled && reviewConfig.incentive && (
+              <div className="mt-3 pt-3 border-t border-gray-300">
+                <p className="text-xs font-medium text-gray-700 mb-1">Incentive:</p>
+                <p className="text-sm text-green-700 font-semibold">🎁 {reviewConfig.incentive}</p>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-medium text-gray-900">Offer Incentive</p>
+              <p className="text-sm text-gray-600">Encourage reviews with a reward</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={reviewConfig.incentiveEnabled} onChange={(e) => setReviewConfig({ ...reviewConfig, incentiveEnabled: e.target.checked })} className="sr-only peer" />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          {reviewConfig.incentiveEnabled && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Incentive Offer</label>
+              <input type="text" value={reviewConfig.incentive} onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., $10 off your next service" />
+              <p className="text-xs text-gray-500 mt-2">💡 Examples: "$10 off next service", "15% discount on next booking", "Free service upgrade"</p>
+            </div>
+          )}
+          <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-medium text-gray-900">Auto-Send Requests</p>
+              <p className="text-sm text-gray-600">Automatically send after service completion</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" checked={reviewConfig.autoSendEnabled} onChange={(e) => setReviewConfig({ ...reviewConfig, autoSendEnabled: e.target.checked })} className="sr-only peer" />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+          {reviewConfig.autoSendEnabled && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">First Email Timing</label>
+              <select value={reviewConfig.sendDelay} onChange={(e) => setReviewConfig({ ...reviewConfig, sendDelay: parseInt(e.target.value) })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                <option value="0">Immediately after service</option>
+                <option value="1">1 hour later</option>
+                <option value="6">6 hours later</option>
+                <option value="24">24 hours later (recommended)</option>
+                <option value="48">48 hours later</option>
+                <option value="72">3 days later</option>
+              </select>
+              <p className="text-xs text-gray-500 mt-2">📱 SMS is always sent 2 hours after service for immediate impact. This setting controls when the first email is sent.</p>
+            </div>
+          )}
+          <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-lg p-4 border border-blue-200">
+            <p className="text-sm font-medium text-gray-900 mb-3">💡 Pro Tips:</p>
+            <ul className="space-y-2 text-xs text-gray-700">
+              <li>• SMS sent automatically 2 hours after service (optimal timing)</li>
+              <li>• Personalize with customer names for better response rates</li>
+              <li>• Send first email 24 hours after service for best results</li>
+              <li>• Keep incentives simple and easy to redeem</li>
+              <li>• Test different messages to see what works best</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {/* Metrics sub-tab */}
+    {reviewSettingsTab === 'metrics' && (
+      <div className="space-y-6">
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Send className="w-5 h-5 text-blue-600" />
+              <p className="text-sm font-medium text-blue-900">Total Sent</p>
+            </div>
+            <p className="text-3xl font-bold text-blue-600">{reviewRequests.filter((r) => r.status === 'sent').length}</p>
+          </div>
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="w-5 h-5 text-green-600" />
+              <p className="text-sm font-medium text-green-900">Completed</p>
+            </div>
+            <p className="text-3xl font-bold text-green-600">{reviewRequests.filter((r) => r.review_completed).length}</p>
+          </div>
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock className="w-5 h-5 text-yellow-600" />
+              <p className="text-sm font-medium text-yellow-900">Pending</p>
+            </div>
+            <p className="text-3xl font-bold text-yellow-600">{reviewRequests.filter((r) => r.status === 'sent' && !r.review_completed).length}</p>
+          </div>
+          <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-5 h-5 text-amber-600" />
+              <p className="text-sm font-medium text-amber-900">Success Rate</p>
+            </div>
+            <p className="text-3xl font-bold text-amber-600">
+              {reviewRequests.filter((r) => r.status === 'sent').length > 0
+                ? Math.round((reviewRequests.filter((r) => r.review_completed).length / reviewRequests.filter((r) => r.status === 'sent').length) * 100)
+                : 0}%
+            </p>
+          </div>
+        </div>
+      </div>
+    )}
   </div>
 )}
-
-              {/* Stats Overview */}
-              <div className="grid grid-cols-4 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Send className="w-5 h-5 text-blue-600" />
-                    <p className="text-sm font-medium text-blue-900">Total Sent</p>
-                  </div>
-                  <p className="text-3xl font-bold text-blue-600">
-                    {reviewRequests.filter((r) => r.status === 'sent').length}
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <CheckCircle2 className="w-5 h-5 text-green-600" />
-                    <p className="text-sm font-medium text-green-900">Completed</p>
-                  </div>
-                  <p className="text-3xl font-bold text-green-600">
-                    {reviewRequests.filter((r) => r.review_completed).length}
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-5 h-5 text-yellow-600" />
-                    <p className="text-sm font-medium text-yellow-900">Pending</p>
-                  </div>
-                  <p className="text-3xl font-bold text-yellow-600">
-                    {reviewRequests.filter((r) => r.status === 'sent' && !r.review_completed).length}
-                  </p>
-                </div>
-                <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
-                  <div className="flex items-center gap-2 mb-2">
-                    <TrendingUp className="w-5 h-5 text-amber-600" />
-                    <p className="text-sm font-medium text-amber-900">Success Rate</p>
-                  </div>
-                  <p className="text-3xl font-bold text-amber-600">
-                    {reviewRequests.filter((r) => r.status === 'sent').length > 0
-                      ? Math.round(
-                          (reviewRequests.filter((r) => r.review_completed).length /
-                            reviewRequests.filter((r) => r.status === 'sent').length) *
-                            100
-                        )
-                      : 0}
-                    %
-                  </p>
-                </div>
-              </div>
 
               {/* Filters */}
               <div className="flex items-center gap-3">

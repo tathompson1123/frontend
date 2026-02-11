@@ -265,19 +265,170 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     }
   };
 
+  // Get the week range based on currentDate
+  const getWeekRange = () => {
+    const d = new Date(currentDate);
+    const dayOfWeek = d.getDay();
+    const start = new Date(d.getFullYear(), d.getMonth(), d.getDate() - dayOfWeek);
+    const end = new Date(start);
+    end.setDate(end.getDate() + 6);
+    return { start, end };
+  };
+
+  // Filter bookings to current week + search query
+  const getWeekBookings = () => {
+    const { start, end } = getWeekRange();
+    const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+
+    let filtered = allBookings.filter(booking => {
+      const bookingDate = booking.booking_date.split('T')[0];
+      return bookingDate >= startStr && bookingDate <= endStr;
+    });
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(booking =>
+        booking.customer_name?.toLowerCase().includes(q) ||
+        booking.customer_email?.toLowerCase().includes(q) ||
+        booking.customer_phone?.includes(q) ||
+        booking.service_name?.toLowerCase().includes(q)
+      );
+    }
+
+    // Sort: active first, then completed at bottom
+    return filtered.sort((a, b) => {
+      const aCompleted = a.status === 'completed' || a.status === 'cancelled';
+      const bCompleted = b.status === 'completed' || b.status === 'cancelled';
+      if (aCompleted && !bCompleted) return 1;
+      if (!aCompleted && bCompleted) return -1;
+      return new Date(a.booking_date + 'T' + (a.start_time || '00:00')) - new Date(b.booking_date + 'T' + (b.start_time || '00:00'));
+    });
+  };
+
+  // Recompute filtered bookings when week or search changes
+  useEffect(() => {
+    setFilteredBookings(getWeekBookings());
+  }, [currentDate, allBookings, searchQuery]);
+
+  const [collapsedCompleted, setCollapsedCompleted] = useState(true);
+
   const handleSearchBookings = (query) => {
     setSearchQuery(query);
-    if (!query.trim()) {
-      setFilteredBookings(allBookings);
-      return;
-    }
-    const filtered = allBookings.filter(booking => 
-      booking.customer_name?.toLowerCase().includes(query.toLowerCase()) ||
-      booking.customer_email?.toLowerCase().includes(query.toLowerCase()) ||
-      booking.customer_phone?.includes(query) ||
-      booking.service_name?.toLowerCase().includes(query.toLowerCase())
+  };
+
+  // Booking card for sidebar list
+  const BookingCard = ({ booking, selectedBooking, setSelectedBooking, setBookingNotes, setShowBookingModal, setEditingNotes, formatTime, handleCompleteBooking, setIsEditingBooking, setEditingBookingId, setNewBooking, setShowCreateBookingModal, compact }) => {
+    const isCompleted = booking.status === 'completed' || booking.status === 'cancelled';
+    return (
+      <div
+        className={`w-full rounded-lg border transition-all ${
+          selectedBooking?.id === booking.id
+            ? 'bg-blue-50 border-blue-300'
+            : isCompleted
+            ? 'bg-gray-50 border-gray-100 opacity-60'
+            : 'bg-white border-gray-200 hover:border-gray-300'
+        } ${compact ? 'p-2' : 'p-3'}`}
+      >
+        <div className="flex items-start justify-between mb-1">
+          <div className="flex-1 min-w-0">
+            <p className={`font-semibold text-gray-900 truncate ${compact ? 'text-xs' : 'text-sm'}`}>
+              {booking.customer_name}
+            </p>
+            {!compact && (
+              <p className="text-xs text-gray-600 truncate">
+                {booking.items?.[0]?.service_name || 'Service'}
+              </p>
+            )}
+          </div>
+          <span className={`px-2 py-0.5 text-xs rounded-full flex-shrink-0 ${
+            booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+            booking.status === 'completed' ? 'bg-gray-100 text-gray-500' :
+            booking.status === 'in_progress' ? 'bg-blue-100 text-blue-700' :
+            booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+            booking.status === 'cancelled' ? 'bg-red-100 text-red-500' :
+            'bg-gray-100 text-gray-700'
+          }`}>
+            {booking.status === 'completed' ? '✓' : booking.status}
+          </span>
+        </div>
+
+        {!compact && (
+          <div className="space-y-1 mb-2">
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <Calendar className="w-3 h-3" />
+              {new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-gray-600">
+              <Clock className="w-3 h-3" />
+              {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+            </div>
+            {booking.employee_name && (
+              <div className="flex items-center gap-2 text-xs text-gray-600">
+                <User className="w-3 h-3" />
+                {booking.employee_name}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className={`grid gap-1 ${compact ? 'grid-cols-1' : 'grid-cols-3'}`}>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedBooking(booking);
+              setBookingNotes(booking.job_notes || '');
+              setShowBookingModal(true);
+              setEditingNotes(false);
+            }}
+            className={`px-2 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition ${compact ? '' : ''}`}
+          >
+            View
+          </button>
+          {!compact && (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditingBooking(true);
+                  setEditingBookingId(booking.id);
+                  setNewBooking({
+                    customerId: booking.customer_id,
+                    customerName: booking.customer_name,
+                    customerEmail: booking.customer_email || '',
+                    customerPhone: booking.customer_phone || '',
+                    customerAddress: booking.customer_address || '',
+                    serviceId: booking.items?.[0]?.service_id || '',
+                    additionalServices: [],
+                    employeeId: booking.employee_id || '',
+                    groupId: booking.group_id || '',
+                    bookingDate: booking.booking_date.split('T')[0],
+                    startTime: booking.start_time,
+                    notes: booking.job_notes || booking.customer_notes || ''
+                  });
+                  setShowCreateBookingModal(true);
+                }}
+                className="px-2 py-1.5 bg-amber-600 text-white text-xs font-medium rounded hover:bg-amber-700 transition"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCompleteBooking(booking.id)}
+                className={`px-2 py-1.5 text-xs font-medium rounded transition ${
+                  booking.status === 'completed'
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+                disabled={booking.status === 'completed'}
+              >
+                {booking.status === 'completed' ? '✓' : 'Done'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
     );
-    setFilteredBookings(filtered);
   };
 
   const MiniCalendar = () => {
@@ -373,7 +524,13 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     <div className="h-full flex gap-6">
       <div className="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-140px)]">
         <div className="p-4 border-b border-gray-200">
-          <h3 className="font-bold text-gray-900 mb-3">All Bookings</h3>
+          <h3 className="font-bold text-gray-900 mb-1">This Week's Bookings</h3>
+          <p className="text-xs text-gray-500 mb-3">
+            {(() => {
+              const { start, end } = getWeekRange();
+              return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+            })()}
+          </p>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -394,105 +551,31 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             </div>
           ) : (
             <div className="p-2 space-y-2">
-              {filteredBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className={`w-full p-3 rounded-lg border transition-all ${
-                    selectedBooking?.id === booking.id
-                      ? 'bg-blue-50 border-blue-300'
-                      : 'bg-white border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-900 text-sm truncate">
-                        {booking.customer_name}
-                      </p>
-                      <p className="text-xs text-gray-600 truncate">
-                        {booking.items?.[0]?.service_name || 'Service'}
-                      </p>
-                    </div>
-                    <span className={`px-2 py-1 text-xs rounded-full ${
-                      booking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                      booking.status === 'completed' ? 'bg-gray-100 text-gray-700' :
-                      booking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                      booking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {booking.status}
-                    </span>
-                  </div>
-                  
-                  <div className="space-y-1 mb-2">
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(booking.booking_date).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <Clock className="w-3 h-3" />
-                      {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                    </div>
-                    {booking.employee_name && (
-                      <div className="flex items-center gap-2 text-xs text-gray-600">
-                        <User className="w-3 h-3" />
-                        {booking.employee_name}
-                      </div>
+              {(() => {
+                const activeBookings = filteredBookings.filter(b => b.status !== 'completed' && b.status !== 'cancelled');
+                const completedBookings = filteredBookings.filter(b => b.status === 'completed' || b.status === 'cancelled');
+                return (
+                  <>
+                    {activeBookings.map((booking) => (
+                      <BookingCard key={booking.id} booking={booking} selectedBooking={selectedBooking} setSelectedBooking={setSelectedBooking} setBookingNotes={setBookingNotes} setShowBookingModal={setShowBookingModal} setEditingNotes={setEditingNotes} formatTime={formatTime} handleCompleteBooking={handleCompleteBooking} setIsEditingBooking={setIsEditingBooking} setEditingBookingId={setEditingBookingId} setNewBooking={setNewBooking} setShowCreateBookingModal={setShowCreateBookingModal} compact={false} />
+                    ))}
+                    {completedBookings.length > 0 && (
+                      <>
+                        <button
+                          onClick={() => setCollapsedCompleted(!collapsedCompleted)}
+                          className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide hover:text-gray-700 transition"
+                        >
+                          <span>Completed ({completedBookings.length})</span>
+                          <ChevronDown className={`w-4 h-4 transition-transform ${collapsedCompleted ? '' : 'rotate-180'}`} />
+                        </button>
+                        {!collapsedCompleted && completedBookings.map((booking) => (
+                          <BookingCard key={booking.id} booking={booking} selectedBooking={selectedBooking} setSelectedBooking={setSelectedBooking} setBookingNotes={setBookingNotes} setShowBookingModal={setShowBookingModal} setEditingNotes={setEditingNotes} formatTime={formatTime} handleCompleteBooking={handleCompleteBooking} setIsEditingBooking={setIsEditingBooking} setEditingBookingId={setEditingBookingId} setNewBooking={setNewBooking} setShowCreateBookingModal={setShowCreateBookingModal} compact={true} />
+                        ))}
+                      </>
                     )}
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedBooking(booking);
-                        setBookingNotes(booking.job_notes || '');
-                        setShowBookingModal(true);
-                        setEditingNotes(false);
-                      }}
-                      className="px-2 py-1.5 bg-blue-600 text-white text-xs font-medium rounded hover:bg-blue-700 transition"
-                    >
-                      View
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsEditingBooking(true);
-                        setEditingBookingId(booking.id);
-                        setNewBooking({
-                          customerId: booking.customer_id,
-                          customerName: booking.customer_name,
-                          customerEmail: booking.customer_email || '',
-                          customerPhone: booking.customer_phone || '',
-                          customerAddress: booking.customer_address || '',
-                          serviceId: booking.items?.[0]?.service_id || '',
-                          additionalServices: [],
-                          employeeId: booking.employee_id || '',
-                          groupId: booking.group_id || '',
-                          bookingDate: booking.booking_date.split('T')[0],
-                          startTime: booking.start_time,
-                          notes: booking.job_notes || booking.customer_notes || ''
-                        });
-                        setShowCreateBookingModal(true);
-                      }}
-                      className="px-2 py-1.5 bg-amber-600 text-white text-xs font-medium rounded hover:bg-amber-700 transition"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleCompleteBooking(booking.id)}
-                      className={`px-2 py-1.5 text-xs font-medium rounded transition ${
-                        booking.status === 'completed'
-                          ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                          : 'bg-green-600 text-white hover:bg-green-700'
-                      }`}
-                      disabled={booking.status === 'completed'}
-                    >
-                      {booking.status === 'completed' ? '✓' : 'Done'}
-                    </button>
-                  </div>
-                </div>
-              ))}
+                  </>
+                );
+              })()}
             </div>
           )}
         </div>

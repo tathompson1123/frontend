@@ -17,7 +17,6 @@ import {
   Menu,
   X,
   Bot,
-  FileText,
   Wallet
 } from 'lucide-react';
 
@@ -34,7 +33,44 @@ import Billing from '../components/dashboard/Billing';
 import SettingsPage from '../components/dashboard/Settings';
 import FeatureGate from '../components/dashboard/FeatureGate';
 import Invoices from '../components/dashboard/Invoices';
-import PaymentSettings from '../components/dashboard/PaymentSettings';
+import PaymentProcessors from '../components/dashboard/PaymentSettings';
+
+// Combined Payment Settings page with sub-tabs
+function PaymentSettingsPage({ apiUrl, user, authFetch }) {
+  const [subTab, setSubTab] = useState('invoices');
+  return (
+    <div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-gray-900">Payment Settings</h2>
+        <p className="text-gray-600 mt-1">Manage invoices and payment processors</p>
+      </div>
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+        <button
+          onClick={() => setSubTab('invoices')}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition ${
+            subTab === 'invoices'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Invoices
+        </button>
+        <button
+          onClick={() => setSubTab('processors')}
+          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition ${
+            subTab === 'processors'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Payment Processors
+        </button>
+      </div>
+      {subTab === 'invoices' && <Invoices apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'processors' && <PaymentProcessors apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+    </div>
+  );
+}
 
 // Helper function for authenticated API calls
 const authFetch = async (url, options = {}) => {
@@ -328,7 +364,6 @@ useEffect(() => {
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
-    { id: 'invoices', icon: FileText, label: 'Invoices' },
     { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
     { id: 'payment-settings', icon: Wallet, label: 'Payment Settings' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
@@ -547,16 +582,8 @@ useEffect(() => {
     />
   </FeatureGate>
 )}
-          {currentView === 'invoices' && (
-            <Invoices
-              apiUrl={apiUrl}
-              user={user}
-              authFetch={authFetch}
-            />
-          )}
-
           {currentView === 'payment-settings' && (
-            <PaymentSettings
+            <PaymentSettingsPage
               apiUrl={apiUrl}
               user={user}
               authFetch={authFetch}
