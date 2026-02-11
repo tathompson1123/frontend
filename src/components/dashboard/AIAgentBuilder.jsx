@@ -185,20 +185,34 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         : `${apiUrl}/api/agents/leadform/config`;
       const config = activeAgent === 'chat' ? chatConfig : leadConfig;
 
+      console.log('💾 SAVE: Sending to', endpoint);
+      console.log('💾 SAVE: Config being sent:', JSON.stringify(config).substring(0, 500));
+
       const response = await authFetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config)
       });
 
+      const responseData = await response.json();
+      console.log('💾 SAVE: Response status:', response.status, 'ok:', response.ok);
+      console.log('💾 SAVE: Response body:', JSON.stringify(responseData).substring(0, 500));
+
       if (response.ok) {
+        // Verify save by reading it back
+        const verifyRes = await authFetch(endpoint.replace('/config', '/config'));
+        if (verifyRes.ok) {
+          const verifyData = await verifyRes.json();
+          console.log('✅ VERIFY: Config in DB:', JSON.stringify(verifyData.config).substring(0, 500));
+        }
         alert('Configuration saved successfully!');
       } else {
-        alert('Failed to save configuration');
+        console.error('❌ SAVE FAILED:', response.status, responseData);
+        alert('Failed to save: ' + (responseData.error || response.status));
       }
     } catch (error) {
-      console.error('Error saving:', error);
-      alert('Failed to save configuration');
+      console.error('❌ SAVE ERROR:', error);
+      alert('Failed to save configuration: ' + error.message);
     } finally {
       setIsSaving(false);
     }
@@ -326,7 +340,11 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           const cleanSuggested = Object.fromEntries(
             Object.entries(data.suggestedConfig).filter(([_, v]) => v != null)
           );
+          console.log('🤖 ASSISTANT: suggestedConfig:', JSON.stringify(data.suggestedConfig));
+          console.log('🤖 ASSISTANT: cleanSuggested:', JSON.stringify(cleanSuggested));
+          console.log('🤖 ASSISTANT: currentConfig keys:', Object.keys(currentConfig).join(', '));
           const mergedConfig = { ...currentConfig, ...cleanSuggested };
+          console.log('🤖 ASSISTANT: mergedConfig:', JSON.stringify(mergedConfig).substring(0, 500));
           if (activeAgent === 'chat') {
             setChatConfig(mergedConfig);
           } else {
@@ -338,16 +356,22 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             const saveEndpoint = activeAgent === 'chat'
               ? `${apiUrl}/api/agents/website/config`
               : `${apiUrl}/api/agents/leadform/config`;
+            console.log('🤖 AUTO-SAVE: Sending to', saveEndpoint);
             const saveRes = await authFetch(saveEndpoint, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(mergedConfig)
             });
             saveSuccess = saveRes.ok;
+            console.log('🤖 AUTO-SAVE: Response status:', saveRes.status, 'ok:', saveRes.ok);
             if (!saveRes.ok) {
-              console.error('Auto-save returned:', saveRes.status);
+              const errText = await saveRes.text();
+              console.error('🤖 AUTO-SAVE FAILED:', saveRes.status, errText);
+            } else {
+              const saveData = await saveRes.json();
+              console.log('🤖 AUTO-SAVE SUCCESS: Returned config keys:', Object.keys(saveData.config || {}).join(', '));
             }
-          } catch (e) { console.error('Auto-save failed:', e); }
+          } catch (e) { console.error('🤖 AUTO-SAVE ERROR:', e); }
           setAiMessages(prev => [...prev, {
             role: 'assistant',
             content: saveSuccess
