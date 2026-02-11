@@ -26,7 +26,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   const [reviewLink, setReviewLink] = useState('');
   const [savingReviewLink, setSavingReviewLink] = useState(false);
   const [showLinkInfo, setShowLinkInfo] = useState(false);
-  const [reviewSettingsTab, setReviewSettingsTab] = useState('timeline');
+  const [reviewSettingsTab, setReviewSettingsTab] = useState('customization');
 
   useEffect(() => {
   fetchStats();
@@ -651,8 +651,8 @@ const saveReviewConfig = async () => {
     {/* Sub-tabs within Review Request Settings */}
     <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
       {[
-        { id: 'timeline', label: 'Timeline' },
         { id: 'customization', label: 'Customization' },
+        { id: 'timeline', label: 'Timeline' },
         { id: 'metrics', label: 'Metrics' },
       ].map((tab) => (
         <button
