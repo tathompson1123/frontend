@@ -75,8 +75,19 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     // Reset preview and AI messages when switching agents
     setPreviewMessages([]);
     setPreviewInput('');
-    setAiMessages([getInitialAiMessage(activeAgent)]);
     setAiInput('');
+    // Show appropriate greeting based on whether agent is already configured
+    const config = activeAgent === 'chat' ? chatConfig : leadConfig;
+    if (isConfigured(config, activeAgent)) {
+      setAiMessages([{
+        role: 'assistant',
+        content: activeAgent === 'chat'
+          ? `Welcome back! Your Website Chat Agent is already configured (agent name: **${config.agentName || 'Kurt'}**). What would you like to change?`
+          : `Welcome back! Your SMS Lead Agent is already configured (agent name: **${config.agentName || 'Kurt'}**). What would you like to change?`
+      }]);
+    } else {
+      setAiMessages([getInitialAiMessage(activeAgent)]);
+    }
   }, [activeAgent]);
 
   useEffect(() => {
@@ -106,6 +117,17 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
+  // Check if config has been customized beyond defaults
+  const isConfigured = (config, type) => {
+    if (type === 'chat') {
+      return config.customInstructions || config.objectionServices ||
+        (config.agentName && config.agentName !== 'Kurt') ||
+        (config.greetingMessage && !config.greetingMessage.includes("Hey it's Kurt"));
+    }
+    return config.businessContext || config.servicesInfo ||
+      (config.agentName && config.agentName !== 'Kurt');
+  };
+
   const loadConfigs = async () => {
     try {
       const [chatRes, leadRes] = await Promise.all([
@@ -113,17 +135,34 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         authFetch(`${apiUrl}/api/agents/leadform/config`)
       ]);
 
+      let chatLoaded = null;
+      let leadLoaded = null;
+
       if (chatRes.ok) {
         const data = await chatRes.json();
         if (data.config) {
+          chatLoaded = data.config;
           setChatConfig(prev => ({ ...prev, ...data.config }));
         }
       }
       if (leadRes.ok) {
         const data = await leadRes.json();
         if (data.config) {
+          leadLoaded = data.config;
           setLeadConfig(prev => ({ ...prev, ...data.config }));
         }
+      }
+
+      // Update initial AI message if agent is already configured
+      const currentType = activeAgent;
+      const loadedConfig = currentType === 'chat' ? chatLoaded : leadLoaded;
+      if (loadedConfig && isConfigured(loadedConfig, currentType)) {
+        setAiMessages([{
+          role: 'assistant',
+          content: currentType === 'chat'
+            ? `Welcome back! Your Website Chat Agent is already configured (agent name: **${loadedConfig.agentName || 'Kurt'}**). What would you like to change?`
+            : `Welcome back! Your SMS Lead Agent is already configured (agent name: **${loadedConfig.agentName || 'Kurt'}**). What would you like to change?`
+        }]);
       }
     } catch (error) {
       console.error('Error loading configs:', error);
@@ -247,10 +286,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     setAiLoading(true);
 
     try {
-      // Filter out the initial assistant message for cleaner history
-      const conversationHistory = updatedMessages.slice(1).map(m => ({
+      // Send prior conversation only (exclude initial greeting + current message — backend adds prompt separately)
+      const conversationHistory = aiMessages.slice(1).map(m => ({
         role: m.role,
-        content: m.content
+        content: m.content.replace(/\n\n[✅⚠️].*/s, '') // Strip appended save status from history
       }));
 
       const response = await authFetch(`${apiUrl}/api/agents/assistant`, {
