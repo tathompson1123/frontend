@@ -7,7 +7,7 @@ import {
 
 export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch }) {
   const [activeAgent, setActiveAgent] = useState('chat'); // 'chat' or 'leadform'
-  const [setupMode, setSetupMode] = useState('manual'); // 'manual' or 'ai'
+  const [setupMode, setSetupMode] = useState('ai'); // 'manual' or 'ai'
   const [chatAgentDeployed, setChatAgentDeployed] = useState(false);
   const [leadAgentDeployed, setLeadAgentDeployed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -678,17 +678,6 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             {/* Setup Mode Dropdown */}
             <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
               <button
-                onClick={() => setSetupMode('manual')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                  setupMode === 'manual'
-                    ? 'bg-white text-gray-900 shadow-sm'
-                    : 'text-gray-600 hover:text-gray-900'
-                }`}
-              >
-                <Wrench className="w-4 h-4" />
-                Manual Setup
-              </button>
-              <button
                 onClick={() => setSetupMode('ai')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                   setupMode === 'ai'
@@ -698,6 +687,17 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               >
                 <Sparkles className="w-4 h-4" />
                 SORCE AI Setup
+              </button>
+              <button
+                onClick={() => setSetupMode('manual')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                  setupMode === 'manual'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <Wrench className="w-4 h-4" />
+                Manual Setup
               </button>
             </div>
 
@@ -838,9 +838,9 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         </div>
 
         {/* Right Side - Preview (1/3 width) */}
-        <div className="w-1/3 flex flex-col gap-4 min-h-0">
+        <div className="w-1/3 flex flex-col gap-4 min-h-0 self-start sticky top-4">
           {/* Chat Preview */}
-          <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
+          <div className="h-[450px] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
             <div className="p-3 border-b border-gray-200 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center">

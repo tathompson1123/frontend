@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, MessageSquare } from 'lucide-react';
+import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, MessageSquare, Smartphone } from 'lucide-react';
 
 export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
   const [activeTab, setActiveTab] = useState('account');
@@ -37,6 +37,9 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(null);
 
+  // App Settings sub-tab
+  const [appSettingsTab, setAppSettingsTab] = useState('customer-updates');
+
   useEffect(() => {
     if (user) {
       setAccountForm({
@@ -47,10 +50,10 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
   }, [user]);
 
   useEffect(() => {
-    if (activeTab === 'customer-updates') {
+    if (activeTab === 'app-settings' && appSettingsTab === 'customer-updates') {
       fetchStatusTemplates();
     }
-  }, [activeTab]);
+  }, [activeTab, appSettingsTab]);
 
   const fetchStatusTemplates = async () => {
     setLoadingTemplates(true);
@@ -166,7 +169,7 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
     { id: 'account', label: 'Account', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
     { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'customer-updates', label: 'Customer Updates', icon: MessageSquare }
+    { id: 'app-settings', label: 'App Settings', icon: Smartphone }
   ];
 
   return (
@@ -458,75 +461,103 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
             </div>
           )}
 
-          {/* Customer Updates Tab */}
-          {activeTab === 'customer-updates' && (
-            <div className="max-w-2xl space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Customer Update Messages</h3>
-                <p className="text-sm text-gray-600">
-                  Configure automatic text message prompts sent to customers when employees update booking status.
-                  Messages are sent from the employee's phone via their native messaging app.
-                </p>
+          {/* App Settings Tab */}
+          {activeTab === 'app-settings' && (
+            <div className="space-y-6">
+              {/* Sub-tab Navigation */}
+              <div className="flex gap-2 border-b border-gray-200 pb-0">
+                {[
+                  { id: 'customer-updates', label: 'Customer Updates', icon: MessageSquare },
+                ].map(sub => {
+                  const SubIcon = sub.icon;
+                  return (
+                    <button
+                      key={sub.id}
+                      onClick={() => setAppSettingsTab(sub.id)}
+                      className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                        appSettingsTab === sub.id
+                          ? 'border-amber-600 text-amber-600'
+                          : 'border-transparent text-gray-500 hover:text-gray-700'
+                      }`}
+                    >
+                      <SubIcon className="w-4 h-4" />
+                      {sub.label}
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-                <p className="text-sm text-amber-800 font-medium mb-1">Available Variables</p>
-                <div className="flex flex-wrap gap-2">
-                  {['{{customerFirstName}}', '{{employeeFirstName}}', '{{businessName}}', '{{serviceName}}'].map(v => (
-                    <code key={v} className="px-2 py-1 bg-white rounded text-xs font-mono text-amber-700 border border-amber-200">{v}</code>
-                  ))}
-                </div>
-              </div>
+              {/* Customer Updates Sub-tab */}
+              {appSettingsTab === 'customer-updates' && (
+                <div className="max-w-2xl space-y-6">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">Customer Update Messages</h3>
+                    <p className="text-sm text-gray-600">
+                      Configure automatic text message prompts sent to customers when employees update booking status.
+                      Messages are sent from the employee's phone via their native messaging app.
+                    </p>
+                  </div>
 
-              {loadingTemplates ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {statusTemplates.map(template => (
-                    <div key={template.status} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <h4 className="font-semibold text-gray-900">
-                            {statusLabels[template.status] || template.status}
-                          </h4>
-                          {template.status === 'progress_update' && (
-                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Pro</span>
-                          )}
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={template.enabled}
-                            onChange={(e) => handleSaveTemplate(template.status, template.message_template, e.target.checked)}
-                            className="sr-only peer"
-                          />
-                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
-                        </label>
-                      </div>
-                      <textarea
-                        value={template.message_template}
-                        onChange={(e) => {
-                          setStatusTemplates(prev => prev.map(t =>
-                            t.status === template.status ? { ...t, message_template: e.target.value } : t
-                          ));
-                        }}
-                        rows={3}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors text-sm resize-none"
-                      />
-                      <div className="flex justify-end mt-3">
-                        <button
-                          onClick={() => handleSaveTemplate(template.status, template.message_template, template.enabled)}
-                          disabled={savingTemplate === template.status}
-                          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50"
-                        >
-                          <Save className="w-3.5 h-3.5" />
-                          {savingTemplate === template.status ? 'Saving...' : 'Save'}
-                        </button>
-                      </div>
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                    <p className="text-sm text-amber-800 font-medium mb-1">Available Variables</p>
+                    <div className="flex flex-wrap gap-2">
+                      {['{{customerFirstName}}', '{{employeeFirstName}}', '{{businessName}}', '{{serviceName}}'].map(v => (
+                        <code key={v} className="px-2 py-1 bg-white rounded text-xs font-mono text-amber-700 border border-amber-200">{v}</code>
+                      ))}
                     </div>
-                  ))}
+                  </div>
+
+                  {loadingTemplates ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" />
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {statusTemplates.map(template => (
+                        <div key={template.status} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-semibold text-gray-900">
+                                {statusLabels[template.status] || template.status}
+                              </h4>
+                              {template.status === 'progress_update' && (
+                                <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Pro</span>
+                              )}
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={template.enabled}
+                                onChange={(e) => handleSaveTemplate(template.status, template.message_template, e.target.checked)}
+                                className="sr-only peer"
+                              />
+                              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                            </label>
+                          </div>
+                          <textarea
+                            value={template.message_template}
+                            onChange={(e) => {
+                              setStatusTemplates(prev => prev.map(t =>
+                                t.status === template.status ? { ...t, message_template: e.target.value } : t
+                              ));
+                            }}
+                            rows={3}
+                            className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors text-sm resize-none"
+                          />
+                          <div className="flex justify-end mt-3">
+                            <button
+                              onClick={() => handleSaveTemplate(template.status, template.message_template, template.enabled)}
+                              disabled={savingTemplate === template.status}
+                              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50"
+                            >
+                              <Save className="w-3.5 h-3.5" />
+                              {savingTemplate === template.status ? 'Saving...' : 'Save'}
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
