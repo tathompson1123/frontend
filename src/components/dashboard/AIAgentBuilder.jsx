@@ -322,7 +322,11 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         // Apply suggested config if provided + auto-save
         if (data.suggestedConfig) {
           const currentConfig = activeAgent === 'chat' ? chatConfig : leadConfig;
-          const mergedConfig = { ...currentConfig, ...data.suggestedConfig };
+          // Filter out null/undefined values to prevent overwriting real config with nulls
+          const cleanSuggested = Object.fromEntries(
+            Object.entries(data.suggestedConfig).filter(([_, v]) => v != null)
+          );
+          const mergedConfig = { ...currentConfig, ...cleanSuggested };
           if (activeAgent === 'chat') {
             setChatConfig(mergedConfig);
           } else {
@@ -909,38 +913,35 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           </div>
         </div>
 
-        {/* Right Side - Preview (1/3 width) */}
+        {/* Right Side - Widget Preview (1/3 width) */}
         <div className="w-1/3 flex flex-col gap-4 min-h-0 self-start sticky top-4">
-          {/* Chat Preview */}
-          <div className="h-[450px] bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
-            <div className="p-3 border-b border-gray-200 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-amber-600 rounded-full flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Live Preview</p>
-                  <p className="text-xs text-gray-500">{currentConfig.agentName || 'Agent'}</p>
-                </div>
+          {/* Widget Preview — matches deployed chat widget */}
+          <div className="h-[520px] bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] flex flex-col min-h-0 overflow-hidden">
+            {/* Widget Header — gradient like deployed widget */}
+            <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+              <div>
+                <h3 className="text-white font-semibold text-base">Chat with {currentConfig.agentName || 'Agent'}</h3>
               </div>
               <button
                 onClick={resetPreview}
-                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                className="text-white/80 hover:text-white transition-colors"
                 title="Reset conversation"
               >
-                <RefreshCw className="w-4 h-4 text-gray-500" />
+                <RefreshCw className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Messages */}
-            <div ref={previewRef} className="flex-1 overflow-y-auto p-3 space-y-3">
+            {/* Messages — gray background like widget */}
+            <div ref={previewRef} className="flex-1 overflow-y-auto p-5 space-y-4" style={{ background: '#f9fafb' }}>
               {previewMessages.length === 0 ? (
-                <div className="text-center py-8">
-                  <Bot className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">Test your agent here</p>
+                <div className="text-center py-10">
+                  <div className="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                    <MessageCircle className="w-7 h-7 text-white" />
+                  </div>
+                  <p className="text-sm text-gray-500 mb-2">Preview your chat widget</p>
                   <button
                     onClick={resetPreview}
-                    className="mt-2 text-sm text-amber-600 hover:text-amber-700 font-medium"
+                    className="text-sm font-medium px-4 py-1.5 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
                   >
                     Start Preview
                   </button>
@@ -949,13 +950,16 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
                 previewMessages.map((msg, i) => (
                   <div
                     key={i}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}
                   >
-                    <div className={`max-w-[85%] px-3 py-2 rounded-lg text-sm ${
-                      msg.role === 'user'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}>
+                    <div
+                      className={`max-w-[75%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
+                        msg.role === 'user'
+                          ? 'text-white'
+                          : 'bg-white text-gray-800 border border-gray-200'
+                      }`}
+                      style={msg.role === 'user' ? { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' } : undefined}
+                    >
                       {msg.content}
                     </div>
                   </div>
@@ -963,34 +967,34 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               )}
               {isPreviewLoading && (
                 <div className="flex justify-start">
-                  <div className="bg-gray-100 px-4 py-3 rounded-lg flex gap-1">
+                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-xl flex gap-1.5">
                     <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Input */}
-            <div className="p-3 border-t border-gray-200">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={previewInput}
-                  onChange={(e) => setPreviewInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && sendPreviewMessage()}
-                  placeholder="Type a message..."
-                  className="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-                />
-                <button
-                  onClick={sendPreviewMessage}
-                  disabled={!previewInput.trim() || isPreviewLoading}
-                  className="p-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
-                >
-                  <Send className="w-4 h-4" />
-                </button>
-              </div>
+            {/* Input — matches widget input area */}
+            <div className="p-4 border-t border-gray-200 bg-white">
+              <textarea
+                value={previewInput}
+                onChange={(e) => setPreviewInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPreviewMessage(); } }}
+                placeholder="Type your message..."
+                rows={2}
+                className="w-full px-3 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:outline-none resize-none"
+                style={{ borderColor: previewInput.trim() ? '#667eea' : undefined }}
+              />
+              <button
+                onClick={sendPreviewMessage}
+                disabled={!previewInput.trim() || isPreviewLoading}
+                className="mt-2 w-full py-2.5 text-white font-semibold rounded-lg transition-opacity disabled:opacity-50 hover:opacity-90 text-sm"
+                style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+              >
+                Send Message
+              </button>
             </div>
           </div>
 
