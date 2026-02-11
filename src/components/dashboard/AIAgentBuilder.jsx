@@ -277,19 +277,26 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             setLeadConfig(mergedConfig);
           }
           // Auto-save immediately so user doesn't have to hit Save
+          let saveSuccess = false;
           try {
             const saveEndpoint = activeAgent === 'chat'
               ? `${apiUrl}/api/agents/website/config`
               : `${apiUrl}/api/agents/leadform/config`;
-            await authFetch(saveEndpoint, {
+            const saveRes = await authFetch(saveEndpoint, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(mergedConfig)
             });
+            saveSuccess = saveRes.ok;
+            if (!saveRes.ok) {
+              console.error('Auto-save returned:', saveRes.status);
+            }
           } catch (e) { console.error('Auto-save failed:', e); }
           setAiMessages(prev => [...prev, {
             role: 'assistant',
-            content: data.message + "\n\n✅ Configuration saved! Anything else you want to add?"
+            content: saveSuccess
+              ? data.message + "\n\n✅ Configuration saved! Anything else you want to add?"
+              : data.message + "\n\n⚠️ Configuration updated locally but failed to save to server. Try clicking Save Changes manually."
           }]);
         } else {
           setAiMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
