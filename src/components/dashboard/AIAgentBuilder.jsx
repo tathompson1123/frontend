@@ -267,16 +267,29 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
       if (response.ok) {
         const data = await response.json();
 
-        // Apply suggested config if provided
+        // Apply suggested config if provided + auto-save
         if (data.suggestedConfig) {
+          const currentConfig = activeAgent === 'chat' ? chatConfig : leadConfig;
+          const mergedConfig = { ...currentConfig, ...data.suggestedConfig };
           if (activeAgent === 'chat') {
-            setChatConfig(prev => ({ ...prev, ...data.suggestedConfig }));
+            setChatConfig(mergedConfig);
           } else {
-            setLeadConfig(prev => ({ ...prev, ...data.suggestedConfig }));
+            setLeadConfig(mergedConfig);
           }
+          // Auto-save immediately so user doesn't have to hit Save
+          try {
+            const saveEndpoint = activeAgent === 'chat'
+              ? `${apiUrl}/api/agents/website/config`
+              : `${apiUrl}/api/agents/leadform/config`;
+            await authFetch(saveEndpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(mergedConfig)
+            });
+          } catch (e) { console.error('Auto-save failed:', e); }
           setAiMessages(prev => [...prev, {
             role: 'assistant',
-            content: data.message + "\n\n✅ Configuration updated!"
+            content: data.message + "\n\n✅ Configuration updated & saved!"
           }]);
         } else {
           setAiMessages(prev => [...prev, { role: 'assistant', content: data.message }]);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare } from 'lucide-react';
 
 export default function BusinessInformation({ 
   businessHours, 
@@ -67,6 +67,48 @@ export default function BusinessInformation({
   const [groupForm, setGroupForm] = useState({ name: '', selectedEmployees: [] });
   const [editingGroup, setEditingGroup] = useState(null);
   const [invitingEmployeeId, setInvitingEmployeeId] = useState(null);
+
+  // App Settings - Status update templates
+  const [statusTemplates, setStatusTemplates] = useState([]);
+  const [loadingTemplates, setLoadingTemplates] = useState(false);
+  const [savingTemplate, setSavingTemplate] = useState(null);
+
+  const statusLabels = {
+    in_progress: 'Job Started',
+    completed: 'Job Completed',
+    no_show: 'No Show',
+    progress_update: 'Progress Update'
+  };
+
+  useEffect(() => {
+    if (activeTab === 'app-settings') {
+      fetchStatusTemplates();
+    }
+  }, [activeTab]);
+
+  const fetchStatusTemplates = async () => {
+    setLoadingTemplates(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/status-templates`);
+      const data = await res.json();
+      setStatusTemplates(data.templates || []);
+    } catch (err) { console.error(err); }
+    finally { setLoadingTemplates(false); }
+  };
+
+  const handleSaveTemplate = async (status, messageTemplate, enabled) => {
+    setSavingTemplate(status);
+    try {
+      const res = await authFetch(`${apiUrl}/api/status-templates/${status}`, {
+        method: 'PUT',
+        body: JSON.stringify({ messageTemplate, enabled })
+      });
+      if (res.ok) {
+        fetchStatusTemplates();
+      }
+    } catch (err) { console.error(err); }
+    finally { setSavingTemplate(null); }
+  };
 
   const handleSendInvite = async (employeeId) => {
     setInvitingEmployeeId(employeeId);
@@ -447,6 +489,16 @@ export default function BusinessInformation({
                 Team ({employees.length})
               </div>
               {activeTab === 'team' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => setActiveTab('app-settings')}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'app-settings' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-4 h-4" />
+                App Settings
+              </div>
+              {activeTab === 'app-settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
           </div>
         </div>
@@ -1246,6 +1298,82 @@ export default function BusinessInformation({
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* App Settings Tab */}
+      {activeTab === 'app-settings' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="max-w-2xl space-y-6">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">Customer Update Messages</h3>
+              <p className="text-sm text-gray-600">
+                Configure automatic text message prompts sent to customers when employees update booking status.
+                Messages are sent from the employee's phone via their native messaging app.
+              </p>
+            </div>
+
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-amber-800 font-medium mb-1">Available Variables</p>
+              <div className="flex flex-wrap gap-2">
+                {['{{customerFirstName}}', '{{employeeFirstName}}', '{{businessName}}', '{{serviceName}}'].map(v => (
+                  <code key={v} className="px-2 py-1 bg-white rounded text-xs font-mono text-amber-700 border border-amber-200">{v}</code>
+                ))}
+              </div>
+            </div>
+
+            {loadingTemplates ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {statusTemplates.map(template => (
+                  <div key={template.status} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="flex items-center gap-3">
+                        <h4 className="font-semibold text-gray-900">
+                          {statusLabels[template.status] || template.status}
+                        </h4>
+                        {template.status === 'progress_update' && (
+                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Pro</span>
+                        )}
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={template.enabled}
+                          onChange={(e) => handleSaveTemplate(template.status, template.message_template, e.target.checked)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
+                      </label>
+                    </div>
+                    <textarea
+                      value={template.message_template}
+                      onChange={(e) => {
+                        setStatusTemplates(prev => prev.map(t =>
+                          t.status === template.status ? { ...t, message_template: e.target.value } : t
+                        ));
+                      }}
+                      rows={3}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors text-sm resize-none"
+                    />
+                    <div className="flex justify-end mt-3">
+                      <button
+                        onClick={() => handleSaveTemplate(template.status, template.message_template, template.enabled)}
+                        disabled={savingTemplate === template.status}
+                        className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50"
+                      >
+                        <Save className="w-3.5 h-3.5" />
+                        {savingTemplate === template.status ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
