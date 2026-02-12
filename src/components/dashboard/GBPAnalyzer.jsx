@@ -61,6 +61,11 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [googleUrl, setGoogleUrl] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [searchMode, setSearchMode] = useState('search'); // 'search' or 'url'
   const [profile, setProfile] = useState(null);
   const [audit, setAudit] = useState(null);
   const [actionItems, setActionItems] = useState([]);
@@ -88,6 +93,53 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
       const data = await res.json();
       if (data.key) setMapsApiKey(data.key);
     } catch {}
+  }
+
+  // ── Business search with debounce ──
+  useEffect(() => {
+    if (searchQuery.length < 2) { setSearchResults([]); return; }
+    const timer = setTimeout(() => searchBusinesses(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  async function searchBusinesses(query) {
+    setSearching(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/gbp-analyzer/search?q=${encodeURIComponent(query)}`);
+      const data = await res.json();
+      setSearchResults(data.results || []);
+      setShowResults(true);
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function selectBusiness(result) {
+    setShowResults(false);
+    setSearchQuery(result.name);
+    setAnalyzing(true);
+    setError(null);
+    try {
+      const res = await authFetch(`${apiUrl}/api/gbp-analyzer/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placeId: result.placeId })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Analysis failed');
+      setProfile(data.profile);
+      setAudit(data.audit);
+      setActionItems(data.actionItems || []);
+      setSubTab('audit');
+      loadScans();
+      loadMonitoring();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
   async function loadProfile() {
@@ -261,35 +313,95 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
           </div>
           <h3 className="text-xl font-bold text-gray-900 mb-2">Analyze Your Google Business Profile</h3>
           <p className="text-gray-600 mb-6">
-            Paste your Google Maps listing URL to get a full audit, optimization score, and action plan.
+            Search for your business to get a full audit, optimization score, and action plan.
           </p>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={googleUrl}
-              onChange={e => setGoogleUrl(e.target.value)}
-              placeholder="https://www.google.com/maps/place/..."
-              className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
-              onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
-            />
+
+          {/* Mode toggle */}
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-4 w-fit mx-auto">
             <button
-              onClick={handleAnalyze}
-              disabled={analyzing || !googleUrl.trim()}
-              className="px-6 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
+              onClick={() => setSearchMode('search')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${searchMode === 'search' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}
             >
-              {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              {analyzing ? 'Analyzing...' : 'Analyze'}
+              Search by Name
+            </button>
+            <button
+              onClick={() => setSearchMode('url')}
+              className={`px-4 py-1.5 rounded-md text-sm font-medium transition ${searchMode === 'url' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}
+            >
+              Paste URL
             </button>
           </div>
+
+          {searchMode === 'search' ? (
+            <div className="relative text-left">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={e => { setSearchQuery(e.target.value); setShowResults(true); }}
+                    onFocus={() => searchResults.length > 0 && setShowResults(true)}
+                    onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                    placeholder="Type your business name..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  />
+                  {searching && (
+                    <Loader2 className="w-4 h-4 animate-spin text-gray-400 absolute right-3 top-3.5" />
+                  )}
+                </div>
+              </div>
+
+              {/* Autocomplete dropdown */}
+              {showResults && searchResults.length > 0 && (
+                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {searchResults.map((r, i) => (
+                    <button
+                      key={i}
+                      onMouseDown={() => selectBusiness(r)}
+                      className="w-full text-left px-4 py-3 hover:bg-amber-50 border-b border-gray-100 last:border-b-0 transition"
+                    >
+                      <div className="font-semibold text-sm text-gray-900">{r.name}</div>
+                      <div className="text-xs text-gray-500">{r.address}</div>
+                      {r.category && <span className="text-xs text-amber-600">{r.category}</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {analyzing && (
+                <div className="mt-4 flex items-center justify-center gap-2 text-amber-600">
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  <span className="text-sm font-medium">Analyzing profile...</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={googleUrl}
+                onChange={e => setGoogleUrl(e.target.value)}
+                placeholder="https://www.google.com/maps/place/..."
+                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                onKeyDown={e => e.key === 'Enter' && handleAnalyze()}
+              />
+              <button
+                onClick={handleAnalyze}
+                disabled={analyzing || !googleUrl.trim()}
+                className="px-6 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
+              >
+                {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                {analyzing ? 'Analyzing...' : 'Analyze'}
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center gap-2">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               {error}
             </div>
           )}
-          <p className="text-xs text-gray-500 mt-4">
-            Search for your business on Google Maps, copy the URL from your browser, and paste it above.
-          </p>
         </div>
       </div>
     );
