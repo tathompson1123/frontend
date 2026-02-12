@@ -5,7 +5,7 @@ import {
   Star, Camera, MessageSquare, FileText, ChevronDown, ChevronUp,
   Activity, Shield, AlertTriangle, ExternalLink, Info
 } from 'lucide-react';
-import { MapContainer, TileLayer, CircleMarker, Tooltip } from 'react-leaflet';
+import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin } from '@vis.gl/react-google-maps';
 
 // ─── Score Circle Component ───────────────────────────────
 function ScoreCircle({ score, label, size = 100, color }) {
@@ -73,11 +73,22 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
   const [actionFilter, setActionFilter] = useState('all');
   const [expandedItems, setExpandedItems] = useState(new Set());
   const [selectedScanIdx, setSelectedScanIdx] = useState(0);
+  const [mapsApiKey, setMapsApiKey] = useState(null);
+  const [hoveredPoint, setHoveredPoint] = useState(null);
 
-  // ── Load existing profile on mount ──
+  // ── Load existing profile + maps key on mount ──
   useEffect(() => {
     loadProfile();
+    loadMapsKey();
   }, []);
+
+  async function loadMapsKey() {
+    try {
+      const res = await authFetch(`${apiUrl}/api/gbp-analyzer/maps-key`);
+      const data = await res.json();
+      if (data.key) setMapsApiKey(data.key);
+    } catch {}
+  }
 
   async function loadProfile() {
     setLoading(true);
@@ -524,56 +535,63 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
                     </div>
 
                     {/* Map */}
-                    {profile.lat && profile.lng && (
+                    {profile.lat && profile.lng && mapsApiKey && (
                       <div className="rounded-lg overflow-hidden border border-gray-200" style={{ height: 400 }}>
-                        <MapContainer
-                          center={[profile.lat, profile.lng]}
-                          zoom={12}
-                          style={{ height: '100%', width: '100%' }}
-                          scrollWheelZoom={false}
-                        >
-                          <TileLayer
-                            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-                          />
-                          {/* Business location marker */}
-                          <CircleMarker
-                            center={[profile.lat, profile.lng]}
-                            radius={8}
-                            pathOptions={{ color: '#d97706', fillColor: '#d97706', fillOpacity: 1, weight: 3 }}
+                        <APIProvider apiKey={mapsApiKey}>
+                          <Map
+                            defaultCenter={{ lat: profile.lat, lng: profile.lng }}
+                            defaultZoom={12}
+                            gestureHandling="cooperative"
+                            mapId="gbp-ranking-grid"
+                            style={{ width: '100%', height: '100%' }}
                           >
-                            <Tooltip permanent direction="top" offset={[0, -10]}>
-                              <span className="font-bold">Your Business</span>
-                            </Tooltip>
-                          </CircleMarker>
-                          {/* Grid point markers */}
-                          {(currentScan.grid_points || []).map((point, i) => (
-                            <CircleMarker
-                              key={i}
-                              center={[point.lat, point.lng]}
-                              radius={14}
-                              pathOptions={{
-                                color: '#fff',
-                                weight: 2,
-                                fillColor: getRankColor(point.rank),
-                                fillOpacity: 0.85
-                              }}
-                            >
-                              <Tooltip direction="top" offset={[0, -10]}>
-                                <div>
-                                  <strong>Rank: {point.rank || 'Not found'}</strong>
-                                  {point.competitors?.length > 0 && (
-                                    <div className="text-xs mt-1">
-                                      {point.competitors.map((c, ci) => (
+                            {/* Business location marker */}
+                            <AdvancedMarker position={{ lat: profile.lat, lng: profile.lng }}>
+                              <div className="flex items-center justify-center w-8 h-8 bg-amber-500 rounded-full border-3 border-white shadow-lg"
+                                title="Your Business">
+                                <MapPin className="w-4 h-4 text-white" />
+                              </div>
+                            </AdvancedMarker>
+                            {/* Grid point markers */}
+                            {(currentScan.grid_points || []).map((point, i) => (
+                              <AdvancedMarker
+                                key={i}
+                                position={{ lat: point.lat, lng: point.lng }}
+                                onClick={() => setHoveredPoint(hoveredPoint === i ? null : i)}
+                              >
+                                <div
+                                  className="flex items-center justify-center w-7 h-7 rounded-full border-2 border-white shadow-md text-white text-xs font-bold cursor-pointer"
+                                  style={{ backgroundColor: getRankColor(point.rank) }}
+                                >
+                                  {point.rank || '-'}
+                                </div>
+                              </AdvancedMarker>
+                            ))}
+                            {/* Info window for clicked point */}
+                            {hoveredPoint !== null && currentScan.grid_points[hoveredPoint] && (
+                              <InfoWindow
+                                position={{ lat: currentScan.grid_points[hoveredPoint].lat, lng: currentScan.grid_points[hoveredPoint].lng }}
+                                onCloseClick={() => setHoveredPoint(null)}
+                              >
+                                <div className="p-1">
+                                  <strong className="text-sm">Rank: {currentScan.grid_points[hoveredPoint].rank || 'Not found'}</strong>
+                                  {currentScan.grid_points[hoveredPoint].competitors?.length > 0 && (
+                                    <div className="text-xs mt-1 text-gray-600">
+                                      {currentScan.grid_points[hoveredPoint].competitors.map((c, ci) => (
                                         <div key={ci}>#{c.rank} {c.name}</div>
                                       ))}
                                     </div>
                                   )}
                                 </div>
-                              </Tooltip>
-                            </CircleMarker>
-                          ))}
-                        </MapContainer>
+                              </InfoWindow>
+                            )}
+                          </Map>
+                        </APIProvider>
+                      </div>
+                    )}
+                    {profile.lat && profile.lng && !mapsApiKey && (
+                      <div className="rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center" style={{ height: 400 }}>
+                        <p className="text-sm text-gray-500">Google Maps API key not configured. Add GOOGLE_PLACES_API_KEY to your environment.</p>
                       </div>
                     )}
 
