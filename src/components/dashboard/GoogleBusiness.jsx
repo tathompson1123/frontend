@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
-import { 
+import {
   Sparkles, Star, RefreshCw, Copy, CheckCircle, MessageSquare,
-  Calendar, TrendingUp, Clock, Users, BarChart3, Send, Mail, 
+  Calendar, TrendingUp, Clock, Users, BarChart3, Send, Mail,
   Phone, ExternalLink, CheckCircle2, XCircle, Loader2, Info, AlertCircle,
-  Link as LinkIcon
+  Link as LinkIcon, Search
 } from 'lucide-react';
+import GBPAnalyzer from './GBPAnalyzer';
 
 export default function GoogleBusiness({ apiUrl, user, authFetch }) {
-  const [activeTab, setActiveTab] = useState('review-requests');
+  const [activeTab, setActiveTab] = useState('analyzer');
   
   // Review Generator State
   const [reviewCustomerName, setReviewCustomerName] = useState('');
@@ -213,10 +214,23 @@ const saveReviewConfig = async () => {
         <p className="text-gray-600 mt-1">Manage reviews and automate customer feedback</p>
       </div>
 
-      {/* Tabs - Review Requests first, AI Reply Generator second */}
+      {/* Tabs - Profile Analyzer first, Review Requests second, AI Reply Generator third */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
           <div className="flex">
+            <button
+              onClick={() => setActiveTab('analyzer')}
+              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+                activeTab === 'analyzer'
+                  ? 'border-amber-600 text-amber-600 bg-amber-50'
+                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Search className="w-5 h-5" />
+                <span>Profile Analyzer</span>
+              </div>
+            </button>
             <button
               onClick={() => setActiveTab('review-requests')}
               className={`px-6 py-4 font-semibold transition-all border-b-2 ${
@@ -248,6 +262,11 @@ const saveReviewConfig = async () => {
 
         {/* Tab Content */}
         <div className="p-6">
+          {/* PROFILE ANALYZER TAB */}
+          {activeTab === 'analyzer' && (
+            <GBPAnalyzer apiUrl={apiUrl} user={user} authFetch={authFetch} />
+          )}
+
           {/* REPLY GENERATOR TAB */}
           {activeTab === 'reply-generator' && (
             <div className="grid lg:grid-cols-2 gap-6">
