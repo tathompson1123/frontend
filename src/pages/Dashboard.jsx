@@ -607,9 +607,10 @@ useEffect(() => {
     feature="market-research"
     onUpgradeClick={() => setCurrentView('billing')}
   >
-    <MarketResearch 
+    <MarketResearch
       apiUrl={apiUrl}
       authFetch={authFetch}
+      user={user}
     />
   </FeatureGate>
 )}
