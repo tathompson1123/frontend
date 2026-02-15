@@ -1153,7 +1153,16 @@ export default function BusinessInformation({
                         {isScraping ? <><Loader2 className="w-5 h-5 animate-spin" /> Scanning...</> : <><Globe className="w-5 h-5" /> Scan</>}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-400">Tip: Link directly to your services or pricing page for best results.</p>
+                    <p className="text-xs text-gray-400">Tip: Link directly to your services or pricing page for best results. We'll also scan linked pages automatically.</p>
+                    {isScraping && (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-blue-700 text-sm flex items-center gap-3">
+                        <Loader2 className="w-5 h-5 animate-spin flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">Rendering website and scanning for services...</p>
+                          <p className="text-xs text-blue-500 mt-1">This may take 20-40 seconds as we load the full page including any JavaScript-rendered content.</p>
+                        </div>
+                      </div>
+                    )}
                     {scrapeError && (
                       <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{scrapeError}</div>
                     )}
