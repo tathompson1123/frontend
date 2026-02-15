@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2 } from 'lucide-react';
 
 export default function BusinessInformation({ 
   businessHours, 
@@ -67,6 +67,105 @@ export default function BusinessInformation({
   const [groupForm, setGroupForm] = useState({ name: '', selectedEmployees: [] });
   const [editingGroup, setEditingGroup] = useState(null);
   const [invitingEmployeeId, setInvitingEmployeeId] = useState(null);
+
+  // Permissions State
+  const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [permissionsEmployee, setPermissionsEmployee] = useState(null);
+  const [permissionsForm, setPermissionsForm] = useState({});
+  const [permissionTemplates, setPermissionTemplates] = useState([]);
+  const [savingPermissions, setSavingPermissions] = useState(false);
+  const [showSaveTemplate, setShowSaveTemplate] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+
+  const PERMISSION_DEFS = [
+    { key: 'view_bookings', label: 'View Bookings', desc: 'See assigned bookings & schedule' },
+    { key: 'manage_bookings', label: 'Manage Bookings', desc: 'Update booking status, add notes' },
+    { key: 'view_customers', label: 'View Customers', desc: 'See customer contact info' },
+    { key: 'view_all_bookings', label: 'View All Bookings', desc: 'See bookings assigned to other employees' },
+    { key: 'send_messages', label: 'Send Messages', desc: 'Send SMS to customers' },
+    { key: 'process_payments', label: 'Process Payments', desc: 'Use tap-to-pay, create invoices' },
+    { key: 'view_reports', label: 'View Reports', desc: 'Access business reports & analytics' },
+  ];
+
+  const DEFAULT_PERMS = {
+    view_bookings: true, manage_bookings: true, view_customers: true,
+    view_all_bookings: false, send_messages: true, process_payments: false, view_reports: false
+  };
+
+  const openPermissionsModal = async (employee) => {
+    setPermissionsEmployee(employee);
+    setPermissionsForm(employee.permissions || DEFAULT_PERMS);
+    setShowPermissionsModal(true);
+    // Fetch templates
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/permission-templates`);
+      if (res.ok) {
+        const data = await res.json();
+        setPermissionTemplates(data.templates || []);
+      }
+    } catch (err) {
+      console.error('Error loading templates:', err);
+    }
+  };
+
+  const savePermissions = async () => {
+    if (!permissionsEmployee) return;
+    setSavingPermissions(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/${permissionsEmployee.id}/permissions`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ permissions: permissionsForm })
+      });
+      if (res.ok) {
+        if (fetchEmployees) await fetchEmployees();
+        setShowPermissionsModal(false);
+      } else {
+        alert('Failed to save permissions');
+      }
+    } catch (err) {
+      console.error('Error saving permissions:', err);
+      alert('Failed to save permissions');
+    } finally {
+      setSavingPermissions(false);
+    }
+  };
+
+  const applyTemplate = (template) => {
+    setPermissionsForm(template.permissions || DEFAULT_PERMS);
+  };
+
+  const saveAsTemplate = async () => {
+    if (!templateName.trim()) return;
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/permission-templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: templateName.trim(), permissions: permissionsForm })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setPermissionTemplates(prev => [...prev, data.template]);
+        setShowSaveTemplate(false);
+        setTemplateName('');
+      }
+    } catch (err) {
+      console.error('Error saving template:', err);
+    }
+  };
+
+  const deleteTemplate = async (templateId) => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/permission-templates/${templateId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        setPermissionTemplates(prev => prev.filter(t => t.id !== templateId));
+      }
+    } catch (err) {
+      console.error('Error deleting template:', err);
+    }
+  };
 
   // App Settings - Status update templates
   const [statusTemplates, setStatusTemplates] = useState([]);
@@ -1046,9 +1145,16 @@ export default function BusinessInformation({
                         </div>
                       )}
                     </div>
-                    <button type="button" onClick={() => handleEditEmployee(employee)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
-                      <Edit className="w-5 h-5" />
-                    </button>
+                    <div className="flex gap-1">
+                      {employee.invite_status === 'accepted' && (
+                        <button type="button" onClick={() => openPermissionsModal(employee)} className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Configure Permissions">
+                          <Shield className="w-5 h-5" />
+                        </button>
+                      )}
+                      <button type="button" onClick={() => handleEditEmployee(employee)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                        <Edit className="w-5 h-5" />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Mobile App Access */}
@@ -1373,6 +1479,117 @@ export default function BusinessInformation({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Permissions Modal */}
+      {showPermissionsModal && permissionsEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Permissions</h2>
+                <p className="text-sm text-gray-600 mt-1">{permissionsEmployee.name}</p>
+              </div>
+              <button onClick={() => setShowPermissionsModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Template Selector */}
+              {permissionTemplates.length > 0 && (
+                <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                  <p className="text-sm font-semibold text-gray-700 mb-2">Apply a Template</p>
+                  <div className="flex flex-wrap gap-2">
+                    {permissionTemplates.map(t => (
+                      <div key={t.id} className="flex items-center gap-1">
+                        <button
+                          onClick={() => applyTemplate(t)}
+                          className="px-3 py-1.5 text-xs font-medium bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                        >
+                          {t.name}
+                        </button>
+                        <button
+                          onClick={() => deleteTemplate(t.id)}
+                          className="p-1 text-red-400 hover:text-red-600 transition"
+                          title="Delete template"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Permission Toggles */}
+              <div className="space-y-3">
+                {PERMISSION_DEFS.map(perm => (
+                  <div key={perm.key} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex-1 mr-4">
+                      <p className="text-sm font-semibold text-gray-900">{perm.label}</p>
+                      <p className="text-xs text-gray-500">{perm.desc}</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={permissionsForm[perm.key] || false}
+                        onChange={(e) => setPermissionsForm(prev => ({ ...prev, [perm.key]: e.target.checked }))}
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+                ))}
+              </div>
+
+              {/* Save as Template */}
+              {showSaveTemplate ? (
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={templateName}
+                    onChange={(e) => setTemplateName(e.target.value)}
+                    placeholder="Template name..."
+                    className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-purple-500 focus:outline-none"
+                    onKeyDown={(e) => e.key === 'Enter' && saveAsTemplate()}
+                  />
+                  <button onClick={saveAsTemplate} disabled={!templateName.trim()} className="px-4 py-2 bg-purple-600 text-white text-sm rounded-lg font-medium hover:bg-purple-700 transition disabled:opacity-50">
+                    Save
+                  </button>
+                  <button onClick={() => { setShowSaveTemplate(false); setTemplateName(''); }} className="px-3 py-2 text-gray-500 hover:text-gray-700">
+                    Cancel
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setShowSaveTemplate(true)}
+                  className="text-sm text-purple-600 hover:text-purple-800 font-medium"
+                >
+                  Save current settings as template
+                </button>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  onClick={() => setShowPermissionsModal(false)}
+                  className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={savePermissions}
+                  disabled={savingPermissions}
+                  className="flex-1 bg-purple-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Save className="w-4 h-4" />
+                  {savingPermissions ? 'Saving...' : 'Save Permissions'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

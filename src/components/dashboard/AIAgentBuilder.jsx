@@ -223,7 +223,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     try {
       const endpoint = activeAgent === 'chat'
         ? `${apiUrl}/api/agents/website/deploy`
-        : `${apiUrl}/api/agents/leadform/deploy`;
+        : `${apiUrl}/api/agents/lead-form/deploy`;
 
       const response = await authFetch(endpoint, {
         method: 'POST',

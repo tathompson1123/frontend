@@ -851,9 +851,12 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
                       </button>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className={`text-sm font-semibold ${item.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
-                            {item.title}
-                          </span>
+                          <button onClick={() => toggleExpand(item.id)} className="flex items-center gap-1 hover:opacity-80 transition">
+                            <span className={`text-sm font-semibold ${item.status === 'completed' ? 'line-through text-gray-400' : 'text-gray-900'}`}>
+                              {item.title}
+                            </span>
+                            {expandedItems.has(item.id) ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                          </button>
                           <CadenceBadge cadence={item.cadence} />
                         </div>
                         {expandedItems.has(item.id) && (
@@ -871,9 +874,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
                           </div>
                         )}
                       </div>
-                      <button onClick={() => toggleExpand(item.id)} className="text-gray-400 hover:text-gray-600">
-                        {expandedItems.has(item.id) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                      </button>
                     </div>
                   </div>
                 ))}

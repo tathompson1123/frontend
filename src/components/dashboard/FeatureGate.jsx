@@ -26,6 +26,18 @@ export default function FeatureGate({
 
   // Features and their requirements
   const featureInfo = {
+    'publish': {
+      title: 'Publish Your Website',
+      description: 'Go live and let customers find you online',
+      icon: Sparkles,
+      requiredPlan: 'Basic',
+      benefits: [
+        'Publish to a live URL',
+        'Professional hosting included',
+        'Free SSL certificate',
+        'Custom domain support'
+      ]
+    },
     'deploy': {
       title: 'Deploy Your Website',
       description: 'Make your website live and accessible to customers',

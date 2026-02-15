@@ -239,11 +239,32 @@ useEffect(() => {
   return () => window.removeEventListener('onboarding-step-complete', handleStepComplete);
 }, [apiUrl]);
 
-  // Handle URL tab parameter
+  // Handle URL tab parameter + 3DS redirect return
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const tab = params.get('tab');
-    if (tab) {
+    const flow = params.get('flow');
+
+    if (flow === 'publish') {
+      // User returning from 3DS redirect — refresh their plan and go to website tab
+      setCurrentView('website');
+      (async () => {
+        try {
+          const res = await authFetch(`${apiUrl}/api/billing/subscription`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.plan) {
+              const updatedUser = { ...user, plan: data.plan };
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              setUser(updatedUser);
+            }
+          }
+        } catch (err) {
+          console.error('Error refreshing plan after 3DS redirect:', err);
+        }
+      })();
+      window.history.replaceState({}, '', '/dashboard');
+    } else if (tab) {
       setCurrentView(tab);
       window.history.replaceState({}, '', '/dashboard');
     }
@@ -533,14 +554,19 @@ useEffect(() => {
           )}
 
           {currentView === 'website' && (
-            <MyWebsite 
-              apiUrl={apiUrl} 
-              user={user} 
-              navigate={navigate} 
+            <MyWebsite
+              apiUrl={apiUrl}
+              user={user}
+              navigate={navigate}
               websiteData={websiteData}
               authFetch={authFetch}
               setCurrentView={setCurrentView}
               refreshWebsiteData={refreshWebsiteData}
+              onUserPlanUpdate={(plan) => {
+                const updatedUser = { ...user, plan };
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+                setUser(updatedUser);
+              }}
             />
           )}
 
