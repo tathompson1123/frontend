@@ -113,6 +113,19 @@ export default function PublishWizard({
   const pollIntervalRef = useRef(null);
   const assistantEndRef = useRef(null);
 
+  // Reset step when wizard opens
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep(startStep || 1);
+      setPaymentComplete(false);
+      setCheckoutClientSecret(null);
+      setSelectedPlan(null);
+      setDomainMode(null);
+      setPublishResult(null);
+      setIsPublishing(false);
+    }
+  }, [isOpen, startStep]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -181,10 +194,8 @@ export default function PublishWizard({
           setPaymentComplete(true);
           clearInterval(pollIntervalRef.current);
 
-          // Update user
-          const updatedUser = { ...user, plan: data.plan };
-          localStorage.setItem('user', JSON.stringify(updatedUser));
-          if (onUserPlanUpdate) onUserPlanUpdate(updatedUser);
+          // Update user plan in parent
+          if (onUserPlanUpdate) onUserPlanUpdate(data.plan);
 
           // Destroy checkout and advance
           if (checkoutInstanceRef.current) {

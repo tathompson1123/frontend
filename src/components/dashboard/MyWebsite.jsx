@@ -491,22 +491,22 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       )}
 
       {/* Publish Wizard */}
-      <PublishWizard
-        isOpen={showPublishWizard}
-        onClose={() => {
-          setShowPublishWizard(false);
-          if (refreshWebsiteData) refreshWebsiteData();
-        }}
-        startStep={wizardStartStep}
-        user={user}
-        apiUrl={apiUrl}
-        authFetch={authFetch}
-        websiteData={websiteData}
-        refreshWebsiteData={async () => {
-          if (refreshWebsiteData) await refreshWebsiteData();
-        }}
-        onUserPlanUpdate={onUserPlanUpdate}
-      />
+      {showPublishWizard && (
+        <PublishWizard
+          isOpen={showPublishWizard}
+          onClose={() => {
+            setShowPublishWizard(false);
+            if (refreshWebsiteData) refreshWebsiteData();
+          }}
+          startStep={wizardStartStep}
+          user={user}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+          websiteData={websiteData}
+          refreshWebsiteData={refreshWebsiteData}
+          onUserPlanUpdate={onUserPlanUpdate}
+        />
+      )}
 
       {/* Generate Website Modal */}
       {showEditWebsite && (
