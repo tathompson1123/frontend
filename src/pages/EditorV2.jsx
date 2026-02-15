@@ -707,48 +707,79 @@ export default function EditorV2() {
   // ============================================
   // IMPORT GOOGLE REVIEWS
   // ============================================
+  const [fetchedGoogleReviews, setFetchedGoogleReviews] = useState(null);
+
   const importGoogleReviews = async () => {
     if (!googleUrl.trim()) {
-      alert('Please enter a Google Business Profile URL');
+      alert('Please enter your business name or Place ID');
       return;
     }
 
     setImportingReviews(true);
+    setFetchedGoogleReviews(null);
 
     try {
       const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/google-business/import-google`, {
+      // Use Places API endpoint (reliable) instead of Puppeteer scraper
+      const isPlaceId = googleUrl.startsWith('ChIJ') || googleUrl.startsWith('places/');
+      const body = isPlaceId
+        ? { placeId: googleUrl.replace('places/', '') }
+        : { query: googleUrl };
+
+      const response = await fetch(`${apiUrl}/api/google-business/fetch-reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ googleUrl })
+        body: JSON.stringify(body)
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        alert(data.error || 'Failed to import reviews');
+        alert(data.error || 'Failed to fetch reviews');
         return;
       }
 
       if (data.reviews && data.reviews.length > 0) {
-        // Update the selected section with imported reviews
-        updateSectionContent(selectedSectionIndex, 'reviews', data.reviews);
-        setShowGoogleImportModal(false);
-        setGoogleUrl('');
-        alert(`Successfully imported ${data.reviews.length} reviews!`);
+        setFetchedGoogleReviews(data);
       } else {
-        alert(data.message || 'No reviews found');
+        alert(data.message || 'No reviews found. Try a more specific business name.');
       }
 
     } catch (error) {
       console.error('Import error:', error);
-      alert('Failed to import reviews. Please try again.');
+      alert('Failed to fetch reviews. Please try again.');
     } finally {
       setImportingReviews(false);
     }
+  };
+
+  const applyGoogleReviews = () => {
+    if (!fetchedGoogleReviews?.reviews) return;
+
+    // Determine which field key this section uses
+    const section = pageData?.sections?.[selectedSectionIndex];
+    const templateDef = TEMPLATE_DEFINITIONS[section?.template];
+    const hasTestimonials = templateDef?.fields?.testimonials;
+
+    if (hasTestimonials) {
+      // Map to testimonials format (quote/author/role/rating)
+      const testimonials = fetchedGoogleReviews.reviews.map(r => ({
+        quote: r.text,
+        author: r.name,
+        role: 'Verified Customer',
+        rating: r.stars || r.rating || 5
+      }));
+      updateSectionContent(selectedSectionIndex, 'testimonials', testimonials);
+    } else {
+      updateSectionContent(selectedSectionIndex, 'reviews', fetchedGoogleReviews.reviews);
+    }
+
+    setShowGoogleImportModal(false);
+    setGoogleUrl('');
+    setFetchedGoogleReviews(null);
   };
 
   // ============================================
@@ -843,11 +874,11 @@ export default function EditorV2() {
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-20">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate('/dashboard?tab=website')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-medium">Back to Dashboard</span>
+            <span className="font-medium">Back</span>
           </button>
         </div>
 
@@ -971,13 +1002,13 @@ export default function EditorV2() {
                   if (field.type === 'array') {
                     return (
                       <div key={fieldKey}>
-                        {fieldKey === 'reviews' && (
+                        {(fieldKey === 'reviews' || fieldKey === 'testimonials') && (
                           <button
-                            onClick={() => setShowGoogleImportModal(true)}
+                            onClick={() => { setFetchedGoogleReviews(null); setShowGoogleImportModal(true); }}
                             className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
                           >
                             <Star className="w-4 h-4" />
-                            Import from Google Business
+                            Link Google Reviews
                           </button>
                         )}
                         <ArrayFieldEditor
@@ -1047,53 +1078,90 @@ export default function EditorV2() {
         onAdd={addSection}
       />
 
-      {/* Google Import Modal */}
+      {/* Link Google Reviews Modal */}
       {showGoogleImportModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Import Google Reviews</h2>
-              <button onClick={() => setShowGoogleImportModal(false)} className="p-1 hover:bg-gray-100 rounded">
+          <div className="bg-white rounded-xl shadow-2xl max-w-lg w-full mx-4 max-h-[85vh] overflow-hidden flex flex-col">
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+              <div>
+                <h2 className="text-lg font-semibold">Link Google Reviews</h2>
+                <p className="text-xs text-gray-500">Pull real reviews from your Google Business Profile</p>
+              </div>
+              <button onClick={() => { setShowGoogleImportModal(false); setFetchedGoogleReviews(null); }} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div className="p-6">
+            <div className="p-6 overflow-y-auto flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Google Business Profile URL or Place ID
+                Search your business name
               </label>
-              <input
-                type="text"
-                value={googleUrl}
-                onChange={(e) => setGoogleUrl(e.target.value)}
-                placeholder="https://maps.google.com/maps?cid=... or Place ID"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                onKeyPress={(e) => e.key === 'Enter' && importGoogleReviews()}
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                Paste your Google Business Profile link or Place ID to import your real reviews.
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={googleUrl}
+                  onChange={(e) => setGoogleUrl(e.target.value)}
+                  placeholder="e.g. Joe's Auto Detailing Dallas"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  onKeyPress={(e) => e.key === 'Enter' && importGoogleReviews()}
+                />
+                <button
+                  onClick={importGoogleReviews}
+                  disabled={importingReviews || !googleUrl.trim()}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2 flex-shrink-0"
+                >
+                  {importingReviews ? (
+                    <><RefreshCw className="w-4 h-4 animate-spin" /> Searching</>
+                  ) : (
+                    <><Star className="w-4 h-4" /> Search</>
+                  )}
+                </button>
+              </div>
+              <p className="text-xs text-gray-400 mb-4">
+                Enter your business name and city, or a Google Place ID
               </p>
+
+              {/* Review Preview */}
+              {fetchedGoogleReviews && (
+                <div className="border border-green-200 bg-green-50 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="font-semibold text-gray-900">{fetchedGoogleReviews.businessName}</p>
+                      <p className="text-sm text-gray-600">
+                        {fetchedGoogleReviews.averageRating} ★ · {fetchedGoogleReviews.totalReviews} total reviews · {fetchedGoogleReviews.reviews.length} loaded
+                      </p>
+                    </div>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {fetchedGoogleReviews.reviews.map((r, i) => (
+                      <div key={i} className="bg-white rounded-lg p-3 border border-gray-200 text-sm">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium text-gray-900">{r.name}</span>
+                          <span className="text-amber-500">{'★'.repeat(r.stars)}</span>
+                          <span className="text-xs text-gray-400 ml-auto">{r.date}</span>
+                        </div>
+                        <p className="text-gray-600 line-clamp-2">{r.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            <div className="p-4 border-t border-gray-200 flex justify-end gap-2">
+            <div className="p-4 border-t border-gray-200 flex justify-end gap-2 flex-shrink-0">
               <button
-                onClick={() => setShowGoogleImportModal(false)}
+                onClick={() => { setShowGoogleImportModal(false); setFetchedGoogleReviews(null); }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
               >
                 Cancel
               </button>
-              <button
-                onClick={importGoogleReviews}
-                disabled={importingReviews}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
-              >
-                {importingReviews ? (
-                  <>Importing...</>
-                ) : (
-                  <>
-                    <Star className="w-4 h-4" />
-                    Import Reviews
-                  </>
-                )}
-              </button>
+              {fetchedGoogleReviews && (
+                <button
+                  onClick={applyGoogleReviews}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                >
+                  <Star className="w-4 h-4" />
+                  Use These Reviews
+                </button>
+              )}
             </div>
           </div>
         </div>

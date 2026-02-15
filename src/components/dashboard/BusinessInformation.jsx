@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2 } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, Globe, Loader2 } from 'lucide-react';
 
 export default function BusinessInformation({ 
   businessHours, 
@@ -46,6 +46,12 @@ export default function BusinessInformation({
   });
   const [isSavingService, setIsSavingService] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [showScrapeModal, setShowScrapeModal] = useState(false);
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [isScraping, setIsScraping] = useState(false);
+  const [scrapedServices, setScrapedServices] = useState([]);
+  const [scrapeError, setScrapeError] = useState('');
+  const [selectedScraped, setSelectedScraped] = useState([]);
 
   // Team State
   const colorPalette = [
@@ -470,6 +476,61 @@ export default function BusinessInformation({
     }
   };
 
+  // Scrape Services Functions
+  const handleScrapeServices = async () => {
+    if (!scrapeUrl.trim()) return;
+    setIsScraping(true);
+    setScrapeError('');
+    setScrapedServices([]);
+    try {
+      let url = scrapeUrl.trim();
+      if (!url.startsWith('http')) url = 'https://' + url;
+      const response = await authFetch(`${apiUrl}/api/services/scrape`, {
+        method: 'POST',
+        body: JSON.stringify({ url })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to scrape');
+      if (data.services && data.services.length > 0) {
+        setScrapedServices(data.services);
+        setSelectedScraped(data.services.map((_, i) => i));
+      } else {
+        setScrapeError('No services found on this website. Try a different page or URL.');
+      }
+    } catch (error) {
+      setScrapeError(error.message);
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  const handleImportScraped = async () => {
+    setIsScraping(true);
+    try {
+      for (const idx of selectedScraped) {
+        const s = scrapedServices[idx];
+        await authFetch(`${apiUrl}/api/services`, {
+          method: 'POST',
+          body: JSON.stringify({
+            name: s.name,
+            description: s.description || '',
+            durationHours: s.durationHours || 1,
+            price: s.price || 0
+          })
+        });
+      }
+      setShowScrapeModal(false);
+      setScrapedServices([]);
+      setSelectedScraped([]);
+      setScrapeUrl('');
+      fetchServices();
+    } catch (error) {
+      setScrapeError('Failed to import some services: ' + error.message);
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
   // Team Functions
   const handleSaveGroup = async (e) => {
     e.preventDefault();
@@ -857,14 +918,24 @@ export default function BusinessInformation({
               <h2 className="text-2xl font-bold text-gray-900">Services</h2>
               <p className="text-gray-600 mt-1">Manage your service offerings</p>
             </div>
-            <button
-              type="button"
-              onClick={() => setShowAddService(true)}
-              className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Add Service
-            </button>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => { setShowScrapeModal(true); setScrapeError(''); setScrapedServices([]); }}
+                className="bg-white border-2 border-gray-200 text-gray-700 px-5 py-3 rounded-lg font-semibold hover:border-amber-400 hover:shadow-md transition-all flex items-center gap-2"
+              >
+                <Globe className="w-5 h-5" />
+                Scrape from Website
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowAddService(true)}
+                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+              >
+                <Plus className="w-5 h-5" />
+                Add Service
+              </button>
+            </div>
           </div>
 
           {services.length === 0 ? (
@@ -1047,6 +1118,105 @@ export default function BusinessInformation({
                     </button>
                   </div>
                 </form>
+              </div>
+            </div>
+          )}
+
+          {/* Scrape Services Modal */}
+          {showScrapeModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">Scrape Services from Website</h2>
+                  <button onClick={() => { setShowScrapeModal(false); setScrapedServices([]); setScrapeError(''); }} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+
+                {scrapedServices.length === 0 ? (
+                  <div className="space-y-4">
+                    <p className="text-gray-600">Enter your current website URL and we'll automatically detect your services.</p>
+                    <div className="flex gap-3">
+                      <input
+                        type="url"
+                        value={scrapeUrl}
+                        onChange={(e) => setScrapeUrl(e.target.value)}
+                        placeholder="https://yourbusiness.com"
+                        className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
+                        onKeyDown={(e) => e.key === 'Enter' && handleScrapeServices()}
+                      />
+                      <button
+                        onClick={handleScrapeServices}
+                        disabled={isScraping || !scrapeUrl.trim()}
+                        className="px-6 py-3 bg-gradient-to-r from-amber-600 to-blue-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center gap-2"
+                      >
+                        {isScraping ? <><Loader2 className="w-5 h-5 animate-spin" /> Scanning...</> : <><Globe className="w-5 h-5" /> Scan</>}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-400">Tip: Link directly to your services or pricing page for best results.</p>
+                    {scrapeError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{scrapeError}</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-gray-600">Found <strong>{scrapedServices.length}</strong> services. Select which ones to import:</p>
+                      <button
+                        onClick={() => setSelectedScraped(
+                          selectedScraped.length === scrapedServices.length ? [] : scrapedServices.map((_, i) => i)
+                        )}
+                        className="text-sm text-amber-600 hover:text-amber-700 font-medium"
+                      >
+                        {selectedScraped.length === scrapedServices.length ? 'Deselect All' : 'Select All'}
+                      </button>
+                    </div>
+                    <div className="space-y-3 max-h-96 overflow-y-auto">
+                      {scrapedServices.map((s, i) => (
+                        <label key={i} className={`flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                          selectedScraped.includes(i) ? 'border-amber-400 bg-amber-50' : 'border-gray-200 hover:border-gray-300'
+                        }`}>
+                          <input
+                            type="checkbox"
+                            checked={selectedScraped.includes(i)}
+                            onChange={() => setSelectedScraped(prev =>
+                              prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
+                            )}
+                            className="mt-1 w-5 h-5 text-amber-600 rounded"
+                          />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <h4 className="font-bold text-gray-900">{s.name}</h4>
+                              <div className="flex items-center gap-3 text-sm text-gray-600">
+                                {s.price > 0 && <span className="font-semibold text-green-600">${s.price}</span>}
+                                {s.durationHours > 0 && <span>{s.durationHours}h</span>}
+                              </div>
+                            </div>
+                            {s.description && <p className="text-sm text-gray-600 mt-1">{s.description}</p>}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    {scrapeError && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">{scrapeError}</div>
+                    )}
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={() => { setScrapedServices([]); setScrapeError(''); }}
+                        className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                      >
+                        Back
+                      </button>
+                      <button
+                        onClick={handleImportScraped}
+                        disabled={isScraping || selectedScraped.length === 0}
+                        className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                      >
+                        {isScraping ? 'Importing...' : `Import ${selectedScraped.length} Service${selectedScraped.length !== 1 ? 's' : ''}`}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
