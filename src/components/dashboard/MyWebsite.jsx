@@ -7,6 +7,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [isPublished, setIsPublished] = useState(false);
   const [devicePreview, setDevicePreview] = useState('desktop');
   const [customDomain, setCustomDomain] = useState('');
+  const [domainVerified, setDomainVerified] = useState(false);
   const [vercelUrl, setVercelUrl] = useState('');
   const [showEditWebsite, setShowEditWebsite] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -74,6 +75,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       setCurrentWebsite(websiteData.html_content);
       setIsPublished(websiteData.is_published || false);
       setCustomDomain(websiteData.custom_domain || '');
+      setDomainVerified(websiteData.domain_verified || false);
       setVercelUrl(websiteData.vercel_url || '');
     }
   }, [websiteData]);
@@ -206,7 +208,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         onClick: () => { setWizardStartStep(4); setShowPublishWizard(true); }
       };
     }
-    if (!customDomain) {
+    if (!customDomain || !domainVerified) {
       return {
         label: 'Configure Domain',
         icon: Globe,

@@ -829,24 +829,6 @@ export default function PublishWizard({
                         </details>
                       </div>
 
-                      {/* Registrar tutorials */}
-                      <div className="bg-white rounded-xl p-5 border border-gray-200">
-                        <h4 className="font-semibold text-gray-900 mb-3">Step-by-step guides for your registrar:</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {registrarLinks.map(r => (
-                            <a
-                              key={r.name}
-                              href={r.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm hover:bg-gray-100 hover:border-gray-300 flex items-center gap-1 transition"
-                            >
-                              {r.name} <ExternalLink className="w-3 h-3" />
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-
                       {/* SORCE Assistant */}
                       <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-5 border border-blue-200">
                         <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2">
@@ -857,8 +839,13 @@ export default function PublishWizard({
 
                         <div className="max-h-48 overflow-y-auto space-y-2 mb-3">
                           {assistantMessages.length === 0 && (
-                            <div className="text-xs text-gray-400 text-center py-4">
-                              Try: "I use GoDaddy" or "How do I change nameservers on Namecheap?"
+                            <div className="text-sm text-gray-500 py-3 px-2 space-y-2">
+                              <p className="font-medium text-gray-700">I have step-by-step instructions for:</p>
+                              <p className="text-xs text-gray-500">
+                                GoDaddy &bull; Namecheap &bull; Google Domains &bull; Cloudflare &bull; Hostinger &bull; Bluehost &bull; IONOS &bull; Porkbun &bull; Hover &bull; Name.com
+                              </p>
+                              <p className="text-xs text-gray-400">I can also help with CNAME/A record setup as an alternative to nameservers.</p>
+                              <p className="text-xs text-blue-500 font-medium">Tell me which registrar you use and I'll walk you through it!</p>
                             </div>
                           )}
                           {assistantMessages.map((msg, i) => (
@@ -896,6 +883,24 @@ export default function PublishWizard({
                           >
                             <Send className="w-4 h-4" />
                           </button>
+                        </div>
+                      </div>
+
+                      {/* Registrar tutorials */}
+                      <div className="bg-white rounded-xl p-5 border border-gray-200">
+                        <h4 className="font-semibold text-gray-900 mb-3">Step-by-step guides for your registrar:</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {registrarLinks.map(r => (
+                            <a
+                              key={r.name}
+                              href={r.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm hover:bg-gray-100 hover:border-gray-300 flex items-center gap-1 transition"
+                            >
+                              {r.name} <ExternalLink className="w-3 h-3" />
+                            </a>
+                          ))}
                         </div>
                       </div>
 

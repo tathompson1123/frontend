@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { CreditCard, CheckCircle, XCircle, ExternalLink, Star, Trash2, RefreshCw } from 'lucide-react';
+import { CheckCircle, XCircle, ExternalLink, Star, Trash2, RefreshCw } from 'lucide-react';
 
 const processorInfo = {
   stripe: { name: 'Stripe', color: 'bg-indigo-50 border-indigo-200', icon: '💳', description: 'Accept credit cards, debit cards, and ACH bank transfers' },
@@ -7,17 +7,25 @@ const processorInfo = {
   paypal: { name: 'PayPal', color: 'bg-blue-50 border-blue-200', icon: '🅿️', description: 'Accept PayPal payments and credit cards' },
 };
 
-export default function PaymentSettings({ apiUrl, user, authFetch }) {
+export default function PaymentSettings({ apiUrl, user, authFetch, justConnected }) {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(null);
   const [showPaypalModal, setShowPaypalModal] = useState(false);
   const [paypalForm, setPaypalForm] = useState({ clientId: '', clientSecret: '' });
   const [connecting, setConnecting] = useState(false);
+  const [successBanner, setSuccessBanner] = useState(justConnected || null);
 
   useEffect(() => {
     fetchConnections();
   }, []);
+
+  useEffect(() => {
+    if (successBanner) {
+      const timer = setTimeout(() => setSuccessBanner(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [successBanner]);
 
   const fetchConnections = async () => {
     try {
@@ -98,6 +106,19 @@ export default function PaymentSettings({ apiUrl, user, authFetch }) {
         <h2 className="text-3xl font-bold text-gray-900">Payment Settings</h2>
         <p className="text-gray-600 mt-1">Connect payment processors to accept payments from customers</p>
       </div>
+
+      {/* Success Banner */}
+      {successBanner && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <p className="text-green-700 font-medium">
+            {processorInfo[successBanner]?.name || successBanner} connected successfully! You can now accept payments through {processorInfo[successBanner]?.name || successBanner}.
+          </p>
+          <button onClick={() => setSuccessBanner(null)} className="ml-auto text-green-500 hover:text-green-700">
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Connected Processors */}
       {connections.length > 0 && (

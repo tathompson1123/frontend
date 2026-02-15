@@ -34,40 +34,40 @@ import SettingsPage from '../components/dashboard/Settings';
 import FeatureGate from '../components/dashboard/FeatureGate';
 import Invoices from '../components/dashboard/Invoices';
 import PaymentProcessors from '../components/dashboard/PaymentSettings';
+import Transactions from '../components/dashboard/Transactions';
 
 // Combined Payment Settings page with sub-tabs
-function PaymentSettingsPage({ apiUrl, user, authFetch }) {
-  const [subTab, setSubTab] = useState('invoices');
+function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConnected }) {
+  const [subTab, setSubTab] = useState(initialSubTab || 'processors');
+  const tabs = [
+    { key: 'processors', label: 'Payment Processors' },
+    { key: 'invoices', label: 'Invoices' },
+    { key: 'transactions', label: 'Transactions' },
+  ];
   return (
     <div>
       <div className="mb-6">
         <h2 className="text-3xl font-bold text-gray-900">Payment Settings</h2>
-        <p className="text-gray-600 mt-1">Manage invoices and payment processors</p>
+        <p className="text-gray-600 mt-1">Manage payment processors, invoices, and transactions</p>
       </div>
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
-        <button
-          onClick={() => setSubTab('invoices')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition ${
-            subTab === 'invoices'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Invoices
-        </button>
-        <button
-          onClick={() => setSubTab('processors')}
-          className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition ${
-            subTab === 'processors'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Payment Processors
-        </button>
+        {tabs.map(t => (
+          <button
+            key={t.key}
+            onClick={() => setSubTab(t.key)}
+            className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition ${
+              subTab === t.key
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
+      {subTab === 'processors' && <PaymentProcessors apiUrl={apiUrl} user={user} authFetch={authFetch} justConnected={justConnected} />}
       {subTab === 'invoices' && <Invoices apiUrl={apiUrl} user={user} authFetch={authFetch} />}
-      {subTab === 'processors' && <PaymentProcessors apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'transactions' && <Transactions apiUrl={apiUrl} user={user} authFetch={authFetch} />}
     </div>
   );
 }
@@ -100,6 +100,7 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [currentView, setCurrentView] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
 
   // DEFINE user AND apiUrl FIRST
 const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
@@ -266,6 +267,10 @@ useEffect(() => {
       window.history.replaceState({}, '', '/dashboard');
     } else if (tab) {
       setCurrentView(tab);
+      const connected = params.get('connected');
+      if (connected) {
+        setJustConnectedProcessor(connected);
+      }
       window.history.replaceState({}, '', '/dashboard');
     }
   }, []);
@@ -613,6 +618,7 @@ useEffect(() => {
               apiUrl={apiUrl}
               user={user}
               authFetch={authFetch}
+              justConnected={justConnectedProcessor}
             />
           )}
 
