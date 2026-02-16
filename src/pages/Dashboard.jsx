@@ -310,13 +310,14 @@ useEffect(() => {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes, googleBusinessRes] = await Promise.all([
+        const [bookingsRes, servicesRes, employeesRes, hoursRes, websiteRes, googleBusinessRes, userProfileRes] = await Promise.all([
           authFetch(`${apiUrl}/api/bookings`),
           authFetch(`${apiUrl}/api/services`),
           authFetch(`${apiUrl}/api/employees`),
           authFetch(`${apiUrl}/api/business-hours`),
           authFetch(`${apiUrl}/api/website`),
-          authFetch(`${apiUrl}/api/google-business/profile`)
+          authFetch(`${apiUrl}/api/google-business/profile`),
+          authFetch(`${apiUrl}/api/user/profile`)
         ]);
 
         const bookingsData = await bookingsRes.json();
@@ -325,6 +326,7 @@ useEffect(() => {
         const hoursData = await hoursRes.json();
         const websiteDataRes = await websiteRes.json();
         const googleBusinessDataRes = await googleBusinessRes.json();
+        const userProfileData = await userProfileRes.json();
 
         setBookings(bookingsData.bookings || []);
         setServices(servicesData.services || []);
@@ -333,9 +335,17 @@ useEffect(() => {
         setWebsiteData(websiteDataRes.website || null);
         setGoogleBusinessData(googleBusinessDataRes.profile || null);
 
+        // Sync user plan and profile from backend (catches plan upgrades)
+        if (userProfileData.user) {
+          const updatedUser = { ...user, plan: userProfileData.user.plan, businessName: userProfileData.user.businessName };
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          setUser(updatedUser);
+        }
+
         if (websiteDataRes.website) {
-          const updatedUser = { 
-            ...user, 
+          const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+          const updatedUser = {
+            ...currentUser,
             websiteUrl: websiteDataRes.website.url || null,
             websiteId: websiteDataRes.website.id || null,
             websitePublished: websiteDataRes.website.is_published || false
