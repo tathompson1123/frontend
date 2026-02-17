@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Code, MessageCircle, Calendar, Mail, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, Eye } from 'lucide-react';
+import { Copy, Check, Code, MessageCircle, Calendar, Mail, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, Eye, Plus, X, FileText } from 'lucide-react';
 
 export default function EmbedCode({ apiUrl, authFetch }) {
   const [siteKey, setSiteKey] = useState('');
@@ -12,6 +12,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
     leadFormFields: ['name', 'email', 'phone', 'message'],
     bookingButtonText: 'Book Online',
     submitButtonText: 'Submit',
+    formRules: [],
     themeColor: '#d97706',
     position: 'bottom-right'
   });
@@ -20,6 +21,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
   const [copied, setCopied] = useState(false);
   const [showGuide, setShowGuide] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [previewRuleIdx, setPreviewRuleIdx] = useState(-1); // -1 = default form
 
   useEffect(() => {
     loadData();
@@ -46,6 +48,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
           leadFormFields: s.lead_form_fields || ['name', 'email', 'phone', 'message'],
           bookingButtonText: s.booking_button_text || 'Book Online',
           submitButtonText: s.submit_button_text || 'Submit',
+          formRules: s.form_rules || [],
           themeColor: s.theme_color || '#d97706',
           position: s.position || 'bottom-right'
         });
@@ -90,6 +93,52 @@ export default function EmbedCode({ apiUrl, authFetch }) {
     else fields.push(field);
     setSettings({ ...settings, leadFormFields: fields });
   };
+
+  const addPageRule = () => {
+    const rules = [...settings.formRules, {
+      urlPattern: '/',
+      formTitle: 'Get a Free Quote',
+      formFields: ['name', 'email', 'phone', 'message'],
+      submitButtonText: 'Submit'
+    }];
+    setSettings({ ...settings, formRules: rules });
+    setPreviewRuleIdx(rules.length - 1);
+  };
+
+  const removePageRule = (idx) => {
+    const rules = settings.formRules.filter((_, i) => i !== idx);
+    setSettings({ ...settings, formRules: rules });
+    if (previewRuleIdx === idx) setPreviewRuleIdx(-1);
+    else if (previewRuleIdx > idx) setPreviewRuleIdx(previewRuleIdx - 1);
+  };
+
+  const updatePageRule = (idx, key, value) => {
+    const rules = [...settings.formRules];
+    rules[idx] = { ...rules[idx], [key]: value };
+    setSettings({ ...settings, formRules: rules });
+  };
+
+  const toggleRuleField = (idx, field) => {
+    const rule = settings.formRules[idx];
+    const fields = [...(rule.formFields || ['name', 'email', 'phone', 'message'])];
+    const fidx = fields.indexOf(field);
+    if (fidx >= 0) fields.splice(fidx, 1);
+    else fields.push(field);
+    updatePageRule(idx, 'formFields', fields);
+  };
+
+  // Get the form config being previewed
+  const previewConfig = previewRuleIdx >= 0 && settings.formRules[previewRuleIdx]
+    ? {
+        title: settings.formRules[previewRuleIdx].formTitle || 'Get a Free Quote',
+        fields: settings.formRules[previewRuleIdx].formFields || ['name', 'email', 'phone', 'message'],
+        submitText: settings.formRules[previewRuleIdx].submitButtonText || 'Submit'
+      }
+    : {
+        title: settings.leadFormTitle || 'Get a Free Quote',
+        fields: settings.leadFormFields || ['name', 'email', 'phone', 'message'],
+        submitText: settings.submitButtonText || 'Submit'
+      };
 
   const enabledCount = [settings.chatEnabled, settings.bookingEnabled, settings.leadFormEnabled].filter(Boolean).length;
 
@@ -255,14 +304,18 @@ export default function EmbedCode({ apiUrl, authFetch }) {
                 </div>
               </div>
 
-              {/* Form Settings */}
+              {/* Default Form Settings */}
               <div className="ml-12 space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <FileText className="w-4 h-4 text-gray-500" />
+                  <span className="text-sm font-semibold text-gray-700">Default Form (all pages)</span>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Form Title</label>
                   <input
                     type="text"
                     value={settings.leadFormTitle}
-                    onChange={e => setSettings({ ...settings, leadFormTitle: e.target.value })}
+                    onChange={e => { setSettings({ ...settings, leadFormTitle: e.target.value }); setPreviewRuleIdx(-1); }}
                     className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
                     placeholder="Get a Free Quote"
                   />
@@ -273,7 +326,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
                     {['name', 'email', 'phone', 'service', 'message'].map(field => (
                       <button
                         key={field}
-                        onClick={() => toggleField(field)}
+                        onClick={() => { toggleField(field); setPreviewRuleIdx(-1); }}
                         disabled={field === 'name' || field === 'email'}
                         className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
                           settings.leadFormFields.includes(field)
@@ -293,49 +346,147 @@ export default function EmbedCode({ apiUrl, authFetch }) {
                   <input
                     type="text"
                     value={settings.submitButtonText}
-                    onChange={e => setSettings({ ...settings, submitButtonText: e.target.value })}
+                    onChange={e => { setSettings({ ...settings, submitButtonText: e.target.value }); setPreviewRuleIdx(-1); }}
                     className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
                     placeholder="Submit"
                   />
                 </div>
               </div>
 
+              {/* Page Rules */}
+              <div className="ml-12 space-y-3 pt-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <span className="text-sm font-semibold text-gray-700">Page Rules</span>
+                    <p className="text-xs text-gray-400">Override the default form for specific pages</p>
+                  </div>
+                  <button
+                    onClick={addPageRule}
+                    className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-sm font-medium hover:bg-blue-100 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" /> Add Rule
+                  </button>
+                </div>
+
+                {settings.formRules.map((rule, idx) => (
+                  <div
+                    key={idx}
+                    className={`border rounded-lg p-4 space-y-3 cursor-pointer transition ${
+                      previewRuleIdx === idx ? 'border-blue-400 bg-blue-50/30' : 'border-gray-200'
+                    }`}
+                    onClick={() => setPreviewRuleIdx(idx)}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-700">
+                        {rule.urlPattern || '/'}
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removePageRule(idx); }}
+                        className="p-1 text-gray-400 hover:text-red-500 transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">URL Path (e.g. /contact, /services)</label>
+                      <input
+                        type="text"
+                        value={rule.urlPattern}
+                        onChange={e => updatePageRule(idx, 'urlPattern', e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-full px-3 py-1.5 border-2 border-gray-200 rounded-lg text-sm font-mono focus:border-blue-500 focus:outline-none"
+                        placeholder="/contact"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Form Title</label>
+                      <input
+                        type="text"
+                        value={rule.formTitle}
+                        onChange={e => updatePageRule(idx, 'formTitle', e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-full px-3 py-1.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
+                        placeholder="Contact Us"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Fields</label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {['name', 'email', 'phone', 'service', 'message'].map(field => (
+                          <button
+                            key={field}
+                            onClick={(e) => { e.stopPropagation(); toggleRuleField(idx, field); }}
+                            disabled={field === 'name' || field === 'email'}
+                            className={`px-2 py-1 rounded-full text-xs font-medium transition ${
+                              (rule.formFields || []).includes(field)
+                                ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                : 'bg-gray-100 text-gray-400 border border-gray-200'
+                            } ${(field === 'name' || field === 'email') ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                          >
+                            {field.charAt(0).toUpperCase() + field.slice(1)}
+                            {(field === 'name' || field === 'email') && '*'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Submit Button Text</label>
+                      <input
+                        type="text"
+                        value={rule.submitButtonText}
+                        onChange={e => updatePageRule(idx, 'submitButtonText', e.target.value)}
+                        onClick={e => e.stopPropagation()}
+                        className="w-full px-3 py-1.5 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
+                        placeholder="Submit"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               {/* Live Form Preview */}
               <div className="border border-gray-200 rounded-xl overflow-hidden">
-                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-gray-500" />
-                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Form Preview</span>
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Eye className="w-4 h-4 text-gray-500" />
+                    <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Form Preview</span>
+                  </div>
+                  <span className="text-xs text-gray-400">
+                    {previewRuleIdx >= 0 && settings.formRules[previewRuleIdx]
+                      ? `Page: ${settings.formRules[previewRuleIdx].urlPattern || '/'}`
+                      : 'Default (all pages)'}
+                  </span>
                 </div>
                 <div className="p-6 bg-white">
                   <div className="max-w-md mx-auto">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1">{settings.leadFormTitle || 'Get a Free Quote'}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">{previewConfig.title}</h3>
                     <p className="text-sm text-gray-500 mb-4">Fill out the form and we'll get back to you shortly.</p>
                     <div className="space-y-3">
-                      {settings.leadFormFields.includes('name') && (
+                      {previewConfig.fields.includes('name') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                           <input type="text" placeholder="Your name" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
                         </div>
                       )}
-                      {settings.leadFormFields.includes('email') && (
+                      {previewConfig.fields.includes('email') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                           <input type="email" placeholder="your@email.com" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
                         </div>
                       )}
-                      {settings.leadFormFields.includes('phone') && (
+                      {previewConfig.fields.includes('phone') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
                           <input type="tel" placeholder="(555) 123-4567" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
                         </div>
                       )}
-                      {settings.leadFormFields.includes('service') && (
+                      {previewConfig.fields.includes('service') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Service Interested In</label>
                           <input type="text" placeholder="What service are you looking for?" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
                         </div>
                       )}
-                      {settings.leadFormFields.includes('message') && (
+                      {previewConfig.fields.includes('message') && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
                           <textarea rows="3" placeholder="Tell us about what you need..." disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 resize-none" />
@@ -350,7 +501,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
                         className="w-full py-3 rounded-lg text-white font-semibold text-sm"
                         style={{ backgroundColor: settings.themeColor }}
                       >
-                        {settings.submitButtonText || 'Submit'}
+                        {previewConfig.submitText}
                       </button>
                     </div>
                   </div>
