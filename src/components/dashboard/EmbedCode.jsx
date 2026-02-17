@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Code, MessageCircle, Calendar, Mail, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Copy, Check, Code, MessageCircle, Calendar, Mail, ChevronDown, ChevronUp, ExternalLink, AlertTriangle, Eye } from 'lucide-react';
 
 export default function EmbedCode({ apiUrl, authFetch }) {
   const [siteKey, setSiteKey] = useState('');
@@ -11,6 +11,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
     leadFormTitle: 'Get a Free Quote',
     leadFormFields: ['name', 'email', 'phone', 'message'],
     bookingButtonText: 'Book Online',
+    submitButtonText: 'Submit',
     themeColor: '#d97706',
     position: 'bottom-right'
   });
@@ -44,6 +45,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
           leadFormTitle: s.lead_form_title || 'Get a Free Quote',
           leadFormFields: s.lead_form_fields || ['name', 'email', 'phone', 'message'],
           bookingButtonText: s.booking_button_text || 'Book Online',
+          submitButtonText: s.submit_button_text || 'Submit',
           themeColor: s.theme_color || '#d97706',
           position: s.position || 'bottom-right'
         });
@@ -222,7 +224,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900">Lead Capture Form</h4>
-                <p className="text-sm text-gray-500">Contact form that creates leads in your dashboard</p>
+                <p className="text-sm text-gray-500">Replaces existing contact forms on your website</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -236,37 +238,123 @@ export default function EmbedCode({ apiUrl, authFetch }) {
             </label>
           </div>
           {settings.leadFormEnabled && (
-            <div className="mt-4 ml-12 space-y-3">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Form Title</label>
-                <input
-                  type="text"
-                  value={settings.leadFormTitle}
-                  onChange={e => setSettings({ ...settings, leadFormTitle: e.target.value })}
-                  className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
-                  placeholder="Get a Free Quote"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Form Fields</label>
-                <div className="flex flex-wrap gap-2">
-                  {['name', 'email', 'phone', 'service', 'message'].map(field => (
-                    <button
-                      key={field}
-                      onClick={() => toggleField(field)}
-                      disabled={field === 'name' || field === 'email'}
-                      className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
-                        settings.leadFormFields.includes(field)
-                          ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                          : 'bg-gray-100 text-gray-500 border border-gray-200'
-                      } ${(field === 'name' || field === 'email') ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-                    >
-                      {field.charAt(0).toUpperCase() + field.slice(1)}
-                      {(field === 'name' || field === 'email') && ' *'}
-                    </button>
-                  ))}
+            <div className="mt-4 space-y-4">
+              {/* Warning Banner */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800 mb-1">How this works</p>
+                    <ul className="text-amber-700 space-y-1">
+                      <li>This will <strong>hide existing contact forms</strong> on your website and show the SORCE lead capture form in their place.</li>
+                      <li>Your original forms are <strong>not deleted</strong> — they'll reappear if you turn this off or remove the embed code.</li>
+                      <li>If no forms are found on your page, a floating button will appear instead.</li>
+                      <li>All leads submitted through this form appear in your dashboard and trigger <strong>SMS follow-up</strong> automatically if your Lead Form Agent is enabled.</li>
+                    </ul>
+                  </div>
                 </div>
-                <p className="text-xs text-gray-400 mt-1">Name and email are always required.</p>
+              </div>
+
+              {/* Form Settings */}
+              <div className="ml-12 space-y-3">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Form Title</label>
+                  <input
+                    type="text"
+                    value={settings.leadFormTitle}
+                    onChange={e => setSettings({ ...settings, leadFormTitle: e.target.value })}
+                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
+                    placeholder="Get a Free Quote"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Form Fields</label>
+                  <div className="flex flex-wrap gap-2">
+                    {['name', 'email', 'phone', 'service', 'message'].map(field => (
+                      <button
+                        key={field}
+                        onClick={() => toggleField(field)}
+                        disabled={field === 'name' || field === 'email'}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium transition ${
+                          settings.leadFormFields.includes(field)
+                            ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                            : 'bg-gray-100 text-gray-500 border border-gray-200'
+                        } ${(field === 'name' || field === 'email') ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                      >
+                        {field.charAt(0).toUpperCase() + field.slice(1)}
+                        {(field === 'name' || field === 'email') && ' *'}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Name and email are always required.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Submit Button Text</label>
+                  <input
+                    type="text"
+                    value={settings.submitButtonText}
+                    onChange={e => setSettings({ ...settings, submitButtonText: e.target.value })}
+                    className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
+                    placeholder="Submit"
+                  />
+                </div>
+              </div>
+
+              {/* Live Form Preview */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                <div className="bg-gray-50 px-4 py-2 border-b border-gray-200 flex items-center gap-2">
+                  <Eye className="w-4 h-4 text-gray-500" />
+                  <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Form Preview</span>
+                </div>
+                <div className="p-6 bg-white">
+                  <div className="max-w-md mx-auto">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">{settings.leadFormTitle || 'Get a Free Quote'}</h3>
+                    <p className="text-sm text-gray-500 mb-4">Fill out the form and we'll get back to you shortly.</p>
+                    <div className="space-y-3">
+                      {settings.leadFormFields.includes('name') && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                          <input type="text" placeholder="Your name" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
+                        </div>
+                      )}
+                      {settings.leadFormFields.includes('email') && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                          <input type="email" placeholder="your@email.com" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
+                        </div>
+                      )}
+                      {settings.leadFormFields.includes('phone') && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                          <input type="tel" placeholder="(555) 123-4567" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
+                        </div>
+                      )}
+                      {settings.leadFormFields.includes('service') && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Service Interested In</label>
+                          <input type="text" placeholder="What service are you looking for?" disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400" />
+                        </div>
+                      )}
+                      {settings.leadFormFields.includes('message') && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Message</label>
+                          <textarea rows="3" placeholder="Tell us about what you need..." disabled className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm bg-gray-50 text-gray-400 resize-none" />
+                        </div>
+                      )}
+                      <div className="flex items-start gap-2">
+                        <input type="checkbox" disabled className="mt-1" />
+                        <span className="text-xs text-gray-400">I consent to receiving SMS messages about my inquiry</span>
+                      </div>
+                      <button
+                        disabled
+                        className="w-full py-3 rounded-lg text-white font-semibold text-sm"
+                        style={{ backgroundColor: settings.themeColor }}
+                      >
+                        {settings.submitButtonText || 'Submit'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
