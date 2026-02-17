@@ -33,6 +33,24 @@ import {
 // Maps template IDs to their editable fields
 // ============================================
 const TEMPLATE_DEFINITIONS = {
+  'review-marquee': {
+    name: 'Review Marquee',
+    icon: Star,
+    category: 'trust',
+    fields: {
+      reviews: {
+        type: 'array',
+        label: 'Reviews',
+        itemFields: {
+          name: { type: 'text', label: 'Reviewer Name' },
+          date: { type: 'text', label: 'Date' },
+          text: { type: 'textarea', label: 'Review Text' },
+          stars: { type: 'number', label: 'Stars (1-5)', min: 1, max: 5 },
+          avatarColor: { type: 'text', label: 'Avatar Color' }
+        }
+      }
+    }
+  },
   'trust-banner-scroll': {
     name: 'Trust Banner (Scrolling)',
     icon: Star,

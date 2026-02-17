@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload } from 'lucide-react';
+import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Code } from 'lucide-react';
 import PublishWizard from './PublishWizard';
 import EmbedCode from './EmbedCode';
 
@@ -14,6 +14,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [showConnectWebsite, setShowConnectWebsite] = useState(false);
   const [existingWebsiteUrl, setExistingWebsiteUrl] = useState('');
+  const [subTab, setSubTab] = useState('website');
 
   // Publish wizard state
   const [showPublishWizard, setShowPublishWizard] = useState(false);
@@ -294,41 +295,73 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
           <p className="text-gray-600 mt-1">Manage your website and domain</p>
         </div>
-        <div className="flex gap-3">
-          {currentWebsite && (
-            <>
-              <button
-                type="button"
-                onClick={() => navigate('/editor-v2')}
-                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-amber-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
-              >
-                <Edit className="w-4 h-4" />
-                Edit Website
-              </button>
+        {subTab === 'website' && (
+          <div className="flex gap-3">
+            {currentWebsite && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => navigate('/editor-v2')}
+                  className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-amber-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Website
+                </button>
 
-              {/* Smart Publish Button */}
-              <button
-                onClick={publishBtn.onClick}
-                disabled={publishBtn.disabled}
-                className={`px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${publishBtn.className}`}
-              >
-                <PublishIcon className="w-4 h-4" />
-                {publishBtn.label}
-              </button>
-            </>
-          )}
-          <button
-            type="button"
-            onClick={() => setShowEditWebsite(true)}
-            className="bg-white border-2 border-amber-600 text-amber-600 px-6 py-2 rounded-lg font-semibold hover:bg-amber-50 transition-all flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Generate New
-          </button>
-        </div>
+                {/* Smart Publish Button */}
+                <button
+                  onClick={publishBtn.onClick}
+                  disabled={publishBtn.disabled}
+                  className={`px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${publishBtn.className}`}
+                >
+                  <PublishIcon className="w-4 h-4" />
+                  {publishBtn.label}
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowEditWebsite(true)}
+              className="bg-white border-2 border-amber-600 text-amber-600 px-6 py-2 rounded-lg font-semibold hover:bg-amber-50 transition-all flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Generate New
+            </button>
+          </div>
+        )}
       </div>
 
-      {currentWebsite ? (
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <button
+          onClick={() => setSubTab('website')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all ${
+            subTab === 'website'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Globe className="w-4 h-4" />
+          Website
+        </button>
+        <button
+          onClick={() => setSubTab('embed')}
+          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all ${
+            subTab === 'embed'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Code className="w-4 h-4" />
+          Embed on External Site
+        </button>
+      </div>
+
+      {subTab === 'embed' && (
+        <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
+      )}
+
+      {subTab === 'website' && currentWebsite ? (
         <div className="space-y-4">
           {/* Inline Status Bar */}
           {isPublished && (
@@ -465,7 +498,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
             </div>
           </div>
         </div>
-      ) : (
+      ) : subTab === 'website' ? (
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No website yet</h3>
@@ -491,10 +524,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
             </button>
           </div>
         </div>
-      )}
-
-      {/* Embed Code Section */}
-      <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
+      ) : null}
 
       {/* Publish Wizard */}
       {showPublishWizard && (
