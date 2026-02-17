@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload } from 'lucide-react';
 import PublishWizard from './PublishWizard';
+import EmbedCode from './EmbedCode';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData, onUserPlanUpdate }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
@@ -491,6 +492,9 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           </div>
         </div>
       )}
+
+      {/* Embed Code Section */}
+      <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
 
       {/* Publish Wizard */}
       {showPublishWizard && (
