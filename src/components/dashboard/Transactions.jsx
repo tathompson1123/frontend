@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { DollarSign, CreditCard, RefreshCw, Filter, CheckCircle, Clock, XCircle, ArrowDownLeft } from 'lucide-react';
+import { DollarSign, CreditCard, RefreshCw, Filter, CheckCircle, Clock, XCircle, ArrowDownLeft, AlertCircle } from 'lucide-react';
 
 const statusConfig = {
   succeeded: { label: 'Completed', color: 'bg-green-100 text-green-700', icon: CheckCircle },
@@ -14,14 +14,25 @@ const processorIcons = {
   square: '🟩',
   stripe: '💳',
   paypal: '🅿️',
+  manual: '💵',
 };
 
 export default function Transactions({ apiUrl, user, authFetch }) {
   const [payments, setPayments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null); // { ok, message }
   const [filter, setFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  useEffect(() => {
+    const init = async () => {
+      await fetchPayments();
+      await syncSquare();
+    };
+    init();
+  }, []);
 
   useEffect(() => {
     fetchPayments();
@@ -44,6 +55,25 @@ export default function Transactions({ apiUrl, user, authFetch }) {
       console.error('Error fetching payments:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const syncSquare = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await authFetch(`${apiUrl}/api/payments/sync-square`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncResult({ ok: true, message: `Synced ${data.synced} transaction${data.synced !== 1 ? 's' : ''} from Square` });
+        await fetchPayments();
+      } else {
+        setSyncResult({ ok: false, message: data.error || 'Sync failed' });
+      }
+    } catch (e) {
+      setSyncResult({ ok: false, message: 'Could not reach server' });
+    } finally {
+      setSyncing(false);
     }
   };
 
@@ -85,7 +115,17 @@ export default function Transactions({ apiUrl, user, authFetch }) {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Sync status banner */}
+      {syncResult && (
+        <div className={`flex items-center gap-2 px-4 py-3 rounded-xl mb-4 text-sm font-medium ${
+          syncResult.ok ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'
+        }`}>
+          {syncResult.ok ? <CheckCircle className="w-4 h-4 flex-shrink-0" /> : <AlertCircle className="w-4 h-4 flex-shrink-0" />}
+          {syncResult.message}
+        </div>
+      )}
+
+      {/* Filters + sync button */}
       <div className="flex flex-wrap items-center gap-3 mb-6">
         <div className="flex gap-1 bg-gray-100 rounded-xl p-1">
           {filters.map(f => (
@@ -122,6 +162,14 @@ export default function Transactions({ apiUrl, user, authFetch }) {
           >
             <Filter className="w-4 h-4" /> Apply
           </button>
+          <button
+            onClick={syncSquare}
+            disabled={syncing}
+            className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync Square'}
+          </button>
         </div>
       </div>
 
@@ -130,7 +178,12 @@ export default function Transactions({ apiUrl, user, authFetch }) {
         <div className="text-center py-16">
           <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-semibold text-gray-600 mb-2">No transactions yet</h3>
-          <p className="text-gray-500">Transactions will appear here as customers make payments.</p>
+          <p className="text-gray-500 max-w-sm mx-auto">
+            Card payments processed through Square, Stripe, or PayPal will appear here.
+            {syncResult?.ok && syncResult.message.includes('0') && (
+              <span className="block mt-2 text-amber-600">Square is connected but has no card transactions in the last 90 days.</span>
+            )}
+          </p>
         </div>
       ) : (
         <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
@@ -160,9 +213,9 @@ export default function Transactions({ apiUrl, user, authFetch }) {
                     </td>
                     <td className="px-6 py-4">
                       <p className="text-sm font-bold text-gray-900">
-                        ${parseFloat(payment.amount).toFixed(2)}
+                        ${parseFloat(payment.amount || 0).toFixed(2)}
                       </p>
-                      {payment.refund_amount > 0 && (
+                      {parseFloat(payment.refund_amount) > 0 && (
                         <p className="text-xs text-purple-600">
                           -${parseFloat(payment.refund_amount).toFixed(2)} refunded
                         </p>
