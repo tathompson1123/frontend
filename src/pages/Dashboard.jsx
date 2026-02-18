@@ -397,11 +397,14 @@ useEffect(() => {
     navigate('/');
   };
 
-  const menuItems = [
+  const topMenuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'My Website' },
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
     { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
+  ];
+
+  const bottomMenuItems = [
     { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
     { id: 'payment-settings', icon: Wallet, label: 'Payment Settings' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
@@ -473,7 +476,7 @@ useEffect(() => {
 
         {/* Navigation Menu */}
         <nav className="p-4 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
-          {menuItems.map((item) => {
+          {topMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
             return (
@@ -548,6 +551,25 @@ useEffect(() => {
               </div>
             )}
           </div>
+
+          {bottomMenuItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-primary-50'
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+              </button>
+            );
+          })}
         </nav>
 
         {/* Logout Button */}
