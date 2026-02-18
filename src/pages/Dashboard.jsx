@@ -18,7 +18,9 @@ import {
   X,
   Bot,
   Wallet,
-  Mail
+  Mail,
+  ChevronDown,
+  Zap
 } from 'lucide-react';
 
 // Component imports
@@ -100,6 +102,7 @@ const authFetch = async (url, options = {}) => {
 export default function Dashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [proOpen, setProOpen] = useState(false);
   const [currentView, setCurrentView] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
@@ -399,15 +402,26 @@ useEffect(() => {
     { id: 'website', icon: Globe, label: 'My Website' },
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
     { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
-    { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
-    { id: 'email-campaigns', icon: Mail, label: 'Email Marketing' },
-    { id: 'google-business', icon: MapPin, label: 'Google Business' },
-    { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
     { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
     { id: 'payment-settings', icon: Wallet, label: 'Payment Settings' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
+
+  const proMenuItems = [
+    { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
+    { id: 'email-campaigns', icon: Mail, label: 'Email Marketing' },
+    { id: 'google-business', icon: MapPin, label: 'Google Business' },
+    { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
+  ];
+
+  // Auto-open Pro section when navigating to a Pro view
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (['ai-agents', 'email-campaigns', 'google-business', 'market-research'].includes(currentView)) {
+      setProOpen(true);
+    }
+  }, [currentView]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
@@ -458,62 +472,82 @@ useEffect(() => {
         </div>
 
         {/* Navigation Menu */}
-        <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+        <nav className="p-4 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isLuxuryItem = item.id === 'ai-agents' || item.id === 'google-business' || item.id === 'market-research' || item.id === 'email-campaigns';
             const isActive = currentView === item.id;
-            
             return (
-  <button
-    key={item.id}
-    onClick={() => setCurrentView(item.id)}
-    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all relative ${
-      isActive
-        ? item.id === 'market-research'
-          ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white shadow-xl shadow-purple-500/50'
-          : isLuxuryItem
-          ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-xl shadow-amber-500/50'
-          : 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
-        : item.id === 'market-research'
-          ? 'bg-gradient-to-r from-purple-50 to-pink-50 text-purple-900 hover:from-purple-100 hover:to-pink-100 border-2 border-purple-200 shadow-md'
-          : isLuxuryItem
-          ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md'
-          : 'text-gray-700 hover:bg-primary-50'
-    }`}
-  >
-    {isLuxuryItem && !isActive && (
-      <span className="absolute -top-1 -right-1 flex h-3 w-3">
-        <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-          item.id === 'market-research' ? 'bg-purple-400' : 'bg-amber-400'
-        }`}></span>
-        <span className={`relative inline-flex rounded-full h-3 w-3 ${
-          item.id === 'market-research' ? 'bg-purple-500' : 'bg-amber-500'
-        }`}></span>
-      </span>
-    )}
-    <Icon className={`w-5 h-5 flex-shrink-0 ${
-      isLuxuryItem && !isActive 
-        ? item.id === 'market-research' ? 'text-purple-600' : 'text-amber-600'
-        : ''
-    }`} />
-    {sidebarOpen && (
-      <span className={`font-medium ${isLuxuryItem && !isActive ? 'font-bold' : ''}`}>
-        {item.label}
-      </span>
-    )}
-    {isLuxuryItem && sidebarOpen && !isActive && (
-      <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-bold text-white ${
-        item.id === 'market-research'
-          ? 'bg-gradient-to-r from-purple-500 to-pink-600'
-          : 'bg-amber-500'
-      }`}>
-        {item.id === 'market-research' ? 'EXPERT' : 'PRO'}
-      </span>
-    )}
-  </button>
-);
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
+                  isActive
+                    ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
+                    : 'text-gray-700 hover:bg-primary-50'
+                }`}
+              >
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {sidebarOpen && <span className="font-medium">{item.label}</span>}
+              </button>
+            );
           })}
+
+          {/* PRO Section */}
+          <div className="pt-2">
+            <button
+              onClick={() => setProOpen(p => !p)}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md"
+            >
+              <Zap className="w-5 h-5 flex-shrink-0 text-amber-600" />
+              {sidebarOpen && (
+                <>
+                  <span className="font-bold">PRO Features</span>
+                  <ChevronDown className={`w-4 h-4 text-amber-600 flex-shrink-0 ml-auto transition-transform duration-200 ${proOpen ? '' : '-rotate-90'}`} />
+                </>
+              )}
+            </button>
+
+            {proOpen && (
+              <div className={`mt-1 space-y-1 ${sidebarOpen ? 'ml-3 border-l-2 border-amber-200 pl-3' : ''}`}>
+                {proMenuItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = currentView === item.id;
+                  const isPurple = item.id === 'market-research';
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => setCurrentView(item.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
+                        isActive
+                          ? isPurple
+                            ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white shadow-lg'
+                            : 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-lg'
+                          : isPurple
+                            ? 'text-purple-800 hover:bg-purple-50'
+                            : 'text-amber-800 hover:bg-amber-50'
+                      }`}
+                    >
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${
+                        !isActive ? (isPurple ? 'text-purple-600' : 'text-amber-600') : ''
+                      }`} />
+                      {sidebarOpen && (
+                        <>
+                          <span className="text-sm font-medium">{item.label}</span>
+                          {!isActive && (
+                            <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold text-white ${
+                              isPurple ? 'bg-purple-500' : 'bg-amber-500'
+                            }`}>
+                              {isPurple ? 'EXPERT' : 'PRO'}
+                            </span>
+                          )}
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </nav>
 
         {/* Logout Button */}

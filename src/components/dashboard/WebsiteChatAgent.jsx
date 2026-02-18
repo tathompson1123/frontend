@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Crown, Sparkles } from 'lucide-react';
+import { MessageCircle, TrendingUp, Calendar, Users, Save, Rocket, Crown, Sparkles, ChevronDown, ChevronUp, History } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
 export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed: initialDeployed, onDeploymentChange }) {
  const [agentConfig, setAgentConfig] = useState({
   agentName: 'Kurt',
   greetingMessage: "Hey it's Kurt, I just happened to look and saw you were browsing. What are you looking to get done?",
-  autoOpenDelay: 14  // Changed from 3
+  autoOpenDelay: 14
 });
   const [stats, setStats] = useState({
     conversations: 0,
@@ -17,6 +17,9 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
   const [isSaving, setIsSaving] = useState(false);
   const [isDeployed, setIsDeployed] = useState(false);
   const [isCheckingStatus, setIsCheckingStatus] = useState(true);
+  const [conversations, setConversations] = useState([]);
+  const [expandedConv, setExpandedConv] = useState(null);
+  const [convMessages, setConvMessages] = useState({});
 
   useEffect(() => {
     loadAgentConfig();
@@ -65,11 +68,40 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
     }
   };
 
+  const loadConversations = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/conversations`);
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data.conversations || []);
+      }
+    } catch (error) {
+      console.error('Error loading conversations:', error);
+    }
+  };
+
+  const loadMessages = async (convId) => {
+    if (convMessages[convId]) {
+      setExpandedConv(expandedConv === convId ? null : convId);
+      return;
+    }
+    try {
+      const response = await authFetch(`${apiUrl}/api/agents/website/conversations/${convId}/messages`);
+      if (response.ok) {
+        const data = await response.json();
+        setConvMessages(prev => ({ ...prev, [convId]: data.messages || [] }));
+        setExpandedConv(convId);
+      }
+    } catch (error) {
+      console.error('Error loading messages:', error);
+    }
+  };
+
   // Load stats when deployed
   useEffect(() => {
     if (isDeployed) {
       loadStats();
-      // Refresh stats every 30 seconds if deployed
+      loadConversations();
       const interval = setInterval(loadStats, 30000);
       return () => clearInterval(interval);
     }
@@ -325,6 +357,62 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
           </div>
         </div>
       </div>
+
+      {/* Chat History */}
+      {isDeployed && conversations.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <History className="w-5 h-5 text-blue-600" />
+            <h3 className="text-lg font-semibold text-gray-900">Chat History</h3>
+            <span className="ml-auto text-xs text-gray-500">{conversations.length} conversations</span>
+          </div>
+          <div className="space-y-2">
+            {conversations.map(conv => (
+              <div key={conv.id} className="border border-gray-200 rounded-lg overflow-hidden">
+                <button
+                  onClick={() => loadMessages(conv.id)}
+                  className="w-full flex items-center gap-3 p-3 text-left hover:bg-gray-50 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <MessageCircle className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {conv.lead_name || 'Website Visitor'}
+                      </p>
+                      {conv.lead_status === 'booked' && (
+                        <span className="text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full flex-shrink-0">Booked</span>
+                      )}
+                      {conv.lead_email && (
+                        <span className="text-xs text-gray-400 truncate">{conv.lead_email}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 truncate mt-0.5">
+                      {conv.first_message || 'No messages'} · {conv.message_count} messages
+                    </p>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <p className="text-xs text-gray-400">{new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                    {expandedConv === conv.id ? <ChevronUp className="w-4 h-4 text-gray-400 ml-auto mt-1" /> : <ChevronDown className="w-4 h-4 text-gray-400 ml-auto mt-1" />}
+                  </div>
+                </button>
+                {expandedConv === conv.id && convMessages[conv.id] && (
+                  <div className="border-t border-gray-200 bg-gray-50 p-3 space-y-2 max-h-64 overflow-y-auto">
+                    {convMessages[conv.id].map((msg, i) => (
+                      <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-xs px-3 py-2 rounded-lg text-sm ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200'}`}>
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* How It Works */}
       <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-xl border border-blue-200 p-6">

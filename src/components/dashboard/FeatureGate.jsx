@@ -122,6 +122,18 @@ export default function FeatureGate({
         'Seasonal & upsell campaigns on autopilot',
         'Full campaign history & analytics'
       ]
+    },
+    'embed-code': {
+      title: 'Embed on External Sites',
+      description: 'Add your booking widget, chat agent, and lead form to any website',
+      icon: Zap,
+      requiredPlan: 'Pro',
+      benefits: [
+        'Embed booking calendar on Wix, Squarespace, WordPress',
+        'AI chat widget on any external site',
+        'Lead capture forms with instant SMS alerts',
+        'One snippet — works everywhere'
+      ]
     }
   };
 

@@ -11,9 +11,6 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(null);
-  const [showPaypalModal, setShowPaypalModal] = useState(false);
-  const [paypalForm, setPaypalForm] = useState({ clientId: '', clientSecret: '' });
-  const [connecting, setConnecting] = useState(false);
   const [successBanner, setSuccessBanner] = useState(justConnected || null);
 
   useEffect(() => {
@@ -37,11 +34,6 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
   };
 
   const handleConnect = async (processor) => {
-    if (processor === 'paypal') {
-      setShowPaypalModal(true);
-      return;
-    }
-
     try {
       const res = await authFetch(`${apiUrl}/api/payment-connections/${processor}/oauth-url`);
       const data = await res.json();
@@ -49,25 +41,6 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
         window.location.href = data.oauthUrl;
       }
     } catch (err) { console.error(err); }
-  };
-
-  const handleConnectPaypal = async () => {
-    setConnecting(true);
-    try {
-      const res = await authFetch(`${apiUrl}/api/payment-connections/paypal/connect`, {
-        method: 'POST',
-        body: JSON.stringify(paypalForm)
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setShowPaypalModal(false);
-        setPaypalForm({ clientId: '', clientSecret: '' });
-        fetchConnections();
-      } else {
-        alert(data.error || 'Failed to connect');
-      }
-    } catch (err) { console.error(err); }
-    finally { setConnecting(false); }
   };
 
   const handleSetPrimary = async (connectionId) => {
@@ -195,36 +168,6 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
         </div>
       </div>
 
-      {/* PayPal Modal */}
-      {showPaypalModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Connect PayPal</h3>
-            <p className="text-sm text-gray-600 mb-6">Enter your PayPal REST API credentials from the PayPal Developer Dashboard.</p>
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Client ID</label>
-                <input type="text" value={paypalForm.clientId} onChange={e => setPaypalForm({ ...paypalForm, clientId: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Client Secret</label>
-                <input type="password" value={paypalForm.clientSecret} onChange={e => setPaypalForm({ ...paypalForm, clientSecret: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={handleConnectPaypal} disabled={connecting || !paypalForm.clientId || !paypalForm.clientSecret}
-                className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold disabled:opacity-50">
-                {connecting ? 'Connecting...' : 'Connect PayPal'}
-              </button>
-              <button onClick={() => setShowPaypalModal(false)} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Code } from 'lucide-react';
 import PublishWizard from './PublishWizard';
 import EmbedCode from './EmbedCode';
+import FeatureGate from './FeatureGate';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData, onUserPlanUpdate }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
@@ -358,7 +359,9 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       </div>
 
       {subTab === 'embed' && (
-        <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
+        <FeatureGate user={user} requiredPlan="pro" feature="embed-code" onUpgradeClick={() => setCurrentView('billing')}>
+          <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
+        </FeatureGate>
       )}
 
       {subTab === 'website' && currentWebsite ? (
