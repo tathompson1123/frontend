@@ -22,8 +22,6 @@ export default function Transactions({ apiUrl, user, authFetch }) {
   const [filter, setFilter] = useState('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState('');
 
   useEffect(() => {
     fetchPayments();
@@ -46,25 +44,6 @@ export default function Transactions({ apiUrl, user, authFetch }) {
       console.error('Error fetching payments:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const syncFromSquare = async () => {
-    setSyncing(true);
-    setSyncMsg('');
-    try {
-      const res = await authFetch(`${apiUrl}/api/payments/sync-square`, { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        setSyncMsg(`Synced ${data.synced} transactions from Square`);
-        fetchPayments();
-      } else {
-        setSyncMsg(data.error || 'Sync failed');
-      }
-    } catch (err) {
-      setSyncMsg('Sync failed');
-    } finally {
-      setSyncing(false);
     }
   };
 
@@ -104,19 +83,6 @@ export default function Transactions({ apiUrl, user, authFetch }) {
           <p className="text-sm text-amber-600 font-medium">Pending</p>
           <p className="text-2xl font-bold text-amber-700">{payments.filter(p => p.status === 'pending').length}</p>
         </div>
-      </div>
-
-      {/* Sync bar */}
-      <div className="flex items-center gap-3 mb-4">
-        <button
-          onClick={syncFromSquare}
-          disabled={syncing}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-[#006AFF] rounded-lg hover:bg-[#0058D0] transition disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Syncing...' : 'Sync from Square'}
-        </button>
-        {syncMsg && <span className="text-sm text-gray-600">{syncMsg}</span>}
       </div>
 
       {/* Filters */}

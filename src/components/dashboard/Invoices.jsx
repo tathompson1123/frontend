@@ -21,8 +21,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
   const [sending, setSending] = useState(null);
-  const [syncing, setSyncing] = useState(false);
-  const [syncMsg, setSyncMsg] = useState('');
+
 
   const [form, setForm] = useState({
     customerName: '', customerEmail: '', customerPhone: '',
@@ -77,25 +76,6 @@ export default function Invoices({ apiUrl, user, authFetch }) {
         fetchInvoices();
       }
     } catch (err) { console.error(err); }
-  };
-
-  const syncFromSquare = async () => {
-    setSyncing(true);
-    setSyncMsg('');
-    try {
-      const res = await authFetch(`${apiUrl}/api/invoices/sync-square`, { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        setSyncMsg(`Synced ${data.synced} invoices from Square`);
-        fetchInvoices();
-      } else {
-        setSyncMsg(data.error || 'Sync failed');
-      }
-    } catch (err) {
-      setSyncMsg('Sync failed');
-    } finally {
-      setSyncing(false);
-    }
   };
 
   const handleSendInvoice = async (invoiceId) => {
@@ -182,20 +162,9 @@ export default function Invoices({ apiUrl, user, authFetch }) {
           <h2 className="text-3xl font-bold text-gray-900">Invoices</h2>
           <p className="text-gray-600 mt-1">Create and manage invoices for your customers</p>
         </div>
-        <div className="flex items-center gap-3">
-          {syncMsg && <span className="text-sm text-gray-600">{syncMsg}</span>}
-          <button
-            onClick={syncFromSquare}
-            disabled={syncing}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-white bg-[#006AFF] rounded-lg hover:bg-[#0058D0] transition disabled:opacity-50"
-          >
-            <RotateCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync from Square'}
-          </button>
-          <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
-            <Plus className="w-5 h-5" /> New Invoice
-          </button>
-        </div>
+        <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+          <Plus className="w-5 h-5" /> New Invoice
+        </button>
       </div>
 
       {/* Stats */}
