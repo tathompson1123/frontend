@@ -515,36 +515,18 @@ useEffect(() => {
                 {proMenuItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = currentView === item.id;
-                  const isPurple = item.id === 'market-research';
                   return (
                     <button
                       key={item.id}
                       onClick={() => setCurrentView(item.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                         isActive
-                          ? isPurple
-                            ? 'bg-gradient-to-r from-purple-500 via-pink-500 to-purple-600 text-white shadow-lg'
-                            : 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-lg'
-                          : isPurple
-                            ? 'text-purple-800 hover:bg-purple-50'
-                            : 'text-amber-800 hover:bg-amber-50'
+                          ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-lg'
+                          : 'text-amber-800 hover:bg-amber-50'
                       }`}
                     >
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${
-                        !isActive ? (isPurple ? 'text-purple-600' : 'text-amber-600') : ''
-                      }`} />
-                      {sidebarOpen && (
-                        <>
-                          <span className="text-sm font-medium">{item.label}</span>
-                          {!isActive && (
-                            <span className={`ml-auto text-xs px-1.5 py-0.5 rounded-full font-bold text-white ${
-                              isPurple ? 'bg-purple-500' : 'bg-amber-500'
-                            }`}>
-                              {isPurple ? 'EXPERT' : 'PRO'}
-                            </span>
-                          )}
-                        </>
-                      )}
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${!isActive ? 'text-amber-600' : ''}`} />
+                      {sidebarOpen && <span className="text-sm font-medium">{item.label}</span>}
                     </button>
                   );
                 })}
