@@ -30,9 +30,16 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   });
 
   useEffect(() => {
-    fetchInvoices();
-    fetchCustomers();
-    fetchServices();
+    const init = async () => {
+      await fetchInvoices();
+      fetchCustomers();
+      fetchServices();
+      try {
+        const res = await authFetch(`${apiUrl}/api/invoices/sync-square`, { method: 'POST' });
+        if (res.ok) fetchInvoices();
+      } catch (e) { /* Square not connected — ignore */ }
+    };
+    init();
   }, []);
 
   const fetchInvoices = async () => {
