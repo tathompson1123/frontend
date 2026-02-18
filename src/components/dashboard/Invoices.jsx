@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Plus, Send, Eye, RotateCw, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Ban } from 'lucide-react';
+import { FileText, Plus, Send, Eye, RotateCw, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Ban, Edit2, ExternalLink } from 'lucide-react';
 
 const statusConfig = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: FileText },
@@ -12,22 +12,25 @@ const statusConfig = {
   refunded: { label: 'Refunded', color: 'bg-purple-100 text-purple-700', icon: RotateCw },
 };
 
+const fmt = (val) => parseFloat(val || 0).toFixed(2);
+
 export default function Invoices({ apiUrl, user, authFetch }) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [editingInvoice, setEditingInvoice] = useState(null); // null = create, object = edit
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
   const [sending, setSending] = useState(null);
+  const [sendingSquare, setSendingSquare] = useState(null);
 
-
-  const [form, setForm] = useState({
+  const emptyForm = {
     customerName: '', customerEmail: '', customerPhone: '',
     customerId: null, items: [{ description: '', quantity: 1, unitPrice: 0 }],
     notes: '', terms: 'Payment due within 30 days.', dueDate: '', taxRate: 0
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   useEffect(() => {
     const init = async () => {
@@ -70,22 +73,60 @@ export default function Invoices({ apiUrl, user, authFetch }) {
     } catch (err) { console.error(err); }
   };
 
-  const handleCreateInvoice = async () => {
+  const openCreateModal = () => {
+    setEditingInvoice(null);
+    setForm(emptyForm);
+    setShowModal(true);
+  };
+
+  const openEditModal = (invoice) => {
+    setEditingInvoice(invoice);
+    setForm({
+      customerName: invoice.customer_name || '',
+      customerEmail: invoice.customer_email || '',
+      customerPhone: invoice.customer_phone || '',
+      customerId: invoice.customer_id || null,
+      items: invoice.items?.length > 0
+        ? invoice.items.map(i => ({
+            description: i.description || '',
+            quantity: parseFloat(i.quantity) || 1,
+            unitPrice: parseFloat(i.unit_price) || 0,
+          }))
+        : [{ description: '', quantity: 1, unitPrice: 0 }],
+      notes: invoice.notes || '',
+      terms: invoice.terms || 'Payment due within 30 days.',
+      dueDate: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
+      taxRate: parseFloat(invoice.tax_rate || 0) * 100,
+    });
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    setEditingInvoice(null);
+    setForm(emptyForm);
+  };
+
+  const handleSaveInvoice = async () => {
     try {
       const dueDate = form.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const res = await authFetch(`${apiUrl}/api/invoices`, {
-        method: 'POST',
+      const url = editingInvoice ? `${apiUrl}/api/invoices/${editingInvoice.id}` : `${apiUrl}/api/invoices`;
+      const method = editingInvoice ? 'PUT' : 'POST';
+      const res = await authFetch(url, {
+        method,
         body: JSON.stringify({ ...form, dueDate, taxRate: form.taxRate / 100 })
       });
       if (res.ok) {
-        setShowCreateModal(false);
-        setForm({ customerName: '', customerEmail: '', customerPhone: '', customerId: null, items: [{ description: '', quantity: 1, unitPrice: 0 }], notes: '', terms: 'Payment due within 30 days.', dueDate: '', taxRate: 0 });
+        closeModal();
         fetchInvoices();
+      } else {
+        const data = await res.json();
+        alert(data.error || 'Failed to save invoice');
       }
     } catch (err) { console.error(err); }
   };
 
-  const handleSendInvoice = async (invoiceId) => {
+  const handleSendEmail = async (invoiceId) => {
     setSending(invoiceId);
     try {
       const res = await authFetch(`${apiUrl}/api/invoices/${invoiceId}/send`, { method: 'POST' });
@@ -98,6 +139,21 @@ export default function Invoices({ apiUrl, user, authFetch }) {
       }
     } catch (err) { console.error(err); }
     finally { setSending(null); }
+  };
+
+  const handleSendViaSquare = async (invoiceId) => {
+    setSendingSquare(invoiceId);
+    try {
+      const res = await authFetch(`${apiUrl}/api/invoices/${invoiceId}/send-square`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok) {
+        alert(data.message || 'Invoice sent via Square!');
+        fetchInvoices();
+      } else {
+        alert(data.error || 'Failed to send via Square');
+      }
+    } catch (err) { console.error(err); }
+    finally { setSendingSquare(null); }
   };
 
   const handleVoidInvoice = async (invoiceId) => {
@@ -156,6 +212,8 @@ export default function Invoices({ apiUrl, user, authFetch }) {
 
   const subtotal = form.items.reduce((s, i) => s + (i.quantity * i.unitPrice), 0);
   const taxAmount = subtotal * (form.taxRate / 100);
+  const isEditingDraft = editingInvoice && editingInvoice.status === 'draft';
+  const canEdit = !editingInvoice || isEditingDraft; // create mode or editing a draft
 
   const filtered = filter === 'all' ? invoices : invoices.filter(i => i.status === filter);
 
@@ -169,7 +227,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
           <h2 className="text-3xl font-bold text-gray-900">Invoices</h2>
           <p className="text-gray-600 mt-1">Create and manage invoices for your customers</p>
         </div>
-        <button onClick={() => setShowCreateModal(true)} className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+        <button onClick={openCreateModal} className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
           <Plus className="w-5 h-5" /> New Invoice
         </button>
       </div>
@@ -205,7 +263,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
           <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-xl font-bold text-gray-900 mb-2">No invoices yet</h3>
           <p className="text-gray-500 mb-6">Create your first invoice to start collecting payments</p>
-          <button onClick={() => setShowCreateModal(true)} className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+          <button onClick={openCreateModal} className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
             Create Invoice
           </button>
         </div>
@@ -226,17 +284,21 @@ export default function Invoices({ apiUrl, user, authFetch }) {
               {filtered.map(invoice => {
                 const config = statusConfig[invoice.status] || statusConfig.draft;
                 const StatusIcon = config.icon;
+                const isSquare = invoice.payment_processor === 'square';
                 return (
                   <tr key={invoice.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 font-mono text-sm font-medium text-gray-900">{invoice.invoice_number}</td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{invoice.customer_name}</div>
-                      <div className="text-xs text-gray-500">{invoice.customer_email}</div>
+                      <span className="font-mono text-sm font-medium text-gray-900">{invoice.invoice_number}</span>
+                      {isSquare && <span className="ml-2 text-xs text-gray-400">via Square</span>}
                     </td>
                     <td className="px-6 py-4">
-                      <div className="text-sm font-bold text-gray-900">${parseFloat(invoice.total_amount).toFixed(2)}</div>
-                      {parseFloat(invoice.amount_due) > 0 && parseFloat(invoice.amount_due) < parseFloat(invoice.total_amount) && (
-                        <div className="text-xs text-amber-600">Due: ${parseFloat(invoice.amount_due).toFixed(2)}</div>
+                      <div className="text-sm font-medium text-gray-900">{invoice.customer_name || '—'}</div>
+                      <div className="text-xs text-gray-500">{invoice.customer_email || ''}</div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-bold text-gray-900">${fmt(invoice.total_amount)}</div>
+                      {parseFloat(invoice.amount_due || 0) > 0 && parseFloat(invoice.amount_due) < parseFloat(invoice.total_amount || 0) && (
+                        <div className="text-xs text-amber-600">Due: ${fmt(invoice.amount_due)}</div>
                       )}
                     </td>
                     <td className="px-6 py-4">
@@ -248,13 +310,32 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : '-'}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {/* Edit button — always visible for draft invoices */}
+                        {invoice.status === 'draft' && (
+                          <button onClick={() => openEditModal(invoice)}
+                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                            title="Edit">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {/* Draft actions */}
                         {invoice.status === 'draft' && (
                           <>
-                            <button onClick={() => handleSendInvoice(invoice.id)} disabled={sending === invoice.id}
+                            <button
+                              onClick={() => handleSendViaSquare(invoice.id)}
+                              disabled={sendingSquare === invoice.id}
+                              className="px-3 py-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
+                              title="Square sends the invoice email to customer">
+                              {sendingSquare === invoice.id ? 'Sending...' : 'Send via Square'}
+                            </button>
+                            <button
+                              onClick={() => handleSendEmail(invoice.id)}
+                              disabled={sending === invoice.id}
                               className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition disabled:opacity-50">
-                              {sending === invoice.id ? 'Sending...' : 'Send'}
+                              {sending === invoice.id ? 'Sending...' : 'Send Email'}
                             </button>
                             <button onClick={() => handleDeleteInvoice(invoice.id)}
                               className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
@@ -262,11 +343,19 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                             </button>
                           </>
                         )}
+
+                        {/* Sent/viewed/overdue actions */}
                         {['sent', 'viewed', 'overdue'].includes(invoice.status) && (
                           <>
-                            <button onClick={() => handleSendInvoice(invoice.id)} disabled={sending === invoice.id}
+                            <button
+                              onClick={() => handleSendViaSquare(invoice.id)}
+                              disabled={sendingSquare === invoice.id}
+                              className="px-3 py-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition disabled:opacity-50">
+                              {sendingSquare === invoice.id ? 'Sending...' : 'Remind via Square'}
+                            </button>
+                            <button onClick={() => handleSendEmail(invoice.id)} disabled={sending === invoice.id}
                               className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition disabled:opacity-50">
-                              Remind
+                              {sending === invoice.id ? '...' : 'Email Reminder'}
                             </button>
                             <button onClick={() => handleVoidInvoice(invoice.id)}
                               className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
@@ -284,27 +373,43 @@ export default function Invoices({ apiUrl, user, authFetch }) {
         </div>
       )}
 
-      {/* Create Invoice Modal */}
-      {showCreateModal && (
+      {/* Create / Edit Invoice Modal */}
+      {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">New Invoice</h2>
-              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-6 h-6" /></button>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {editingInvoice ? (canEdit ? 'Edit Invoice' : 'Invoice Details') : 'New Invoice'}
+                </h2>
+                {editingInvoice && !canEdit && (
+                  <p className="text-sm text-amber-600 mt-1">Only draft invoices can be edited</p>
+                )}
+              </div>
+              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-6 h-6" /></button>
             </div>
 
             {/* Customer Selection */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Customer</label>
-              <select onChange={(e) => selectCustomer(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none mb-3">
-                <option value="">Select existing customer...</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name} - {c.email}</option>)}
-              </select>
-              <div className="grid grid-cols-3 gap-3">
-                <input type="text" placeholder="Name" value={form.customerName} onChange={e => setForm({ ...form, customerName: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                <input type="email" placeholder="Email" value={form.customerEmail} onChange={e => setForm({ ...form, customerEmail: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                <input type="tel" placeholder="Phone" value={form.customerPhone} onChange={e => setForm({ ...form, customerPhone: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-              </div>
+              {canEdit ? (
+                <>
+                  <select onChange={(e) => selectCustomer(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none mb-3">
+                    <option value="">Select existing customer...</option>
+                    {customers.map(c => <option key={c.id} value={c.id}>{c.name} - {c.email}</option>)}
+                  </select>
+                  <div className="grid grid-cols-3 gap-3">
+                    <input type="text" placeholder="Name" value={form.customerName} onChange={e => setForm({ ...form, customerName: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                    <input type="email" placeholder="Email" value={form.customerEmail} onChange={e => setForm({ ...form, customerEmail: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                    <input type="tel" placeholder="Phone" value={form.customerPhone} onChange={e => setForm({ ...form, customerPhone: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                  </div>
+                </>
+              ) : (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <p className="font-semibold text-gray-900">{editingInvoice.customer_name}</p>
+                  <p className="text-sm text-gray-600">{editingInvoice.customer_email}</p>
+                </div>
+              )}
             </div>
 
             {/* Line Items */}
@@ -313,24 +418,34 @@ export default function Invoices({ apiUrl, user, authFetch }) {
               {form.items.map((item, i) => (
                 <div key={i} className="flex gap-3 mb-3 items-start">
                   <div className="flex-1">
-                    <select onChange={(e) => selectService(i, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-1 focus:border-amber-500 focus:outline-none">
-                      <option value="">Pick a service...</option>
-                      {services.map(s => <option key={s.id} value={s.id}>{s.name} - ${s.price}</option>)}
-                    </select>
-                    <input type="text" placeholder="Description" value={item.description} onChange={e => updateLineItem(i, 'description', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none" />
+                    {canEdit && (
+                      <select onChange={(e) => selectService(i, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-1 focus:border-amber-500 focus:outline-none">
+                        <option value="">Pick a service...</option>
+                        {services.map(s => <option key={s.id} value={s.id}>{s.name} - ${s.price}</option>)}
+                      </select>
+                    )}
+                    <input type="text" placeholder="Description" value={item.description}
+                      onChange={e => updateLineItem(i, 'description', e.target.value)}
+                      disabled={!canEdit}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
                   </div>
-                  <input type="number" min="1" value={item.quantity} onChange={e => updateLineItem(i, 'quantity', parseInt(e.target.value) || 1)}
-                    className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none" placeholder="Qty" />
-                  <input type="number" step="0.01" min="0" value={item.unitPrice} onChange={e => updateLineItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                    className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none" placeholder="Price" />
+                  <input type="number" min="1" value={item.quantity}
+                    onChange={e => updateLineItem(i, 'quantity', parseInt(e.target.value) || 1)}
+                    disabled={!canEdit}
+                    className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-50" placeholder="Qty" />
+                  <input type="number" step="0.01" min="0" value={item.unitPrice}
+                    onChange={e => updateLineItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
+                    disabled={!canEdit}
+                    className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-50" placeholder="Price" />
                   <span className="py-2 text-sm font-bold text-gray-700 w-24 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</span>
-                  {form.items.length > 1 && (
+                  {canEdit && form.items.length > 1 && (
                     <button onClick={() => removeLineItem(i)} className="p-2 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
                   )}
                 </div>
               ))}
-              <button onClick={addLineItem} className="text-sm text-amber-600 hover:text-amber-700 font-medium">+ Add Line Item</button>
+              {canEdit && (
+                <button onClick={addLineItem} className="text-sm text-amber-600 hover:text-amber-700 font-medium">+ Add Line Item</button>
+              )}
             </div>
 
             {/* Totals */}
@@ -338,11 +453,18 @@ export default function Invoices({ apiUrl, user, authFetch }) {
               <div className="flex justify-between text-sm mb-2"><span>Subtotal</span><span className="font-bold">${subtotal.toFixed(2)}</span></div>
               <div className="flex justify-between text-sm mb-2 items-center">
                 <span>Tax (%)</span>
-                <input type="number" step="0.01" min="0" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })}
-                  className="w-20 px-2 py-1 border border-gray-200 rounded text-right text-sm" />
+                {canEdit ? (
+                  <input type="number" step="0.01" min="0" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })}
+                    className="w-20 px-2 py-1 border border-gray-200 rounded text-right text-sm" />
+                ) : (
+                  <span>{(parseFloat(editingInvoice?.tax_rate || 0) * 100).toFixed(1)}%</span>
+                )}
               </div>
               {taxAmount > 0 && <div className="flex justify-between text-sm mb-2"><span>Tax Amount</span><span>${taxAmount.toFixed(2)}</span></div>}
-              <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2"><span>Total</span><span>${(subtotal + taxAmount).toFixed(2)}</span></div>
+              <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2">
+                <span>Total</span>
+                <span>${canEdit ? (subtotal + taxAmount).toFixed(2) : fmt(editingInvoice?.total_amount)}</span>
+              </div>
             </div>
 
             {/* Notes & Due Date */}
@@ -350,21 +472,32 @@ export default function Invoices({ apiUrl, user, authFetch }) {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
                 <input type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                  disabled={!canEdit}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
-                <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Optional notes..."
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
+                  disabled={!canEdit}
+                  placeholder="Optional notes..."
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
               </div>
             </div>
 
             <div className="flex gap-3">
-              <button onClick={handleCreateInvoice} className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
-                Create Invoice
-              </button>
-              <button onClick={() => setShowCreateModal(false)} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
-                Cancel
+              {canEdit ? (
+                <button onClick={handleSaveInvoice} className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+                  {editingInvoice ? 'Save Changes' : 'Create Invoice'}
+                </button>
+              ) : (
+                <button
+                  onClick={() => { closeModal(); handleSendViaSquare(editingInvoice.id); }}
+                  className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+                  Send via Square
+                </button>
+              )}
+              <button onClick={closeModal} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
+                {canEdit ? 'Cancel' : 'Close'}
               </button>
             </div>
           </div>
