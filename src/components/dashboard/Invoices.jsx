@@ -442,32 +442,46 @@ export default function Invoices({ apiUrl, user, authFetch }) {
 
             {/* Line Items */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Line Items</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-700">Line Items</label>
+                {canEdit && services.length > 0 && (
+                  <span className="text-xs text-gray-400">Type a custom service or quick-fill from your saved services</span>
+                )}
+              </div>
               {form.items.map((item, i) => (
-                <div key={i} className="flex gap-3 mb-3 items-start">
-                  <div className="flex-1">
-                    {canEdit && (
-                      <select onChange={(e) => selectService(i, e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm mb-1 focus:border-amber-500 focus:outline-none">
-                        <option value="">Pick a service...</option>
-                        {services.map(s => <option key={s.id} value={s.id}>{s.name} - ${s.price}</option>)}
-                      </select>
-                    )}
-                    <input type="text" placeholder="Description" value={item.description}
+                <div key={i} className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex gap-3 mb-2 items-start">
+                    <input type="text" placeholder="Service description (e.g. Full detail, Oil change, Lawn mow...)" value={item.description}
                       onChange={e => updateLineItem(i, 'description', e.target.value)}
                       disabled={!canEdit}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
+                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white" />
+                    <input type="number" min="1" value={item.quantity}
+                      onChange={e => updateLineItem(i, 'quantity', parseInt(e.target.value) || 1)}
+                      disabled={!canEdit}
+                      className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white text-center" placeholder="Qty" />
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                      <input type="number" step="0.01" min="0" value={item.unitPrice}
+                        onChange={e => updateLineItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
+                        disabled={!canEdit}
+                        className="w-28 pl-6 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white" placeholder="0.00" />
+                    </div>
+                    <span className="py-2 text-sm font-bold text-gray-700 w-20 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                    {canEdit && form.items.length > 1 && (
+                      <button onClick={() => removeLineItem(i)} className="p-2 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+                    )}
                   </div>
-                  <input type="number" min="1" value={item.quantity}
-                    onChange={e => updateLineItem(i, 'quantity', parseInt(e.target.value) || 1)}
-                    disabled={!canEdit}
-                    className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-50" placeholder="Qty" />
-                  <input type="number" step="0.01" min="0" value={item.unitPrice}
-                    onChange={e => updateLineItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                    disabled={!canEdit}
-                    className="w-28 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-gray-50" placeholder="Price" />
-                  <span className="py-2 text-sm font-bold text-gray-700 w-24 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</span>
-                  {canEdit && form.items.length > 1 && (
-                    <button onClick={() => removeLineItem(i)} className="p-2 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
+                  {canEdit && services.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">Quick-fill:</span>
+                      <select
+                        value=""
+                        onChange={(e) => { if (e.target.value) selectService(i, e.target.value); }}
+                        className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
+                        <option value="">— pick a saved service —</option>
+                        {services.map(s => <option key={s.id} value={s.id}>{s.name} (${parseFloat(s.price).toFixed(2)})</option>)}
+                      </select>
+                    </div>
                   )}
                 </div>
               ))}
