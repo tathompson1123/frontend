@@ -17,7 +17,8 @@ import {
   Menu,
   X,
   Bot,
-  Wallet
+  Wallet,
+  Mail
 } from 'lucide-react';
 
 // Component imports
@@ -30,6 +31,7 @@ import GoogleBusiness from '../components/dashboard/GoogleBusiness';
 import BusinessInformation from '../components/dashboard/BusinessInformation';
 import MarketResearch from '../components/dashboard/MarketResearch';
 import Billing from '../components/dashboard/Billing';
+import EmailCampaigns from '../components/dashboard/EmailCampaigns';
 import SettingsPage from '../components/dashboard/Settings';
 import FeatureGate from '../components/dashboard/FeatureGate';
 import Invoices from '../components/dashboard/Invoices';
@@ -398,6 +400,7 @@ useEffect(() => {
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
     { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
+    { id: 'email-campaigns', icon: Mail, label: 'Email Marketing' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
     { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
@@ -458,7 +461,7 @@ useEffect(() => {
         <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
           {menuItems.map((item) => {
             const Icon = item.icon;
-            const isLuxuryItem = item.id === 'ai-agents' || item.id === 'google-business' || item.id === 'market-research';
+            const isLuxuryItem = item.id === 'ai-agents' || item.id === 'google-business' || item.id === 'market-research' || item.id === 'email-campaigns';
             const isActive = currentView === item.id;
             
             return (
@@ -566,6 +569,16 @@ useEffect(() => {
               apiUrl={apiUrl}
               authFetch={authFetch}
             />
+          )}
+
+          {currentView === 'email-campaigns' && (
+            <FeatureGate user={user} requiredPlan="pro" feature="email-campaigns" onUpgradeClick={() => setCurrentView('billing')}>
+              <EmailCampaigns
+                user={user}
+                apiUrl={apiUrl}
+                authFetch={authFetch}
+              />
+            </FeatureGate>
           )}
 
           {currentView === 'website' && (

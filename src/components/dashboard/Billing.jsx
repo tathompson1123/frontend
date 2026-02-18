@@ -1,422 +1,244 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Sparkles, Crown, Rocket, DollarSign, TrendingUp, ArrowRight } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
+import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail } from 'lucide-react';
 
 export default function Billing({ user, apiUrl, authFetch }) {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showAnnual, setShowAnnual] = useState(false);
-
-  const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
 
   useEffect(() => {
     setCurrentPlan(user?.plan || null);
-
-    // Trigger onboarding step 5 completion when user has a paid plan
     if (user?.plan && user.plan !== 'free') {
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', {
-        detail: { step: 5 }
-      }));
+      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 5 } }));
     }
   }, [user]);
 
   const handleUpgrade = async (planId) => {
-  if (planId === currentPlan) return;
-  
-  setLoading(true);
-  try {
-    // Create Stripe Checkout Session
-    const response = await authFetch(`${apiUrl}/api/billing/create-checkout-session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ plan: planId })
-    });
-
-    if (response.ok) {
-      const { url } = await response.json();
-      
-      // Redirect to Stripe Checkout
-      window.location.href = url;
-    } else {
-      alert('Failed to start checkout. Please try again.');
+    if (planId === currentPlan) return;
+    setLoading(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/billing/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: planId })
+      });
+      if (response.ok) {
+        const { url } = await response.json();
+        window.location.href = url;
+      } else {
+        alert('Failed to start checkout. Please try again.');
+      }
+    } catch (error) {
+      console.error('Checkout error:', error);
+      alert('Something went wrong. Please contact support.');
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error('Checkout error:', error);
-    alert('Something went wrong. Please contact support.');
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
+  const SMS_LIMIT = { free: 0, pro: 100, scale: 500, basic: 100, expert: 200 };
+  const planSmsLimit = SMS_LIMIT[currentPlan] || 0;
 
   const plans = [
     {
-      id: 'basic',
-      name: 'Basic',
-      tagline: 'Essential tools to get started',
-      price: 29.95,
-      annualPrice: 299,
+      id: null,
+      name: 'Free',
+      tagline: 'Get started at no cost',
+      price: 0,
       icon: Sparkles,
-      gradient: 'from-gray-400 to-gray-600',
+      gradient: 'from-gray-400 to-gray-500',
       features: [
-        { text: 'Deploy High Converting AI Website', included: true },
-        { text: 'Online Booking Integration', included: true },
-        { text: 'Team Management and Job View Calendar', included: true },
+        { text: 'AI Website Generator', included: true },
+        { text: 'Publish & Host Your Website', included: true },
+        { text: 'Online Booking Calendar', included: true },
         { text: 'Customer & Lead Management', included: true },
+        { text: 'Team Management', included: true },
         { text: 'AI Chat Agent', included: false },
+        { text: 'SMS Lead Follow-Up Agent', included: false },
         { text: 'Automated Google Reviews', included: false },
-        { text: 'SEO Blog Writing', included: false },
-        { text: 'Advanced Analytics', included: false }
+        { text: 'Embed on Any Website', included: false },
+        { text: 'AI Email Marketing', included: false },
+        { text: 'Market Research Reports', included: false },
       ],
-     cta: 'Select Basic Plan',
-      ctaVariant: 'outline'
+      cta: 'Current Plan',
+      isFree: true,
     },
     {
       id: 'pro',
       name: 'Pro',
-      tagline: 'AI-powered automation for growth',
-      price: 69.95,
-      annualPrice: 699,
+      tagline: 'Full AI automation for growth',
+      price: 95.50,
       icon: Crown,
       gradient: 'from-blue-500 to-purple-600',
       popular: true,
-      savings: {
-        total: 447,
-        breakdown: [
-          { feature: 'AI Chat Agent', value: 199 },
-          { feature: 'Automated Google Reviews', value: 149 },
-          { feature: 'SEO Blog Writing', value: 99 }
-        ]
-      },
+      smsLimit: 100,
       features: [
-        { text: 'Everything in Basic', included: true, bold: true },
-        { text: 'AI Chat Agent for website', included: true, highlight: true },
-        { text: 'AI Lead Form Agent', included: true, highlight: true },
-        { text: 'Automated Google Review requests', included: true, highlight: true },
-        { text: 'AI SEO Blog Writing (4 posts/month)', included: true, highlight: true },
-        { text: 'Advanced analytics dashboard', included: true },
-        { text: 'Multi-page website builder', included: true },
-        { text: 'Priority support', included: true },
-        { text: 'Custom branding', included: true }
+        { text: 'Everything in Free', included: true, bold: true },
+        { text: 'AI Chat Agent (24/7 on your website)', included: true, highlight: true },
+        { text: 'SMS Lead Follow-Up Agent', included: true, highlight: true },
+        { text: '100 SMS / month', included: true, highlight: true },
+        { text: 'Automated Google Review Requests', included: true, highlight: true },
+        { text: 'Embed on Any Website (Wix, Squarespace…)', included: true, highlight: true },
+        { text: 'Weekly AI Email Marketing', included: true, highlight: true },
+        { text: 'Market Research Reports', included: true },
+        { text: 'SEO Blog Writing (4 posts/month)', included: true },
+        { text: 'Priority Support', included: true },
       ],
       cta: 'Upgrade to Pro',
-      ctaVariant: 'primary'
     },
     {
-      id: 'expert',
-      name: 'Expert',
-      tagline: 'Complete business intelligence',
-      price: 99.95,
-      annualPrice: 999,
-      icon: Rocket,
+      id: 'scale',
+      name: 'Scale',
+      tagline: 'Higher limits for busy businesses',
+      price: 175.50,
+      icon: TrendingUp,
       gradient: 'from-purple-500 to-pink-600',
-      comingSoon: true,
+      smsLimit: 500,
       features: [
         { text: 'Everything in Pro', included: true, bold: true },
-        { text: 'AI Market Research Reports', included: true, soon: true },
-        { text: 'Business Model Generator', included: true, soon: true },
-        { text: 'Service Offer Optimization', included: true, soon: true },
-        { text: 'Upsell Idea Creation', included: true, soon: true },
-        { text: 'Competitor Analysis', included: true, soon: true },
-        { text: 'Revenue Forecasting', included: true, soon: true },
+        { text: '500 SMS / month (5× more)', included: true, highlight: true },
+        { text: 'Higher chat conversation limits', included: true, highlight: true },
         { text: 'White-label options', included: true, soon: true },
-        { text: 'Dedicated account manager', included: true, soon: true }
+        { text: 'Dedicated account manager', included: true, soon: true },
+        { text: 'Custom API integrations', included: true, soon: true },
       ],
-      cta: 'Coming Soon',
-      ctaVariant: 'outline'
-    }
+      cta: 'Upgrade to Scale',
+    },
   ];
 
- return (
-  <div className="max-w-7xl mx-auto px-4 py-8">
-    {/* Header */}
-    <div className="text-center mb-12">
-      <h1 className="text-4xl font-bold text-gray-900 mb-4">
-        Choose Your Growth Plan
-      </h1>
-      <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-        Get AI-powered tools that work 24/7 to grow your business
-      </p>
+  const isCurrentPlanPaid = currentPlan && currentPlan !== 'free';
 
-      {/* No Plan Warning */}
-      {!user?.plan && (
-  <div className="mt-6 mx-auto max-w-xl p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl">
-    <p className="text-yellow-900 font-semibold flex items-center justify-center gap-2">
-      <span className="text-2xl">⚠️</span>
-      No plan selected - Choose a plan below to unlock features
-    </p>
-  </div>
-)}
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="text-center mb-10">
+        <h1 className="text-4xl font-bold text-gray-900 mb-3">Choose Your Plan</h1>
+        <p className="text-lg text-gray-600">AI-powered tools that grow your business on autopilot</p>
 
-      {/* Billing Toggle */}
-      <div className="mt-8 inline-flex items-center gap-3 bg-gray-100 rounded-full p-1">
-        <button
-          onClick={() => setShowAnnual(false)}
-          className={`px-6 py-2 rounded-full font-medium transition-all ${
-            !showAnnual ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-          }`}
-        >
-          Monthly
-        </button>
-        <button
-          onClick={() => setShowAnnual(true)}
-          className={`px-6 py-2 rounded-full font-medium transition-all ${
-            showAnnual ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-          }`}
-        >
-          Annual
-          <span className="ml-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
-            Save 15%
-          </span>
-        </button>
+        {!currentPlan && (
+          <div className="mt-5 mx-auto max-w-xl p-4 bg-amber-50 border-2 border-amber-300 rounded-xl">
+            <p className="text-amber-900 font-semibold">⚠️ You're on the Free plan — upgrade to unlock AI agents & automation</p>
+          </div>
+        )}
       </div>
-    </div>
 
-      {/* Pro Plan Value Proposition */}
-      <div className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 rounded-2xl p-8 mb-12">
-        <div className="flex items-start gap-4 mb-6">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
-            <TrendingUp className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Pro Plan: Get $447/month in AI Tools for just $69.95
-            </h2>
-            <p className="text-gray-600">
-              Save 84% by bundling the most powerful automation tools
-            </p>
-          </div>
-        </div>
-
+      {/* Cost breakdown callout */}
+      <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-6 mb-10">
+        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <Zap className="w-5 h-5 text-blue-600" /> What you get with Pro — estimated value
+        </h2>
         <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-gray-900">AI Chat Agent</span>
-              <span className="text-sm line-through text-gray-400">$199/mo</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              24/7 website chat that captures leads & books appointments automatically
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-gray-900">Auto Reviews</span>
-              <span className="text-sm line-through text-gray-400">$149/mo</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              Automated Google review requests with smart follow-up sequences
-            </p>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-blue-200">
-            <div className="flex items-center justify-between mb-2">
-              <span className="font-semibold text-gray-900">SEO Blogs</span>
-              <span className="text-sm line-through text-gray-400">$99/mo</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              AI-written blog posts optimized for Google rankings (4 posts/month)
-            </p>
-          </div>
+          {[
+            { label: 'AI Chat Agent', value: '$199/mo', icon: MessageSquare, desc: '24/7 lead capture & booking on your site' },
+            { label: 'SMS Lead Agent', value: '$79/mo', icon: Zap, desc: 'Texts every new lead within 60 seconds' },
+            { label: 'AI Email Marketing', value: '$149/mo', icon: Mail, desc: 'Weekly offers to past customers, on autopilot' },
+          ].map((item) => {
+            const Icon = item.icon;
+            return (
+              <div key={item.label} className="bg-white rounded-xl p-4 border border-blue-100">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="font-semibold text-gray-900 flex items-center gap-2"><Icon className="w-4 h-4 text-blue-500" />{item.label}</span>
+                  <span className="text-sm line-through text-gray-400">{item.value}</span>
+                </div>
+                <p className="text-xs text-gray-500">{item.desc}</p>
+              </div>
+            );
+          })}
         </div>
-
-        <div className="mt-6 flex items-center justify-center gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-gray-400" />
-            <span className="text-gray-600">
-              Total Value: <span className="font-bold text-gray-900">$447/month</span>
-            </span>
-          </div>
-          <ArrowRight className="w-5 h-5 text-gray-400" />
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-green-600" />
-            <span className="text-gray-600">
-              You Pay: <span className="font-bold text-green-600">$69.95/month</span>
-            </span>
-          </div>
-          <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full font-bold">
-            Save ${(447 - 69.95).toFixed(2)}/mo (84% OFF)
-          </div>
-        </div>
+        <p className="text-center text-sm text-gray-600 mt-4">
+          Total standalone value: <span className="font-bold text-gray-900 line-through">$427/mo</span>
+          {' '}→ <span className="font-bold text-green-600">$95.50/mo with Pro</span>
+          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">78% OFF</span>
+        </p>
       </div>
 
-      {/* Plans Grid */}
-      <div className="grid md:grid-cols-3 gap-8">
+      {/* Plans grid */}
+      <div className="grid md:grid-cols-3 gap-6">
         {plans.map((plan) => {
-          const isCurrentPlan = currentPlan === plan.id;
+          const isActive = currentPlan === plan.id || (plan.id === null && !currentPlan);
           const Icon = plan.icon;
-
           return (
             <div
-              key={plan.id}
+              key={plan.name}
               className={`relative rounded-2xl border-2 transition-all ${
-                plan.popular
-                  ? 'border-blue-500 shadow-xl scale-105'
-                  : 'border-gray-200 hover:border-gray-300'
-              } ${isCurrentPlan ? 'ring-4 ring-green-200' : ''}`}
+                plan.popular ? 'border-blue-500 shadow-xl md:scale-105' : 'border-gray-200'
+              } ${isActive ? 'ring-4 ring-green-200' : ''}`}
             >
-              {/* Popular Badge */}
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-1 rounded-full text-sm font-bold shadow-lg">
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-5 py-1 rounded-full text-sm font-bold shadow">
                     ⭐ MOST POPULAR
                   </div>
                 </div>
               )}
-
-              {/* Coming Soon Badge */}
-              {plan.comingSoon && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-gradient-to-r from-purple-500 to-pink-600 text-white px-6 py-1 rounded-full text-sm font-bold shadow-lg">
-                    🚀 COMING SOON
-                  </div>
-                </div>
-              )}
-
-              <div className="p-8">
-                {/* Plan Header */}
+              <div className="p-7">
                 <div className="flex items-center gap-3 mb-4">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${plan.gradient} flex items-center justify-center`}>
-                    <Icon className="w-6 h-6 text-white" />
+                  <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${plan.gradient} flex items-center justify-center`}>
+                    <Icon className="w-5 h-5 text-white" />
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
-                    <p className="text-sm text-gray-600">{plan.tagline}</p>
+                    <p className="text-xs text-gray-500">{plan.tagline}</p>
                   </div>
                 </div>
 
-                {/* Pricing */}
                 <div className="mb-6">
-                  <div className="flex items-baseline gap-2">
+                  <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold text-gray-900">
-                      ${showAnnual ? plan.annualPrice : plan.price}
+                      {plan.price === 0 ? 'Free' : `$${plan.price}`}
                     </span>
-                    <span className="text-gray-600">
-                      /{showAnnual ? 'year' : 'month'}
-                    </span>
+                    {plan.price > 0 && <span className="text-gray-500 text-sm">/month</span>}
                   </div>
-                  {showAnnual && (
-                    <p className="text-sm text-green-600 font-medium mt-1">
-                      Save ${(plan.price * 12 - plan.annualPrice).toFixed(0)} per year
-                    </p>
+                  {plan.smsLimit && (
+                    <p className="text-xs text-blue-600 font-medium mt-1">{plan.smsLimit} SMS leads/month included</p>
                   )}
                 </div>
 
-                {/* Savings Breakdown (Pro Plan Only) */}
-                {plan.savings && !showAnnual && (
-                  <div className="mb-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                    <div className="text-sm font-bold text-green-900 mb-2">
-                      💰 You Save ${(plan.savings.total - plan.price).toFixed(2)}/month
-                    </div>
-                    {plan.savings.breakdown.map((item, idx) => (
-                      <div key={idx} className="flex justify-between text-xs text-green-700 mb-1">
-                        <span>{item.feature}</span>
-                        <span className="line-through">${item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Features List */}
-                <div className="space-y-3 mb-8">
-                  {plan.features.map((feature, idx) => (
-                    <div
-                      key={idx}
-                      className={`flex items-start gap-3 ${
-                        feature.highlight ? 'bg-blue-50 -mx-2 px-2 py-1 rounded-lg' : ''
-                      }`}
-                    >
-                      {feature.included ? (
-                        <Check className={`w-5 h-5 flex-shrink-0 ${
-                          feature.highlight ? 'text-blue-600' : 'text-green-600'
-                        }`} />
-                      ) : (
-                        <X className="w-5 h-5 text-gray-300 flex-shrink-0" />
-                      )}
-                      <span className={`text-sm ${
-                        feature.bold ? 'font-semibold text-gray-900' : 'text-gray-700'
-                      } ${!feature.included ? 'text-gray-400 line-through' : ''}`}>
-                        {feature.text}
-                        {feature.soon && (
-                          <span className="ml-2 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
-                            Soon
-                          </span>
-                        )}
+                <div className="space-y-2 mb-7">
+                  {plan.features.map((f, i) => (
+                    <div key={i} className={`flex items-start gap-2 ${f.highlight ? 'bg-blue-50 -mx-2 px-2 py-1 rounded-lg' : ''}`}>
+                      {f.included
+                        ? <Check className={`w-4 h-4 flex-shrink-0 mt-0.5 ${f.highlight ? 'text-blue-600' : 'text-green-500'}`} />
+                        : <X className="w-4 h-4 text-gray-300 flex-shrink-0 mt-0.5" />}
+                      <span className={`text-sm ${f.bold ? 'font-semibold text-gray-900' : f.included ? 'text-gray-700' : 'text-gray-400 line-through'}`}>
+                        {f.text}
+                        {f.soon && <span className="ml-1.5 text-xs bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded-full">Soon</span>}
                       </span>
                     </div>
                   ))}
                 </div>
 
-                {/* CTA Button */}
                 <button
-  onClick={() => !plan.comingSoon && handleUpgrade(plan.id)}
-  disabled={isCurrentPlan || loading || plan.comingSoon}
-  className={`w-full py-3 rounded-xl font-bold transition-all ${
-    plan.ctaVariant === 'primary' && !isCurrentPlan
-      ? `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`
-      : isCurrentPlan
-      ? 'bg-green-100 text-green-700 cursor-default'
-      : plan.comingSoon
-      ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-      : 'border-2 border-gray-300 text-gray-700 hover:border-gray-400'
-  }`}
->
-  {isCurrentPlan ? '✓ Current Plan' : loading ? 'Processing...' : plan.cta}
-</button>
+                  onClick={() => !plan.isFree && handleUpgrade(plan.id)}
+                  disabled={isActive || loading || plan.isFree}
+                  className={`w-full py-3 rounded-xl font-bold transition-all text-sm ${
+                    isActive
+                      ? 'bg-green-100 text-green-700 cursor-default'
+                      : plan.isFree
+                      ? 'bg-gray-100 text-gray-400 cursor-default'
+                      : `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`
+                  }`}
+                >
+                  {isActive ? '✓ Current Plan' : loading ? 'Processing…' : plan.cta}
+                </button>
               </div>
             </div>
           );
         })}
       </div>
 
-      {/* FAQ / Additional Info */}
-      <div className="mt-16 bg-gray-50 rounded-2xl p-8">
-        <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">
-          Frequently Asked Questions
-        </h3>
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Can I change plans anytime?</h4>
-            <p className="text-sm text-gray-600">
-              Yes! Upgrade or downgrade your plan at any time. Changes take effect immediately.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">What payment methods do you accept?</h4>
-            <p className="text-sm text-gray-600">
-              We accept all major credit cards, debit cards, and ACH bank transfers.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Is there a free trial?</h4>
-            <p className="text-sm text-gray-600">
-              The Basic plan is free forever. Upgrade to Pro to access AI features with a 14-day money-back guarantee.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-gray-900 mb-2">Do AI features really work?</h4>
-            <p className="text-sm text-gray-600">
-              Yes! Our AI agents capture leads 24/7, book appointments automatically, and get you more Google reviews without lifting a finger.
-            </p>
-          </div>
+      {/* SMS usage for current paid users */}
+      {isCurrentPlanPaid && (
+        <div className="mt-8 bg-gray-50 rounded-xl p-5 border border-gray-200 text-sm text-gray-600">
+          <p className="font-semibold text-gray-800 mb-1">Your plan: <span className="capitalize">{currentPlan}</span></p>
+          <p>SMS lead follow-ups: <strong>{planSmsLimit}/month</strong> included.
+            {currentPlan === 'pro' && ' Upgrade to Scale for 500 SMS/month.'}
+          </p>
         </div>
-      </div>
+      )}
 
-      {/* Trust Indicators */}
-      <div className="mt-12 text-center">
-        <div className="flex items-center justify-center gap-8 text-sm text-gray-600">
-          <div className="flex items-center gap-2">
-            <Check className="w-5 h-5 text-green-600" />
-            <span>14-day money-back guarantee</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Check className="w-5 h-5 text-green-600" />
-            <span>Cancel anytime</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Check className="w-5 h-5 text-green-600" />
-            <span>No setup fees</span>
-          </div>
-        </div>
+      <div className="mt-10 text-center text-sm text-gray-500 flex items-center justify-center gap-8">
+        <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />14-day money-back guarantee</span>
+        <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />Cancel anytime</span>
+        <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />No setup fees</span>
       </div>
     </div>
   );

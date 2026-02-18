@@ -9,16 +9,16 @@ import { Lock, CreditCard, Sparkles, Zap, Star, Crown } from 'lucide-react';
  * - pro: Can use AI agents, Google Business, AI replies, review automation
  * - expert: All features + priority support
  */
-export default function FeatureGate({ 
-  user, 
-  requiredPlan = 'basic', // 'basic', 'pro', or 'expert'
-  feature, 
-  children, 
+export default function FeatureGate({
+  user,
+  requiredPlan = 'pro', // 'pro', 'scale' (basic/expert are legacy)
+  feature,
+  children,
   onUpgradeClick,
-  fallback = null 
+  fallback = null
 }) {
-  // Plan hierarchy: no plan (0) < basic (1) < pro (2) < expert (3)
-  const planLevels = { 'basic': 1, 'pro': 2, 'expert': 3 };
+  // Plan hierarchy: free (0) < pro/basic/expert (1-2) < scale (3)
+  const planLevels = { 'basic': 1, 'pro': 2, 'expert': 2, 'scale': 3 };
   const currentLevel = planLevels[user?.plan?.toLowerCase()] || 0;
   const requiredLevel = planLevels[requiredPlan.toLowerCase()] || 0;
   
@@ -103,12 +103,24 @@ export default function FeatureGate({
       title: 'Market Research & Revenue Potential',
       description: 'AI-powered business intelligence and growth insights',
       icon: Crown,
-      requiredPlan: 'Expert',
+      requiredPlan: 'Pro',
       benefits: [
         'AI-generated market research reports',
         'Revenue forecasting & predictions',
         'Competitor analysis & benchmarking',
         'Service pricing optimization'
+      ]
+    },
+    'email-campaigns': {
+      title: 'AI Email Marketing',
+      description: 'Weekly AI-generated offers sent automatically to past customers',
+      icon: Crown,
+      requiredPlan: 'Pro',
+      benefits: [
+        'Claude generates irresistible weekly offers',
+        'Sends automatically to all past customers',
+        'Seasonal & upsell campaigns on autopilot',
+        'Full campaign history & analytics'
       ]
     }
   };
@@ -138,8 +150,8 @@ export default function FeatureGate({
 
   // Show upgrade prompt
   const Icon = currentFeature.icon;
-  const isProFeature = requiredLevel === 2; // Only Pro
-const isExpertFeature = requiredLevel === 3; // Only Expert
+  const isProFeature = requiredLevel === 2;
+  const isExpertFeature = requiredLevel === 3; // Scale tier
 
   return (
     <div className={`bg-gradient-to-br rounded-xl border-2 p-8 ${
@@ -217,10 +229,9 @@ const isExpertFeature = requiredLevel === 3; // Only Expert
  * Hook to check if feature is available
  */
 export function useFeatureAccess(user, requiredPlan) {
-  const planLevels = { 'basic': 1, 'pro': 2, 'expert': 3 };
+  const planLevels = { 'basic': 1, 'pro': 2, 'expert': 2, 'scale': 3 };
   const currentLevel = planLevels[user?.plan?.toLowerCase()] || 0;
   const requiredLevel = planLevels[requiredPlan?.toLowerCase()] || 0;
-  
   return currentLevel >= requiredLevel;
 }
 

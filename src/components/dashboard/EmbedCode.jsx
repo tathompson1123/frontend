@@ -304,6 +304,40 @@ export default function EmbedCode({ apiUrl, authFetch }) {
                 </div>
               </div>
 
+              {/* Webhook URL */}
+              {siteKey && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm font-semibold text-gray-800 mb-1 flex items-center gap-2">
+                    <ExternalLink className="w-4 h-4 text-gray-500" />
+                    Webhook URL — for Wix, Squarespace, WordPress, Zapier
+                  </p>
+                  <p className="text-xs text-gray-500 mb-3">
+                    If the embed script can't detect your forms, use this webhook instead. Point your form platform's webhook to this URL and we'll receive submissions directly — 100% reliable.
+                  </p>
+                  <div className="flex gap-2">
+                    <code className="flex-1 text-xs bg-white border border-gray-300 rounded px-3 py-2 text-gray-700 truncate select-all">
+                      {apiUrl}/api/webhooks/form/{siteKey}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(`${apiUrl}/api/webhooks/form/${siteKey}`); }}
+                      className="px-3 py-2 bg-gray-700 text-white text-xs rounded hover:bg-gray-800 whitespace-nowrap flex items-center gap-1"
+                    >
+                      <Copy className="w-3 h-3" /> Copy
+                    </button>
+                  </div>
+                  <details className="mt-3">
+                    <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">Platform setup instructions ▸</summary>
+                    <div className="mt-2 space-y-2 text-xs text-gray-600">
+                      <p><strong>Wix:</strong> Automations → Create Automation → Form Submitted → Webhook → paste URL above. Map fields to JSON keys: <code>name</code>, <code>email</code>, <code>phone</code>, <code>message</code>.</p>
+                      <p><strong>Squarespace:</strong> Settings → Advanced → Code Injection — or use Squarespace Automations with webhook action.</p>
+                      <p><strong>WordPress/Contact Form 7:</strong> Install "CF7 to Webhook" plugin, paste URL above.</p>
+                      <p><strong>Zapier/Make:</strong> Add a Webhook step after your form trigger. POST to the URL with JSON body containing <code>name</code>, <code>email</code>, <code>phone</code>.</p>
+                      <p className="bg-blue-50 p-2 rounded"><strong>Expected JSON:</strong> <code>{'{"name":"John","email":"j@j.com","phone":"5551234567","message":"optional"}'}</code></p>
+                    </div>
+                  </details>
+                </div>
+              )}
+
               {/* Default Form Settings */}
               <div className="ml-12 space-y-3">
                 <div className="flex items-center gap-2 mb-1">
