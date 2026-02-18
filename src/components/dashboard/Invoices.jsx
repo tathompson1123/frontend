@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { FileText, Plus, Send, Eye, RotateCw, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Ban, Edit2, ExternalLink } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { FileText, Plus, Send, Eye, RotateCw, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Ban, Edit2, ChevronDown } from 'lucide-react';
 
 const statusConfig = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: FileText },
@@ -12,6 +12,8 @@ const statusConfig = {
   refunded: { label: 'Refunded', color: 'bg-purple-100 text-purple-700', icon: RotateCw },
 };
 
+const processorLabel = { square: 'Square', stripe: 'Stripe', paypal: 'PayPal' };
+
 const fmt = (val) => parseFloat(val || 0).toFixed(2);
 
 export default function Invoices({ apiUrl, user, authFetch }) {
@@ -19,11 +21,13 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
-  const [editingInvoice, setEditingInvoice] = useState(null); // null = create, object = edit
+  const [editingInvoice, setEditingInvoice] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
-  const [sending, setSending] = useState(null);
-  const [sendingSquare, setSendingSquare] = useState(null);
+  const [connections, setConnections] = useState([]);
+  const [sendingId, setSendingId] = useState(null);
+  const [sendDropdown, setSendDropdown] = useState(null); // invoice id with open dropdown
+  const dropdownRef = useRef(null);
 
   const emptyForm = {
     customerName: '', customerEmail: '', customerPhone: '',
@@ -37,12 +41,24 @@ export default function Invoices({ apiUrl, user, authFetch }) {
       await fetchInvoices();
       fetchCustomers();
       fetchServices();
+      fetchConnections();
       try {
         const res = await authFetch(`${apiUrl}/api/invoices/sync-square`, { method: 'POST' });
         if (res.ok) fetchInvoices();
       } catch (e) { /* Square not connected — ignore */ }
     };
     init();
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handler = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setSendDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
   }, []);
 
   const fetchInvoices = async () => {
@@ -72,6 +88,16 @@ export default function Invoices({ apiUrl, user, authFetch }) {
       setServices(data.services || []);
     } catch (err) { console.error(err); }
   };
+
+  const fetchConnections = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/payment-connections`);
+      const data = await res.json();
+      setConnections(data.connections || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const activeProcessors = connections.filter(c => c.is_active).map(c => c.processor);
 
   const openCreateModal = () => {
     setEditingInvoice(null);
@@ -126,34 +152,24 @@ export default function Invoices({ apiUrl, user, authFetch }) {
     } catch (err) { console.error(err); }
   };
 
-  const handleSendEmail = async (invoiceId) => {
-    setSending(invoiceId);
+  // Generic send handler — processor is 'square'|'stripe'|'paypal'|'email'
+  const handleSend = async (processor, invoiceId, isRemind = false) => {
+    setSendingId(invoiceId);
+    setSendDropdown(null);
     try {
-      const res = await authFetch(`${apiUrl}/api/invoices/${invoiceId}/send`, { method: 'POST' });
+      const url = processor === 'email'
+        ? `${apiUrl}/api/invoices/${invoiceId}/${isRemind ? 'remind' : 'send'}`
+        : `${apiUrl}/api/invoices/${invoiceId}/send-${processor}`;
+      const res = await authFetch(url, { method: 'POST' });
       const data = await res.json();
       if (res.ok) {
         alert(data.message || 'Invoice sent!');
         fetchInvoices();
       } else {
-        alert(data.error || 'Failed to send');
+        alert(data.error || 'Failed to send invoice');
       }
     } catch (err) { console.error(err); }
-    finally { setSending(null); }
-  };
-
-  const handleSendViaSquare = async (invoiceId) => {
-    setSendingSquare(invoiceId);
-    try {
-      const res = await authFetch(`${apiUrl}/api/invoices/${invoiceId}/send-square`, { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        alert(data.message || 'Invoice sent via Square!');
-        fetchInvoices();
-      } else {
-        alert(data.error || 'Failed to send via Square');
-      }
-    } catch (err) { console.error(err); }
-    finally { setSendingSquare(null); }
+    finally { setSendingId(null); }
   };
 
   const handleVoidInvoice = async (invoiceId) => {
@@ -212,10 +228,18 @@ export default function Invoices({ apiUrl, user, authFetch }) {
 
   const subtotal = form.items.reduce((s, i) => s + (i.quantity * i.unitPrice), 0);
   const taxAmount = subtotal * (form.taxRate / 100);
-  const isEditingDraft = editingInvoice && editingInvoice.status === 'draft';
-  const canEdit = !editingInvoice || isEditingDraft; // create mode or editing a draft
+  const canEdit = !editingInvoice || editingInvoice.status === 'draft';
 
   const filtered = filter === 'all' ? invoices : invoices.filter(i => i.status === filter);
+
+  // Send dropdown options for a given invoice (draft = send, sent/overdue = remind)
+  const sendOptions = (isRemind = false) => [
+    ...['square', 'stripe', 'paypal'].filter(p => activeProcessors.includes(p)).map(p => ({
+      processor: p,
+      label: `${isRemind ? 'Remind via' : 'Send via'} ${processorLabel[p]}`,
+    })),
+    { processor: 'email', label: isRemind ? 'Email Reminder' : 'Send Email' },
+  ];
 
   if (loading) return <div className="flex justify-center py-20"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600" /></div>;
 
@@ -268,7 +292,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
           </button>
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden" ref={dropdownRef}>
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -284,12 +308,19 @@ export default function Invoices({ apiUrl, user, authFetch }) {
               {filtered.map(invoice => {
                 const config = statusConfig[invoice.status] || statusConfig.draft;
                 const StatusIcon = config.icon;
-                const isSquare = invoice.payment_processor === 'square';
+                const isDraft = invoice.status === 'draft';
+                const isActionable = ['draft', 'sent', 'viewed', 'overdue'].includes(invoice.status);
+                const isRemind = ['sent', 'viewed', 'overdue'].includes(invoice.status);
+                const isSending = sendingId === invoice.id;
+                const dropdownOpen = sendDropdown === invoice.id;
+
                 return (
                   <tr key={invoice.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <span className="font-mono text-sm font-medium text-gray-900">{invoice.invoice_number}</span>
-                      {isSquare && <span className="ml-2 text-xs text-gray-400">via Square</span>}
+                      {invoice.payment_processor && (
+                        <span className="ml-2 text-xs text-gray-400">via {processorLabel[invoice.payment_processor] || invoice.payment_processor}</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium text-gray-900">{invoice.customer_name || '—'}</div>
@@ -312,56 +343,53 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1.5">
-                        {/* Edit button — always visible for draft invoices */}
-                        {invoice.status === 'draft' && (
+                        {/* Edit — draft only */}
+                        {isDraft && (
                           <button onClick={() => openEditModal(invoice)}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
-                            title="Edit">
+                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Edit">
                             <Edit2 className="w-4 h-4" />
                           </button>
                         )}
 
-                        {/* Draft actions */}
-                        {invoice.status === 'draft' && (
-                          <>
+                        {/* Send / Remind dropdown */}
+                        {isActionable && (
+                          <div className="relative">
                             <button
-                              onClick={() => handleSendViaSquare(invoice.id)}
-                              disabled={sendingSquare === invoice.id}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
-                              title="Square sends the invoice email to customer">
-                              {sendingSquare === invoice.id ? 'Sending...' : 'Send via Square'}
+                              onClick={() => setSendDropdown(dropdownOpen ? null : invoice.id)}
+                              disabled={isSending}
+                              className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition disabled:opacity-50">
+                              {isSending ? 'Sending...' : isRemind ? 'Remind' : 'Send'}
+                              {!isSending && <ChevronDown className="w-3 h-3" />}
                             </button>
-                            <button
-                              onClick={() => handleSendEmail(invoice.id)}
-                              disabled={sending === invoice.id}
-                              className="px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition disabled:opacity-50">
-                              {sending === invoice.id ? 'Sending...' : 'Send Email'}
-                            </button>
-                            <button onClick={() => handleDeleteInvoice(invoice.id)}
-                              className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
+                            {dropdownOpen && (
+                              <div className="absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-20 min-w-[180px] py-1">
+                                {sendOptions(isRemind).map(opt => (
+                                  <button
+                                    key={opt.processor}
+                                    onClick={() => handleSend(opt.processor, invoice.id, isRemind)}
+                                    className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-amber-50 hover:text-amber-700 transition">
+                                    {opt.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
                         )}
 
-                        {/* Sent/viewed/overdue actions */}
-                        {['sent', 'viewed', 'overdue'].includes(invoice.status) && (
-                          <>
-                            <button
-                              onClick={() => handleSendViaSquare(invoice.id)}
-                              disabled={sendingSquare === invoice.id}
-                              className="px-3 py-1.5 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition disabled:opacity-50">
-                              {sendingSquare === invoice.id ? 'Sending...' : 'Remind via Square'}
-                            </button>
-                            <button onClick={() => handleSendEmail(invoice.id)} disabled={sending === invoice.id}
-                              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 transition disabled:opacity-50">
-                              {sending === invoice.id ? '...' : 'Email Reminder'}
-                            </button>
-                            <button onClick={() => handleVoidInvoice(invoice.id)}
-                              className="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
-                              Void
-                            </button>
-                          </>
+                        {/* Void — sent invoices */}
+                        {isRemind && (
+                          <button onClick={() => handleVoidInvoice(invoice.id)}
+                            className="px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition">
+                            Void
+                          </button>
+                        )}
+
+                        {/* Delete — draft only */}
+                        {isDraft && (
+                          <button onClick={() => handleDeleteInvoice(invoice.id)}
+                            className="p-1.5 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -389,7 +417,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
               <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-6 h-6" /></button>
             </div>
 
-            {/* Customer Selection */}
+            {/* Customer */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">Customer</label>
               {canEdit ? (
@@ -490,11 +518,16 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                   {editingInvoice ? 'Save Changes' : 'Create Invoice'}
                 </button>
               ) : (
-                <button
-                  onClick={() => { closeModal(); handleSendViaSquare(editingInvoice.id); }}
-                  className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
-                  Send via Square
-                </button>
+                /* Non-draft: show send options inline */
+                <div className="flex-1 flex gap-2">
+                  {sendOptions().map(opt => (
+                    <button key={opt.processor}
+                      onClick={() => { closeModal(); handleSend(opt.processor, editingInvoice.id); }}
+                      className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold text-sm">
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
               )}
               <button onClick={closeModal} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
                 {canEdit ? 'Cancel' : 'Close'}
