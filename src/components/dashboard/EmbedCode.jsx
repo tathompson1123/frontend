@@ -295,10 +295,10 @@ export default function EmbedCode({ apiUrl, authFetch }) {
                   <div className="text-sm">
                     <p className="font-medium text-amber-800 mb-1">How this works</p>
                     <ul className="text-amber-700 space-y-1">
-                      <li>This will <strong>hide existing contact forms</strong> on your website and show the SORCE lead capture form in their place.</li>
-                      <li>Your original forms are <strong>not deleted</strong> — they'll reappear if you turn this off or remove the embed code.</li>
-                      <li>If no forms are found on your page, a floating button will appear instead.</li>
-                      <li>All leads submitted through this form appear in your dashboard and trigger <strong>SMS follow-up</strong> automatically if your Lead Form Agent is enabled.</li>
+                      <li>Your existing contact forms stay <strong>exactly as they are</strong> — we just listen for submissions in the background.</li>
+                      <li>When a visitor submits your form, their info is automatically forwarded to your SORCE dashboard as a new lead.</li>
+                      <li>If no forms are detected on your page, a floating lead capture button will appear instead.</li>
+                      <li>All captured leads trigger <strong>SMS follow-up</strong> automatically if your Lead Form Agent is enabled.</li>
                     </ul>
                   </div>
                 </div>
