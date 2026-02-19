@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { FileText, Plus, Send, Eye, RotateCw, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Ban, Edit2, ChevronDown } from 'lucide-react';
+import { FileText, Plus, Send, Eye, RotateCw, Trash2, X, DollarSign, Clock, CheckCircle, AlertCircle, Ban, Edit2, ChevronDown, Settings, Percent } from 'lucide-react';
 
 const statusConfig = {
   draft: { label: 'Draft', color: 'bg-gray-100 text-gray-700', icon: FileText },
@@ -21,13 +21,20 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
+  const [catalog, setCatalog] = useState([]); // saved fees/supplies
   const [connections, setConnections] = useState([]);
+  const [defaultTaxRate, setDefaultTaxRate] = useState(0);
   const [sendingId, setSendingId] = useState(null);
-  const [sendDropdown, setSendDropdown] = useState(null); // invoice id with open dropdown
+  const [sendDropdown, setSendDropdown] = useState(null);
   const dropdownRef = useRef(null);
+
+  // Settings modal state
+  const [settingsTaxRate, setSettingsTaxRate] = useState('');
+  const [newCatalogItem, setNewCatalogItem] = useState({ name: '', category: 'fee', amountType: 'fixed', amount: '' });
 
   const emptyForm = {
     customerName: '', customerEmail: '', customerPhone: '',
@@ -42,6 +49,8 @@ export default function Invoices({ apiUrl, user, authFetch }) {
       fetchCustomers();
       fetchServices();
       fetchConnections();
+      fetchSettings();
+      fetchCatalog();
       try {
         const res = await authFetch(`${apiUrl}/api/invoices/sync-square`, { method: 'POST' });
         if (res.ok) fetchInvoices();
@@ -97,11 +106,62 @@ export default function Invoices({ apiUrl, user, authFetch }) {
     } catch (e) { console.error(e); }
   };
 
+  const fetchSettings = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/invoices/settings`);
+      const data = await res.json();
+      setDefaultTaxRate(data.defaultTaxRate || 0);
+      setSettingsTaxRate(String(data.defaultTaxRate || 0));
+    } catch (e) { console.error(e); }
+  };
+
+  const fetchCatalog = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/invoices/catalog`);
+      const data = await res.json();
+      setCatalog(data.items || []);
+    } catch (e) { console.error(e); }
+  };
+
+  const saveSettings = async () => {
+    try {
+      await authFetch(`${apiUrl}/api/invoices/settings`, {
+        method: 'PUT',
+        body: JSON.stringify({ defaultTaxRate: parseFloat(settingsTaxRate) || 0 }),
+      });
+      const rate = parseFloat(settingsTaxRate) || 0;
+      setDefaultTaxRate(rate);
+      setShowSettings(false);
+    } catch (e) { console.error(e); }
+  };
+
+  const addCatalogItem = async () => {
+    if (!newCatalogItem.name.trim() || !newCatalogItem.amount) return;
+    try {
+      const res = await authFetch(`${apiUrl}/api/invoices/catalog`, {
+        method: 'POST',
+        body: JSON.stringify(newCatalogItem),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCatalog(prev => [...prev, data.item]);
+        setNewCatalogItem({ name: '', category: 'fee', amountType: 'fixed', amount: '' });
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const deleteCatalogItem = async (itemId) => {
+    try {
+      await authFetch(`${apiUrl}/api/invoices/catalog/${itemId}`, { method: 'DELETE' });
+      setCatalog(prev => prev.filter(i => i.id !== itemId));
+    } catch (e) { console.error(e); }
+  };
+
   const activeProcessors = connections.filter(c => c.is_active).map(c => c.processor);
 
   const openCreateModal = () => {
     setEditingInvoice(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, taxRate: defaultTaxRate });
     setShowModal(true);
   };
 
@@ -213,6 +273,23 @@ export default function Invoices({ apiUrl, user, authFetch }) {
     }
   };
 
+  const selectCatalogItem = (index, itemId) => {
+    const item = catalog.find(c => c.id === parseInt(itemId));
+    if (!item) return;
+    if (item.amount_type === 'percentage') {
+      // Calculate against current subtotal of other items
+      const subtotalOthers = form.items.reduce((s, it, idx) => idx !== index ? s + (it.quantity * it.unitPrice) : s, 0);
+      const calculated = Math.round(subtotalOthers * (parseFloat(item.amount) / 100) * 100) / 100;
+      updateLineItem(index, 'description', `${item.name} (${item.amount}%)`);
+      updateLineItem(index, 'unitPrice', calculated);
+      updateLineItem(index, 'quantity', 1);
+    } else {
+      updateLineItem(index, 'description', item.name);
+      updateLineItem(index, 'unitPrice', parseFloat(item.amount));
+      updateLineItem(index, 'quantity', 1);
+    }
+  };
+
   const selectCustomer = (customerId) => {
     const customer = customers.find(c => c.id === parseInt(customerId));
     if (customer) {
@@ -251,9 +328,15 @@ export default function Invoices({ apiUrl, user, authFetch }) {
           <h2 className="text-3xl font-bold text-gray-900">Invoices</h2>
           <p className="text-gray-600 mt-1">Create and manage invoices for your customers</p>
         </div>
-        <button onClick={openCreateModal} className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
-          <Plus className="w-5 h-5" /> New Invoice
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => { setSettingsTaxRate(String(defaultTaxRate)); setShowSettings(true); }}
+            className="flex items-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-semibold">
+            <Settings className="w-4 h-4" /> Tax & Fees
+          </button>
+          <button onClick={openCreateModal} className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+            <Plus className="w-5 h-5" /> New Invoice
+          </button>
+        </div>
       </div>
 
       {/* Stats */}
@@ -471,16 +554,27 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                       <button onClick={() => removeLineItem(i)} className="p-2 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
                     )}
                   </div>
-                  {canEdit && services.length > 0 && (
+                  {canEdit && (services.length > 0 || catalog.length > 0) && (
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">Quick-fill:</span>
-                      <select
-                        value=""
-                        onChange={(e) => { if (e.target.value) selectService(i, e.target.value); }}
-                        className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
-                        <option value="">— pick a saved service —</option>
-                        {services.map(s => <option key={s.id} value={s.id}>{s.name} (${parseFloat(s.price).toFixed(2)})</option>)}
-                      </select>
+                      {services.length > 0 && (
+                        <select value="" onChange={(e) => { if (e.target.value) selectService(i, e.target.value); }}
+                          className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
+                          <option value="">— service —</option>
+                          {services.map(s => <option key={s.id} value={s.id}>{s.name} (${parseFloat(s.price).toFixed(2)})</option>)}
+                        </select>
+                      )}
+                      {catalog.length > 0 && (
+                        <select value="" onChange={(e) => { if (e.target.value) selectCatalogItem(i, e.target.value); }}
+                          className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
+                          <option value="">— fee / supply —</option>
+                          {catalog.map(c => (
+                            <option key={c.id} value={c.id}>
+                              {c.name} {c.amount_type === 'percentage' ? `(${c.amount}%)` : `($${parseFloat(c.amount).toFixed(2)})`}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                     </div>
                   )}
                 </div>
@@ -546,6 +640,112 @@ export default function Invoices({ apiUrl, user, authFetch }) {
               <button onClick={closeModal} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
                 {canEdit ? 'Cancel' : 'Close'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tax & Fees Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Tax & Fees Settings</h2>
+              <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Sales Tax */}
+            <div className="mb-8">
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Default Sales Tax Rate</label>
+              <p className="text-xs text-gray-400 mb-3">Auto-fills on every new invoice. You can still override it per invoice.</p>
+              <div className="flex items-center gap-3">
+                <div className="relative flex-1">
+                  <input
+                    type="number" step="0.01" min="0" max="100"
+                    value={settingsTaxRate}
+                    onChange={e => setSettingsTaxRate(e.target.value)}
+                    placeholder="e.g. 9.8"
+                    className="w-full px-4 py-3 pr-8 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none text-lg font-semibold"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 font-semibold">%</span>
+                </div>
+                <button onClick={saveSettings}
+                  className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+                  Save
+                </button>
+              </div>
+            </div>
+
+            {/* Saved Fees & Supplies */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Saved Fees & Supplies</label>
+              <p className="text-xs text-gray-400 mb-3">These appear as quick-fill options when building invoices. Percentage items are calculated against the invoice subtotal when applied.</p>
+
+              {/* Existing items */}
+              {catalog.length > 0 && (
+                <div className="mb-4 divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
+                  {catalog.map(item => (
+                    <div key={item.id} className="flex items-center justify-between px-4 py-3 bg-white">
+                      <div>
+                        <span className="text-sm font-medium text-gray-900">{item.name}</span>
+                        <span className="ml-2 text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize">{item.category}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-bold text-gray-700 flex items-center gap-0.5">
+                          {item.amount_type === 'percentage'
+                            ? <><Percent className="w-3.5 h-3.5" />{parseFloat(item.amount).toFixed(2)}</>
+                            : <>${parseFloat(item.amount).toFixed(2)}</>}
+                        </span>
+                        <button onClick={() => deleteCatalogItem(item.id)} className="p-1 text-red-400 hover:text-red-600">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new item */}
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-3">Add New</p>
+                <div className="grid grid-cols-2 gap-2 mb-2">
+                  <input
+                    type="text" placeholder="Name (e.g. Processing Fee)"
+                    value={newCatalogItem.name}
+                    onChange={e => setNewCatalogItem(p => ({ ...p, name: e.target.value }))}
+                    className="col-span-2 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none bg-white"
+                  />
+                  <select value={newCatalogItem.category}
+                    onChange={e => setNewCatalogItem(p => ({ ...p, category: e.target.value }))}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none bg-white">
+                    <option value="fee">Fee</option>
+                    <option value="supply">Supply</option>
+                    <option value="other">Other</option>
+                  </select>
+                  <select value={newCatalogItem.amountType}
+                    onChange={e => setNewCatalogItem(p => ({ ...p, amountType: e.target.value }))}
+                    className="px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none bg-white">
+                    <option value="fixed">Fixed ($)</option>
+                    <option value="percentage">Percentage (%)</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
+                      {newCatalogItem.amountType === 'percentage' ? '%' : '$'}
+                    </span>
+                    <input type="number" step="0.01" min="0" placeholder="0.00"
+                      value={newCatalogItem.amount}
+                      onChange={e => setNewCatalogItem(p => ({ ...p, amount: e.target.value }))}
+                      className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none bg-white"
+                    />
+                  </div>
+                  <button onClick={addCatalogItem}
+                    className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-semibold">
+                    + Add
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
