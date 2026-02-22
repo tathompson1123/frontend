@@ -415,7 +415,7 @@ useEffect(() => {
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'email-campaigns', icon: Mail, label: 'Email Marketing' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
-    { id: 'market-research', icon: TrendingUp, label: 'Market Research' },
+    { id: 'market-research', icon: TrendingUp, label: 'Upsell Potential' },
   ];
 
   // Auto-open Pro section when navigating to a Pro view
