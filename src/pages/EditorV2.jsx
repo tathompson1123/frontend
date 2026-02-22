@@ -25,7 +25,8 @@ import {
   Star,
   MessageSquare,
   Zap,
-  Edit3
+  Edit3,
+  RefreshCw
 } from 'lucide-react';
 
 // ============================================
