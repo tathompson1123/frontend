@@ -26,8 +26,7 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
       label: 'Generate your website',
       view: 'website',
       key: 'step2',
-      description: 'Create your AI-powered website',
-      requiresStep1: true
+      description: 'Create your AI-powered website'
     },
     {
       id: 3,
@@ -385,33 +384,25 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
           {steps.map((step) => {
             const isCompleted = completedSteps[step.key];
             const isStep1 = step.id === 1;
-            const isLocked = step.requiresStep1 && !completedSteps.step1;
 
             return (
               <div key={step.id}>
                 <button
-                  onClick={() => !isLocked && setCurrentView(step.view)}
-                  disabled={isLocked}
+                  onClick={() => setCurrentView(step.view)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
                     isCompleted
                       ? 'bg-green-50 text-green-900 hover:bg-green-100'
-                      : isLocked
-                      ? 'bg-gray-50 text-gray-400 cursor-not-allowed'
                       : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   {isCompleted ? (
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                  ) : isLocked ? (
-                    <AlertCircle className="w-5 h-5 text-gray-300 flex-shrink-0" />
                   ) : (
                     <Circle className="w-5 h-5 text-gray-400 flex-shrink-0" />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold ${
-                        isCompleted ? 'text-green-600' : isLocked ? 'text-gray-300' : 'text-gray-400'
-                      }`}>
+                      <span className={`text-xs font-bold ${isCompleted ? 'text-green-600' : 'text-gray-400'}`}>
                         {step.id}
                       </span>
                       <span className={`text-sm font-medium truncate ${isCompleted ? 'line-through' : ''}`}>
@@ -420,9 +411,6 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
                     </div>
                     {step.description && !isCompleted && (
                       <p className="text-xs text-gray-500 mt-0.5 truncate">{step.description}</p>
-                    )}
-                    {isLocked && (
-                      <p className="text-xs text-amber-600 mt-0.5">Complete step 1 first</p>
                     )}
                   </div>
                 </button>

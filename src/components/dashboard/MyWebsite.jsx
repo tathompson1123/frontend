@@ -241,55 +241,33 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     );
   }
 
-  // Show gate if business settings are incomplete
-  if (!businessSettingsComplete && !currentWebsite) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
-          <p className="text-gray-600 mt-1">Generate your AI-powered website</p>
-        </div>
-
-        <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-8 text-center">
-          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <AlertCircle className="w-8 h-8 text-amber-600" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Complete Your Business Settings First</h3>
-          <p className="text-gray-600 mb-4 max-w-lg mx-auto">
-            Your website is generated using information from your Business Settings.
-            Please complete the following before generating your website:
-          </p>
-
-          <div className="bg-white rounded-xl p-4 mb-6 max-w-md mx-auto text-left">
-            <p className="text-sm font-semibold text-gray-700 mb-2">Missing information:</p>
-            <ul className="space-y-1">
-              {missingSettings.map((item, idx) => (
-                <li key={idx} className="flex items-center gap-2 text-sm text-red-600">
-                  <X className="w-4 h-4" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <button
-            onClick={() => setCurrentView('business-settings')}
-            className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-8 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl hover:from-amber-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2 mx-auto"
-          >
-            Go to Business Settings
-            <ArrowRight className="w-5 h-5" />
-          </button>
-
-          <p className="text-xs text-gray-500 mt-4">
-            Your contact info, services, team, and location will appear on your generated website.
-          </p>
-        </div>
-      </div>
-    );
+  // Hard gate only for re-generation when settings are still incomplete after first website
+  if (!businessSettingsComplete && currentWebsite) {
+    // Already have a website — show soft reminder but don't block (handled inline below)
   }
 
   return (
     <div className="space-y-6">
+      {/* Soft business settings reminder for users without a website yet */}
+      {!businessSettingsComplete && !currentWebsite && (
+        <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-amber-900">Your first website is on us — no setup required!</p>
+            <p className="text-sm text-amber-800 mt-0.5">
+              For the best results, complete your business settings first. Missing:{' '}
+              <span className="font-medium">{missingSettings.join(', ')}</span>.
+            </p>
+          </div>
+          <button
+            onClick={() => setCurrentView('business-settings')}
+            className="flex-shrink-0 text-xs font-semibold text-amber-700 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Complete Settings
+          </button>
+        </div>
+      )}
+
       {/* Header with action buttons */}
       <div className="flex justify-between items-center">
         <div>
