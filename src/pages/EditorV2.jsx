@@ -652,6 +652,11 @@ export default function EditorV2() {
         if (data.website?.html_content) {
           setPreviewHtml(data.website.html_content);
         }
+
+        // Load all pages HTML for multi-page sites
+        if (data.website?.pages) {
+          setAllPagesHtml(data.website.pages);
+        }
       }
     } catch (error) {
       console.error('Error loading page data:', error);

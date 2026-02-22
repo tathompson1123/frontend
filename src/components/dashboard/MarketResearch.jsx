@@ -65,7 +65,7 @@ export default function MarketResearch({ apiUrl, authFetch, user }) {
             ) : upsellAnalysis ? (
               <><RefreshCw className="w-5 h-5" /> Re-analyze</>
             ) : (
-              <><TrendingUp className="w-5 h-5" /> Analyze Upsell Potential</>
+              <><TrendingUp className="w-5 h-5" /> Create Upsell Plan</>
             )}
           </button>
         </div>
@@ -87,7 +87,7 @@ export default function MarketResearch({ apiUrl, authFetch, user }) {
         <div className="bg-white rounded-2xl border-2 border-dashed border-gray-300 p-12 text-center">
           <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-gray-900 mb-2">No upsell analysis yet</h3>
-          <p className="text-gray-600">Click "Analyze Upsell Potential" to discover upsells for every service you offer.</p>
+          <p className="text-gray-600">Click "Create Upsell Plan" to discover upsells for every service you offer.</p>
         </div>
       )}
 
