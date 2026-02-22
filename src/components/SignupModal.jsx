@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertCircle, ArrowRight } from 'lucide-react';
+import { AlertCircle, ArrowRight, Eye, EyeOff } from 'lucide-react';
 
 export default function SignupModal({ isOpen, onClose, generatedWebsite, onSuccess }) {
   const [mode, setMode] = useState('signup'); // 'signup' or 'login'
@@ -10,6 +10,7 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [showEmailExistsPrompt, setShowEmailExistsPrompt] = useState(false);
   const [existingEmail, setExistingEmail] = useState('');
 
@@ -225,16 +226,26 @@ export default function SignupModal({ isOpen, onClose, generatedWebsite, onSucce
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Password
             </label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-              minLength={6}
-              placeholder={mode === 'signup' ? 'Minimum 6 characters' : 'Your password'}
-              className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+                minLength={6}
+                placeholder={mode === 'signup' ? 'Minimum 6 characters' : 'Your password'}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors pr-12"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(p => !p)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           
           {error && !showEmailExistsPrompt && (

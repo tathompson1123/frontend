@@ -1,6 +1,56 @@
 import { useState, useEffect } from 'react';
 import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2 } from 'lucide-react';
 
+function TimeInput({ value, onChange, className }) {
+  const toDisplay = (hhmm) => {
+    if (!hhmm) return '';
+    const [h, m] = hhmm.split(':').map(Number);
+    if (isNaN(h) || isNaN(m)) return hhmm;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour = h % 12 || 12;
+    return `${hour}:${String(m).padStart(2, '0')} ${period}`;
+  };
+
+  const [display, setDisplay] = useState(toDisplay(value));
+
+  useEffect(() => { setDisplay(toDisplay(value)); }, [value]);
+
+  const parseTime = (input) => {
+    const str = input.trim().toLowerCase().replace(/\s+/g, '');
+    const match = str.match(/^(\d{1,2})(?::(\d{2}))?(am|pm)?$/);
+    if (!match) return null;
+    let hours = parseInt(match[1]);
+    const minutes = parseInt(match[2] || '0');
+    const period = match[3];
+    if (minutes < 0 || minutes > 59) return null;
+    if (period === 'pm' && hours !== 12) hours += 12;
+    if (period === 'am' && hours === 12) hours = 0;
+    if (hours > 23) return null;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+  };
+
+  const handleBlur = () => {
+    const parsed = parseTime(display);
+    if (parsed) {
+      setDisplay(toDisplay(parsed));
+      onChange(parsed);
+    } else {
+      setDisplay(toDisplay(value));
+    }
+  };
+
+  return (
+    <input
+      type="text"
+      value={display}
+      onChange={(e) => setDisplay(e.target.value)}
+      onBlur={handleBlur}
+      placeholder="9:00 AM"
+      className={className}
+    />
+  );
+}
+
 export default function BusinessInformation({ 
   businessHours, 
   setBusinessHours, 
@@ -34,6 +84,10 @@ export default function BusinessInformation({
 
   const [newZipCode, setNewZipCode] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState(null); // { type: 'success'|'error', message: string }
+  const [addressSuggestions, setAddressSuggestions] = useState([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const addressSearchTimeout = useState(null);
   const [mapCenter, setMapCenter] = useState({ lat: 47.6062, lng: -122.3321 });
   const [isLoadingMap, setIsLoadingMap] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(11);
@@ -294,6 +348,53 @@ export default function BusinessInformation({
     }
   };
 
+  const stateAbbreviations = {
+    'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR', 'California': 'CA',
+    'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE', 'Florida': 'FL', 'Georgia': 'GA',
+    'Hawaii': 'HI', 'Idaho': 'ID', 'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA',
+    'Kansas': 'KS', 'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+    'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+    'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV', 'New Hampshire': 'NH',
+    'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC',
+    'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK', 'Oregon': 'OR', 'Pennsylvania': 'PA',
+    'Rhode Island': 'RI', 'South Carolina': 'SC', 'South Dakota': 'SD', 'Tennessee': 'TN',
+    'Texas': 'TX', 'Utah': 'UT', 'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA',
+    'West Virginia': 'WV', 'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC'
+  };
+
+  const handleAddressInput = (value) => {
+    setBusinessInfo(prev => ({ ...prev, address: value }));
+    if (addressSearchTimeout[0]) clearTimeout(addressSearchTimeout[0]);
+    if (value.length < 3) { setAddressSuggestions([]); setShowAddressSuggestions(false); return; }
+    addressSearchTimeout[0] = setTimeout(async () => {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&addressdetails=1&countrycodes=us&limit=6`,
+          { headers: { 'User-Agent': 'BusinessManagementApp/1.0' } }
+        );
+        const data = await res.json();
+        setAddressSuggestions(data);
+        setShowAddressSuggestions(data.length > 0);
+      } catch (err) {
+        console.error('Address autocomplete error:', err);
+      }
+    }, 350);
+  };
+
+  const selectAddressSuggestion = (suggestion) => {
+    const a = suggestion.address;
+    const streetNumber = a.house_number || '';
+    const road = a.road || a.pedestrian || a.footway || '';
+    const streetAddress = [streetNumber, road].filter(Boolean).join(' ');
+    const city = a.city || a.town || a.village || a.hamlet || a.suburb || '';
+    const stateRaw = a.state || '';
+    const state = stateAbbreviations[stateRaw] || stateRaw.slice(0, 2).toUpperCase();
+    const zip = (a.postcode || '').slice(0, 5);
+    setBusinessInfo(prev => ({ ...prev, address: streetAddress, city, state, zipCode: zip }));
+    setShowAddressSuggestions(false);
+    setAddressSuggestions([]);
+  };
+
   const fetchBusinessInfo = async () => {
     try {
       const response = await authFetch(`${apiUrl}/api/business-info`);
@@ -333,6 +434,7 @@ export default function BusinessInformation({
 
   const handleSaveAll = async () => {
     setIsSaving(true);
+    setSaveStatus(null);
     try {
       const hoursArray = Object.entries(hours).map(([dayName, dayData]) => ({
         day_name: dayName,
@@ -345,7 +447,10 @@ export default function BusinessInformation({
         method: 'POST',
         body: JSON.stringify({ hours: hoursArray })
       });
-      if (!hoursResponse.ok) throw new Error('Failed to save hours');
+      if (!hoursResponse.ok) {
+        const errData = await hoursResponse.json().catch(() => ({}));
+        throw new Error(errData.error || `Hours save failed (${hoursResponse.status})`);
+      }
 
       const infoResponse = await authFetch(`${apiUrl}/api/business-info`, {
         method: 'POST',
@@ -362,13 +467,17 @@ export default function BusinessInformation({
           centerZipCode: businessInfo.centerZipCode
         })
       });
-      if (!infoResponse.ok) throw new Error('Failed to save business information');
-      alert('Business information saved successfully!');
-      // Trigger onboarding widget to re-validate business settings
+      if (!infoResponse.ok) {
+        const errData = await infoResponse.json().catch(() => ({}));
+        throw new Error(errData.error || `Info save failed (${infoResponse.status})`);
+      }
+
+      setSaveStatus({ type: 'success', message: 'Business information saved!' });
       window.dispatchEvent(new CustomEvent('business-info-updated'));
+      setTimeout(() => setSaveStatus(null), 4000);
     } catch (error) {
       console.error('Error saving:', error);
-      alert('Failed to save business information: ' + error.message);
+      setSaveStatus({ type: 'error', message: error.message });
     } finally {
       setIsSaving(false);
     }
@@ -606,7 +715,12 @@ export default function BusinessInformation({
       {/* Business Info Tab */}
       {activeTab === 'info' && (
         <div className="space-y-6">
-          <div className="flex justify-end">
+          <div className="flex items-center justify-between gap-4">
+            {saveStatus ? (
+              <div className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium ${saveStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                {saveStatus.type === 'success' ? '✓ ' : '✗ '}{saveStatus.message}
+              </div>
+            ) : <div className="flex-1" />}
             <button type="button" onClick={handleSaveAll} disabled={isSaving} className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">
               <Save className="w-5 h-5" />
               {isSaving ? 'Saving...' : 'Save All Changes'}
@@ -636,9 +750,39 @@ export default function BusinessInformation({
               Business Location
             </h3>
             <div className="space-y-4">
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
-                <input type="text" value={businessInfo.address} onChange={(e) => setBusinessInfo({ ...businessInfo, address: e.target.value })} placeholder="123 Main Street" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                <input
+                  type="text"
+                  value={businessInfo.address}
+                  onChange={(e) => handleAddressInput(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowAddressSuggestions(false), 150)}
+                  onFocus={() => addressSuggestions.length > 0 && setShowAddressSuggestions(true)}
+                  placeholder="123 Main Street"
+                  autoComplete="off"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
+                />
+                {showAddressSuggestions && (
+                  <ul className="absolute z-50 w-full mt-1 bg-white border-2 border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                    {addressSuggestions.map((s) => {
+                      const a = s.address;
+                      const street = [a.house_number, a.road || a.pedestrian || a.footway].filter(Boolean).join(' ');
+                      const city = a.city || a.town || a.village || a.hamlet || '';
+                      const state = a.state || '';
+                      const zip = (a.postcode || '').slice(0, 5);
+                      return (
+                        <li
+                          key={s.place_id}
+                          onMouseDown={() => selectAddressSuggestion(s)}
+                          className="px-4 py-3 hover:bg-amber-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <p className="text-sm font-medium text-gray-900">{street || s.display_name.split(',')[0]}</p>
+                          <p className="text-xs text-gray-500">{[city, state, zip].filter(Boolean).join(', ')}</p>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
               <div className="grid md:grid-cols-3 gap-4">
                 <div>
@@ -776,7 +920,7 @@ export default function BusinessInformation({
                   {hours[day].open ? (
                     <div className="flex items-center gap-2 flex-1">
                       <div className="flex items-center gap-1">
-                        <input type="time" value={hours[day].start} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], start: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                        <TimeInput value={hours[day].start} onChange={(v) => setHours({ ...hours, [day]: { ...hours[day], start: v } })} className="w-28 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none text-center" />
                         <button
                           type="button"
                           onClick={() => {
@@ -792,7 +936,7 @@ export default function BusinessInformation({
                       </div>
                       <span className="text-gray-500 font-medium">to</span>
                       <div className="flex items-center gap-1">
-                        <input type="time" value={hours[day].end} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], end: e.target.value } })} className="px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                        <TimeInput value={hours[day].end} onChange={(v) => setHours({ ...hours, [day]: { ...hours[day], end: v } })} className="w-28 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none text-center" />
                         <button
                           type="button"
                           onClick={() => {
@@ -845,6 +989,13 @@ export default function BusinessInformation({
                 </ul>
               </div>
             </div>
+          </div>
+
+          <div className="flex justify-end">
+            <button type="button" onClick={handleSaveAll} disabled={isSaving} className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2 disabled:opacity-50">
+              <Save className="w-5 h-5" />
+              {isSaving ? 'Saving...' : 'Save All Changes'}
+            </button>
           </div>
         </div>
       )}
