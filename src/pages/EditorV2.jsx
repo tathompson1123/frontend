@@ -609,6 +609,8 @@ export default function EditorV2() {
   const [showGoogleImportModal, setShowGoogleImportModal] = useState(false);
   const [googleUrl, setGoogleUrl] = useState('');
   const [importingReviews, setImportingReviews] = useState(false);
+  const [activeEditorPage, setActiveEditorPage] = useState(0);
+  const [allPagesHtml, setAllPagesHtml] = useState(null);
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -636,7 +638,10 @@ export default function EditorV2() {
             pd = JSON.parse(pd);
           }
           setPageData(pd);
-          console.log('✅ Loaded V2 schema with', pd.sections?.length, 'sections');
+          const sectionCount = pd.multiPage
+            ? pd.pages?.reduce((sum, p) => sum + (p.sections?.length || 0), 0)
+            : pd.sections?.length;
+          console.log('✅ Loaded V2 schema with', sectionCount, 'sections (multiPage:', !!pd.multiPage, ')');
         } else {
           // No page_data - create empty schema
           setPageData({ meta: {}, theme: {}, sections: [] });
@@ -661,45 +666,50 @@ export default function EditorV2() {
   const updateSectionContent = useCallback((sectionIndex, fieldKey, value) => {
     setPageData(prev => {
       const newData = JSON.parse(JSON.stringify(prev));
-      if (!newData.sections[sectionIndex].content) {
-        newData.sections[sectionIndex].content = {};
-      }
-      newData.sections[sectionIndex].content[fieldKey] = value;
+      const secs = newData.multiPage ? newData.pages[activeEditorPage].sections : newData.sections;
+      if (!secs[sectionIndex].content) secs[sectionIndex].content = {};
+      secs[sectionIndex].content[fieldKey] = value;
       return newData;
     });
-  }, []);
+  }, [activeEditorPage]);
 
   // ============================================
   // MOVE SECTION
   // ============================================
   const moveSection = useCallback((index, direction) => {
+    const sections = pageData?.multiPage ? pageData.pages[activeEditorPage]?.sections : pageData?.sections;
     const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= pageData.sections.length) return;
+    if (newIndex < 0 || newIndex >= (sections?.length || 0)) return;
 
     setPageData(prev => {
       const newData = JSON.parse(JSON.stringify(prev));
-      const [removed] = newData.sections.splice(index, 1);
-      newData.sections.splice(newIndex, 0, removed);
+      const secs = newData.multiPage ? newData.pages[activeEditorPage].sections : newData.sections;
+      const [removed] = secs.splice(index, 1);
+      secs.splice(newIndex, 0, removed);
       return newData;
     });
 
     setSelectedSectionIndex(newIndex);
-  }, [pageData]);
+  }, [pageData, activeEditorPage]);
 
   // ============================================
   // DELETE SECTION
   // ============================================
   const deleteSection = useCallback((index) => {
     if (!confirm('Delete this section?')) return;
-    
+
     setPageData(prev => {
       const newData = JSON.parse(JSON.stringify(prev));
-      newData.sections.splice(index, 1);
+      if (newData.multiPage) {
+        newData.pages[activeEditorPage].sections.splice(index, 1);
+      } else {
+        newData.sections.splice(index, 1);
+      }
       return newData;
     });
 
     setSelectedSectionIndex(null);
-  }, []);
+  }, [activeEditorPage]);
 
   // ============================================
   // ADD SECTION
@@ -713,14 +723,19 @@ export default function EditorV2() {
       content: {}
     };
 
+    const currentSecs = pageData?.multiPage ? pageData.pages[activeEditorPage]?.sections : pageData?.sections;
     setPageData(prev => {
       const newData = JSON.parse(JSON.stringify(prev));
-      newData.sections.push(newSection);
+      if (newData.multiPage) {
+        newData.pages[activeEditorPage].sections.push(newSection);
+      } else {
+        newData.sections.push(newSection);
+      }
       return newData;
     });
 
-    setSelectedSectionIndex(pageData.sections.length);
-  }, [pageData]);
+    setSelectedSectionIndex(currentSecs?.length || 0);
+  }, [pageData, activeEditorPage]);
 
   // ============================================
   // IMPORT GOOGLE REVIEWS
@@ -778,7 +793,10 @@ export default function EditorV2() {
     if (!fetchedGoogleReviews?.reviews) return;
 
     // Determine which field key this section uses
-    const section = pageData?.sections?.[selectedSectionIndex];
+    const secs = pageData?.multiPage
+      ? pageData.pages?.[activeEditorPage]?.sections
+      : pageData?.sections;
+    const section = secs?.[selectedSectionIndex];
     const templateDef = TEMPLATE_DEFINITIONS[section?.template];
     const hasTestimonials = templateDef?.fields?.testimonials;
 
@@ -805,7 +823,11 @@ export default function EditorV2() {
   // ============================================
   useEffect(() => {
     const timer = setTimeout(async () => {
-      if (pageData && pageData.sections?.length > 0 && !isLoading) {
+      const hasContent = pageData && !isLoading && (
+        (pageData.multiPage && pageData.pages?.some(p => p.sections?.length > 0)) ||
+        (!pageData.multiPage && pageData.sections?.length > 0)
+      );
+      if (hasContent) {
         try {
           const token = localStorage.getItem('token');
           const response = await fetch(`${apiUrl}/api/website/save-schema`, {
@@ -821,6 +843,9 @@ export default function EditorV2() {
             const data = await response.json();
             if (data.html) {
               setPreviewHtml(data.html);
+            }
+            if (data.pages) {
+              setAllPagesHtml(data.pages);
             }
           }
         } catch (error) {
@@ -855,6 +880,9 @@ export default function EditorV2() {
         if (data.html) {
           setPreviewHtml(data.html);
         }
+        if (data.pages) {
+          setAllPagesHtml(data.pages);
+        }
         console.log('✅ Saved successfully');
       } else {
         throw new Error('Save failed');
@@ -881,7 +909,11 @@ export default function EditorV2() {
     );
   }
 
-  const selectedSection = selectedSectionIndex !== null ? pageData?.sections[selectedSectionIndex] : null;
+  const currentSections = pageData?.multiPage
+    ? (pageData.pages?.[activeEditorPage]?.sections || [])
+    : (pageData?.sections || []);
+
+  const selectedSection = selectedSectionIndex !== null ? currentSections[selectedSectionIndex] : null;
   const selectedTemplateDef = selectedSection ? TEMPLATE_DEFINITIONS[selectedSection.template] : null;
 
   return (
@@ -968,13 +1000,33 @@ export default function EditorV2() {
               {/* Section List Mode */}
               <div className="p-4 border-b border-gray-200">
                 <h2 className="font-semibold text-gray-900">Sections</h2>
-                <p className="text-sm text-gray-500">{pageData?.sections?.length || 0} sections</p>
+                <p className="text-sm text-gray-500">{currentSections.length} sections</p>
               </div>
 
+              {/* Page tabs for multi-page schemas */}
+              {pageData?.multiPage && (
+                <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Page</p>
+                  <div className="flex flex-wrap gap-1">
+                    {pageData.pages.map((page, i) => (
+                      <button
+                        key={i}
+                        onClick={() => { setActiveEditorPage(i); setSelectedSectionIndex(null); setIsEditingSection(false); }}
+                        className={`px-2 py-1 text-xs rounded font-medium capitalize ${
+                          activeEditorPage === i ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {(page.filename || `page-${i + 1}`).replace('.html', '')}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {pageData?.sections?.map((section, index) => (
+                {currentSections.map((section, index) => (
                   <SectionCard
-                    key={section.id}
+                    key={section.id || index}
                     section={section}
                     index={index}
                     isSelected={selectedSectionIndex === index}
@@ -982,7 +1034,7 @@ export default function EditorV2() {
                     onMoveUp={() => moveSection(index, 'up')}
                     onMoveDown={() => moveSection(index, 'down')}
                     onDelete={() => deleteSection(index)}
-                    totalSections={pageData.sections.length}
+                    totalSections={currentSections.length}
                   />
                 ))}
               </div>
@@ -1076,7 +1128,12 @@ export default function EditorV2() {
           >
             {previewHtml ? (
               <iframe
-                srcDoc={previewHtml}
+                key={activeEditorPage}
+                srcDoc={
+                  pageData?.multiPage && allPagesHtml
+                    ? (allPagesHtml[pageData.pages?.[activeEditorPage]?.filename] || previewHtml)
+                    : previewHtml
+                }
                 className="w-full h-full min-h-screen border-0"
                 title="Website Preview"
               />

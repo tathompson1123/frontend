@@ -8,6 +8,8 @@ export default function WebsiteGenerator() {
   const navigate = useNavigate();
   const location = useLocation();
   const [generatedWebsite, setGeneratedWebsite] = useState(null);
+  const [generatedPages, setGeneratedPages] = useState(null);
+  const [activePreviewPage, setActivePreviewPage] = useState('index.html');
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
   const [buildStatus, setBuildStatus] = useState('');
@@ -161,7 +163,10 @@ export default function WebsiteGenerator() {
         
         setTimeout(() => {
           console.log('✅ Setting generated website, length:', data.html.length);
+          const pages = data.pages || { 'index.html': data.html };
           setGeneratedWebsite(data.html);
+          setGeneratedPages(pages);
+          setActivePreviewPage('index.html');
           
           // Auto-save if logged in
          // if (token) {
@@ -243,8 +248,9 @@ export default function WebsiteGenerator() {
                 </div>
                 <button
                   onClick={() => {
+                    const activeHtml = generatedPages?.[activePreviewPage] || generatedWebsite;
                     const win = window.open('', '_blank');
-                    win.document.write(generatedWebsite);
+                    win.document.write(activeHtml);
                     win.document.close();
                   }}
                   className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-semibold"
@@ -252,10 +258,33 @@ export default function WebsiteGenerator() {
                   Open in New Tab
                 </button>
               </div>
-              
+
+              {/* Page tabs for multi-page sites */}
+              {generatedPages && Object.keys(generatedPages).length > 1 && (
+                <div className="flex gap-1 px-4 py-2 border-b border-gray-200 bg-gray-50 overflow-x-auto">
+                  {Object.keys(generatedPages).map(filename => {
+                    const label = filename.replace('.html', '');
+                    return (
+                      <button
+                        key={filename}
+                        onClick={() => setActivePreviewPage(filename)}
+                        className={`px-3 py-1.5 text-sm rounded-md font-medium whitespace-nowrap capitalize ${
+                          activePreviewPage === filename
+                            ? 'bg-amber-600 text-white'
+                            : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="flex-1 overflow-hidden">
                 <iframe
-                  srcDoc={generatedWebsite}
+                  key={activePreviewPage}
+                  srcDoc={generatedPages?.[activePreviewPage] || generatedWebsite}
                   title="Generated Website Preview"
                   className="w-full h-full"
                   style={{ border: 'none' }}
@@ -263,6 +292,20 @@ export default function WebsiteGenerator() {
                     try {
                       const iframeDoc = e.target.contentDocument;
                       iframeDoc.addEventListener('click', (event) => {
+                        // Intercept page navigation links (e.g. services.html)
+                        const anchor = event.target.closest('a[href]');
+                        if (anchor) {
+                          const href = anchor.getAttribute('href');
+                          if (href && !href.startsWith('#') && !href.startsWith('http') &&
+                              !href.startsWith('tel:') && !href.startsWith('mailto:')) {
+                            event.preventDefault();
+                            const filename = href.replace(/^\.\//, '');
+                            if (generatedPages && generatedPages[filename]) {
+                              setActivePreviewPage(filename);
+                            }
+                            return;
+                          }
+                        }
                         event.stopPropagation();
                       });
                     } catch (err) {
