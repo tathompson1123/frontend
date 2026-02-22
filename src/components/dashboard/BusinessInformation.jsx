@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2 } from 'lucide-react';
 
 function TimeInput({ value, onChange, className }) {
@@ -90,7 +90,13 @@ export default function BusinessInformation({
   const addressSearchTimeout = useState(null);
   const [mapCenter, setMapCenter] = useState({ lat: 47.6062, lng: -122.3321 });
   const [isLoadingMap, setIsLoadingMap] = useState(false);
-  const [zoomLevel, setZoomLevel] = useState(11);
+
+  // Leaflet map refs
+  const mapContainerRef = useRef(null);
+  const leafletMapRef = useRef(null);
+  const leafletCircleRef = useRef(null);
+  const centerMarkerRef = useRef(null);
+  const [leafletReady, setLeafletReady] = useState(!!window.L);
 
   // Services State
   const [showAddService, setShowAddService] = useState(false);
@@ -331,6 +337,97 @@ export default function BusinessInformation({
     }
   }, [businessInfo.centerZipCode, businessInfo.serviceAreaType]);
 
+  // Load Leaflet CSS + JS from CDN once
+  useEffect(() => {
+    if (window.L) { setLeafletReady(true); return; }
+    if (!document.getElementById('leaflet-css')) {
+      const link = document.createElement('link');
+      link.id = 'leaflet-css';
+      link.rel = 'stylesheet';
+      link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+      document.head.appendChild(link);
+    }
+    if (!document.getElementById('leaflet-js')) {
+      const script = document.createElement('script');
+      script.id = 'leaflet-js';
+      script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+      script.onload = () => setLeafletReady(true);
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  // Initialize Leaflet map when entering radius mode; destroy when leaving
+  useEffect(() => {
+    if (!leafletReady || !mapContainerRef.current) return;
+
+    if (businessInfo.serviceAreaType !== 'radius') {
+      if (leafletMapRef.current) {
+        leafletMapRef.current.remove();
+        leafletMapRef.current = null;
+        leafletCircleRef.current = null;
+        centerMarkerRef.current = null;
+      }
+      return;
+    }
+
+    if (leafletMapRef.current) return; // already initialized
+
+    const L = window.L;
+    const map = L.map(mapContainerRef.current, {
+      center: [mapCenter.lat, mapCenter.lng],
+      zoom: 10,
+    });
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxZoom: 18,
+    }).addTo(map);
+
+    const circle = L.circle([mapCenter.lat, mapCenter.lng], {
+      radius: businessInfo.serviceRadius * 1609.34,
+      color: '#9333ea',
+      fillColor: '#9333ea',
+      fillOpacity: 0.15,
+      weight: 3,
+      dashArray: '10, 5',
+    }).addTo(map);
+
+    const marker = L.circleMarker([mapCenter.lat, mapCenter.lng], {
+      radius: 7,
+      color: 'white',
+      fillColor: '#9333ea',
+      fillOpacity: 1,
+      weight: 2,
+    }).addTo(map);
+
+    leafletMapRef.current = map;
+    leafletCircleRef.current = circle;
+    centerMarkerRef.current = marker;
+
+    map.fitBounds(circle.getBounds(), { padding: [30, 30] });
+
+    return () => {
+      map.remove();
+      leafletMapRef.current = null;
+      leafletCircleRef.current = null;
+      centerMarkerRef.current = null;
+    };
+  }, [leafletReady, businessInfo.serviceAreaType]);
+
+  // Update circle radius when slider changes
+  useEffect(() => {
+    if (!leafletCircleRef.current) return;
+    leafletCircleRef.current.setRadius(businessInfo.serviceRadius * 1609.34);
+  }, [businessInfo.serviceRadius]);
+
+  // Fly to new center when zip code geocodes
+  useEffect(() => {
+    if (!leafletMapRef.current || !leafletCircleRef.current) return;
+    leafletCircleRef.current.setLatLng([mapCenter.lat, mapCenter.lng]);
+    if (centerMarkerRef.current) centerMarkerRef.current.setLatLng([mapCenter.lat, mapCenter.lng]);
+    leafletMapRef.current.fitBounds(leafletCircleRef.current.getBounds(), { padding: [30, 30] });
+  }, [mapCenter]);
+
   const geocodeZipCode = async (zipCode) => {
     setIsLoadingMap(true);
     try {
@@ -501,15 +598,6 @@ export default function BusinessInformation({
     setBusinessInfo({ ...businessInfo, serviceZipCodes: businessInfo.serviceZipCodes.filter(z => z !== zipCode) });
   };
 
-  const getRadiusPixels = () => {
-    // The iframe bbox spans 0.6 / 2^(zoomLevel-11) degrees of latitude vertically.
-    // 1 degree latitude ≈ 69 miles, so miles shown in the 384px (h-96) container height:
-    const mapHeightPixels = 384;
-    const latRangeDegrees = 0.6 / Math.pow(2, zoomLevel - 11);
-    const milesShownInHeight = latRangeDegrees * 69;
-    const pixelsPerMile = mapHeightPixels / milesShownInHeight;
-    return Math.min(businessInfo.serviceRadius * pixelsPerMile, 500);
-  };
 
   // Services Functions
   const handleMediaUpload = (e) => {
@@ -860,33 +948,16 @@ export default function BusinessInformation({
                   <p className="text-sm text-gray-500 mt-1">Usually your business zip code</p>
                 </div>
                 <div className="bg-gray-100 rounded-lg p-4 border-2 border-gray-200">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Map Zoom</span>
-                    <div className="flex items-center gap-2">
-                      <button onClick={() => setZoomLevel(Math.max(8, zoomLevel - 1))} className="px-3 py-1 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold text-lg" title="Zoom Out">−</button>
-                      <span className="text-sm font-medium text-gray-600 min-w-[60px] text-center">Level {zoomLevel}</span>
-                      <button onClick={() => setZoomLevel(Math.min(15, zoomLevel + 1))} className="px-3 py-1 bg-white border-2 border-gray-300 rounded-lg hover:bg-gray-50 font-bold text-lg" title="Zoom In">+</button>
-                    </div>
-                  </div>
                   <div className="relative w-full h-96 bg-gray-200 rounded-lg overflow-hidden">
                     {isLoadingMap && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 z-10">
+                      <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75" style={{ zIndex: 1000 }}>
                         <div className="text-center">
                           <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-amber-600 mx-auto mb-2"></div>
                           <p className="text-gray-600">Loading map...</p>
                         </div>
                       </div>
                     )}
-                    <iframe
-                      key={`${mapCenter.lat}-${mapCenter.lng}-${zoomLevel}`}
-                      src={`https://www.openstreetmap.org/export/embed.html?bbox=${mapCenter.lng - 0.5/Math.pow(2, zoomLevel-11)},${mapCenter.lat - 0.3/Math.pow(2, zoomLevel-11)},${mapCenter.lng + 0.5/Math.pow(2, zoomLevel-11)},${mapCenter.lat + 0.3/Math.pow(2, zoomLevel-11)}&layer=mapnik&marker=${mapCenter.lat},${mapCenter.lng}`}
-                      className="w-full h-full border-0"
-                      title="Service Area Map"
-                    />
-                    <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 5 }}>
-                      <circle cx="50%" cy="50%" r={Math.min(getRadiusPixels(), 500)} fill="rgba(147, 51, 234, 0.2)" stroke="rgba(147, 51, 234, 0.8)" strokeWidth="3" strokeDasharray="10,5" />
-                      <circle cx="50%" cy="50%" r="8" fill="#9333ea" stroke="white" strokeWidth="2" />
-                    </svg>
+                    <div ref={mapContainerRef} className="w-full h-full" />
                   </div>
                   <div className="mt-2 text-center text-sm text-gray-600">
                     <p>Purple circle shows your {businessInfo.serviceRadius}-mile service radius</p>
