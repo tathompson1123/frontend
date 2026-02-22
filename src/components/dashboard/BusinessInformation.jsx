@@ -502,9 +502,11 @@ export default function BusinessInformation({
   };
 
   const getRadiusPixels = () => {
-    const zoomScales = { 8: 2760, 9: 1380, 10: 690, 11: 345, 12: 172.5, 13: 86.25, 14: 43.13, 15: 21.56 };
+    // The iframe bbox spans 0.6 / 2^(zoomLevel-11) degrees of latitude vertically.
+    // 1 degree latitude ≈ 69 miles, so miles shown in the 384px (h-96) container height:
     const mapHeightPixels = 384;
-    const milesShownInHeight = zoomScales[zoomLevel] || 345;
+    const latRangeDegrees = 0.6 / Math.pow(2, zoomLevel - 11);
+    const milesShownInHeight = latRangeDegrees * 69;
     const pixelsPerMile = mapHeightPixels / milesShownInHeight;
     return Math.min(businessInfo.serviceRadius * pixelsPerMile, 500);
   };
