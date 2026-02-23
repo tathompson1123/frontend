@@ -26,7 +26,9 @@ import {
   MessageSquare,
   Zap,
   Edit3,
-  RefreshCw
+  RefreshCw,
+  Upload,
+  Loader
 } from 'lucide-react';
 
 // ============================================
@@ -465,6 +467,74 @@ const AVAILABLE_TEMPLATES = [
 ];
 
 // ============================================
+// IMAGE FIELD EDITOR — URL input + file upload
+// ============================================
+function ImageFieldEditor({ field, value, onChange, fieldKey }) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${apiUrl}/api/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Upload failed');
+      onChange(fieldKey, data.url);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploading(false);
+      e.target.value = '';
+    }
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(fieldKey, e.target.value)}
+          placeholder="https://..."
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm"
+        />
+        <label className={`flex items-center gap-1 px-3 py-2 rounded-lg border text-sm font-medium cursor-pointer transition ${
+          uploading
+            ? 'border-gray-300 text-gray-400 bg-gray-50 cursor-not-allowed'
+            : 'border-amber-300 text-amber-700 bg-amber-50 hover:bg-amber-100'
+        }`}>
+          {uploading ? <Loader className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+          {uploading ? '' : 'Upload'}
+          <input
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={uploading}
+            onChange={handleFileChange}
+          />
+        </label>
+      </div>
+      {uploadError && <p className="text-xs text-red-500 mt-1">{uploadError}</p>}
+      {value && (
+        <img src={value} alt="Preview" className="mt-2 max-h-32 w-full rounded-lg object-cover" />
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // FIELD EDITOR COMPONENT
 // ============================================
 function FieldEditor({ field, value, onChange, fieldKey }) {
@@ -513,21 +583,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
   }
 
   if (field.type === 'image') {
-    return (
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
-        <input
-          type="text"
-          value={value || ''}
-          onChange={(e) => onChange(fieldKey, e.target.value)}
-          placeholder="https://..."
-          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-        />
-        {value && (
-          <img src={value} alt="Preview" className="mt-2 max-h-32 rounded-lg object-cover" />
-        )}
-      </div>
-    );
+    return <ImageFieldEditor field={field} value={value} onChange={onChange} fieldKey={fieldKey} />;
   }
 
   if (field.type === 'checkbox') {
