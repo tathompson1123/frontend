@@ -786,6 +786,26 @@ export default function EditorV2() {
     loadPageData();
   }, []);
 
+  // ============================================
+  // PREVIEW IFRAME: Listen for page-nav messages
+  // so clicking nav links switches the active page
+  // ============================================
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === 'preview-navigate' && pageData?.multiPage) {
+        const target = e.data.page; // e.g. 'services.html'
+        const idx = pageData.pages?.findIndex(p => p.filename === target);
+        if (idx !== -1 && idx !== undefined) {
+          setActiveEditorPage(idx);
+          setSelectedSectionIndex(null);
+          setIsEditingSection(false);
+        }
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [pageData]);
+
   const loadPageData = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -1323,8 +1343,8 @@ export default function EditorV2() {
                   const raw = pageData?.multiPage && allPagesHtml
                     ? (allPagesHtml[pageData.pages?.[activeEditorPage]?.filename] || previewHtml)
                     : previewHtml;
-                  // Inject script to block .html page navigations inside the preview iframe
-                  const guard = `<script>document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(a){var h=a.getAttribute('href');if(h&&!h.startsWith('#')&&!h.startsWith('http')&&!h.startsWith('mailto')&&!h.startsWith('tel')){e.preventDefault();}}},true);<\/script>`;
+                  // Intercept .html page links: prevent navigation, post message to parent to switch page
+                  const guard = `<script>document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(a){var h=a.getAttribute('href');if(h&&!h.startsWith('#')&&!h.startsWith('http')&&!h.startsWith('mailto')&&!h.startsWith('tel')){e.preventDefault();window.parent.postMessage({type:'preview-navigate',page:h},'*');}}},true);<\/script>`;
                   return raw.replace('</body>', guard + '</body>');
                 })()}
                 className="w-full h-full min-h-screen border-0"
