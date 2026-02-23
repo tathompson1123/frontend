@@ -280,6 +280,170 @@ const TEMPLATE_DEFINITIONS = {
         }
       }
     }
+  },
+
+  // ── Organic / Landscaping templates ────────────────────────────────
+  'nav-sticky-organic': {
+    name: 'Navigation (Organic)',
+    icon: Layout,
+    category: 'nav',
+    fields: {
+      logo: { type: 'text', label: 'Logo Text' },
+      ctaText: { type: 'text', label: 'CTA Button Text' },
+      ctaLink: { type: 'text', label: 'CTA Button Link' },
+      links: {
+        type: 'array',
+        label: 'Navigation Links',
+        itemFields: {
+          text: { type: 'text', label: 'Link Text' },
+          url: { type: 'text', label: 'Link URL' }
+        }
+      }
+    }
+  },
+  'hero-split-portrait': {
+    name: 'Hero (Split Portrait)',
+    icon: Zap,
+    category: 'hero',
+    fields: {
+      badge: { type: 'text', label: 'Badge Text' },
+      headline: { type: 'text', label: 'Headline' },
+      highlightText: { type: 'text', label: 'Highlighted Word' },
+      subtitle: { type: 'textarea', label: 'Subtitle' },
+      ctaText: { type: 'text', label: 'Primary Button Text' },
+      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaText2: { type: 'text', label: 'Secondary Button Text' },
+      ctaLink2: { type: 'text', label: 'Secondary Button Link' },
+      floatBadge: { type: 'text', label: 'Float Badge Number (e.g. 10+)' },
+      floatBadgeLabel: { type: 'text', label: 'Float Badge Label (e.g. Years Experience)' },
+      portraitImage: { type: 'image', label: 'Portrait Image URL' },
+      bgImage: { type: 'image', label: 'Background Image URL' }
+    }
+  },
+  'importance-split': {
+    name: 'Why It Matters (Split)',
+    icon: Star,
+    category: 'features',
+    fields: {
+      badge: { type: 'text', label: 'Badge Text' },
+      headline: { type: 'text', label: 'Headline' },
+      body1: { type: 'textarea', label: 'First Paragraph' },
+      body2: { type: 'textarea', label: 'Second Paragraph' },
+      image: { type: 'image', label: 'Image URL' },
+      imageAlt: { type: 'text', label: 'Image Alt Text' },
+      highlights: {
+        type: 'array',
+        label: 'Highlight Points',
+        itemFields: {
+          icon: { type: 'text', label: 'Icon (emoji)' },
+          text: { type: 'text', label: 'Highlight Text' }
+        }
+      }
+    }
+  },
+  'services-carousel': {
+    name: 'Services Carousel',
+    icon: Layout,
+    category: 'services',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      subtitle: { type: 'text', label: 'Section Subtitle' },
+      services: {
+        type: 'array',
+        label: 'Services',
+        itemFields: {
+          title: { type: 'text', label: 'Service Name' },
+          category: { type: 'text', label: 'Category' },
+          price: { type: 'text', label: 'Price (e.g. From $199)' },
+          image: { type: 'image', label: 'Image URL' },
+          features: {
+            type: 'array',
+            label: 'Features',
+            itemFields: {
+              text: { type: 'text', label: 'Feature' }
+            }
+          }
+        }
+      }
+    }
+  },
+  'before-after-cards': {
+    name: 'Before & After Cards',
+    icon: Image,
+    category: 'gallery',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      subtitle: { type: 'text', label: 'Section Subtitle' },
+      cards: {
+        type: 'array',
+        label: 'Transformation Cards',
+        itemFields: {
+          title: { type: 'text', label: 'Project Title' },
+          description: { type: 'textarea', label: 'Description' },
+          beforeImage: { type: 'image', label: 'Before Image URL' },
+          afterImage: { type: 'image', label: 'After Image URL' }
+        }
+      }
+    }
+  },
+  'hero-page-banner': {
+    name: 'Page Banner Hero',
+    icon: Zap,
+    category: 'hero',
+    fields: {
+      title: { type: 'text', label: 'Page Title' },
+      subtitle: { type: 'text', label: 'Page Subtitle' },
+      bgImage: { type: 'image', label: 'Background Image URL' }
+    }
+  },
+  'benefits-cards': {
+    name: 'Benefits Cards',
+    icon: Star,
+    category: 'benefits',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      subtitle: { type: 'text', label: 'Section Subtitle' },
+      benefits: {
+        type: 'array',
+        label: 'Benefits',
+        itemFields: {
+          icon: { type: 'text', label: 'Icon (emoji)' },
+          title: { type: 'text', label: 'Benefit Title' },
+          description: { type: 'textarea', label: 'Description' }
+        }
+      }
+    }
+  },
+  'gallery-filtered': {
+    name: 'Gallery (Filtered)',
+    icon: Image,
+    category: 'gallery',
+    fields: {
+      title: { type: 'text', label: 'Section Title' },
+      subtitle: { type: 'text', label: 'Section Subtitle' },
+      items: {
+        type: 'array',
+        label: 'Gallery Items',
+        itemFields: {
+          url: { type: 'image', label: 'Image URL' },
+          title: { type: 'text', label: 'Title' },
+          category: { type: 'text', label: 'Category' }
+        }
+      }
+    }
+  },
+  'cta-card': {
+    name: 'CTA Card',
+    icon: Zap,
+    category: 'cta',
+    fields: {
+      headline: { type: 'text', label: 'Headline' },
+      subtitle: { type: 'textarea', label: 'Subtitle' },
+      ctaText: { type: 'text', label: 'Primary Button Text' },
+      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaText2: { type: 'text', label: 'Secondary Button Text' },
+      ctaLink2: { type: 'text', label: 'Secondary Button Link' }
+    }
   }
 };
 
@@ -1108,6 +1272,26 @@ export default function EditorV2() {
                 })}
               </div>
             </>
+          ) : isEditingSection ? (
+            // Template not in TEMPLATE_DEFINITIONS — show back button + message
+            <div className="flex flex-col h-full">
+              <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-blue-50">
+                <button
+                  onClick={() => setIsEditingSection(false)}
+                  className="flex items-center gap-2 text-gray-700 hover:text-amber-600 transition"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span className="text-sm font-medium">Back to Sections</span>
+                </button>
+              </div>
+              <div className="flex-1 flex items-center justify-center text-gray-500 p-8">
+                <div className="text-center">
+                  <Edit3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                  <p className="font-medium mb-1">No editable fields</p>
+                  <p className="text-xs text-gray-400">{selectedSection?.template}</p>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="flex-1 flex items-center justify-center text-gray-500 p-8">
               <div className="text-center">
@@ -1135,11 +1319,14 @@ export default function EditorV2() {
             {previewHtml ? (
               <iframe
                 key={activeEditorPage}
-                srcDoc={
-                  pageData?.multiPage && allPagesHtml
+                srcDoc={(() => {
+                  const raw = pageData?.multiPage && allPagesHtml
                     ? (allPagesHtml[pageData.pages?.[activeEditorPage]?.filename] || previewHtml)
-                    : previewHtml
-                }
+                    : previewHtml;
+                  // Inject script to block .html page navigations inside the preview iframe
+                  const guard = `<script>document.addEventListener('click',function(e){var a=e.target.closest('a[href]');if(a){var h=a.getAttribute('href');if(h&&!h.startsWith('#')&&!h.startsWith('http')&&!h.startsWith('mailto')&&!h.startsWith('tel')){e.preventDefault();}}},true);<\/script>`;
+                  return raw.replace('</body>', guard + '</body>');
+                })()}
                 className="w-full h-full min-h-screen border-0"
                 title="Website Preview"
               />
