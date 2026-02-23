@@ -469,10 +469,10 @@ const AVAILABLE_TEMPLATES = [
 // ============================================
 // IMAGE FIELD EDITOR — URL input + file upload
 // ============================================
-function ImageFieldEditor({ field, value, onChange, fieldKey }) {
+function ImageFieldEditor({ field, value, onChange, fieldKey, apiUrl: apiUrlProp }) {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState('');
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+  const apiUrl = apiUrlProp || import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -537,7 +537,7 @@ function ImageFieldEditor({ field, value, onChange, fieldKey }) {
 // ============================================
 // FIELD EDITOR COMPONENT
 // ============================================
-function FieldEditor({ field, value, onChange, fieldKey }) {
+function FieldEditor({ field, value, onChange, fieldKey, apiUrl }) {
   if (field.type === 'text') {
     return (
       <div className="mb-4">
@@ -583,7 +583,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
   }
 
   if (field.type === 'image') {
-    return <ImageFieldEditor field={field} value={value} onChange={onChange} fieldKey={fieldKey} />;
+    return <ImageFieldEditor field={field} value={value} onChange={onChange} fieldKey={fieldKey} apiUrl={apiUrl} />;
   }
 
   if (field.type === 'checkbox') {
@@ -606,7 +606,7 @@ function FieldEditor({ field, value, onChange, fieldKey }) {
 // ============================================
 // ARRAY FIELD EDITOR
 // ============================================
-function ArrayFieldEditor({ field, value = [], onChange, fieldKey }) {
+function ArrayFieldEditor({ field, value = [], onChange, fieldKey, apiUrl }) {
   const items = Array.isArray(value) ? value : [];
 
   const addItem = () => {
@@ -674,6 +674,7 @@ function ArrayFieldEditor({ field, value = [], onChange, fieldKey }) {
                 value={item[itemKey]}
                 onChange={(_, val) => updateItem(index, itemKey, val)}
                 fieldKey={itemKey}
+                apiUrl={apiUrl}
               />
             ))}
           </div>
@@ -1344,6 +1345,7 @@ export default function EditorV2() {
                           value={selectedSection.content?.[fieldKey]}
                           onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
                           fieldKey={fieldKey}
+                          apiUrl={apiUrl}
                         />
                       </div>
                     );
@@ -1355,6 +1357,7 @@ export default function EditorV2() {
                       value={selectedSection.content?.[fieldKey]}
                       onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
                       fieldKey={fieldKey}
+                      apiUrl={apiUrl}
                     />
                   );
                 })}
