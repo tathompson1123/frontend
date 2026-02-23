@@ -11,6 +11,8 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(null);
+  const [connecting, setConnecting] = useState(null);
+  const [connectError, setConnectError] = useState(null);
   const [successBanner, setSuccessBanner] = useState(justConnected || null);
 
   useEffect(() => {
@@ -34,13 +36,22 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
   };
 
   const handleConnect = async (processor) => {
+    setConnecting(processor);
+    setConnectError(null);
     try {
       const res = await authFetch(`${apiUrl}/api/payment-connections/${processor}/oauth-url`);
       const data = await res.json();
       if (data.oauthUrl) {
         window.location.href = data.oauthUrl;
+      } else {
+        setConnectError(data.error || `Could not generate ${processor} OAuth URL. Check that your API keys are configured in the server settings.`);
       }
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setConnectError(`Failed to connect to ${processor}. Please try again.`);
+    } finally {
+      setConnecting(null);
+    }
   };
 
   const handleSetPrimary = async (connectionId) => {
@@ -79,6 +90,17 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
         <h2 className="text-3xl font-bold text-gray-900">Payment Settings</h2>
         <p className="text-gray-600 mt-1">Connect payment processors to accept payments from customers</p>
       </div>
+
+      {/* Error Banner */}
+      {connectError && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3">
+          <XCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
+          <p className="text-red-700 font-medium">{connectError}</p>
+          <button onClick={() => setConnectError(null)} className="ml-auto text-red-400 hover:text-red-600">
+            <XCircle className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Success Banner */}
       {successBanner && (
@@ -157,9 +179,11 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
                     <CheckCircle className="w-4 h-4" /> Connected
                   </div>
                 ) : (
-                  <button onClick={() => handleConnect(key)}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold text-sm">
-                    <ExternalLink className="w-4 h-4" /> Connect {info.name}
+                  <button onClick={() => handleConnect(key)} disabled={connecting === key}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold text-sm disabled:opacity-60">
+                    {connecting === key
+                      ? <><RefreshCw className="w-4 h-4 animate-spin" /> Connecting...</>
+                      : <><ExternalLink className="w-4 h-4" /> Connect {info.name}</>}
                   </button>
                 )}
               </div>
