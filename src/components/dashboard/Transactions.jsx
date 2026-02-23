@@ -27,11 +27,7 @@ export default function Transactions({ apiUrl, user, authFetch }) {
   const [endDate, setEndDate] = useState('');
 
   useEffect(() => {
-    const init = async () => {
-      await fetchPayments();
-      await syncSquare();
-    };
-    init();
+    fetchPayments();
   }, []);
 
   useEffect(() => {
