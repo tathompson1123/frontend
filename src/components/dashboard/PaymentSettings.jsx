@@ -4,7 +4,6 @@ import { CheckCircle, XCircle, ExternalLink, Star, Trash2, RefreshCw } from 'luc
 const processorInfo = {
   stripe: { name: 'Stripe', color: 'bg-indigo-50 border-indigo-200', icon: '💳', description: 'Accept credit cards, debit cards, and ACH bank transfers' },
   square: { name: 'Square', color: 'bg-green-50 border-green-200', icon: '🟩', description: 'In-person and online payments with Square' },
-  paypal: { name: 'PayPal', color: 'bg-blue-50 border-blue-200', icon: '🅿️', description: 'Accept PayPal payments and credit cards' },
   clover: { name: 'Clover', color: 'bg-emerald-50 border-emerald-200', icon: '🍀', description: 'Accept payments with Clover POS and online checkout' },
 };
 
