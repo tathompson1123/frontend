@@ -47,6 +47,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [bookingUpsells, setBookingUpsells] = useState(null);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [upsellForId, setUpsellForId] = useState(null);
+  const [showCustomerPicker, setShowCustomerPicker] = useState(false);
+  const [customerPickerTab, setCustomerPickerTab] = useState('customers');
+  const [customerPickerSearch, setCustomerPickerSearch] = useState('');
+  const [existingCustomers, setExistingCustomers] = useState([]);
+  const [existingLeads, setExistingLeads] = useState([]);
+  const [loadingPicker, setLoadingPicker] = useState(false);
   const [calendarView, setCalendarView] = useState('week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [allBookings, setAllBookings] = useState([]);
@@ -162,6 +168,38 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       console.error('Error completing booking:', error);
       showToast('Failed to mark as completed', 'error');
     }
+  };
+
+  const openCustomerPicker = async () => {
+    setShowCustomerPicker(true);
+    if (existingCustomers.length > 0 || existingLeads.length > 0) return;
+    setLoadingPicker(true);
+    try {
+      const [custRes, leadRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/customers`),
+        authFetch(`${apiUrl}/api/leads`),
+      ]);
+      const custData = await custRes.json();
+      const leadData = await leadRes.json();
+      setExistingCustomers(custData.customers || []);
+      setExistingLeads(leadData.leads || []);
+    } catch (err) {
+      console.error('Failed to load customers/leads:', err.message);
+    } finally {
+      setLoadingPicker(false);
+    }
+  };
+
+  const selectFromPicker = (person) => {
+    setNewBooking(prev => ({
+      ...prev,
+      customerName: person.name || '',
+      customerEmail: person.email || '',
+      customerPhone: person.phone || '',
+      customerAddress: person.address || prev.customerAddress,
+    }));
+    setShowCustomerPicker(false);
+    setCustomerPickerSearch('');
   };
 
   const fetchBookingUpsells = async (booking) => {
@@ -1147,6 +1185,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   setIsEditingBooking(false);
                   setEditingBookingId(null);
                   setServiceTab('main');
+                  setShowCustomerPicker(false);
+                  setCustomerPickerSearch('');
                   setNewBooking({
                     customerId: '', customerName: '', customerEmail: '', customerPhone: '',
                     customerAddress: '', serviceId: '', additionalServices: [],
@@ -1160,6 +1200,88 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             </div>
 
             <div className="p-6 space-y-6">
+              {/* Customer / Lead Picker */}
+              <div>
+                <button
+                  type="button"
+                  onClick={openCustomerPicker}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 border-2 border-dashed border-blue-300 rounded-xl text-blue-600 hover:bg-blue-50 transition text-sm font-medium"
+                >
+                  <Search className="w-4 h-4" />
+                  Select from existing Customers or Leads
+                </button>
+
+                {showCustomerPicker && (
+                  <div className="mt-2 border border-gray-200 rounded-xl bg-white shadow-lg overflow-hidden">
+                    {/* Tabs */}
+                    <div className="flex border-b border-gray-200">
+                      {['customers', 'leads'].map(tab => (
+                        <button
+                          key={tab}
+                          type="button"
+                          onClick={() => setCustomerPickerTab(tab)}
+                          className={`flex-1 py-2 text-sm font-medium capitalize transition ${
+                            customerPickerTab === tab
+                              ? 'border-b-2 border-blue-500 text-blue-600 bg-blue-50'
+                              : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                        >
+                          {tab}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => { setShowCustomerPicker(false); setCustomerPickerSearch(''); }}
+                        className="px-3 text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="p-2 border-b border-gray-100">
+                      <input
+                        type="text"
+                        value={customerPickerSearch}
+                        onChange={(e) => setCustomerPickerSearch(e.target.value)}
+                        placeholder="Search by name, email, or phone…"
+                        className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+                        autoFocus
+                      />
+                    </div>
+
+                    {/* List */}
+                    <div className="max-h-48 overflow-y-auto">
+                      {loadingPicker ? (
+                        <div className="py-6 text-center text-gray-400 text-sm">Loading…</div>
+                      ) : (() => {
+                        const list = (customerPickerTab === 'customers' ? existingCustomers : existingLeads)
+                          .filter(p => {
+                            const q = customerPickerSearch.toLowerCase();
+                            return !q || (p.name || '').toLowerCase().includes(q) ||
+                              (p.email || '').toLowerCase().includes(q) ||
+                              (p.phone || '').includes(q);
+                          });
+                        if (list.length === 0) return (
+                          <div className="py-6 text-center text-gray-400 text-sm">No {customerPickerTab} found</div>
+                        );
+                        return list.map((p, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => selectFromPicker(p)}
+                            className="w-full text-left px-4 py-3 hover:bg-blue-50 transition border-b border-gray-50 last:border-0"
+                          >
+                            <p className="text-sm font-semibold text-gray-900">{p.name}</p>
+                            <p className="text-xs text-gray-400">{[p.email, p.phone].filter(Boolean).join(' · ')}</p>
+                          </button>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="bg-blue-50 rounded-xl p-4">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <User className="w-5 h-5 text-blue-600" />
