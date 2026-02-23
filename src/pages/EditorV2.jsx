@@ -830,6 +830,7 @@ export default function EditorV2() {
   const [showGoogleImportModal, setShowGoogleImportModal] = useState(false);
   const [googleUrl, setGoogleUrl] = useState('');
   const [importingReviews, setImportingReviews] = useState(false);
+  const [reviewStarFilter, setReviewStarFilter] = useState('above'); // 'above' = 4+ stars, 'below' = under 4 stars
   const [activeEditorPage, setActiveEditorPage] = useState(0);
   const [allPagesHtml, setAllPagesHtml] = useState(null);
 
@@ -1038,6 +1039,17 @@ export default function EditorV2() {
   const applyGoogleReviews = () => {
     if (!fetchedGoogleReviews?.reviews) return;
 
+    // Apply star filter
+    const filtered = fetchedGoogleReviews.reviews.filter(r => {
+      const stars = r.stars || r.rating || 5;
+      return reviewStarFilter === 'above' ? stars >= 4 : stars < 4;
+    });
+
+    if (filtered.length === 0) {
+      alert(`No reviews match the selected filter (${reviewStarFilter === 'above' ? '4+ stars' : 'under 4 stars'}). Try the other filter.`);
+      return;
+    }
+
     // Determine which field key this section uses
     const secs = pageData?.multiPage
       ? pageData.pages?.[activeEditorPage]?.sections
@@ -1048,7 +1060,7 @@ export default function EditorV2() {
 
     if (hasTestimonials) {
       // Map to testimonials format (quote/author/role/rating)
-      const testimonials = fetchedGoogleReviews.reviews.map(r => ({
+      const testimonials = filtered.map(r => ({
         quote: r.text,
         author: r.name,
         role: 'Verified Customer',
@@ -1056,7 +1068,7 @@ export default function EditorV2() {
       }));
       updateSectionContent(selectedSectionIndex, 'testimonials', testimonials);
     } else {
-      updateSectionContent(selectedSectionIndex, 'reviews', fetchedGoogleReviews.reviews);
+      updateSectionContent(selectedSectionIndex, 'reviews', filtered);
     }
 
     setShowGoogleImportModal(false);
@@ -1431,7 +1443,7 @@ export default function EditorV2() {
                 <h2 className="text-lg font-semibold">Link Google Reviews</h2>
                 <p className="text-xs text-gray-500">Pull real reviews from your Google Business Profile</p>
               </div>
-              <button onClick={() => { setShowGoogleImportModal(false); setFetchedGoogleReviews(null); }} className="p-1 hover:bg-gray-100 rounded">
+              <button onClick={() => { setShowGoogleImportModal(false); setFetchedGoogleReviews(null); setReviewStarFilter('above'); }} className="p-1 hover:bg-gray-100 rounded">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -1464,35 +1476,78 @@ export default function EditorV2() {
                 Enter your business name and city, or a Google Place ID
               </p>
 
-              {/* Review Preview */}
-              {fetchedGoogleReviews && (
-                <div className="border border-green-200 bg-green-50 rounded-xl p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div>
-                      <p className="font-semibold text-gray-900">{fetchedGoogleReviews.businessName}</p>
-                      <p className="text-sm text-gray-600">
-                        {fetchedGoogleReviews.averageRating} ★ · {fetchedGoogleReviews.totalReviews} total reviews · {fetchedGoogleReviews.reviews.length} loaded
-                      </p>
-                    </div>
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {fetchedGoogleReviews.reviews.map((r, i) => (
-                      <div key={i} className="bg-white rounded-lg p-3 border border-gray-200 text-sm">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-medium text-gray-900">{r.name}</span>
-                          <span className="text-amber-500">{'★'.repeat(r.stars)}</span>
-                          <span className="text-xs text-gray-400 ml-auto">{r.date}</span>
-                        </div>
-                        <p className="text-gray-600 line-clamp-2">{r.text}</p>
-                      </div>
-                    ))}
-                  </div>
+              {/* Star Filter */}
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Which reviews do you want to pull?
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setReviewStarFilter('above')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border-2 text-sm font-medium transition ${
+                      reviewStarFilter === 'above'
+                        ? 'border-amber-400 bg-amber-50 text-amber-800'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-amber-400">★★★★★</span> 4 stars &amp; above
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setReviewStarFilter('below')}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg border-2 text-sm font-medium transition ${
+                      reviewStarFilter === 'below'
+                        ? 'border-red-400 bg-red-50 text-red-800'
+                        : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className="text-red-400">★★★☆☆</span> Under 4 stars
+                  </button>
                 </div>
-              )}
+              </div>
+
+              {/* Review Preview */}
+              {fetchedGoogleReviews && (() => {
+                const visibleReviews = fetchedGoogleReviews.reviews.filter(r => {
+                  const stars = r.stars || r.rating || 5;
+                  return reviewStarFilter === 'above' ? stars >= 4 : stars < 4;
+                });
+                return (
+                  <div className="border border-green-200 bg-green-50 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div>
+                        <p className="font-semibold text-gray-900">{fetchedGoogleReviews.businessName}</p>
+                        <p className="text-sm text-gray-600">
+                          {fetchedGoogleReviews.averageRating} ★ · {fetchedGoogleReviews.totalReviews} total reviews · <strong>{visibleReviews.length}</strong> match filter
+                        </p>
+                      </div>
+                    </div>
+                    {visibleReviews.length === 0 ? (
+                      <p className="text-sm text-amber-700 bg-amber-50 rounded-lg p-3">
+                        No reviews match this filter. Try switching to the other option.
+                      </p>
+                    ) : (
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {visibleReviews.map((r, i) => (
+                          <div key={i} className="bg-white rounded-lg p-3 border border-gray-200 text-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-medium text-gray-900">{r.name}</span>
+                              <span className="text-amber-500">{'★'.repeat(r.stars || r.rating || 5)}</span>
+                              <span className="text-xs text-gray-400 ml-auto">{r.date}</span>
+                            </div>
+                            <p className="text-gray-600 line-clamp-2">{r.text}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
             <div className="p-4 border-t border-gray-200 flex justify-end gap-2 flex-shrink-0">
               <button
-                onClick={() => { setShowGoogleImportModal(false); setFetchedGoogleReviews(null); }}
+                onClick={() => { setShowGoogleImportModal(false); setFetchedGoogleReviews(null); setReviewStarFilter('above'); }}
                 className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
               >
                 Cancel
