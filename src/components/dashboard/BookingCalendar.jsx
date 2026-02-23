@@ -17,7 +17,11 @@ import {
   Users,
   Briefcase,
   ChevronDown,
-  CheckCircle
+  CheckCircle,
+  TrendingUp,
+  Loader2,
+  DollarSign,
+  Lightbulb
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
@@ -40,6 +44,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingNotes, setBookingNotes] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
+  const [bookingUpsells, setBookingUpsells] = useState(null);
+  const [upsellLoading, setUpsellLoading] = useState(false);
+  const [upsellForId, setUpsellForId] = useState(null);
   const [calendarView, setCalendarView] = useState('week');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [allBookings, setAllBookings] = useState([]);
@@ -154,6 +161,29 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     } catch (error) {
       console.error('Error completing booking:', error);
       showToast('Failed to mark as completed', 'error');
+    }
+  };
+
+  const fetchBookingUpsells = async (booking) => {
+    const serviceName = booking.items?.[0]?.service_name || '';
+    const servicePrice = booking.items?.[0]?.price || booking.total_amount;
+    if (!serviceName) return;
+    setUpsellLoading(true);
+    setBookingUpsells(null);
+    setUpsellForId(booking.id);
+    try {
+      const res = await authFetch(`${apiUrl}/api/market-research/upsells/booking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ serviceName, servicePrice }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed');
+      setBookingUpsells(data.upsells || []);
+    } catch (err) {
+      console.error('Upsell fetch error:', err.message);
+    } finally {
+      setUpsellLoading(false);
     }
   };
 
@@ -837,6 +867,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     setShowBookingModal(false);
                     setSelectedBooking(null);
                     setEditingNotes(false);
+                    setBookingUpsells(null);
+                    setUpsellForId(null);
                   }}
                   className="p-2 hover:bg-gray-100 rounded-lg transition"
                 >
@@ -1032,6 +1064,62 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     ) : (
                       <p className="text-gray-400 italic">No notes added yet</p>
                     )}
+                  </div>
+                )}
+              </div>
+              {/* Upsell Recommendations */}
+              <div className="bg-purple-50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-purple-600" />
+                    <h3 className="font-bold text-gray-900">Upsell Recommendations</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fetchBookingUpsells(selectedBooking)}
+                    disabled={upsellLoading}
+                    className="flex items-center gap-2 px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition text-sm font-medium disabled:opacity-50"
+                  >
+                    {upsellLoading ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>
+                    ) : bookingUpsells && upsellForId === selectedBooking.id ? (
+                      <><TrendingUp className="w-4 h-4" /> Regenerate</>
+                    ) : (
+                      <><Lightbulb className="w-4 h-4" /> Get Upsell Ideas</>
+                    )}
+                  </button>
+                </div>
+
+                {!bookingUpsells && !upsellLoading && (
+                  <p className="text-sm text-gray-500 italic">Click "Get Upsell Ideas" to see what to offer this customer based on their booking.</p>
+                )}
+
+                {upsellLoading && (
+                  <div className="flex items-center gap-3 py-4 text-purple-600">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span className="text-sm">Generating upsell scripts for {selectedBooking.items?.[0]?.service_name}...</span>
+                  </div>
+                )}
+
+                {bookingUpsells && upsellForId === selectedBooking.id && !upsellLoading && (
+                  <div className="space-y-3">
+                    {bookingUpsells.map((u, i) => (
+                      <div key={i} className="bg-white rounded-lg p-4 border border-purple-100">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-gray-900">{u.name}</h4>
+                          <span className="flex items-center gap-1 text-green-600 font-bold text-sm bg-green-50 px-2 py-1 rounded-full">
+                            <DollarSign className="w-3 h-3" />+${u.price}
+                          </span>
+                        </div>
+                        <p className="text-xs text-purple-600 font-medium mb-2">
+                          When: {u.timing}
+                        </p>
+                        <div className="bg-gray-50 rounded-lg p-3">
+                          <p className="text-xs text-gray-500 font-semibold mb-1">Say this:</p>
+                          <p className="text-sm text-gray-800 italic">"{u.script}"</p>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
