@@ -98,6 +98,7 @@ export default function PublishWizard({
   const [domainLoading, setDomainLoading] = useState(false);
   const [domainAdded, setDomainAdded] = useState(false);
   const [domainVerified, setDomainVerified] = useState(false);
+  const [domainPurchasedViaSorce, setDomainPurchasedViaSorce] = useState(false);
 
   // Assistant state
   const [assistantMessages, setAssistantMessages] = useState([]);
@@ -290,6 +291,7 @@ export default function PublishWizard({
       });
       if (response.ok) {
         setDomainVerified(true);
+        setDomainPurchasedViaSorce(true);
         // Auto-advance to publish
         setTimeout(() => setCurrentStep(4), 1000);
       } else {
@@ -959,6 +961,18 @@ export default function PublishWizard({
                     >
                       <Globe className="w-5 h-5" /> Visit Your Website <ExternalLink className="w-4 h-4" />
                     </a>
+                  )}
+
+                  {domainPurchasedViaSorce && (
+                    <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800 text-left max-w-md mx-auto">
+                      <p className="font-semibold mb-1">⏱ DNS Propagation in Progress</p>
+                      <p className="text-amber-700">
+                        Your domain was successfully registered and pointed to your website. However, DNS changes can take <strong>a few minutes up to 48 hours</strong> to fully propagate worldwide — this is normal. Your custom domain will start working automatically once propagation completes.
+                      </p>
+                      <p className="mt-2 text-amber-600 text-xs">
+                        In the meantime, your site is live at the link above.
+                      </p>
+                    </div>
                   )}
 
                   <div className="mt-6">
