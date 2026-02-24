@@ -28,7 +28,8 @@ import {
   Edit3,
   RefreshCw,
   Upload,
-  Loader
+  Loader,
+  Link2
 } from 'lucide-react';
 
 // ============================================
@@ -77,13 +78,13 @@ const TEMPLATE_DEFINITIONS = {
     fields: {
       logo: { type: 'text', label: 'Logo Text' },
       ctaText: { type: 'text', label: 'CTA Button Text' },
-      ctaLink: { type: 'text', label: 'CTA Button Link' },
+      ctaLink: { type: 'url', label: 'CTA Button Link' },
       links: {
         type: 'array',
         label: 'Navigation Links',
         itemFields: {
           text: { type: 'text', label: 'Link Text' },
-          url: { type: 'text', label: 'Link URL' }
+          url: { type: 'url', label: 'Link URL' }
         }
       }
     }
@@ -97,9 +98,9 @@ const TEMPLATE_DEFINITIONS = {
       highlightText: { type: 'text', label: 'Highlighted Text' },
       subtitle: { type: 'textarea', label: 'Subtitle' },
       ctaText: { type: 'text', label: 'Primary Button Text' },
-      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaLink: { type: 'url', label: 'Primary Button Link' },
       ctaText2: { type: 'text', label: 'Secondary Button Text' },
-      ctaLink2: { type: 'text', label: 'Secondary Button Link' },
+      ctaLink2: { type: 'url', label: 'Secondary Button Link' },
       backgroundImage: { type: 'image', label: 'Background Image URL' }
     }
   },
@@ -112,9 +113,9 @@ const TEMPLATE_DEFINITIONS = {
       highlightText: { type: 'text', label: 'Highlighted Text' },
       subtitle: { type: 'textarea', label: 'Subtitle' },
       ctaText: { type: 'text', label: 'Primary Button Text' },
-      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaLink: { type: 'url', label: 'Primary Button Link' },
       ctaText2: { type: 'text', label: 'Secondary Button Text' },
-      ctaLink2: { type: 'text', label: 'Secondary Button Link' }
+      ctaLink2: { type: 'url', label: 'Secondary Button Link' }
     }
   },
   'features-icon-row': {
@@ -140,7 +141,7 @@ const TEMPLATE_DEFINITIONS = {
     fields: {
       title: { type: 'text', label: 'Section Title' },
       ctaText: { type: 'text', label: 'CTA Button Text' },
-      ctaLink: { type: 'text', label: 'CTA Button Link' },
+      ctaLink: { type: 'url', label: 'CTA Button Link' },
       services: {
         type: 'array',
         label: 'Services',
@@ -149,7 +150,7 @@ const TEMPLATE_DEFINITIONS = {
           description: { type: 'textarea', label: 'Description' },
           price: { type: 'text', label: 'Price' },
           image: { type: 'image', label: 'Image URL' },
-          link: { type: 'text', label: 'Link' }
+          link: { type: 'url', label: 'Link' }
         }
       }
     }
@@ -215,9 +216,9 @@ const TEMPLATE_DEFINITIONS = {
       headline: { type: 'text', label: 'Headline' },
       subtitle: { type: 'textarea', label: 'Subtitle' },
       ctaText: { type: 'text', label: 'Primary Button Text' },
-      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaLink: { type: 'url', label: 'Primary Button Link' },
       ctaText2: { type: 'text', label: 'Secondary Button Text' },
-      ctaLink2: { type: 'text', label: 'Secondary Button Link' },
+      ctaLink2: { type: 'url', label: 'Secondary Button Link' },
       features: {
         type: 'array',
         label: 'Feature List',
@@ -237,7 +238,7 @@ const TEMPLATE_DEFINITIONS = {
       imageUrl: { type: 'text', label: 'Image URL (optional)' },
       imageAlt: { type: 'text', label: 'Image Alt Text' },
       buttonText: { type: 'text', label: 'Button Text (optional)' },
-      buttonLink: { type: 'text', label: 'Button Link' },
+      buttonLink: { type: 'url', label: 'Button Link' },
       align: { type: 'text', label: 'Alignment (left/center/right)' }
     }
   },
@@ -292,13 +293,13 @@ const TEMPLATE_DEFINITIONS = {
     fields: {
       logo: { type: 'text', label: 'Logo Text' },
       ctaText: { type: 'text', label: 'CTA Button Text' },
-      ctaLink: { type: 'text', label: 'CTA Button Link' },
+      ctaLink: { type: 'url', label: 'CTA Button Link' },
       links: {
         type: 'array',
         label: 'Navigation Links',
         itemFields: {
           text: { type: 'text', label: 'Link Text' },
-          url: { type: 'text', label: 'Link URL' }
+          url: { type: 'url', label: 'Link URL' }
         }
       }
     }
@@ -313,9 +314,9 @@ const TEMPLATE_DEFINITIONS = {
       highlightText: { type: 'text', label: 'Highlighted Word' },
       subtitle: { type: 'textarea', label: 'Subtitle' },
       ctaText: { type: 'text', label: 'Primary Button Text' },
-      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaLink: { type: 'url', label: 'Primary Button Link' },
       ctaText2: { type: 'text', label: 'Secondary Button Text' },
-      ctaLink2: { type: 'text', label: 'Secondary Button Link' },
+      ctaLink2: { type: 'url', label: 'Secondary Button Link' },
       floatBadge: { type: 'text', label: 'Float Badge Number (e.g. 10+)' },
       floatBadgeLabel: { type: 'text', label: 'Float Badge Label (e.g. Years Experience)' },
       portraitImage: { type: 'image', label: 'Portrait Image URL' },
@@ -442,9 +443,9 @@ const TEMPLATE_DEFINITIONS = {
       headline: { type: 'text', label: 'Headline' },
       subtitle: { type: 'textarea', label: 'Subtitle' },
       ctaText: { type: 'text', label: 'Primary Button Text' },
-      ctaLink: { type: 'text', label: 'Primary Button Link' },
+      ctaLink: { type: 'url', label: 'Primary Button Link' },
       ctaText2: { type: 'text', label: 'Secondary Button Text' },
-      ctaLink2: { type: 'text', label: 'Secondary Button Link' }
+      ctaLink2: { type: 'url', label: 'Secondary Button Link' }
     }
   }
 };
@@ -535,9 +536,103 @@ function ImageFieldEditor({ field, value, onChange, fieldKey, apiUrl: apiUrlProp
 }
 
 // ============================================
+// URL FIELD EDITOR COMPONENT
+// ============================================
+function UrlFieldEditor({ field, value, onChange, fieldKey, pages = [], sectionIds = [] }) {
+  const [showPicker, setShowPicker] = useState(false);
+
+  const handleSelect = (href) => {
+    onChange(fieldKey, href);
+    setShowPicker(false);
+  };
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-1">{field.label}</label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={value || ''}
+          onChange={(e) => onChange(fieldKey, e.target.value)}
+          placeholder={field.placeholder || '#section or https://...'}
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPicker(!showPicker)}
+          className={`flex items-center gap-1 px-3 py-2 rounded-lg border text-sm font-medium transition ${
+            showPicker
+              ? 'border-amber-500 bg-amber-100 text-amber-700'
+              : 'border-gray-300 text-gray-600 hover:border-amber-300 hover:text-amber-700'
+          }`}
+          title="Pick a link target"
+        >
+          <Link2 className="w-4 h-4" />
+        </button>
+      </div>
+      {showPicker && (
+        <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-md overflow-hidden">
+          {sectionIds.length > 0 && (
+            <div className="p-2 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Sections on this page</p>
+              <div className="flex flex-wrap gap-1">
+                {sectionIds.map(id => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleSelect(`#${id}`)}
+                    className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition"
+                  >
+                    #{id}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {pages.length > 0 && (
+            <div className="p-2 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Pages</p>
+              <div className="flex flex-wrap gap-1">
+                {pages.map(page => (
+                  <button
+                    key={page.filename}
+                    type="button"
+                    onClick={() => handleSelect(page.filename === 'index.html' ? '/' : page.filename)}
+                    className="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 transition"
+                  >
+                    {page.meta?.title || page.filename}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="p-2">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Special</p>
+            <div className="flex flex-wrap gap-1">
+              <button type="button" onClick={() => handleSelect('tel:')}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
+                <Phone className="w-3 h-3" /> Phone (tel:)
+              </button>
+              <button type="button" onClick={() => handleSelect('mailto:')}
+                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
+                <Mail className="w-3 h-3" /> Email (mailto:)
+              </button>
+              <button type="button" onClick={() => handleSelect('#')}
+                className="px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
+                # (top of page)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // FIELD EDITOR COMPONENT
 // ============================================
-function FieldEditor({ field, value, onChange, fieldKey, apiUrl }) {
+function FieldEditor({ field, value, onChange, fieldKey, apiUrl, pages, sectionIds }) {
   if (field.type === 'text') {
     return (
       <div className="mb-4">
@@ -582,6 +677,10 @@ function FieldEditor({ field, value, onChange, fieldKey, apiUrl }) {
     );
   }
 
+  if (field.type === 'url') {
+    return <UrlFieldEditor field={field} value={value} onChange={onChange} fieldKey={fieldKey} pages={pages} sectionIds={sectionIds} />;
+  }
+
   if (field.type === 'image') {
     return <ImageFieldEditor field={field} value={value} onChange={onChange} fieldKey={fieldKey} apiUrl={apiUrl} />;
   }
@@ -606,7 +705,7 @@ function FieldEditor({ field, value, onChange, fieldKey, apiUrl }) {
 // ============================================
 // ARRAY FIELD EDITOR
 // ============================================
-function ArrayFieldEditor({ field, value = [], onChange, fieldKey, apiUrl }) {
+function ArrayFieldEditor({ field, value = [], onChange, fieldKey, apiUrl, pages, sectionIds }) {
   const items = Array.isArray(value) ? value : [];
 
   const addItem = () => {
@@ -675,6 +774,8 @@ function ArrayFieldEditor({ field, value = [], onChange, fieldKey, apiUrl }) {
                 onChange={(_, val) => updateItem(index, itemKey, val)}
                 fieldKey={itemKey}
                 apiUrl={apiUrl}
+                pages={pages}
+                sectionIds={sectionIds}
               />
             ))}
           </div>
@@ -1172,6 +1273,10 @@ export default function EditorV2() {
     ? (pageData.pages?.[activeEditorPage]?.sections || [])
     : (pageData?.sections || []);
 
+  // For URL field picker
+  const currentSectionIds = [...new Set(currentSections.map(sec => sec.id || sec.template).filter(Boolean))];
+  const currentPages = pageData?.multiPage ? (pageData.pages || []) : [];
+
   const selectedSection = selectedSectionIndex !== null ? currentSections[selectedSectionIndex] : null;
   const selectedTemplateDef = selectedSection ? TEMPLATE_DEFINITIONS[selectedSection.template] : null;
 
@@ -1346,6 +1451,8 @@ export default function EditorV2() {
                           onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
                           fieldKey={fieldKey}
                           apiUrl={apiUrl}
+                          pages={currentPages}
+                          sectionIds={currentSectionIds}
                         />
                       </div>
                     );
@@ -1358,6 +1465,8 @@ export default function EditorV2() {
                       onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
                       fieldKey={fieldKey}
                       apiUrl={apiUrl}
+                      pages={currentPages}
+                      sectionIds={currentSectionIds}
                     />
                   );
                 })}
