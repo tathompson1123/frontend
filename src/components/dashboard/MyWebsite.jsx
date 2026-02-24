@@ -323,24 +323,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           <Globe className="w-4 h-4" />
           Website
         </button>
-        <button
-          onClick={() => setSubTab('embed')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all ${
-            subTab === 'embed'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Code className="w-4 h-4" />
-          Embed on External Site
-        </button>
       </div>
-
-      {subTab === 'embed' && (
-        <FeatureGate user={user} requiredPlan="pro" feature="embed-code" onUpgradeClick={() => setCurrentView('billing')}>
-          <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
-        </FeatureGate>
-      )}
 
       {subTab === 'website' && currentWebsite ? (
         <div className="space-y-4">
