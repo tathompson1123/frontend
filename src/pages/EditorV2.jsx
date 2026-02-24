@@ -536,15 +536,151 @@ function ImageFieldEditor({ field, value, onChange, fieldKey, apiUrl: apiUrlProp
 }
 
 // ============================================
+// LINK HELPERS
+// ============================================
+function friendlyLinkName(link, sectionIds = [], pages = []) {
+  if (!link) return null;
+  if (link === '#') return 'Top of page';
+  if (link.startsWith('tel:')) {
+    const num = link.slice(4);
+    return num ? `Call ${num}` : 'Phone number';
+  }
+  if (link.startsWith('mailto:')) {
+    const email = link.slice(7);
+    return email ? `Email ${email}` : 'Email address';
+  }
+  if (link.startsWith('#')) {
+    const id = link.slice(1);
+    const pg = pages.find(p => p.filename?.replace('.html', '') === id);
+    if (pg) return `${pg.meta?.title || id} page`;
+    return `${id.charAt(0).toUpperCase() + id.slice(1)} section`;
+  }
+  if (link === '/' || link === 'index.html') return 'Home page';
+  const pg = pages.find(p => p.filename === link || p.filename === link.replace(/^\//, ''));
+  if (pg) return `${pg.meta?.title || link} page`;
+  if (link.endsWith('.html')) {
+    const name = link.replace('.html', '');
+    return `${name.charAt(0).toUpperCase() + name.slice(1)} page`;
+  }
+  if (link.startsWith('http')) {
+    try { return new URL(link).hostname; } catch { return link; }
+  }
+  return link;
+}
+
+// Shared picker dropdown used by both UrlFieldEditor and ButtonPairFieldEditor
+function LinkPickerDropdown({ sectionIds, pages, onSelect }) {
+  return (
+    <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-md overflow-hidden z-10">
+      {sectionIds.length > 0 && (
+        <div className="p-2 border-b border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Sections on this page</p>
+          <div className="flex flex-wrap gap-1">
+            {sectionIds.map(id => (
+              <button key={id} type="button" onClick={() => onSelect(`#${id}`)}
+                className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition">
+                {friendlyLinkName(`#${id}`, sectionIds, pages)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {pages.length > 0 && (
+        <div className="p-2 border-b border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Pages</p>
+          <div className="flex flex-wrap gap-1">
+            {pages.map(page => (
+              <button key={page.filename} type="button"
+                onClick={() => onSelect(page.filename === 'index.html' ? '/' : page.filename)}
+                className="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 transition">
+                {page.meta?.title || page.filename}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="p-2">
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Special</p>
+        <div className="flex flex-wrap gap-1">
+          <button type="button" onClick={() => onSelect('tel:')}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
+            <Phone className="w-3 h-3" /> Phone (tel:)
+          </button>
+          <button type="button" onClick={() => onSelect('mailto:')}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
+            <Mail className="w-3 h-3" /> Email (mailto:)
+          </button>
+          <button type="button" onClick={() => onSelect('#')}
+            className="px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
+            # (top of page)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// BUTTON PAIR FIELD EDITOR
+// Text input + inline link picker, combined in one row
+// Used when a 'text' field is immediately followed by a 'url' field
+// ============================================
+function ButtonPairFieldEditor({ label, textValue, linkValue, onTextChange, onLinkChange, pages = [], sectionIds = [] }) {
+  const [showPicker, setShowPicker] = useState(false);
+  const linkLabel = friendlyLinkName(linkValue, sectionIds, pages);
+
+  return (
+    <div className="mb-4">
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={textValue || ''}
+          onChange={(e) => onTextChange(e.target.value)}
+          placeholder="Button text..."
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm"
+        />
+        <button
+          type="button"
+          onClick={() => setShowPicker(!showPicker)}
+          className={`flex items-center gap-1 px-3 py-2 rounded-lg border text-sm font-medium transition ${
+            showPicker ? 'border-amber-500 bg-amber-100 text-amber-700'
+              : linkValue ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100'
+              : 'border-gray-300 text-gray-600 hover:border-amber-300 hover:text-amber-700'
+          }`}
+          title={linkLabel || 'Set link target'}
+        >
+          <Link2 className="w-4 h-4" />
+        </button>
+      </div>
+      {linkLabel && (
+        <div className="mt-1 flex items-center gap-1.5 text-xs text-blue-600">
+          <Link2 className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">{linkLabel}</span>
+          <button type="button" onClick={() => { onLinkChange(''); setShowPicker(false); }}
+            className="ml-auto flex-shrink-0 text-gray-300 hover:text-red-400 transition" title="Remove link">
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+      {showPicker && (
+        <LinkPickerDropdown
+          sectionIds={sectionIds}
+          pages={pages}
+          onSelect={(href) => { onLinkChange(href); setShowPicker(false); }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ============================================
 // URL FIELD EDITOR COMPONENT
+// Standalone URL field (no paired text input)
 // ============================================
 function UrlFieldEditor({ field, value, onChange, fieldKey, pages = [], sectionIds = [] }) {
   const [showPicker, setShowPicker] = useState(false);
-
-  const handleSelect = (href) => {
-    onChange(fieldKey, href);
-    setShowPicker(false);
-  };
+  const linkLabel = friendlyLinkName(value, sectionIds, pages);
 
   return (
     <div className="mb-4">
@@ -561,8 +697,8 @@ function UrlFieldEditor({ field, value, onChange, fieldKey, pages = [], sectionI
           type="button"
           onClick={() => setShowPicker(!showPicker)}
           className={`flex items-center gap-1 px-3 py-2 rounded-lg border text-sm font-medium transition ${
-            showPicker
-              ? 'border-amber-500 bg-amber-100 text-amber-700'
+            showPicker ? 'border-amber-500 bg-amber-100 text-amber-700'
+              : value ? 'border-blue-300 bg-blue-50 text-blue-700 hover:bg-blue-100'
               : 'border-gray-300 text-gray-600 hover:border-amber-300 hover:text-amber-700'
           }`}
           title="Pick a link target"
@@ -570,60 +706,18 @@ function UrlFieldEditor({ field, value, onChange, fieldKey, pages = [], sectionI
           <Link2 className="w-4 h-4" />
         </button>
       </div>
-      {showPicker && (
-        <div className="mt-2 border border-gray-200 rounded-lg bg-white shadow-md overflow-hidden">
-          {sectionIds.length > 0 && (
-            <div className="p-2 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Sections on this page</p>
-              <div className="flex flex-wrap gap-1">
-                {sectionIds.map(id => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handleSelect(`#${id}`)}
-                    className="px-2 py-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded hover:bg-blue-100 transition"
-                  >
-                    #{id}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          {pages.length > 0 && (
-            <div className="p-2 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Pages</p>
-              <div className="flex flex-wrap gap-1">
-                {pages.map(page => (
-                  <button
-                    key={page.filename}
-                    type="button"
-                    onClick={() => handleSelect(page.filename === 'index.html' ? '/' : page.filename)}
-                    className="px-2 py-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded hover:bg-green-100 transition"
-                  >
-                    {page.meta?.title || page.filename}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="p-2">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide px-1 mb-1">Special</p>
-            <div className="flex flex-wrap gap-1">
-              <button type="button" onClick={() => handleSelect('tel:')}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
-                <Phone className="w-3 h-3" /> Phone (tel:)
-              </button>
-              <button type="button" onClick={() => handleSelect('mailto:')}
-                className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
-                <Mail className="w-3 h-3" /> Email (mailto:)
-              </button>
-              <button type="button" onClick={() => handleSelect('#')}
-                className="px-2 py-1 text-xs bg-gray-50 text-gray-700 border border-gray-200 rounded hover:bg-gray-100 transition">
-                # (top of page)
-              </button>
-            </div>
-          </div>
+      {linkLabel && (
+        <div className="mt-1 text-xs text-blue-600 flex items-center gap-1">
+          <Link2 className="w-3 h-3 flex-shrink-0" />
+          <span className="truncate">{linkLabel}</span>
         </div>
+      )}
+      {showPicker && (
+        <LinkPickerDropdown
+          sectionIds={sectionIds}
+          pages={pages}
+          onSelect={(href) => { onChange(fieldKey, href); setShowPicker(false); }}
+        />
       )}
     </div>
   );
@@ -766,18 +860,45 @@ function ArrayFieldEditor({ field, value = [], onChange, fieldKey, apiUrl, pages
                 </button>
               </div>
             </div>
-            {Object.entries(field.itemFields).map(([itemKey, itemField]) => (
-              <FieldEditor
-                key={itemKey}
-                field={itemField}
-                value={item[itemKey]}
-                onChange={(_, val) => updateItem(index, itemKey, val)}
-                fieldKey={itemKey}
-                apiUrl={apiUrl}
-                pages={pages}
-                sectionIds={sectionIds}
-              />
-            ))}
+            {(() => {
+              const itemEntries = Object.entries(field.itemFields);
+              const rendered = [];
+              let skipNext = false;
+              itemEntries.forEach(([itemKey, itemField], i) => {
+                if (skipNext) { skipNext = false; return; }
+                const nextEntry = i < itemEntries.length - 1 ? itemEntries[i + 1] : null;
+                if (itemField.type === 'text' && nextEntry && nextEntry[1].type === 'url') {
+                  const [linkKey] = nextEntry;
+                  rendered.push(
+                    <ButtonPairFieldEditor
+                      key={itemKey}
+                      label={itemField.label}
+                      textValue={item[itemKey]}
+                      linkValue={item[linkKey]}
+                      onTextChange={(val) => updateItem(index, itemKey, val)}
+                      onLinkChange={(val) => updateItem(index, linkKey, val)}
+                      pages={pages}
+                      sectionIds={sectionIds}
+                    />
+                  );
+                  skipNext = true;
+                  return;
+                }
+                rendered.push(
+                  <FieldEditor
+                    key={itemKey}
+                    field={itemField}
+                    value={item[itemKey]}
+                    onChange={(_, val) => updateItem(index, itemKey, val)}
+                    fieldKey={itemKey}
+                    apiUrl={apiUrl}
+                    pages={pages}
+                    sectionIds={sectionIds}
+                  />
+                );
+              });
+              return rendered;
+            })()}
           </div>
         ))}
       </div>
@@ -1432,44 +1553,71 @@ export default function EditorV2() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
-                {Object.entries(selectedTemplateDef.fields || {}).map(([fieldKey, field]) => {
-                  if (field.type === 'array') {
-                    return (
-                      <div key={fieldKey}>
-                        {(fieldKey === 'reviews' || fieldKey === 'testimonials') && (
-                          <button
-                            onClick={() => { setFetchedGoogleReviews(null); setShowGoogleImportModal(true); }}
-                            className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                          >
-                            <Star className="w-4 h-4" />
-                            Link Google Reviews
-                          </button>
-                        )}
-                        <ArrayFieldEditor
-                          field={field}
-                          value={selectedSection.content?.[fieldKey]}
-                          onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
-                          fieldKey={fieldKey}
-                          apiUrl={apiUrl}
+                {(() => {
+                  const entries = Object.entries(selectedTemplateDef.fields || {});
+                  const result = [];
+                  let skipNext = false;
+                  entries.forEach(([fieldKey, field], index) => {
+                    if (skipNext) { skipNext = false; return; }
+                    if (field.type === 'array') {
+                      result.push(
+                        <div key={fieldKey}>
+                          {(fieldKey === 'reviews' || fieldKey === 'testimonials') && (
+                            <button
+                              onClick={() => { setFetchedGoogleReviews(null); setShowGoogleImportModal(true); }}
+                              className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                            >
+                              <Star className="w-4 h-4" />
+                              Link Google Reviews
+                            </button>
+                          )}
+                          <ArrayFieldEditor
+                            field={field}
+                            value={selectedSection.content?.[fieldKey]}
+                            onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
+                            fieldKey={fieldKey}
+                            apiUrl={apiUrl}
+                            pages={currentPages}
+                            sectionIds={currentSectionIds}
+                          />
+                        </div>
+                      );
+                      return;
+                    }
+                    // Pair adjacent text + url fields as a single button row
+                    const nextEntry = index < entries.length - 1 ? entries[index + 1] : null;
+                    if (field.type === 'text' && nextEntry && nextEntry[1].type === 'url') {
+                      const [linkKey] = nextEntry;
+                      result.push(
+                        <ButtonPairFieldEditor
+                          key={fieldKey}
+                          label={field.label}
+                          textValue={selectedSection.content?.[fieldKey]}
+                          linkValue={selectedSection.content?.[linkKey]}
+                          onTextChange={(val) => updateSectionContent(selectedSectionIndex, fieldKey, val)}
+                          onLinkChange={(val) => updateSectionContent(selectedSectionIndex, linkKey, val)}
                           pages={currentPages}
                           sectionIds={currentSectionIds}
                         />
-                      </div>
+                      );
+                      skipNext = true;
+                      return;
+                    }
+                    result.push(
+                      <FieldEditor
+                        key={fieldKey}
+                        field={field}
+                        value={selectedSection.content?.[fieldKey]}
+                        onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
+                        fieldKey={fieldKey}
+                        apiUrl={apiUrl}
+                        pages={currentPages}
+                        sectionIds={currentSectionIds}
+                      />
                     );
-                  }
-                  return (
-                    <FieldEditor
-                      key={fieldKey}
-                      field={field}
-                      value={selectedSection.content?.[fieldKey]}
-                      onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
-                      fieldKey={fieldKey}
-                      apiUrl={apiUrl}
-                      pages={currentPages}
-                      sectionIds={currentSectionIds}
-                    />
-                  );
-                })}
+                  });
+                  return result;
+                })()}
               </div>
             </>
           ) : isEditingSection ? (
