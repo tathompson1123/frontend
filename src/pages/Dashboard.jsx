@@ -39,6 +39,7 @@ import FeatureGate from '../components/dashboard/FeatureGate';
 import Invoices from '../components/dashboard/Invoices';
 import PaymentProcessors from '../components/dashboard/PaymentSettings';
 import Transactions from '../components/dashboard/Transactions';
+import DomainPolicyModal from '../components/dashboard/DomainPolicyModal';
 
 // Combined Payment Settings page with sub-tabs
 function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConnected }) {
@@ -138,6 +139,7 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const [businessHours, setBusinessHours] = useState([]);
   const [websiteData, setWebsiteData] = useState(null);
   const [googleBusinessData, setGoogleBusinessData] = useState(null);
+  const [showDomainPolicy, setShowDomainPolicy] = useState(false);
   
 // Show welcome wizard ONLY on first signup (never on login)
 useEffect(() => {
@@ -705,7 +707,26 @@ useEffect(() => {
             />
           )}
         </div>
+
+        {/* Dashboard Footer */}
+        <footer className="border-t border-gray-200 bg-white/60 px-8 py-4 flex items-center justify-between text-xs text-gray-400">
+          <span>© {new Date().getFullYear()} SORCE. All rights reserved.</span>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowDomainPolicy(true)}
+              className="hover:text-gray-600 transition-colors"
+            >
+              Domain Policy
+            </button>
+            <span>·</span>
+            <a href="mailto:support@sorce.com" className="hover:text-gray-600 transition-colors">
+              Support
+            </a>
+          </div>
+        </footer>
       </main>
+
+      {showDomainPolicy && <DomainPolicyModal onClose={() => setShowDomainPolicy(false)} />}
     </div>
   );
 }
