@@ -253,9 +253,9 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         <div className="bg-amber-50 border-2 border-amber-200 rounded-xl p-4 flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-900">Your first website is on us — no setup required!</p>
+            <p className="text-sm font-semibold text-amber-900">Complete your business settings for best results</p>
             <p className="text-sm text-amber-800 mt-0.5">
-              For the best results, complete your business settings first. Missing:{' '}
+              Missing:{' '}
               <span className="font-medium">{missingSettings.join(', ')}</span>.
             </p>
           </div>
