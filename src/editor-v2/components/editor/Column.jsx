@@ -14,6 +14,7 @@ export default function Column({
   totalColumns,
   selectedElement,
   devicePreview,
+  isDraggingWidget,
   onSelectWidget,
   onUpdateWidget,
 }) {
@@ -27,7 +28,7 @@ export default function Column({
 
   const getColumnStyle = () => {
     const baseStyle = column.style || {};
-    
+
     return {
       width: getColumnWidth(),
       minWidth: devicePreview === 'mobile' ? '100%' : 'auto',
@@ -40,7 +41,23 @@ export default function Column({
   };
 
   return (
-    <div style={getColumnStyle()} className="relative">
+    <div
+      style={getColumnStyle()}
+      className={`relative transition-all duration-150 rounded-lg ${
+        isDraggingWidget
+          ? 'outline outline-2 outline-dashed outline-blue-300 outline-offset-2 bg-blue-50/30'
+          : ''
+      }`}
+    >
+      {/* Column label shown during drag */}
+      {isDraggingWidget && totalColumns > 1 && (
+        <div className="absolute -top-5 left-0 right-0 flex justify-center pointer-events-none z-10">
+          <span className="text-[10px] font-medium text-blue-500 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">
+            {columnIndex === 0 ? 'Left' : columnIndex === totalColumns - 1 ? 'Right' : 'Center'}
+          </span>
+        </div>
+      )}
+
       {/* Widget list with drop zones */}
       <SortableContext
         items={column.widgets?.map((w) => w.id) || []}
@@ -55,8 +72,10 @@ export default function Column({
                 rowId={rowId}
                 columnId={column.id}
                 index={widgetIndex}
+                isDraggingWidget={isDraggingWidget}
+                position="above"
               />
-              
+
               {/* Widget */}
               <WidgetWrapper
                 widget={widget}
@@ -75,7 +94,7 @@ export default function Column({
                   onUpdateWidget(sectionId, rowId, column.id, widget.id, updates)
                 }
               />
-              
+
               {/* Drop zone after last widget */}
               {widgetIndex === column.widgets.length - 1 && (
                 <DropZone
@@ -83,6 +102,8 @@ export default function Column({
                   rowId={rowId}
                   columnId={column.id}
                   index={widgetIndex + 1}
+                  isDraggingWidget={isDraggingWidget}
+                  position="below"
                 />
               )}
             </div>
@@ -93,6 +114,7 @@ export default function Column({
             sectionId={sectionId}
             rowId={rowId}
             columnId={column.id}
+            isDraggingWidget={isDraggingWidget}
           />
         )}
       </SortableContext>
@@ -103,7 +125,7 @@ export default function Column({
 // ============================================
 // DROP ZONE COMPONENT
 // ============================================
-function DropZone({ sectionId, rowId, columnId, index }) {
+function DropZone({ sectionId, rowId, columnId, index, isDraggingWidget, position }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `dropzone-${sectionId}-${rowId}-${columnId}-${index}`,
     data: {
@@ -115,22 +137,40 @@ function DropZone({ sectionId, rowId, columnId, index }) {
     },
   });
 
+  if (!isDraggingWidget) {
+    // Invisible strip when not dragging — still droppable
+    return (
+      <div
+        ref={setNodeRef}
+        className="h-2 my-0.5 rounded transition-all hover:bg-gray-200"
+      />
+    );
+  }
+
   return (
     <div
       ref={setNodeRef}
-      className={`h-2 my-1 rounded transition-all ${
+      className={`transition-all rounded my-1 flex items-center justify-center ${
         isOver
-          ? 'bg-amber-400 h-16 border-2 border-dashed border-amber-600'
-          : 'bg-transparent hover:bg-gray-200'
+          ? 'h-14 bg-amber-50 border-2 border-dashed border-amber-500'
+          : 'h-5 bg-blue-50 border border-dashed border-blue-300'
       }`}
-    />
+    >
+      {isOver ? (
+        <span className="text-amber-600 text-xs font-semibold">Drop here</span>
+      ) : (
+        <span className="text-blue-300 text-[10px]">
+          {position === 'above' ? '↑ above' : '↓ below'}
+        </span>
+      )}
+    </div>
   );
 }
 
 // ============================================
 // EMPTY COLUMN DROP ZONE
 // ============================================
-function EmptyColumnDropZone({ sectionId, rowId, columnId }) {
+function EmptyColumnDropZone({ sectionId, rowId, columnId, isDraggingWidget }) {
   const { isOver, setNodeRef } = useDroppable({
     id: `empty-${sectionId}-${rowId}-${columnId}`,
     data: {
@@ -145,14 +185,22 @@ function EmptyColumnDropZone({ sectionId, rowId, columnId }) {
   return (
     <div
       ref={setNodeRef}
-      className={`min-h-[100px] border-2 border-dashed rounded-lg flex items-center justify-center transition-all ${
+      className={`min-h-[80px] border-2 border-dashed rounded-lg flex items-center justify-center transition-all ${
         isOver
           ? 'border-amber-500 bg-amber-50'
+          : isDraggingWidget
+          ? 'border-blue-400 bg-blue-50'
           : 'border-gray-300 bg-gray-50 hover:border-gray-400'
       }`}
     >
-      <p className="text-gray-400 text-sm">
-        {isOver ? 'Drop widget here' : 'Drag a widget here'}
+      <p className={`text-sm font-medium ${
+        isOver
+          ? 'text-amber-600'
+          : isDraggingWidget
+          ? 'text-blue-500'
+          : 'text-gray-400'
+      }`}>
+        {isOver ? 'Drop widget here' : isDraggingWidget ? '+ Drop here' : 'Drag a widget here'}
       </p>
     </div>
   );

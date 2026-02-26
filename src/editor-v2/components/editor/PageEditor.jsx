@@ -47,6 +47,7 @@ export default function PageEditor({
   const [isSaving, setIsSaving] = useState(false);
   const [activeId, setActiveId] = useState(null);
   const [draggedWidget, setDraggedWidget] = useState(null);
+  const [isDraggingWidget, setIsDraggingWidget] = useState(false);
 
   // ============================================
   // HISTORY MANAGEMENT
@@ -233,10 +234,13 @@ export default function PageEditor({
   const handleDragStart = (event) => {
     const { active } = event;
     setActiveId(active.id);
-    
+
     // Check if dragging from widget panel (new widget)
     if (active.data?.current?.isNew) {
       setDraggedWidget(active.data.current);
+      setIsDraggingWidget(true);
+    } else if (active.data?.current?.isWidget) {
+      setIsDraggingWidget(true);
     }
   };
 
@@ -244,6 +248,7 @@ export default function PageEditor({
     const { active, over } = event;
     setActiveId(null);
     setDraggedWidget(null);
+    setIsDraggingWidget(false);
 
     if (!over) return;
 
@@ -320,6 +325,7 @@ export default function PageEditor({
   const handleDragCancel = () => {
     setActiveId(null);
     setDraggedWidget(null);
+    setIsDraggingWidget(false);
   };
 
   // ============================================
@@ -555,6 +561,7 @@ export default function PageEditor({
                     isSelected={selectedElement?.type === 'section' && selectedElement?.id === section.id}
                     selectedElement={selectedElement}
                     devicePreview={devicePreview}
+                    isDraggingWidget={isDraggingWidget}
                     onSelect={() => setSelectedElement({ type: 'section', id: section.id })}
                     onSelectWidget={(widgetId, path) =>
                       setSelectedElement({ type: 'widget', id: widgetId, path })

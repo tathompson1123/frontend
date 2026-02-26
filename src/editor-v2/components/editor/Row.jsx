@@ -9,6 +9,7 @@ export default function Row({
   rowIndex,
   selectedElement,
   devicePreview,
+  isDraggingWidget,
   onSelectWidget,
   onUpdateWidget,
 }) {
@@ -37,6 +38,7 @@ export default function Row({
           totalColumns={row.columns.length}
           selectedElement={selectedElement}
           devicePreview={devicePreview}
+          isDraggingWidget={isDraggingWidget}
           onSelectWidget={onSelectWidget}
           onUpdateWidget={onUpdateWidget}
         />

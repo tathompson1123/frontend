@@ -21,6 +21,7 @@ export default function Section({
   isSelected,
   selectedElement,
   devicePreview,
+  isDraggingWidget,
   onSelect,
   onSelectWidget,
   onUpdateWidget,
@@ -247,6 +248,7 @@ export default function Section({
               rowIndex={rowIndex}
               selectedElement={selectedElement}
               devicePreview={devicePreview}
+              isDraggingWidget={isDraggingWidget}
               onSelectWidget={onSelectWidget}
               onUpdateWidget={onUpdateWidget}
             />
