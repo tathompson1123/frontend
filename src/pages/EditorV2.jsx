@@ -447,7 +447,37 @@ const TEMPLATE_DEFINITIONS = {
       ctaText2: { type: 'text', label: 'Secondary Button Text' },
       ctaLink2: { type: 'url', label: 'Secondary Button Link' }
     }
-  }
+  },
+  'lead-magnet-landscaping': {
+    name: 'Landscape Estimator',
+    icon: Zap,
+    category: 'lead-magnet',
+    defaultContent: {
+      headline: 'Get Your Free Landscape Estimate',
+      subheadline: 'Answer 4 quick questions and see your personalized price range instantly.',
+      ctaText: 'See My Estimate',
+    },
+    fields: {
+      headline: { type: 'text', label: 'Headline' },
+      subheadline: { type: 'textarea', label: 'Subheadline' },
+      ctaText: { type: 'text', label: 'CTA Button Text' },
+    }
+  },
+  'lead-magnet-auto-wrap': {
+    name: 'Vehicle Wrap Designer',
+    icon: Zap,
+    category: 'lead-magnet',
+    defaultContent: {
+      headline: 'Design Your Vehicle Wrap',
+      subheadline: 'Get an instant price estimate in under 2 minutes.',
+      ctaText: 'Get My Estimate',
+    },
+    fields: {
+      headline: { type: 'text', label: 'Headline' },
+      subheadline: { type: 'textarea', label: 'Subheadline' },
+      ctaText: { type: 'text', label: 'CTA Button Text' },
+    }
+  },
 };
 
 // Available templates for adding new sections
@@ -464,7 +494,9 @@ const AVAILABLE_TEMPLATES = [
   { id: 'cta-gradient-full', category: 'CTA' },
   { id: 'content-block', category: 'Content' },
   { id: 'contact-split', category: 'Contact' },
-  { id: 'footer-4col-dark', category: 'Footer' }
+  { id: 'footer-4col-dark', category: 'Footer' },
+  { id: 'lead-magnet-landscaping', category: 'Lead Magnets' },
+  { id: 'lead-magnet-auto-wrap', category: 'Lead Magnets' },
 ];
 
 // ============================================
@@ -1187,10 +1219,11 @@ export default function EditorV2() {
   const addSection = useCallback((templateId) => {
     if (!templateId) return;
 
+    const def = TEMPLATE_DEFINITIONS[templateId];
     const newSection = {
       id: `s${Date.now()}`,
       template: templateId,
-      content: {}
+      content: def?.defaultContent ? { ...def.defaultContent } : {}
     };
 
     const currentSecs = pageData?.multiPage ? pageData.pages[activeEditorPage]?.sections : pageData?.sections;
