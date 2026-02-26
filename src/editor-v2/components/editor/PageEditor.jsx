@@ -1,38 +1,45 @@
 import { useState, useCallback, useEffect } from 'react';
 import { DndContext, DragOverlay, closestCenter, pointerWithin, rectIntersection } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { 
-  ArrowLeft, 
-  Monitor, 
-  Tablet, 
-  Smartphone, 
-  Save, 
-  Eye, 
-  Undo2, 
+import {
+  ArrowLeft,
+  Monitor,
+  Tablet,
+  Smartphone,
+  Save,
+  Eye,
+  Undo2,
   Redo2,
   Plus,
   Layers,
   Settings,
-  PanelLeft
+  PanelLeft,
+  ChevronDown,
+  ChevronRight,
+  FilePlus,
+  Navigation,
 } from 'lucide-react';
 
 import Section from './Section';
 import WidgetPanel from './Sidebar/WidgetPanel';
 import SectionPanel from './Sidebar/SectionPanel';
 import StylePanel from './Sidebar/StylePanel';
+import NewPagePanel from './Sidebar/NewPagePanel';
+import NavbarPanel, { defaultNavbar } from './Sidebar/NavbarPanel';
 import WidgetRenderer from './WidgetRenderer';
 import { createWidget, createSection, SECTION_TEMPLATES } from '../../utils/schema';
 
 // ============================================
 // MAIN PAGE EDITOR COMPONENT
 // ============================================
-export default function PageEditor({ 
-  initialData, 
-  onSave, 
+export default function PageEditor({
+  initialData,
+  onSave,
   onBack,
+  onAddPage,
   pages = [],
   currentPageId,
-  onPageChange 
+  onPageChange,
 }) {
   // ============================================
   // STATE
@@ -40,7 +47,7 @@ export default function PageEditor({
   const [pageData, setPageData] = useState(initialData || { sections: [] });
   const [selectedElement, setSelectedElement] = useState(null); // { type: 'widget'|'section'|'row'|'column', id: string, path: object }
   const [devicePreview, setDevicePreview] = useState('desktop');
-  const [sidebarTab, setSidebarTab] = useState('widgets'); // 'widgets', 'sections', 'style', 'settings'
+  const [openCard, setOpenCard] = useState('sections'); // which accordion card is open
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [history, setHistory] = useState([initialData || { sections: [] }]);
   const [historyIndex, setHistoryIndex] = useState(0);
@@ -125,6 +132,19 @@ export default function PageEditor({
       return newData;
     });
   }, [updatePageData]);
+
+  // Update navbar
+  const updateNavbar = useCallback((updates) => {
+    updatePageData((prev) => ({
+      ...prev,
+      navbar: { ...(prev.navbar || defaultNavbar()), ...updates },
+    }));
+  }, [updatePageData]);
+
+  // Auto-open style card when something is selected
+  useEffect(() => {
+    if (selectedElement) setOpenCard('style');
+  }, [selectedElement]);
 
   // Update a section
   const updateSection = useCallback((sectionId, updates) => {
@@ -278,7 +298,7 @@ export default function PageEditor({
         id: newWidget.id,
         path: { sectionId, rowId, columnId },
       });
-      setSidebarTab('style');
+      setOpenCard('style');
     }
 
     // Handle reordering existing widgets
@@ -470,48 +490,65 @@ export default function PageEditor({
           {/* ============================================ */}
           {isSidebarOpen && (
             <aside className="w-72 bg-white border-r border-gray-200 flex flex-col">
-              {/* Sidebar Tabs */}
-              <div className="flex border-b border-gray-200">
-                <button
-                  onClick={() => setSidebarTab('widgets')}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition ${
-                    sidebarTab === 'widgets'
-                      ? 'text-amber-600 border-b-2 border-amber-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <Plus className="w-4 h-4 mx-auto mb-1" />
-                  Widgets
-                </button>
-                <button
-                  onClick={() => setSidebarTab('sections')}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition ${
-                    sidebarTab === 'sections'
-                      ? 'text-amber-600 border-b-2 border-amber-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <Layers className="w-4 h-4 mx-auto mb-1" />
-                  Sections
-                </button>
-                <button
-                  onClick={() => setSidebarTab('style')}
-                  className={`flex-1 px-4 py-3 text-sm font-medium transition ${
-                    sidebarTab === 'style'
-                      ? 'text-amber-600 border-b-2 border-amber-600'
-                      : 'text-gray-500 hover:text-gray-700'
-                  }`}
-                >
-                  <Settings className="w-4 h-4 mx-auto mb-1" />
-                  Style
-                </button>
-              </div>
+              {/* Accordion Card Sidebar */}
+              <div className="flex-1 overflow-y-auto divide-y divide-gray-100">
 
-              {/* Sidebar Content */}
-              <div className="flex-1 overflow-y-auto">
-                {sidebarTab === 'widgets' && <WidgetPanel />}
-                {sidebarTab === 'sections' && <SectionPanel onAddSection={addSection} />}
-                {sidebarTab === 'style' && (
+                {/* SECTIONS CARD */}
+                <SidebarCard
+                  id="sections"
+                  label="Sections"
+                  icon={<Layers className="w-4 h-4" />}
+                  openCard={openCard}
+                  onToggle={setOpenCard}
+                >
+                  <SectionPanel onAddSection={addSection} />
+                </SidebarCard>
+
+                {/* WIDGETS CARD */}
+                <SidebarCard
+                  id="widgets"
+                  label="Widgets"
+                  icon={<Plus className="w-4 h-4" />}
+                  openCard={openCard}
+                  onToggle={setOpenCard}
+                >
+                  <WidgetPanel />
+                </SidebarCard>
+
+                {/* NEW PAGE CARD */}
+                <SidebarCard
+                  id="new-page"
+                  label="New Page"
+                  icon={<FilePlus className="w-4 h-4" />}
+                  openCard={openCard}
+                  onToggle={setOpenCard}
+                >
+                  <NewPagePanel onAddPage={onAddPage} />
+                </SidebarCard>
+
+                {/* NAVIGATION CARD */}
+                <SidebarCard
+                  id="navigation"
+                  label="Navigation"
+                  icon={<Navigation className="w-4 h-4" />}
+                  openCard={openCard}
+                  onToggle={setOpenCard}
+                >
+                  <NavbarPanel
+                    navbar={pageData.navbar}
+                    onUpdate={updateNavbar}
+                  />
+                </SidebarCard>
+
+                {/* STYLE CARD — auto-opens on element selection */}
+                <SidebarCard
+                  id="style"
+                  label="Style"
+                  icon={<Settings className="w-4 h-4" />}
+                  openCard={openCard}
+                  onToggle={setOpenCard}
+                  badge={selectedElement ? '●' : null}
+                >
                   <StylePanel
                     selectedElement={selectedElement}
                     pageData={pageData}
@@ -520,7 +557,8 @@ export default function PageEditor({
                     onDeleteWidget={deleteWidget}
                     onDuplicateWidget={duplicateWidget}
                   />
-                )}
+                </SidebarCard>
+
               </div>
             </aside>
           )}
@@ -623,5 +661,45 @@ export default function PageEditor({
         )}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+// ============================================
+// SIDEBAR CARD (accordion item)
+// ============================================
+function SidebarCard({ id, label, icon, openCard, onToggle, badge, children }) {
+  const isOpen = openCard === id;
+
+  return (
+    <div>
+      {/* Card Header */}
+      <button
+        onClick={() => onToggle(isOpen ? null : id)}
+        className={`w-full flex items-center justify-between px-4 py-3 text-sm font-semibold transition-colors ${
+          isOpen
+            ? 'bg-amber-50 text-amber-700'
+            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <span className={isOpen ? 'text-amber-600' : 'text-gray-400'}>{icon}</span>
+          {label}
+          {badge && (
+            <span className="text-amber-500 text-xs leading-none">{badge}</span>
+          )}
+        </div>
+        {isOpen
+          ? <ChevronDown className="w-4 h-4 text-amber-500" />
+          : <ChevronRight className="w-4 h-4 text-gray-400" />
+        }
+      </button>
+
+      {/* Card Body */}
+      {isOpen && (
+        <div className="border-t border-gray-100">
+          {children}
+        </div>
+      )}
+    </div>
   );
 }

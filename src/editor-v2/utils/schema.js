@@ -250,6 +250,23 @@ export const createSection = (type = 'content') => ({
 });
 
 // ============================================
+// CREATE NAVBAR
+// ============================================
+export const createNavbar = () => ({
+  logo: 'My Brand',
+  backgroundColor: '#ffffff',
+  textColor: '#111827',
+  ctaColor: '#d97706',
+  sticky: true,
+  links: [
+    { id: generateId(), label: 'Home', href: '#', highlighted: false },
+    { id: generateId(), label: 'About', href: '#about', highlighted: false },
+    { id: generateId(), label: 'Services', href: '#services', highlighted: false },
+    { id: generateId(), label: 'Contact', href: '#contact', highlighted: true },
+  ],
+});
+
+// ============================================
 // CREATE NEW PAGE
 // ============================================
 export const createPage = (name = 'New Page', slug = 'new-page') => ({
@@ -258,6 +275,7 @@ export const createPage = (name = 'New Page', slug = 'new-page') => ({
   slug,
   title: name,
   description: '',
+  navbar: createNavbar(),
   sections: [],
   settings: {
     favicon: '',

@@ -6,12 +6,13 @@
 export function renderPageToHtml(pageData, options = {}) {
   const { includeDoctype = true, includeHead = true } = options;
 
+  const navbarHtml = pageData.navbar ? renderNavbar(pageData.navbar) : '';
   const sectionsHtml = pageData.sections
     .map((section) => renderSection(section))
     .join('\n');
 
   if (!includeHead) {
-    return sectionsHtml;
+    return (navbarHtml ? navbarHtml + '\n' : '') + sectionsHtml;
   }
 
   const html = `
@@ -29,12 +30,47 @@ export function renderPageToHtml(pageData, options = {}) {
   </style>
 </head>
 <body>
+  ${navbarHtml}
   ${sectionsHtml}
 </body>
 </html>
   `.trim();
 
   return html;
+}
+
+// ============================================
+// RENDER NAVBAR
+// ============================================
+function renderNavbar(navbar) {
+  const {
+    logo = 'My Brand',
+    backgroundColor = '#ffffff',
+    textColor = '#111827',
+    ctaColor = '#d97706',
+    sticky = true,
+    links = [],
+  } = navbar;
+
+  const positionStyle = sticky ? 'position: sticky; top: 0; z-index: 1000;' : '';
+
+  const linksHtml = links
+    .map((link) => {
+      if (link.highlighted) {
+        return `<a href="${escapeHtml(link.href || '#')}" style="display: inline-block; padding: 8px 20px; background-color: ${ctaColor}; color: #ffffff; border-radius: 6px; font-weight: 600; font-size: 14px; text-decoration: none;">${escapeHtml(link.label)}</a>`;
+      }
+      return `<a href="${escapeHtml(link.href || '#')}" style="color: ${textColor}; font-size: 14px; font-weight: 500; text-decoration: none; opacity: 0.85; transition: opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.85">${escapeHtml(link.label)}</a>`;
+    })
+    .join('\n    ');
+
+  return `
+<nav style="background-color: ${backgroundColor}; ${positionStyle} padding: 0 32px; height: 64px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 3px rgba(0,0,0,0.08);">
+  <div style="font-weight: 700; font-size: 20px; color: ${textColor};">${escapeHtml(logo)}</div>
+  <div style="display: flex; align-items: center; gap: 28px;">
+    ${linksHtml}
+  </div>
+</nav>
+  `.trim();
 }
 
 // ============================================
