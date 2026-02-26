@@ -2,6 +2,33 @@ import { useState } from 'react';
 import { Trash2, Copy, ChevronDown, ChevronRight } from 'lucide-react';
 
 // ============================================
+// OVERLAY HELPERS
+// Parse/build rgba strings
+// ============================================
+function parseOverlay(overlay) {
+  if (!overlay) return { color: '#000000', opacity: 0 };
+  const m = overlay.match(/rgba?\(\s*(\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (m) {
+    const r = parseInt(m[1]);
+    const g = parseInt(m[2]);
+    const b = parseInt(m[3]);
+    const a = m[4] !== undefined ? parseFloat(m[4]) : 1;
+    const hex = '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('');
+    return { color: hex, opacity: a };
+  }
+  if (overlay.startsWith('#')) return { color: overlay, opacity: 0.5 };
+  return { color: '#000000', opacity: 0 };
+}
+
+function buildOverlay(color, opacity) {
+  if (!opacity || opacity <= 0) return '';
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${Math.round(opacity * 100) / 100})`;
+}
+
+// ============================================
 // STYLE PANEL
 // Edit styles for selected element
 // ============================================
@@ -104,6 +131,15 @@ function SectionStylePanel({ section, onUpdate }) {
     });
   };
 
+  // Overlay state derived from current overlay string
+  const { color: overlayColor, opacity: overlayOpacity } = parseOverlay(
+    section.background?.overlay
+  );
+
+  const handleOverlayChange = (color, opacity) => {
+    updateBackground('overlay', buildOverlay(color, opacity));
+  };
+
   return (
     <div className="divide-y divide-gray-200">
       {/* Background */}
@@ -113,6 +149,7 @@ function SectionStylePanel({ section, onUpdate }) {
         onToggle={() => toggleSection('background')}
       >
         <div className="space-y-3">
+          {/* Background type */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Type</label>
             <select
@@ -126,6 +163,7 @@ function SectionStylePanel({ section, onUpdate }) {
             </select>
           </div>
 
+          {/* Solid color */}
           {section.background?.type === 'color' && (
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Color</label>
@@ -146,42 +184,120 @@ function SectionStylePanel({ section, onUpdate }) {
             </div>
           )}
 
+          {/* Gradient */}
           {section.background?.type === 'gradient' && (
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Gradient</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Gradient CSS</label>
               <input
                 type="text"
                 value={section.background?.value || ''}
                 onChange={(e) => updateBackground('value', e.target.value)}
                 placeholder="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm font-mono"
               />
             </div>
           )}
 
+          {/* Image */}
           {section.background?.type === 'image' && (
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
-              <input
-                type="text"
-                value={section.background?.value || ''}
-                onChange={(e) => updateBackground('value', e.target.value)}
-                placeholder="https://..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-              />
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
+                <input
+                  type="text"
+                  value={section.background?.value || ''}
+                  onChange={(e) => updateBackground('value', e.target.value)}
+                  placeholder="https://images.unsplash.com/..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                />
+                {/* Preview thumbnail */}
+                {section.background?.value && (
+                  <div
+                    className="mt-2 w-full h-16 rounded-lg border border-gray-200 bg-cover bg-center"
+                    style={{ backgroundImage: `url("${section.background.value}")` }}
+                  />
+                )}
+              </div>
+
+              {/* Image position */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Image Position</label>
+                <div className="grid grid-cols-3 gap-1">
+                  {[
+                    ['top left', '↖'], ['top center', '↑'], ['top right', '↗'],
+                    ['center left', '←'], ['center center', '⊙'], ['center right', '→'],
+                    ['bottom left', '↙'], ['bottom center', '↓'], ['bottom right', '↘'],
+                  ].map(([pos, icon]) => (
+                    <button
+                      key={pos}
+                      onClick={() => updateBackground('backgroundPosition', pos)}
+                      title={pos}
+                      className={`py-1.5 rounded text-sm transition ${
+                        (section.background?.backgroundPosition || 'center center') === pos
+                          ? 'bg-amber-500 text-white'
+                          : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+                      }`}
+                    >
+                      {icon}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Overlay</label>
-            <input
-              type="text"
-              value={section.background?.overlay || ''}
-              onChange={(e) => updateBackground('overlay', e.target.value)}
-              placeholder="rgba(0,0,0,0.5)"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-            />
-          </div>
+          {/* Overlay — shown for image and gradient */}
+          {(section.background?.type === 'image' || section.background?.type === 'gradient') && (
+            <div className="space-y-2 pt-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-gray-600">Overlay</label>
+                <span className="text-xs text-gray-400">
+                  {overlayOpacity > 0 ? `${Math.round(overlayOpacity * 100)}% opacity` : 'Off'}
+                </span>
+              </div>
+
+              {/* Opacity slider */}
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-gray-400">0%</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={overlayOpacity}
+                  onChange={(e) =>
+                    handleOverlayChange(overlayColor, parseFloat(e.target.value))
+                  }
+                  className="flex-1 accent-amber-500"
+                />
+                <span className="text-[10px] text-gray-400">100%</span>
+              </div>
+
+              {/* Overlay color (only visible when opacity > 0) */}
+              {overlayOpacity > 0 && (
+                <div className="flex items-center gap-2">
+                  <label className="text-xs text-gray-500 w-20">Tint color</label>
+                  <input
+                    type="color"
+                    value={overlayColor}
+                    onChange={(e) => handleOverlayChange(e.target.value, overlayOpacity)}
+                    className="w-8 h-8 rounded border border-gray-300 cursor-pointer p-0.5"
+                  />
+                  <span className="text-xs text-gray-400 font-mono">{overlayColor}</span>
+                </div>
+              )}
+
+              {/* Visual preview strip */}
+              {overlayOpacity > 0 && (
+                <div
+                  className="w-full h-3 rounded-full"
+                  style={{
+                    background: `linear-gradient(to right, transparent, ${buildOverlay(overlayColor, overlayOpacity)})`,
+                  }}
+                />
+              )}
+            </div>
+          )}
         </div>
       </CollapsibleSection>
 

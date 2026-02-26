@@ -65,9 +65,10 @@ export default function Section({
         return { background: bg.value };
       case 'image':
         return {
-          backgroundImage: `url(${bg.value})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
+          backgroundImage: `url("${bg.value}")`,
+          backgroundSize: bg.backgroundSize || 'cover',
+          backgroundPosition: bg.backgroundPosition || 'center center',
+          backgroundRepeat: 'no-repeat',
         };
       case 'video':
         return {}; // Video is handled separately
