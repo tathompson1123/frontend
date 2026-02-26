@@ -16,9 +16,11 @@ export {
   createRow,
   createSection,
   createPage,
+  createPageEntry,
+  createSite,
   getDefaultWidgetContent,
   getDefaultWidgetStyle,
 } from './utils/schema';
 
 // HTML Renderer
-export { renderPageToHtml } from './utils/htmlRenderer';
+export { renderPageToHtml, renderSiteToHtml } from './utils/htmlRenderer';

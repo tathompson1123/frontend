@@ -3,6 +3,31 @@
 // Converts JSON schema to static HTML for publishing
 // ============================================
 
+// ============================================
+// RENDER MULTI-PAGE SITE TO HTML MAP
+// Returns { 'index.html': html, 'services.html': html, ... }
+// ============================================
+export function renderSiteToHtml(siteData) {
+  if (!siteData?.multiPage || !Array.isArray(siteData.pages)) {
+    // Single-page fallback
+    return { 'index.html': renderPageToHtml(siteData) };
+  }
+
+  const result = {};
+  siteData.pages.forEach((page) => {
+    const pageForRender = {
+      ...page,
+      navbar: siteData.navbar, // shared navbar
+      title: page.title || page.name,
+      description: page.description || '',
+      settings: siteData.settings || {},
+    };
+    const filename = page.filename || `${page.slug || page.name.toLowerCase().replace(/\s+/g, '-')}.html`;
+    result[filename] = renderPageToHtml(pageForRender);
+  });
+  return result;
+}
+
 export function renderPageToHtml(pageData, options = {}) {
   const { includeDoctype = true, includeHead = true } = options;
 

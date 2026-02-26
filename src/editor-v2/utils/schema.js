@@ -284,6 +284,30 @@ export const createPage = (name = 'New Page', slug = 'new-page') => ({
 });
 
 // ============================================
+// CREATE A PAGE ENTRY (for multi-page sites)
+// ============================================
+export const createPageEntry = (name = 'New Page', slug = 'new-page') => ({
+  id: generateId(),
+  name,
+  slug,
+  filename: `${slug}.html`,
+  title: name,
+  description: '',
+  sections: [],
+});
+
+// ============================================
+// CREATE A MULTI-PAGE SITE
+// ============================================
+export const createSite = () => ({
+  id: generateId(),
+  multiPage: true,
+  navbar: createNavbar(),
+  pages: [{ ...createPageEntry('Home', 'home'), filename: 'index.html' }],
+  settings: { favicon: '', ogImage: '' },
+});
+
+// ============================================
 // SECTION TEMPLATES
 // ============================================
 export const SECTION_TEMPLATES = {
