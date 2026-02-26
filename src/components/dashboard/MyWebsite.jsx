@@ -277,26 +277,15 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         {subTab === 'website' && (
           <div className="flex gap-3">
             {currentWebsite && (
-              <>
-                <button
-                  type="button"
-                  onClick={() => navigate('/editor-v2')}
-                  className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl hover:from-amber-700 hover:to-blue-700 hover:scale-105 transition-all duration-300 flex items-center gap-2"
-                >
-                  <Edit className="w-4 h-4" />
-                  Edit Website
-                </button>
-
-                {/* Smart Publish Button */}
-                <button
-                  onClick={publishBtn.onClick}
-                  disabled={publishBtn.disabled}
-                  className={`px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${publishBtn.className}`}
-                >
-                  <PublishIcon className="w-4 h-4" />
-                  {publishBtn.label}
-                </button>
-              </>
+              /* Smart Publish Button */
+              <button
+                onClick={publishBtn.onClick}
+                disabled={publishBtn.disabled}
+                className={`px-6 py-2 rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 ${publishBtn.className}`}
+              >
+                <PublishIcon className="w-4 h-4" />
+                {publishBtn.label}
+              </button>
             )}
             <button
               type="button"
@@ -391,6 +380,14 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 >
                   <Smartphone className="w-4 h-4" />
                   <span className="hidden sm:inline">Mobile</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/editor-v2')}
+                  className="px-3 py-1.5 rounded text-sm flex items-center gap-1 bg-amber-600 text-white hover:bg-amber-700 transition"
+                >
+                  <Edit className="w-4 h-4" />
+                  <span className="hidden sm:inline">Edit</span>
                 </button>
               </div>
             </div>
