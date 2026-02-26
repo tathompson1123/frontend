@@ -976,6 +976,7 @@ function SectionCard({ section, index, isSelected, onSelect, onMoveUp, onMoveDow
         </div>
         <div className="flex items-center gap-1">
           <button
+            title="Move section up"
             onClick={(e) => { e.stopPropagation(); onMoveUp(); }}
             disabled={index === 0}
             className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded"
@@ -983,6 +984,7 @@ function SectionCard({ section, index, isSelected, onSelect, onMoveUp, onMoveDow
             <ChevronUp className="w-4 h-4" />
           </button>
           <button
+            title="Move section down"
             onClick={(e) => { e.stopPropagation(); onMoveDown(); }}
             disabled={index === totalSections - 1}
             className="p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-30 rounded"
@@ -990,6 +992,7 @@ function SectionCard({ section, index, isSelected, onSelect, onMoveUp, onMoveDow
             <ChevronDown className="w-4 h-4" />
           </button>
           <button
+            title="Delete section"
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="p-1.5 text-gray-400 hover:text-red-600 rounded"
           >
@@ -1088,6 +1091,8 @@ export default function EditorV2() {
   const [reviewStarFilter, setReviewStarFilter] = useState('above'); // 'above' = 4+ stars, 'below' = under 4 stars
   const [activeEditorPage, setActiveEditorPage] = useState(0);
   const [allPagesHtml, setAllPagesHtml] = useState(null);
+  const [showAddPage, setShowAddPage] = useState(false);
+  const [newPageName, setNewPageName] = useState('');
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -1212,6 +1217,49 @@ export default function EditorV2() {
 
     setSelectedSectionIndex(null);
   }, [activeEditorPage]);
+
+  // ============================================
+  // ADD / DELETE PAGE
+  // ============================================
+  const handleAddPage = useCallback(() => {
+    const name = newPageName.trim();
+    if (!name) return;
+    const filename = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '.html';
+
+    setPageData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev));
+      // Convert single-page to multi-page if needed
+      if (!newData.multiPage) {
+        newData.multiPage = true;
+        newData.pages = [{ filename: 'index.html', meta: newData.meta || {}, sections: newData.sections || [] }];
+        delete newData.sections;
+      }
+      if (newData.pages.some(p => p.filename === filename)) return prev; // duplicate
+      newData.pages.push({ filename, meta: { title: name, description: '' }, sections: [] });
+      return newData;
+    });
+
+    setActiveEditorPage((pageData?.pages?.length || 1));
+    setSelectedSectionIndex(null);
+    setIsEditingSection(false);
+    setNewPageName('');
+    setShowAddPage(false);
+  }, [newPageName, pageData]);
+
+  const handleDeletePage = useCallback((i) => {
+    const page = pageData?.pages?.[i];
+    if (!page || page.filename === 'index.html') return;
+    if (!confirm(`Delete the "${page.filename.replace('.html', '')}" page? This cannot be undone.`)) return;
+
+    setPageData(prev => {
+      const newData = JSON.parse(JSON.stringify(prev));
+      newData.pages.splice(i, 1);
+      return newData;
+    });
+    setActiveEditorPage(prev => (prev >= i ? Math.max(0, prev - 1) : prev));
+    setSelectedSectionIndex(null);
+    setIsEditingSection(false);
+  }, [pageData]);
 
   // ============================================
   // ADD SECTION
@@ -1453,6 +1501,7 @@ export default function EditorV2() {
         {/* Device Preview */}
         <div className="flex items-center gap-2 bg-gray-100 p-1 rounded-lg">
           <button
+            title="Desktop preview"
             onClick={() => setDevicePreview('desktop')}
             className={`p-2 rounded-md transition ${
               devicePreview === 'desktop'
@@ -1463,6 +1512,7 @@ export default function EditorV2() {
             <Monitor className="w-5 h-5" />
           </button>
           <button
+            title="Tablet preview"
             onClick={() => setDevicePreview('tablet')}
             className={`p-2 rounded-md transition ${
               devicePreview === 'tablet'
@@ -1473,6 +1523,7 @@ export default function EditorV2() {
             <Tablet className="w-5 h-5" />
           </button>
           <button
+            title="Mobile preview"
             onClick={() => setDevicePreview('mobile')}
             className={`p-2 rounded-md transition ${
               devicePreview === 'mobile'
@@ -1524,20 +1575,91 @@ export default function EditorV2() {
               {/* Page tabs for multi-page schemas */}
               {pageData?.multiPage && (
                 <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-                  <p className="text-xs font-semibold text-gray-500 uppercase mb-1.5">Page</p>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="text-xs font-semibold text-gray-500 uppercase">Pages</p>
+                    <button
+                      title="Add new page"
+                      onClick={() => { setShowAddPage(v => !v); setNewPageName(''); }}
+                      className="w-5 h-5 flex items-center justify-center rounded bg-amber-100 text-amber-700 hover:bg-amber-200 transition"
+                    >
+                      <Plus className="w-3 h-3" />
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-1">
                     {pageData.pages.map((page, i) => (
-                      <button
-                        key={i}
-                        onClick={() => { setActiveEditorPage(i); setSelectedSectionIndex(null); setIsEditingSection(false); }}
-                        className={`px-2 py-1 text-xs rounded font-medium capitalize ${
-                          activeEditorPage === i ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                        }`}
-                      >
-                        {(page.filename || `page-${i + 1}`).replace('.html', '')}
-                      </button>
+                      <div key={i} className={`flex items-center gap-0.5 rounded text-xs font-medium ${activeEditorPage === i ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-700'}`}>
+                        <button
+                          onClick={() => { setActiveEditorPage(i); setSelectedSectionIndex(null); setIsEditingSection(false); }}
+                          className="px-2 py-1 capitalize"
+                        >
+                          {(page.filename || `page-${i + 1}`).replace('.html', '')}
+                        </button>
+                        {page.filename !== 'index.html' && (
+                          <button
+                            title={`Delete ${page.filename.replace('.html', '')} page`}
+                            onClick={() => handleDeletePage(i)}
+                            className={`pr-1.5 opacity-60 hover:opacity-100 transition ${activeEditorPage === i ? 'text-white' : 'text-gray-500'}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        )}
+                      </div>
                     ))}
                   </div>
+                  {showAddPage && (
+                    <div className="mt-2 flex items-center gap-1">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={newPageName}
+                        onChange={e => setNewPageName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleAddPage(); if (e.key === 'Escape') setShowAddPage(false); }}
+                        placeholder="Page name (e.g. About)"
+                        className="flex-1 text-xs px-2 py-1 border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                      />
+                      <button
+                        onClick={handleAddPage}
+                        disabled={!newPageName.trim()}
+                        className="text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-40 transition"
+                      >
+                        Add
+                      </button>
+                      <button
+                        onClick={() => setShowAddPage(false)}
+                        className="text-xs px-1.5 py-1 text-gray-500 hover:bg-gray-200 rounded transition"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Add page option for single-page sites */}
+              {!pageData?.multiPage && (
+                <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
+                  {!showAddPage ? (
+                    <button
+                      onClick={() => { setShowAddPage(true); setNewPageName(''); }}
+                      className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-amber-600 hover:bg-amber-50 py-1.5 rounded transition"
+                    >
+                      <Plus className="w-3 h-3" /> Add Another Page
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-1">
+                      <input
+                        autoFocus
+                        type="text"
+                        value={newPageName}
+                        onChange={e => setNewPageName(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') handleAddPage(); if (e.key === 'Escape') setShowAddPage(false); }}
+                        placeholder="Page name (e.g. About)"
+                        className="flex-1 text-xs px-2 py-1 border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                      />
+                      <button onClick={handleAddPage} disabled={!newPageName.trim()} className="text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-40 transition">Add</button>
+                      <button onClick={() => setShowAddPage(false)} className="text-xs px-1.5 py-1 text-gray-500 hover:bg-gray-200 rounded transition"><X className="w-3 h-3" /></button>
+                    </div>
+                  )}
                 </div>
               )}
 
