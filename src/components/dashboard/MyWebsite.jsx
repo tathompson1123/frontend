@@ -364,7 +364,16 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   </span>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/editor-v2')}
+                  className="px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md hover:from-amber-600 hover:to-amber-700 hover:shadow-lg transition-all"
+                >
+                  <Edit className="w-4 h-4" />
+                  Edit Website
+                </button>
+                <div className="w-px h-5 bg-gray-300" />
                 <button
                   type="button"
                   onClick={() => setDevicePreview('desktop')}
@@ -380,14 +389,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 >
                   <Smartphone className="w-4 h-4" />
                   <span className="hidden sm:inline">Mobile</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/editor-v2')}
-                  className="px-3 py-1.5 rounded text-sm flex items-center gap-1 bg-amber-600 text-white hover:bg-amber-700 transition"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span className="hidden sm:inline">Edit</span>
                 </button>
               </div>
             </div>
