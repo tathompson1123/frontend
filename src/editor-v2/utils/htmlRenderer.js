@@ -21,6 +21,7 @@ export function renderSiteToHtml(siteData) {
       title: page.title || page.name,
       description: page.description || '',
       settings: siteData.settings || {},
+      theme: siteData.theme || null,
     };
     const filename = page.filename || `${page.slug || page.name.toLowerCase().replace(/\s+/g, '-')}.html`;
     result[filename] = renderPageToHtml(pageForRender);
@@ -30,15 +31,24 @@ export function renderSiteToHtml(siteData) {
 
 export function renderPageToHtml(pageData, options = {}) {
   const { includeDoctype = true, includeHead = true } = options;
+  const theme = pageData.theme || {};
+  const ctx = { theme };
 
   const navbarHtml = pageData.navbar ? renderNavbar(pageData.navbar) : '';
   const sectionsHtml = pageData.sections
-    .map((section) => renderSection(section))
+    .map((section) => renderSection(section, ctx))
     .join('\n');
 
   if (!includeHead) {
     return (navbarHtml ? navbarHtml + '\n' : '') + sectionsHtml;
   }
+
+  // Google Fonts injection
+  const fontLinkHtml = theme.fontImport
+    ? `<link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="${theme.fontImport}">`
+    : '';
 
   const html = `
 <!DOCTYPE html>
@@ -50,8 +60,9 @@ export function renderPageToHtml(pageData, options = {}) {
   <meta name="description" content="${pageData.description || ''}">
   ${pageData.settings?.favicon ? `<link rel="icon" href="${pageData.settings.favicon}">` : ''}
   ${pageData.settings?.ogImage ? `<meta property="og:image" content="${pageData.settings.ogImage}">` : ''}
+  ${fontLinkHtml}
   <style>
-    ${getBaseStyles()}
+    ${getBaseStyles(theme)}
   </style>
 </head>
 <body>
@@ -101,7 +112,7 @@ function renderNavbar(navbar) {
 // ============================================
 // RENDER SECTION
 // ============================================
-function renderSection(section) {
+function renderSection(section, ctx) {
   const bgStyle = getBackgroundStyle(section.background);
   const sectionStyle = {
     ...bgStyle,
@@ -113,7 +124,7 @@ function renderSection(section) {
   };
 
   const styleAttr = objectToStyleString(sectionStyle);
-  const rowsHtml = section.rows?.map((row) => renderRow(row)).join('\n') || '';
+  const rowsHtml = section.rows?.map((row) => renderRow(row, ctx)).join('\n') || '';
 
   // Overlay div if needed
   const overlayHtml = section.background?.overlay
@@ -133,7 +144,7 @@ function renderSection(section) {
 // ============================================
 // RENDER ROW
 // ============================================
-function renderRow(row) {
+function renderRow(row, ctx) {
   const rowStyle = {
     display: 'flex',
     flexWrap: 'wrap',
@@ -143,7 +154,7 @@ function renderRow(row) {
     padding: row.style?.padding || '20px 0',
   };
 
-  const columnsHtml = row.columns?.map((col) => renderColumn(col, row.columns.length)).join('\n') || '';
+  const columnsHtml = row.columns?.map((col) => renderColumn(col, row.columns.length, ctx)).join('\n') || '';
 
   return `
 <div class="row" style="${objectToStyleString(rowStyle)}">
@@ -155,7 +166,7 @@ function renderRow(row) {
 // ============================================
 // RENDER COLUMN
 // ============================================
-function renderColumn(column, totalColumns) {
+function renderColumn(column, totalColumns, ctx) {
   const colStyle = {
     width: column.width || `${100 / totalColumns}%`,
     minWidth: '0',
@@ -164,7 +175,7 @@ function renderColumn(column, totalColumns) {
     flexDirection: 'column',
   };
 
-  const widgetsHtml = column.widgets?.map((w) => renderWidget(w)).join('\n') || '';
+  const widgetsHtml = column.widgets?.map((w) => renderWidget(w, ctx)).join('\n') || '';
 
   return `
 <div class="column" style="${objectToStyleString(colStyle)}">
@@ -176,7 +187,7 @@ function renderColumn(column, totalColumns) {
 // ============================================
 // RENDER WIDGET
 // ============================================
-function renderWidget(widget) {
+function renderWidget(widget, ctx) {
   switch (widget.type) {
     case 'text':
       return renderTextWidget(widget);
@@ -185,15 +196,15 @@ function renderWidget(widget) {
     case 'video':
       return renderVideoWidget(widget);
     case 'button':
-      return renderButtonWidget(widget);
+      return renderButtonWidget(widget, ctx);
     case 'button-group':
-      return renderButtonGroupWidget(widget);
+      return renderButtonGroupWidget(widget, ctx);
     case 'spacer':
       return renderSpacerWidget(widget);
     case 'divider':
       return renderDividerWidget(widget);
     case 'form':
-      return renderFormWidget(widget);
+      return renderFormWidget(widget, ctx);
     case 'testimonial':
       return renderTestimonialWidget(widget);
     case 'html':
@@ -278,9 +289,11 @@ function renderVideoWidget(widget) {
   `.trim();
 }
 
-function renderButtonWidget(widget) {
+function renderButtonWidget(widget, ctx) {
   const content = widget.content || {};
   const style = widget.style || {};
+  const primaryColor = content.primaryColor || ctx?.theme?.primaryColor || '#8b5cf6';
+  const buttonRadius = ctx?.theme?.buttonRadius || style.borderRadius || '8px';
 
   const btnStyle = {
     display: 'inline-flex',
@@ -289,12 +302,12 @@ function renderButtonWidget(widget) {
     padding: style.padding || '12px 24px',
     fontSize: style.fontSize || '16px',
     fontWeight: style.fontWeight || '600',
-    borderRadius: style.borderRadius || '8px',
+    borderRadius: buttonRadius,
     textDecoration: 'none',
     cursor: 'pointer',
-    border: content.style === 'outline' ? `2px solid ${style.borderColor || '#8b5cf6'}` : 'none',
-    backgroundColor: content.style === 'outline' ? 'transparent' : (style.backgroundColor || '#8b5cf6'),
-    color: style.color || (content.style === 'outline' ? '#8b5cf6' : '#ffffff'),
+    border: content.style === 'outline' ? `2px solid ${primaryColor}` : 'none',
+    backgroundColor: content.style === 'outline' ? 'transparent' : (style.backgroundColor || primaryColor),
+    color: style.color || (content.style === 'outline' ? primaryColor : '#ffffff'),
   };
 
   return `
@@ -304,30 +317,34 @@ function renderButtonWidget(widget) {
   `.trim();
 }
 
-function renderButtonGroupWidget(widget) {
+function renderButtonGroupWidget(widget, ctx) {
   const content = widget.content || {};
   const buttons = content.buttons || [];
+  const primaryColor = ctx?.theme?.primaryColor || '#8b5cf6';
+  const buttonRadius = ctx?.theme?.buttonRadius || '8px';
 
   const containerStyle = {
     display: 'flex',
     flexWrap: 'wrap',
     gap: content.gap || '16px',
-    justifyContent: content.alignment || 'center',
+    justifyContent: content.alignment === 'left' ? 'flex-start' : content.alignment === 'right' ? 'flex-end' : 'center',
   };
 
   const buttonsHtml = buttons.map((btn) => {
+    // Per-button primaryColor override (set during conversion)
+    const btnColor = btn.primaryColor || primaryColor;
     const btnStyle = {
       display: 'inline-flex',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: '12px 24px',
+      padding: '12px 28px',
       fontSize: '16px',
       fontWeight: '600',
-      borderRadius: '8px',
+      borderRadius: buttonRadius,
       textDecoration: 'none',
-      border: btn.style === 'outline' ? '2px solid #8b5cf6' : 'none',
-      backgroundColor: btn.style === 'outline' ? 'transparent' : (btn.style === 'secondary' ? '#1f2937' : '#8b5cf6'),
-      color: btn.style === 'outline' ? '#8b5cf6' : '#ffffff',
+      border: btn.style === 'outline' ? `2px solid ${btnColor}` : 'none',
+      backgroundColor: btn.style === 'outline' ? 'transparent' : (btn.style === 'secondary' ? '#1f2937' : btnColor),
+      color: btn.style === 'outline' ? btnColor : '#ffffff',
     };
 
     return `<a href="${btn.link || '#'}" style="${objectToStyleString(btnStyle)}">${escapeHtml(btn.text)}</a>`;
@@ -358,9 +375,11 @@ function renderDividerWidget(widget) {
   return `<hr style="${objectToStyleString(hrStyle)}">`;
 }
 
-function renderFormWidget(widget) {
+function renderFormWidget(widget, ctx) {
   const content = widget.content || {};
   const fields = content.fields || [];
+  const primaryColor = ctx?.theme?.primaryColor || '#8b5cf6';
+  const buttonRadius = ctx?.theme?.buttonRadius || '8px';
 
   const fieldsHtml = fields.map((field) => {
     const label = `<label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 4px;">${escapeHtml(field.label)}${field.required ? '<span style="color: #ef4444; margin-left: 4px;">*</span>' : ''}</label>`;
@@ -378,7 +397,7 @@ function renderFormWidget(widget) {
   return `
 <form style="padding: 24px; background: #ffffff; border: 1px solid #e5e7eb; border-radius: 12px;">
   ${fieldsHtml}
-  <button type="submit" style="width: 100%; padding: 12px; background: #8b5cf6; color: #ffffff; font-size: 16px; font-weight: 600; border: none; border-radius: 8px; cursor: pointer;">
+  <button type="submit" style="width: 100%; padding: 12px; background: ${primaryColor}; color: #ffffff; font-size: 16px; font-weight: 600; border: none; border-radius: ${buttonRadius}; cursor: pointer;">
     ${escapeHtml(content.submitText || 'Submit')}
   </button>
 </form>
@@ -457,13 +476,21 @@ function escapeHtml(text) {
   return String(text).replace(/[&<>"']/g, (m) => map[m]);
 }
 
-function getBaseStyles() {
+function getBaseStyles(theme = {}) {
+  const headingFont = theme.headingFont ? `'${theme.headingFont}', ` : '';
+  const bodyFont = theme.bodyFont ? `'${theme.bodyFont}', ` : '';
+  const bodyBg = theme.bgColor || '#ffffff';
+  const bodyText = theme.textColor === '#ffffff' || theme.textColor === '#fff'
+    ? '#ffffff'
+    : (theme.textColor || '#1f2937');
+
   return `
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: #1f2937; }
+    body { font-family: ${bodyFont}-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; line-height: 1.6; color: ${bodyText}; background-color: ${bodyBg}; }
+    h1, h2, h3, h4, h5, h6 { font-family: ${headingFont}-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; }
     img { max-width: 100%; height: auto; }
     a { color: inherit; }
-    
+
     @media (max-width: 768px) {
       .row { flex-direction: column !important; }
       .column { width: 100% !important; min-width: 100% !important; }

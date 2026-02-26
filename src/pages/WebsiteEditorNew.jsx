@@ -51,8 +51,9 @@ export default function WebsiteEditorNew() {
           setPageData(pd);
         } else if (pd) {
           // Old template format — auto-convert to widget format
-          console.log('🔄 Converting template format to widget format...');
-          const converted = convertFromTemplate(pd);
+          // Pass pd.theme so conversion uses the AI-generated theme colors + fonts
+          console.log('🔄 Converting template format to widget format...', pd.theme?.name || 'default theme');
+          const converted = convertFromTemplate(pd, pd.theme || null);
           setPageData(converted);
           console.log('✅ Conversion complete:', converted);
         } else {
