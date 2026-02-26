@@ -1438,14 +1438,7 @@ export default function EditorV2() {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        if (data.html) {
-          setPreviewHtml(data.html);
-        }
-        if (data.pages) {
-          setAllPagesHtml(data.pages);
-        }
-        console.log('✅ Saved successfully');
+        navigate('/dashboard?tab=website');
       } else {
         throw new Error('Save failed');
       }
