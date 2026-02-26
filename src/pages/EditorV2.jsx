@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Save, 
-  Eye, 
-  ChevronUp, 
-  ChevronDown, 
-  Trash2, 
+import {
+  ArrowLeft,
+  Save,
+  Eye,
+  ChevronUp,
+  ChevronDown,
+  Trash2,
   GripVertical,
   Plus,
   Monitor,
@@ -29,7 +29,16 @@ import {
   RefreshCw,
   Upload,
   Loader,
-  Link2
+  Link2,
+  Undo2,
+  Redo2,
+  Minus,
+  AlignLeft,
+  FileText,
+  Home,
+  Camera,
+  HelpCircle,
+  DollarSign
 } from 'lucide-react';
 
 // ============================================
@@ -478,10 +487,24 @@ const TEMPLATE_DEFINITIONS = {
       ctaText: { type: 'text', label: 'CTA Button Text' },
     }
   },
+  'custom-row': {
+    name: 'Custom Row',
+    icon: Layout,
+    category: 'custom',
+    isCustomRow: true,
+    defaultContent: {
+      layout: '2col',
+      bgColor: '',
+      padding: 'normal',
+      columns: [{ elements: [] }, { elements: [] }],
+    },
+    fields: {}
+  },
 };
 
 // Available templates for adding new sections
 const AVAILABLE_TEMPLATES = [
+  { id: 'custom-row', category: 'Custom' },
   { id: 'trust-banner-scroll', category: 'Trust' },
   { id: 'nav-sticky-dark', category: 'Navigation' },
   { id: 'hero-fullscreen-dark', category: 'Hero' },
@@ -497,6 +520,107 @@ const AVAILABLE_TEMPLATES = [
   { id: 'footer-4col-dark', category: 'Footer' },
   { id: 'lead-magnet-landscaping', category: 'Lead Magnets' },
   { id: 'lead-magnet-auto-wrap', category: 'Lead Magnets' },
+];
+
+// ============================================
+// COLUMN LAYOUTS for Custom Row
+// ============================================
+const COLUMN_LAYOUTS = [
+  { id: '1col',            label: 'Full Width',   preview: '████████████' },
+  { id: '2col',            label: '50 / 50',       preview: '██████  ██████' },
+  { id: '2col-wide-left',  label: '66 / 33',       preview: '████████  ████' },
+  { id: '2col-wide-right', label: '33 / 66',       preview: '████  ████████' },
+  { id: '3col',            label: '33 / 33 / 33',  preview: '████ ████ ████' },
+];
+
+// ============================================
+// ELEMENT TYPES for Custom Row columns
+// ============================================
+const ELEMENT_TYPES = [
+  { id: 'heading',  label: 'Heading',  icon: Type,      defaultProps: { tag: 'h2', text: 'Your Heading Here', align: 'left', color: '' } },
+  { id: 'text',     label: 'Text',     icon: AlignLeft,  defaultProps: { text: 'Your text content here.', align: 'left', color: '' } },
+  { id: 'image',    label: 'Image',    icon: Image,      defaultProps: { url: '', alt: '', rounded: true, shadow: true } },
+  { id: 'button',   label: 'Button',   icon: Zap,        defaultProps: { text: 'Click Here', link: '#', style: 'primary', size: 'medium', align: 'left' } },
+  { id: 'spacer',   label: 'Spacer',   icon: Minus,      defaultProps: { height: 32 } },
+  { id: 'divider',  label: 'Divider',  icon: Minus,      defaultProps: { color: '#e5e7eb', margin: 16 } },
+];
+
+// ============================================
+// PAGE TEMPLATES for Add Page modal
+// ============================================
+const PAGE_TEMPLATES = [
+  {
+    id: 'home',
+    label: 'Home Page',
+    icon: Home,
+    description: 'Hero, reviews, features, services, CTA',
+    filenameDefault: 'index.html',
+    sections: ['hero-fullscreen-dark', 'review-marquee', 'features-icon-row', 'services-cards-3col', 'cta-gradient-full'],
+  },
+  {
+    id: 'services',
+    label: 'Services',
+    icon: Settings,
+    description: 'Banner, services list, benefits, testimonials',
+    filenameDefault: 'services.html',
+    sections: ['hero-page-banner', 'services-carousel', 'benefits-numbered', 'testimonials-3col', 'cta-card'],
+  },
+  {
+    id: 'gallery',
+    label: 'Gallery',
+    icon: Camera,
+    description: 'Filterable photo gallery with CTA',
+    filenameDefault: 'gallery.html',
+    sections: ['hero-page-banner', 'gallery-mixed-grid', 'cta-card'],
+  },
+  {
+    id: 'about',
+    label: 'About',
+    icon: Star,
+    description: 'Your story, mission, and values',
+    filenameDefault: 'about.html',
+    sections: ['hero-page-banner', 'importance-split', 'features-icon-row', 'cta-card'],
+  },
+  {
+    id: 'contact',
+    label: 'Contact',
+    icon: Phone,
+    description: 'Contact form, phone, hours, location',
+    filenameDefault: 'contact.html',
+    sections: ['contact-split'],
+  },
+  {
+    id: 'pricing',
+    label: 'Pricing',
+    icon: DollarSign,
+    description: 'Packages, pricing cards, FAQ',
+    filenameDefault: 'pricing.html',
+    sections: ['hero-page-banner', 'services-cards-3col', 'benefits-numbered', 'cta-card'],
+  },
+  {
+    id: 'faq',
+    label: 'FAQ',
+    icon: HelpCircle,
+    description: 'Frequently asked questions',
+    filenameDefault: 'faq.html',
+    sections: ['hero-page-banner', 'benefits-numbered', 'cta-card'],
+  },
+  {
+    id: 'testimonials',
+    label: 'Testimonials',
+    icon: MessageSquare,
+    description: 'Client reviews and success stories',
+    filenameDefault: 'testimonials.html',
+    sections: ['hero-page-banner', 'testimonials-3col', 'review-marquee', 'cta-card'],
+  },
+  {
+    id: 'blank',
+    label: 'Blank Page',
+    icon: FileText,
+    description: 'Start from scratch',
+    filenameDefault: '',
+    sections: [],
+  },
 ];
 
 // ============================================
@@ -1005,6 +1129,429 @@ function SectionCard({ section, index, isSelected, onSelect, onMoveUp, onMoveDow
 }
 
 // ============================================
+// CUSTOM ROW EDITOR
+// ============================================
+function CustomRowEditor({ content = {}, onChange, apiUrl }) {
+  const [editingEl, setEditingEl] = useState(null); // { colIdx, elIdx }
+  const [addingEl, setAddingEl] = useState(null);   // colIdx
+
+  const layout = content.layout || '2col';
+  const columns = content.columns || [{ elements: [] }, { elements: [] }];
+  const bgColor = content.bgColor || '';
+  const padding = content.padding || 'normal';
+
+  const colCount = layout === '1col' ? 1 : layout === '3col' ? 3 : 2;
+
+  // Ensure columns array matches colCount
+  const normalizedCols = Array.from({ length: colCount }, (_, i) => columns[i] || { elements: [] });
+
+  const update = (patch) => {
+    onChange({ ...content, ...patch });
+  };
+
+  const updateLayout = (newLayout) => {
+    const newColCount = newLayout === '1col' ? 1 : newLayout === '3col' ? 3 : 2;
+    const newCols = Array.from({ length: newColCount }, (_, i) => columns[i] || { elements: [] });
+    setEditingEl(null);
+    setAddingEl(null);
+    onChange({ ...content, layout: newLayout, columns: newCols });
+  };
+
+  const updateColumn = (colIdx, newCol) => {
+    const newCols = normalizedCols.map((c, i) => i === colIdx ? newCol : c);
+    onChange({ ...content, columns: newCols });
+  };
+
+  const addElement = (colIdx, typeId) => {
+    const typeDef = ELEMENT_TYPES.find(t => t.id === typeId);
+    if (!typeDef) return;
+    const col = normalizedCols[colIdx];
+    const newEl = { type: typeId, ...typeDef.defaultProps };
+    const newElements = [...(col.elements || []), newEl];
+    updateColumn(colIdx, { ...col, elements: newElements });
+    setAddingEl(null);
+    setEditingEl({ colIdx, elIdx: newElements.length - 1 });
+  };
+
+  const removeElement = (colIdx, elIdx) => {
+    const col = normalizedCols[colIdx];
+    const newElements = col.elements.filter((_, i) => i !== elIdx);
+    updateColumn(colIdx, { ...col, elements: newElements });
+    if (editingEl?.colIdx === colIdx && editingEl?.elIdx === elIdx) setEditingEl(null);
+  };
+
+  const moveElement = (colIdx, elIdx, dir) => {
+    const col = normalizedCols[colIdx];
+    const els = [...col.elements];
+    const newIdx = elIdx + (dir === 'up' ? -1 : 1);
+    if (newIdx < 0 || newIdx >= els.length) return;
+    [els[elIdx], els[newIdx]] = [els[newIdx], els[elIdx]];
+    updateColumn(colIdx, { ...col, elements: els });
+    setEditingEl({ colIdx, elIdx: newIdx });
+  };
+
+  const updateElement = (colIdx, elIdx, patch) => {
+    const col = normalizedCols[colIdx];
+    const els = col.elements.map((el, i) => i === elIdx ? { ...el, ...patch } : el);
+    updateColumn(colIdx, { ...col, elements: els });
+  };
+
+  const renderElementEditor = (el, colIdx, elIdx) => {
+    const isEditing = editingEl?.colIdx === colIdx && editingEl?.elIdx === elIdx;
+    const typeDef = ELEMENT_TYPES.find(t => t.id === el.type);
+    const Icon = typeDef?.icon || Layout;
+
+    return (
+      <div key={elIdx} className={`border rounded-lg overflow-hidden ${isEditing ? 'border-amber-400 shadow-sm' : 'border-gray-200'}`}>
+        <div className="flex items-center gap-2 px-2 py-1.5 bg-gray-50">
+          <Icon className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+          <span className="text-xs font-medium text-gray-700 flex-1 truncate">{el.type === 'heading' ? `${el.tag?.toUpperCase() || 'H2'}: ${el.text?.slice(0, 20) || ''}` : el.type === 'text' ? (el.text?.slice(0, 24) || 'Text') : el.type === 'image' ? 'Image' : el.type === 'button' ? el.text || 'Button' : el.type === 'spacer' ? `Spacer (${el.height}px)` : 'Divider'}</span>
+          <div className="flex gap-0.5">
+            <button title="Move up" onClick={() => moveElement(colIdx, elIdx, 'up')} disabled={elIdx === 0} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronUp className="w-3.5 h-3.5" /></button>
+            <button title="Move down" onClick={() => moveElement(colIdx, elIdx, 'down')} disabled={elIdx === (normalizedCols[colIdx]?.elements?.length || 0) - 1} className="p-0.5 text-gray-400 hover:text-gray-600 disabled:opacity-30"><ChevronDown className="w-3.5 h-3.5" /></button>
+            <button title="Edit" onClick={() => setEditingEl(isEditing ? null : { colIdx, elIdx })} className={`p-0.5 transition ${isEditing ? 'text-amber-600' : 'text-gray-400 hover:text-amber-600'}`}><Edit3 className="w-3.5 h-3.5" /></button>
+            <button title="Delete" onClick={() => removeElement(colIdx, elIdx)} className="p-0.5 text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+          </div>
+        </div>
+
+        {isEditing && (
+          <div className="p-2 bg-white border-t border-gray-100 space-y-2">
+            {el.type === 'heading' && (
+              <>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Level</label>
+                  <select value={el.tag || 'h2'} onChange={e => updateElement(colIdx, elIdx, { tag: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400">
+                    <option value="h1">H1 — Largest</option>
+                    <option value="h2">H2 — Large</option>
+                    <option value="h3">H3 — Medium</option>
+                    <option value="h4">H4 — Small</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Text</label>
+                  <input type="text" value={el.text || ''} onChange={e => updateElement(colIdx, elIdx, { text: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Align</label>
+                  <select value={el.align || 'left'} onChange={e => updateElement(colIdx, elIdx, { align: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+              </>
+            )}
+            {el.type === 'text' && (
+              <>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Text</label>
+                  <textarea value={el.text || ''} onChange={e => updateElement(colIdx, elIdx, { text: e.target.value })} rows={3} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Align</label>
+                  <select value={el.align || 'left'} onChange={e => updateElement(colIdx, elIdx, { align: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+              </>
+            )}
+            {el.type === 'image' && (
+              <>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Image URL</label>
+                  <div className="flex gap-1">
+                    <input type="text" value={el.url || ''} onChange={e => updateElement(colIdx, elIdx, { url: e.target.value })} placeholder="https://..." className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+                    <label className="flex items-center px-2 py-1 border border-amber-300 text-amber-700 bg-amber-50 rounded text-xs cursor-pointer hover:bg-amber-100 transition">
+                      <Upload className="w-3 h-3" />
+                      <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const formData = new FormData();
+                        formData.append('image', file);
+                        const token = localStorage.getItem('token');
+                        const res = await fetch(`${apiUrl}/api/upload`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData });
+                        const d = await res.json();
+                        if (res.ok) updateElement(colIdx, elIdx, { url: d.url });
+                      }} />
+                    </label>
+                  </div>
+                  {el.url && <img src={el.url} alt="" className="mt-1 max-h-20 w-full rounded object-cover" />}
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Alt Text</label>
+                  <input type="text" value={el.alt || ''} onChange={e => updateElement(colIdx, elIdx, { alt: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+                </div>
+                <div className="flex gap-3">
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <input type="checkbox" checked={el.rounded !== false} onChange={e => updateElement(colIdx, elIdx, { rounded: e.target.checked })} className="w-3 h-3" /> Rounded
+                  </label>
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <input type="checkbox" checked={el.shadow !== false} onChange={e => updateElement(colIdx, elIdx, { shadow: e.target.checked })} className="w-3 h-3" /> Shadow
+                  </label>
+                </div>
+              </>
+            )}
+            {el.type === 'button' && (
+              <>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Button Text</label>
+                  <input type="text" value={el.text || ''} onChange={e => updateElement(colIdx, elIdx, { text: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Link</label>
+                  <input type="text" value={el.link || ''} onChange={e => updateElement(colIdx, elIdx, { link: e.target.value })} placeholder="#section or /page or https://..." className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-0.5">Style</label>
+                    <select value={el.style || 'primary'} onChange={e => updateElement(colIdx, elIdx, { style: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400">
+                      <option value="primary">Primary</option>
+                      <option value="secondary">Secondary</option>
+                      <option value="outline">Outline</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-0.5">Size</label>
+                    <select value={el.size || 'medium'} onChange={e => updateElement(colIdx, elIdx, { size: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400">
+                      <option value="small">Small</option>
+                      <option value="medium">Medium</option>
+                      <option value="large">Large</option>
+                    </select>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-500 mb-0.5">Align</label>
+                  <select value={el.align || 'left'} onChange={e => updateElement(colIdx, elIdx, { align: e.target.value })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400">
+                    <option value="left">Left</option>
+                    <option value="center">Center</option>
+                    <option value="right">Right</option>
+                  </select>
+                </div>
+              </>
+            )}
+            {el.type === 'spacer' && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">Height (px)</label>
+                <input type="number" value={el.height || 32} min={8} max={200} onChange={e => updateElement(colIdx, elIdx, { height: parseInt(e.target.value) || 32 })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+              </div>
+            )}
+            {el.type === 'divider' && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-0.5">Margin (px)</label>
+                <input type="number" value={el.margin || 16} min={0} max={64} onChange={e => updateElement(colIdx, elIdx, { margin: parseInt(e.target.value) || 16 })} className="w-full text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Layout picker */}
+      <div>
+        <label className="block text-xs font-semibold text-gray-500 uppercase mb-1.5">Layout</label>
+        <div className="grid grid-cols-1 gap-1">
+          {COLUMN_LAYOUTS.map(cl => (
+            <button key={cl.id} type="button" onClick={() => updateLayout(cl.id)}
+              className={`flex items-center justify-between px-3 py-2 rounded-lg border text-xs font-medium transition ${layout === cl.id ? 'border-amber-500 bg-amber-50 text-amber-800' : 'border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+              <span>{cl.label}</span>
+              <span className="font-mono text-gray-400">{cl.preview}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Background & Padding */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Background</label>
+          <div className="flex items-center gap-1.5">
+            <input type="color" value={bgColor || '#ffffff'} onChange={e => update({ bgColor: e.target.value })} className="w-7 h-7 rounded border border-gray-300 cursor-pointer p-0" />
+            <input type="text" value={bgColor || ''} onChange={e => update({ bgColor: e.target.value })} placeholder="default" className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400" />
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Padding</label>
+          <select value={padding} onChange={e => update({ padding: e.target.value })} className="w-full text-xs px-2 py-1.5 border border-gray-300 rounded focus:ring-1 focus:ring-amber-400">
+            <option value="none">None</option>
+            <option value="small">Small</option>
+            <option value="normal">Normal</option>
+            <option value="large">Large</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Columns */}
+      {normalizedCols.map((col, colIdx) => (
+        <div key={colIdx} className="border border-gray-200 rounded-lg overflow-hidden">
+          <div className="px-3 py-1.5 bg-gray-50 border-b border-gray-200">
+            <span className="text-xs font-semibold text-gray-600">
+              {colCount === 1 ? 'Content' : `Column ${colIdx + 1}`}
+            </span>
+          </div>
+          <div className="p-2 space-y-1.5">
+            {(col.elements || []).map((el, elIdx) => renderElementEditor(el, colIdx, elIdx))}
+
+            {addingEl === colIdx ? (
+              <div>
+                <div className="grid grid-cols-3 gap-1 mb-1">
+                  {ELEMENT_TYPES.map(et => {
+                    const EIcon = et.icon;
+                    return (
+                      <button key={et.id} onClick={() => addElement(colIdx, et.id)}
+                        className="flex flex-col items-center gap-0.5 p-2 rounded-lg border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition text-xs text-gray-600">
+                        <EIcon className="w-4 h-4 text-gray-500" />
+                        {et.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                <button onClick={() => setAddingEl(null)} className="w-full text-xs text-gray-400 hover:text-gray-600 py-1">Cancel</button>
+              </div>
+            ) : (
+              <button onClick={() => setAddingEl(colIdx)}
+                className="w-full flex items-center justify-center gap-1 py-1.5 text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 rounded border border-dashed border-amber-200 transition">
+                <Plus className="w-3.5 h-3.5" /> Add Element
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================
+// ADD PAGE MODAL
+// ============================================
+function AddPageModal({ isOpen, onClose, onAdd, existingPages = [] }) {
+  const [selectedTemplate, setSelectedTemplate] = useState(null);
+  const [pageName, setPageName] = useState('');
+
+  if (!isOpen) return null;
+
+  const handleTemplateSelect = (tpl) => {
+    setSelectedTemplate(tpl);
+    if (!pageName || PAGE_TEMPLATES.find(t => t.label.toLowerCase() === pageName.toLowerCase())) {
+      setPageName(tpl.label === 'Home Page' ? 'Home' : tpl.label);
+    }
+  };
+
+  const handleAdd = () => {
+    if (!selectedTemplate || !pageName.trim()) return;
+    onAdd({ template: selectedTemplate, name: pageName.trim() });
+    setSelectedTemplate(null);
+    setPageName('');
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center flex-shrink-0">
+          <div>
+            <h2 className="text-lg font-semibold">Add Page</h2>
+            <p className="text-xs text-gray-500">Choose a template to start with</p>
+          </div>
+          <button onClick={onClose} className="p-1 hover:bg-gray-100 rounded"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-4 overflow-y-auto flex-1">
+          <div className="grid grid-cols-3 gap-3">
+            {PAGE_TEMPLATES.map(tpl => {
+              const Icon = tpl.icon;
+              const isSelected = selectedTemplate?.id === tpl.id;
+              return (
+                <button key={tpl.id} onClick={() => handleTemplateSelect(tpl)}
+                  className={`p-4 rounded-xl border-2 text-left transition flex flex-col gap-2 ${isSelected ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:border-gray-300 bg-white'}`}>
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${isSelected ? 'bg-amber-100' : 'bg-gray-100'}`}>
+                    <Icon className={`w-5 h-5 ${isSelected ? 'text-amber-600' : 'text-gray-500'}`} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold text-gray-900">{tpl.label}</div>
+                    <div className="text-xs text-gray-500 mt-0.5">{tpl.description}</div>
+                  </div>
+                  {tpl.sections.length > 0 && (
+                    <div className="text-xs text-gray-400">{tpl.sections.length} sections</div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {selectedTemplate && (
+          <div className="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Page Name</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                autoFocus
+                value={pageName}
+                onChange={e => setPageName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleAdd()}
+                placeholder="e.g. About Us"
+                className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-400 focus:border-amber-400 text-sm"
+              />
+              <button onClick={handleAdd} disabled={!pageName.trim()}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 font-medium text-sm transition">
+                Add Page
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// DELETE PAGE MODAL
+// ============================================
+function DeletePageModal({ page, onClose, onConfirm }) {
+  const [confirmed, setConfirmed] = useState(false);
+
+  if (!page) return null;
+  const sectionCount = page.sections?.length || 0;
+  const pageName = (page.filename || '').replace('.html', '');
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-2xl max-w-sm w-full mx-4 overflow-hidden">
+        <div className="p-5">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <Trash2 className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <h2 className="font-semibold text-gray-900">Delete "{pageName}" page?</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {sectionCount > 0
+                  ? `This will permanently delete this page and its ${sectionCount} section${sectionCount !== 1 ? 's' : ''}. This cannot be undone.`
+                  : 'This will permanently delete this page. This cannot be undone.'}
+              </p>
+            </div>
+          </div>
+          <label className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 cursor-pointer">
+            <input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="w-4 h-4 text-red-600 rounded" />
+            <span className="text-sm text-red-700 font-medium">I understand this cannot be undone</span>
+          </label>
+        </div>
+        <div className="px-5 pb-5 flex gap-2 justify-end">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition">Cancel</button>
+          <button onClick={onConfirm} disabled={!confirmed} className="px-4 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-40 transition font-medium">
+            Delete Page
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // ADD SECTION MODAL
 // ============================================
 function AddSectionModal({ isOpen, onClose, onAdd }) {
@@ -1088,11 +1635,19 @@ export default function EditorV2() {
   const [showGoogleImportModal, setShowGoogleImportModal] = useState(false);
   const [googleUrl, setGoogleUrl] = useState('');
   const [importingReviews, setImportingReviews] = useState(false);
-  const [reviewStarFilter, setReviewStarFilter] = useState('above'); // 'above' = 4+ stars, 'below' = under 4 stars
+  const [reviewStarFilter, setReviewStarFilter] = useState('above');
   const [activeEditorPage, setActiveEditorPage] = useState(0);
   const [allPagesHtml, setAllPagesHtml] = useState(null);
-  const [showAddPage, setShowAddPage] = useState(false);
-  const [newPageName, setNewPageName] = useState('');
+  const [showAddPageModal, setShowAddPageModal] = useState(false);
+  const [deletingPage, setDeletingPage] = useState(null); // { index, page }
+
+  // Undo/Redo
+  const historyRef = useRef([]);
+  const historyIdxRef = useRef(-1);
+  const isUndoRedoRef = useRef(false);
+  const historyTimerRef = useRef(null);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -1122,6 +1677,51 @@ export default function EditorV2() {
     window.addEventListener('message', handler);
     return () => window.removeEventListener('message', handler);
   }, [pageData]);
+
+  // ============================================
+  // UNDO / REDO
+  // ============================================
+  const pushHistory = useCallback((pd) => {
+    if (isUndoRedoRef.current) return;
+    if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = setTimeout(() => {
+      const snapshot = JSON.stringify(pd);
+      if (historyRef.current[historyIdxRef.current] === snapshot) return;
+      // Trim future states
+      historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1);
+      historyRef.current.push(snapshot);
+      if (historyRef.current.length > 50) historyRef.current.shift();
+      historyIdxRef.current = historyRef.current.length - 1;
+      setCanUndo(historyIdxRef.current > 0);
+      setCanRedo(false);
+    }, 500);
+  }, []);
+
+  useEffect(() => {
+    if (pageData && !isLoading) pushHistory(pageData);
+  }, [pageData, isLoading, pushHistory]);
+
+  const handleUndo = useCallback(() => {
+    if (historyIdxRef.current <= 0) return;
+    if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+    isUndoRedoRef.current = true;
+    historyIdxRef.current--;
+    setPageData(JSON.parse(historyRef.current[historyIdxRef.current]));
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(true);
+    requestAnimationFrame(() => { isUndoRedoRef.current = false; });
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    if (historyTimerRef.current) clearTimeout(historyTimerRef.current);
+    isUndoRedoRef.current = true;
+    historyIdxRef.current++;
+    setPageData(JSON.parse(historyRef.current[historyIdxRef.current]));
+    setCanUndo(true);
+    setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
+    requestAnimationFrame(() => { isUndoRedoRef.current = false; });
+  }, []);
 
   const loadPageData = async () => {
     try {
@@ -1221,35 +1821,37 @@ export default function EditorV2() {
   // ============================================
   // ADD / DELETE PAGE
   // ============================================
-  const handleAddPage = useCallback(() => {
-    const name = newPageName.trim();
-    if (!name) return;
+  const handleAddPage = useCallback(({ template, name }) => {
     const filename = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') + '.html';
+    const sections = (template.sections || []).map(tId => ({
+      id: `s${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      template: tId,
+      content: TEMPLATE_DEFINITIONS[tId]?.defaultContent ? { ...TEMPLATE_DEFINITIONS[tId].defaultContent } : {}
+    }));
 
     setPageData(prev => {
       const newData = JSON.parse(JSON.stringify(prev));
-      // Convert single-page to multi-page if needed
       if (!newData.multiPage) {
         newData.multiPage = true;
         newData.pages = [{ filename: 'index.html', meta: newData.meta || {}, sections: newData.sections || [] }];
         delete newData.sections;
       }
-      if (newData.pages.some(p => p.filename === filename)) return prev; // duplicate
-      newData.pages.push({ filename, meta: { title: name, description: '' }, sections: [] });
+      const safeFilename = newData.pages.some(p => p.filename === filename)
+        ? filename.replace('.html', `-${Date.now()}.html`)
+        : filename;
+      newData.pages.push({ filename: safeFilename, meta: { title: name, description: '' }, sections });
       return newData;
     });
 
+    setShowAddPageModal(false);
     setActiveEditorPage((pageData?.pages?.length || 1));
     setSelectedSectionIndex(null);
     setIsEditingSection(false);
-    setNewPageName('');
-    setShowAddPage(false);
-  }, [newPageName, pageData]);
+  }, [pageData]);
 
-  const handleDeletePage = useCallback((i) => {
-    const page = pageData?.pages?.[i];
-    if (!page || page.filename === 'index.html') return;
-    if (!confirm(`Delete the "${page.filename.replace('.html', '')}" page? This cannot be undone.`)) return;
+  const handleDeletePage = useCallback(() => {
+    if (!deletingPage) return;
+    const { index: i } = deletingPage;
 
     setPageData(prev => {
       const newData = JSON.parse(JSON.stringify(prev));
@@ -1259,7 +1861,8 @@ export default function EditorV2() {
     setActiveEditorPage(prev => (prev >= i ? Math.max(0, prev - 1) : prev));
     setSelectedSectionIndex(null);
     setIsEditingSection(false);
-  }, [pageData]);
+    setDeletingPage(null);
+  }, [deletingPage]);
 
   // ============================================
   // ADD SECTION
@@ -1481,7 +2084,7 @@ export default function EditorV2() {
       {/* HEADER */}
       {/* ============================================ */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between z-20">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3">
           <button
             onClick={() => navigate('/dashboard?tab=website')}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition"
@@ -1489,6 +2092,25 @@ export default function EditorV2() {
             <ArrowLeft className="w-5 h-5" />
             <span className="font-medium">Back</span>
           </button>
+          {/* Undo / Redo */}
+          <div className="flex items-center gap-1 border-l border-gray-200 pl-3">
+            <button
+              title="Undo"
+              onClick={handleUndo}
+              disabled={!canUndo}
+              className="p-1.5 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              <Undo2 className="w-4 h-4" />
+            </button>
+            <button
+              title="Redo"
+              onClick={handleRedo}
+              disabled={!canRedo}
+              className="p-1.5 rounded-md text-gray-500 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition"
+            >
+              <Redo2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Device Preview */}
@@ -1571,11 +2193,10 @@ export default function EditorV2() {
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs font-semibold text-gray-500 uppercase">Pages</p>
                     <button
-                      title="Add new page"
-                      onClick={() => { setShowAddPage(v => !v); setNewPageName(''); }}
-                      className="w-5 h-5 flex items-center justify-center rounded bg-amber-100 text-amber-700 hover:bg-amber-200 transition"
+                      onClick={() => setShowAddPageModal(true)}
+                      className="flex items-center gap-1 px-2 py-1 rounded-md bg-amber-100 text-amber-700 hover:bg-amber-200 transition text-xs font-semibold"
                     >
-                      <Plus className="w-3 h-3" />
+                      <Plus className="w-3 h-3" /> Add Page
                     </button>
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -1590,69 +2211,27 @@ export default function EditorV2() {
                         {page.filename !== 'index.html' && (
                           <button
                             title={`Delete ${page.filename.replace('.html', '')} page`}
-                            onClick={() => handleDeletePage(i)}
-                            className={`pr-1.5 opacity-60 hover:opacity-100 transition ${activeEditorPage === i ? 'text-white' : 'text-gray-500'}`}
+                            onClick={() => setDeletingPage({ index: i, page })}
+                            className={`pr-1.5 opacity-50 hover:opacity-100 transition ${activeEditorPage === i ? 'text-amber-200 hover:text-white' : 'text-gray-500 hover:text-red-600'}`}
                           >
-                            <X className="w-3 h-3" />
+                            <Trash2 className="w-3 h-3" />
                           </button>
                         )}
                       </div>
                     ))}
                   </div>
-                  {showAddPage && (
-                    <div className="mt-2 flex items-center gap-1">
-                      <input
-                        autoFocus
-                        type="text"
-                        value={newPageName}
-                        onChange={e => setNewPageName(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleAddPage(); if (e.key === 'Escape') setShowAddPage(false); }}
-                        placeholder="Page name (e.g. About)"
-                        className="flex-1 text-xs px-2 py-1 border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
-                      />
-                      <button
-                        onClick={handleAddPage}
-                        disabled={!newPageName.trim()}
-                        className="text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-40 transition"
-                      >
-                        Add
-                      </button>
-                      <button
-                        onClick={() => setShowAddPage(false)}
-                        className="text-xs px-1.5 py-1 text-gray-500 hover:bg-gray-200 rounded transition"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
                 </div>
               )}
 
-              {/* Add page option for single-page sites */}
+              {/* Add page button for single-page sites */}
               {!pageData?.multiPage && (
                 <div className="px-4 py-2 border-b border-gray-200 bg-gray-50">
-                  {!showAddPage ? (
-                    <button
-                      onClick={() => { setShowAddPage(true); setNewPageName(''); }}
-                      className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-amber-600 hover:bg-amber-50 py-1.5 rounded transition"
-                    >
-                      <Plus className="w-3 h-3" /> Add Another Page
-                    </button>
-                  ) : (
-                    <div className="flex items-center gap-1">
-                      <input
-                        autoFocus
-                        type="text"
-                        value={newPageName}
-                        onChange={e => setNewPageName(e.target.value)}
-                        onKeyDown={e => { if (e.key === 'Enter') handleAddPage(); if (e.key === 'Escape') setShowAddPage(false); }}
-                        placeholder="Page name (e.g. About)"
-                        className="flex-1 text-xs px-2 py-1 border border-amber-300 rounded focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
-                      />
-                      <button onClick={handleAddPage} disabled={!newPageName.trim()} className="text-xs px-2 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 disabled:opacity-40 transition">Add</button>
-                      <button onClick={() => setShowAddPage(false)} className="text-xs px-1.5 py-1 text-gray-500 hover:bg-gray-200 rounded transition"><X className="w-3 h-3" /></button>
-                    </div>
-                  )}
+                  <button
+                    onClick={() => setShowAddPageModal(true)}
+                    className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-500 hover:text-amber-600 hover:bg-amber-50 py-1.5 rounded transition font-medium"
+                  >
+                    <Plus className="w-3 h-3" /> Add Another Page
+                  </button>
                 </div>
               )}
 
@@ -1701,71 +2280,86 @@ export default function EditorV2() {
               </div>
 
               <div className="flex-1 overflow-y-auto p-4">
-                {(() => {
-                  const entries = Object.entries(selectedTemplateDef.fields || {});
-                  const result = [];
-                  let skipNext = false;
-                  entries.forEach(([fieldKey, field], index) => {
-                    if (skipNext) { skipNext = false; return; }
-                    if (field.type === 'array') {
-                      result.push(
-                        <div key={fieldKey}>
-                          {(fieldKey === 'reviews' || fieldKey === 'testimonials') && (
-                            <button
-                              onClick={() => { setFetchedGoogleReviews(null); setShowGoogleImportModal(true); }}
-                              className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                            >
-                              <Star className="w-4 h-4" />
-                              Link Google Reviews
-                            </button>
-                          )}
-                          <ArrayFieldEditor
-                            field={field}
-                            value={selectedSection.content?.[fieldKey]}
-                            onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
-                            fieldKey={fieldKey}
-                            apiUrl={apiUrl}
+                {selectedTemplateDef.isCustomRow ? (
+                  <CustomRowEditor
+                    content={selectedSection.content || {}}
+                    onChange={(newContent) => {
+                      setPageData(prev => {
+                        const newData = JSON.parse(JSON.stringify(prev));
+                        const secs = newData.multiPage ? newData.pages[activeEditorPage].sections : newData.sections;
+                        secs[selectedSectionIndex].content = newContent;
+                        return newData;
+                      });
+                    }}
+                    apiUrl={apiUrl}
+                  />
+                ) : (
+                  (() => {
+                    const entries = Object.entries(selectedTemplateDef.fields || {});
+                    const result = [];
+                    let skipNext = false;
+                    entries.forEach(([fieldKey, field], index) => {
+                      if (skipNext) { skipNext = false; return; }
+                      if (field.type === 'array') {
+                        result.push(
+                          <div key={fieldKey}>
+                            {(fieldKey === 'reviews' || fieldKey === 'testimonials') && (
+                              <button
+                                onClick={() => { setFetchedGoogleReviews(null); setShowGoogleImportModal(true); }}
+                                className="w-full mb-3 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                              >
+                                <Star className="w-4 h-4" />
+                                Link Google Reviews
+                              </button>
+                            )}
+                            <ArrayFieldEditor
+                              field={field}
+                              value={selectedSection.content?.[fieldKey]}
+                              onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
+                              fieldKey={fieldKey}
+                              apiUrl={apiUrl}
+                              pages={currentPages}
+                              sectionIds={currentSectionIds}
+                            />
+                          </div>
+                        );
+                        return;
+                      }
+                      // Pair adjacent text + url fields as a single button row
+                      const nextEntry = index < entries.length - 1 ? entries[index + 1] : null;
+                      if (field.type === 'text' && nextEntry && nextEntry[1].type === 'url') {
+                        const [linkKey] = nextEntry;
+                        result.push(
+                          <ButtonPairFieldEditor
+                            key={fieldKey}
+                            label={field.label}
+                            textValue={selectedSection.content?.[fieldKey]}
+                            linkValue={selectedSection.content?.[linkKey]}
+                            onTextChange={(val) => updateSectionContent(selectedSectionIndex, fieldKey, val)}
+                            onLinkChange={(val) => updateSectionContent(selectedSectionIndex, linkKey, val)}
                             pages={currentPages}
                             sectionIds={currentSectionIds}
                           />
-                        </div>
-                      );
-                      return;
-                    }
-                    // Pair adjacent text + url fields as a single button row
-                    const nextEntry = index < entries.length - 1 ? entries[index + 1] : null;
-                    if (field.type === 'text' && nextEntry && nextEntry[1].type === 'url') {
-                      const [linkKey] = nextEntry;
+                        );
+                        skipNext = true;
+                        return;
+                      }
                       result.push(
-                        <ButtonPairFieldEditor
+                        <FieldEditor
                           key={fieldKey}
-                          label={field.label}
-                          textValue={selectedSection.content?.[fieldKey]}
-                          linkValue={selectedSection.content?.[linkKey]}
-                          onTextChange={(val) => updateSectionContent(selectedSectionIndex, fieldKey, val)}
-                          onLinkChange={(val) => updateSectionContent(selectedSectionIndex, linkKey, val)}
+                          field={field}
+                          value={selectedSection.content?.[fieldKey]}
+                          onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
+                          fieldKey={fieldKey}
+                          apiUrl={apiUrl}
                           pages={currentPages}
                           sectionIds={currentSectionIds}
                         />
                       );
-                      skipNext = true;
-                      return;
-                    }
-                    result.push(
-                      <FieldEditor
-                        key={fieldKey}
-                        field={field}
-                        value={selectedSection.content?.[fieldKey]}
-                        onChange={(_, value) => updateSectionContent(selectedSectionIndex, fieldKey, value)}
-                        fieldKey={fieldKey}
-                        apiUrl={apiUrl}
-                        pages={currentPages}
-                        sectionIds={currentSectionIds}
-                      />
-                    );
-                  });
-                  return result;
-                })()}
+                    });
+                    return result;
+                  })()
+                )}
               </div>
             </>
           ) : isEditingSection ? (
@@ -1840,6 +2434,21 @@ export default function EditorV2() {
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
         onAdd={addSection}
+      />
+
+      {/* Add Page Modal */}
+      <AddPageModal
+        isOpen={showAddPageModal}
+        onClose={() => setShowAddPageModal(false)}
+        onAdd={handleAddPage}
+        existingPages={pageData?.pages || []}
+      />
+
+      {/* Delete Page Modal */}
+      <DeletePageModal
+        page={deletingPage?.page || null}
+        onClose={() => setDeletingPage(null)}
+        onConfirm={handleDeletePage}
       />
 
       {/* Link Google Reviews Modal */}
