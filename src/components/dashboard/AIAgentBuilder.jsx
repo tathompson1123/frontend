@@ -882,7 +882,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">SORCE AI Assistant</h3>
-                      <p className="text-sm text-gray-600">Describe what you want and I'll configure your agent</p>
+                      <p className="text-sm text-gray-600">Describe what you want and I'll train your agent</p>
                     </div>
                   </div>
                 </div>
