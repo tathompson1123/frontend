@@ -26,19 +26,19 @@ export default function GenerationProgress({ businessName, progress = 0, buildSt
   return (
     <div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center p-6 overflow-hidden"
-      style={{ background: '#0f0f0f', fontFamily: 'inherit' }}
+      style={{ background: '#f8fafc', fontFamily: 'inherit' }}
     >
       {/* Ambient glow */}
       <div
         className="absolute inset-0 flex items-center justify-center pointer-events-none"
-        style={{ opacity: 0.15 }}
+        style={{ opacity: 0.25 }}
       >
         <div
           style={{
             width: 700, height: 700,
             borderRadius: '50%',
-            filter: 'blur(140px)',
-            background: 'radial-gradient(circle, #E76F51 0%, #F4A261 60%, transparent 100%)',
+            filter: 'blur(160px)',
+            background: 'radial-gradient(circle, #fbbf24 0%, #f59e0b 50%, transparent 100%)',
           }}
         />
       </div>
@@ -52,7 +52,7 @@ export default function GenerationProgress({ businessName, progress = 0, buildSt
             <div className="relative flex items-center justify-center" style={{ width: 96, height: 96 }}>
               {/* Track */}
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="48" fill="none" stroke="#27272a" strokeWidth="4" />
+                <circle cx="50" cy="50" r="48" fill="none" stroke="#e2e8f0" strokeWidth="4" />
               </svg>
               {/* Progress arc */}
               <svg
@@ -80,10 +80,10 @@ export default function GenerationProgress({ businessName, progress = 0, buildSt
 
           {/* Heading */}
           <div className="text-center flex flex-col gap-1">
-            <h2 className="text-3xl font-bold text-white">
+            <h2 className="text-3xl font-bold" style={{ color: '#0f172a' }}>
               {isDone ? 'Website Ready!' : `Building ${businessName || 'your website'}`}
             </h2>
-            <p className="font-mono text-sm" style={{ color: '#71717a' }}>
+            <p className="font-mono text-sm" style={{ color: '#64748b' }}>
               {Math.round(progress)}% complete &bull; Estimated time: ~60s
             </p>
           </div>
@@ -93,9 +93,9 @@ export default function GenerationProgress({ businessName, progress = 0, buildSt
         <div
           className="rounded-2xl p-6"
           style={{
-            background: 'rgba(24,24,27,0.6)',
-            border: '1px solid rgba(63,63,70,0.5)',
-            backdropFilter: 'blur(16px)',
+            background: '#ffffff',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 4px 24px rgba(0,0,0,0.06)',
           }}
         >
           <div className="flex flex-col gap-5">
@@ -120,16 +120,16 @@ export default function GenerationProgress({ businessName, progress = 0, buildSt
                     style={{
                       width: 40, height: 40,
                       border: isActive
-                        ? '1px solid rgba(234,88,12,0.5)'
+                        ? '1px solid rgba(234,88,12,0.4)'
                         : isPast
-                        ? '1px solid #3f3f46'
-                        : '1px solid #27272a',
+                        ? '1px solid #d1fae5'
+                        : '1px solid #e2e8f0',
                       background: isActive
-                        ? 'rgba(234,88,12,0.15)'
+                        ? 'rgba(251,191,36,0.12)'
                         : isPast
-                        ? '#27272a'
-                        : '#18181b',
-                      color: isActive ? '#fb923c' : isPast ? '#a1a1aa' : '#52525b',
+                        ? '#d1fae5'
+                        : '#f1f5f9',
+                      color: isActive ? '#d97706' : isPast ? '#059669' : '#94a3b8',
                     }}
                   >
                     {isPast
@@ -142,7 +142,7 @@ export default function GenerationProgress({ businessName, progress = 0, buildSt
                   {/* Label */}
                   <p
                     className="flex-1 font-medium"
-                    style={{ color: isActive ? '#ffffff' : '#71717a' }}
+                    style={{ color: isActive ? '#0f172a' : '#94a3b8' }}
                   >
                     {step.text}
                   </p>
@@ -167,16 +167,16 @@ export default function GenerationProgress({ businessName, progress = 0, buildSt
           className="relative overflow-hidden rounded-xl p-4"
           style={{
             height: 112,
-            border: '1px solid rgba(63,63,70,0.4)',
-            background: 'rgba(24,24,27,0.4)',
+            border: '1px solid #e2e8f0',
+            background: '#f1f5f9',
           }}
         >
           {/* Fade-out mask */}
           <div
             className="absolute inset-0 z-10 pointer-events-none"
-            style={{ background: 'linear-gradient(to bottom, transparent 40%, #0f0f0f 100%)' }}
+            style={{ background: 'linear-gradient(to bottom, transparent 40%, #f1f5f9 100%)' }}
           />
-          <div className="gp-scroll font-mono text-xs flex flex-col gap-3" style={{ color: '#52525b' }}>
+          <div className="gp-scroll font-mono text-xs flex flex-col gap-3" style={{ color: '#64748b' }}>
             <p><span style={{ color: '#ec4899' }}>import</span> {'{ motion }'} <span style={{ color: '#ec4899' }}>from</span> <span style={{ color: '#4ade80' }}>'motion/react'</span>;</p>
             <p><span style={{ color: '#ec4899' }}>export default function</span> <span style={{ color: '#60a5fa' }}>Hero</span>() {'{'}</p>
             <p className="pl-4"><span style={{ color: '#ec4899' }}>return</span> (</p>
