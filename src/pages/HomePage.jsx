@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart, Calendar, Globe, Brain, LineChart } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
+import GenerateModal from '../components/GenerateModal';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState('signup');
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
 
   const handleGetStarted = () => {
-    navigate('/generate');
+    setShowGenerateModal(true);
   };
 
   const handleLogin = () => {
@@ -599,6 +601,12 @@ export default function HomePage() {
         mode={authMode}
         onModeChange={setAuthMode}
         onSuccess={handleAuthSuccess}
+      />
+
+      {/* Generate Website Modal */}
+      <GenerateModal
+        isOpen={showGenerateModal}
+        onClose={() => setShowGenerateModal(false)}
       />
     </div>
   );

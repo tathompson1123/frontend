@@ -97,7 +97,7 @@ export default function WebsiteEditorNew() {
       throw new Error(err.error || 'Save failed');
     }
 
-    navigate('/dashboard?tab=website');
+    navigate('/dashboard?tab=website&saved=1');
   };
 
   // Widget save: render HTML on frontend, send pre-rendered HTML + schema
@@ -130,7 +130,7 @@ export default function WebsiteEditorNew() {
       throw new Error(err.error || 'Save failed');
     }
 
-    navigate('/dashboard?tab=website');
+    navigate('/dashboard?tab=website&saved=1');
   };
 
   if (isLoading || editorMode === null) {

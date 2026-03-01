@@ -3,6 +3,7 @@ import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartph
 import PublishWizard from './PublishWizard';
 import EmbedCode from './EmbedCode';
 import FeatureGate from './FeatureGate';
+import GenerateModal from '../GenerateModal';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData, onUserPlanUpdate }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
@@ -12,7 +13,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [domainVerified, setDomainVerified] = useState(false);
   const [vercelUrl, setVercelUrl] = useState('');
   const [showEditWebsite, setShowEditWebsite] = useState(false);
-  const [isRegenerating, setIsRegenerating] = useState(false);
   const [showConnectWebsite, setShowConnectWebsite] = useState(false);
   const [existingWebsiteUrl, setExistingWebsiteUrl] = useState('');
   const [subTab, setSubTab] = useState('website');
@@ -106,58 +106,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       fetchBizInfo();
     }
   }, [showEditWebsite]);
-
-  const handleRegenerateWebsite = async (e) => {
-    e.preventDefault();
-    setIsRegenerating(true);
-
-    try {
-      const token = localStorage.getItem('token');
-      const response = await fetch(`${apiUrl}/api/generate-v2`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          businessName: websiteForm.businessName,
-          businessType: websiteForm.businessType,
-          tagline: websiteForm.tagline,
-          services: websiteForm.services,
-          yearsInBusiness: websiteForm.yearsInBusiness,
-          certifications: websiteForm.certifications,
-          description: websiteForm.description,
-          uniqueSellingPoints: websiteForm.uniqueSellingPoints,
-          targetCustomer: websiteForm.targetCustomer,
-          phone: websiteForm.phone,
-          email: websiteForm.email,
-          city: websiteForm.city,
-          state: websiteForm.state,
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success && data.html) {
-        setCurrentWebsite(data.html);
-        setShowEditWebsite(false);
-        setIsRegenerating(false);
-
-        if (refreshWebsiteData) {
-          await refreshWebsiteData();
-        }
-
-        sessionStorage.setItem('trigger-onboarding-step-2', 'true');
-        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 2 } }));
-      } else {
-        throw new Error(data.error || 'Generation failed');
-      }
-    } catch (error) {
-      console.error('Generation error:', error);
-      alert('Failed to generate website. Please try again.');
-      setIsRegenerating(false);
-    }
-  };
 
   const handleConnectExistingWebsite = async () => {
     if (!existingWebsiteUrl.trim()) {
@@ -506,111 +454,13 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         />
       )}
 
-      {/* Generate Website Modal */}
-      {showEditWebsite && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">{currentWebsite ? 'Regenerate Website' : 'Generate Website'}</h2>
-                <p className="text-gray-600 text-sm mt-1">Provide detailed information for best results</p>
-              </div>
-              <button onClick={() => setShowEditWebsite(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <form onSubmit={handleRegenerateWebsite} className="space-y-6">
-              <div className="bg-blue-50 rounded-lg p-4 border-2 border-blue-200">
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-blue-600">Basic Information</span></h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Business Name *</label>
-                    <input type="text" value={websiteForm.businessName} onChange={(e) => setWebsiteForm({ ...websiteForm, businessName: e.target.value })} required placeholder="e.g., Thompson's Auto Detailing" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Business Type *</label>
-                    <input type="text" value={websiteForm.businessType} onChange={(e) => setWebsiteForm({ ...websiteForm, businessType: e.target.value })} required placeholder="e.g., Plumbing, Auto Detailing, Hair Salon" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Tagline / Slogan</label>
-                    <input type="text" value={websiteForm.tagline || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, tagline: e.target.value })} placeholder="e.g., Quality Service Since 1995" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-green-600">Contact & Location</span></h3>
-                <p className="text-xs text-gray-500 mb-4">This info appears on your website and auto-saves to Business Settings</p>
-                <div className="space-y-4">
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Business Phone</label>
-                      <input type="tel" value={websiteForm.phone} onChange={(e) => setWebsiteForm({ ...websiteForm, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">Business Email</label>
-                      <input type="email" value={websiteForm.email} onChange={(e) => setWebsiteForm({ ...websiteForm, email: e.target.value })} placeholder="contact@mybusiness.com" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                    </div>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">City</label>
-                      <input type="text" value={websiteForm.city} onChange={(e) => setWebsiteForm({ ...websiteForm, city: e.target.value })} placeholder="e.g., Seattle" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">State</label>
-                      <input type="text" value={websiteForm.state} onChange={(e) => setWebsiteForm({ ...websiteForm, state: e.target.value })} placeholder="e.g., WA" maxLength="2" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none uppercase" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 rounded-lg p-4 border-2 border-amber-200">
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-amber-600">Services & Expertise</span></h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Services Offered *</label>
-                    <textarea value={websiteForm.services} onChange={(e) => setWebsiteForm({ ...websiteForm, services: e.target.value })} required placeholder="List your main services..." rows={5} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Years in Business</label>
-                    <input type="number" value={websiteForm.yearsInBusiness || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, yearsInBusiness: e.target.value })} placeholder="e.g., 15" min="0" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Certifications / Licenses</label>
-                    <input type="text" value={websiteForm.certifications || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, certifications: e.target.value })} placeholder="e.g., Licensed, Bonded, Insured" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-green-50 rounded-lg p-4 border-2 border-green-200">
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><span className="text-green-600">About Your Business</span></h3>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Business Description *</label>
-                    <textarea value={websiteForm.description} onChange={(e) => setWebsiteForm({ ...websiteForm, description: e.target.value })} required placeholder="Tell us about your business..." rows={6} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">What Makes You Different?</label>
-                    <textarea value={websiteForm.uniqueSellingPoints || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, uniqueSellingPoints: e.target.value })} placeholder="List 3-5 key differentiators..." rows={4} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Target Customer</label>
-                    <input type="text" value={websiteForm.targetCustomer || ''} onChange={(e) => setWebsiteForm({ ...websiteForm, targetCustomer: e.target.value })} placeholder="e.g., Homeowners, Property managers" className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex gap-4 pt-4 border-t-2 border-gray-200">
-                <button type="button" onClick={() => setShowEditWebsite(false)} className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors">Cancel</button>
-                <button type="submit" disabled={isRegenerating} className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2">
-                  {isRegenerating ? <><RefreshCw className="w-5 h-5 animate-spin" />Generating...</> : <><RefreshCw className="w-5 h-5" />{currentWebsite ? 'Regenerate Website' : 'Generate Website'}</>}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* Generate / Regenerate Website Modal */}
+      <GenerateModal
+        isOpen={showEditWebsite}
+        onClose={() => setShowEditWebsite(false)}
+        defaultValues={websiteForm}
+        isRegeneration={!!currentWebsite}
+      />
 
       {/* Connect Existing Website Modal */}
       {showConnectWebsite && (

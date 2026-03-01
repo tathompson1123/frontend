@@ -74,6 +74,17 @@ const CONTENT_FIELDS = {
     { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
     { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
   ],
+  'hero-fullscreen-light': [
+    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'highlightText', label: 'Highlight Text (colored accent)', type: TEXT },
+    { key: 'subtitle', label: 'Subtitle / Description', type: TEXTAREA },
+    { key: 'ctaText', label: 'Primary Button Text', type: TEXT },
+    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD },
+    { key: 'ctaText2', label: 'Secondary Button Text', type: TEXT },
+    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
+    { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
+  ],
   'hero-gradient': [
     { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'headline', label: 'Headline', type: TEXT },
@@ -148,6 +159,7 @@ const CONTENT_FIELDS = {
       { key: 'description', label: 'Description', type: TEXTAREA },
       { key: 'price', label: 'Price (optional)', type: TEXT },
       { key: 'icon', label: 'Icon (emoji)', type: TEXT },
+      { key: 'image', label: 'Service Image', type: IMAGE },
     ]},
   ],
   'testimonials-3col': [
@@ -252,14 +264,26 @@ const CONTENT_FIELDS = {
     { key: 'buttonLink', label: 'Button Link (optional)', type: URL_FIELD },
   ],
   'footer-4col-dark': [
-    { key: 'logo', label: 'Business Name', type: TEXT },
-    { key: 'tagline', label: 'Tagline', type: TEXTAREA },
-    { key: 'phone', label: 'Phone Number', type: TEXT },
-    { key: 'email', label: 'Email Address', type: TEXT },
-    { key: 'hours', label: 'Business Hours', type: TEXTAREA },
-    { key: 'services', label: 'Services List', type: ARRAY, itemFields: [
+    { key: 'logo',            label: 'Business Name',         type: TEXT },
+    { key: 'tagline',         label: 'Tagline',               type: TEXTAREA },
+    { key: 'phone',           label: 'Phone Number',          type: TEXT },
+    { key: 'email',           label: 'Email Address',         type: TEXT },
+    { key: 'hours',           label: 'Business Hours',        type: TEXTAREA },
+    { key: 'services',        label: 'Services List',         type: ARRAY, itemFields: [
       { key: 'text', label: 'Service Name', type: TEXT },
     ]},
+    { key: 'footerLinks',     label: 'Quick Links (Navigation)', type: ARRAY, itemFields: [
+      { key: 'text', label: 'Link Text', type: TEXT },
+      { key: 'url',  label: 'URL',       type: URL_FIELD },
+    ]},
+    { key: 'socialLabel',     label: 'Social Media Label (e.g. "Follow us")', type: TEXT },
+    { key: 'socialFacebook',  label: 'Facebook URL',          type: TEXT },
+    { key: 'socialInstagram', label: 'Instagram URL',         type: TEXT },
+    { key: 'socialGoogle',    label: 'Google Business URL',   type: TEXT },
+    { key: 'socialTiktok',    label: 'TikTok URL',            type: TEXT },
+    { key: 'socialX',         label: 'X (Twitter) URL',       type: TEXT },
+    { key: 'privacyUrl',      label: 'Privacy Policy URL',    type: URL_FIELD },
+    { key: 'termsUrl',        label: 'Terms of Service URL',  type: URL_FIELD },
   ],
 };
 
@@ -743,9 +767,41 @@ function FieldInput({ field, value, onChange, sections }) {
 }
 
 // ============================================
+// SECTION COLORS PANEL
+// Reusable color override panel shown at the bottom of every section editor
+// ============================================
+function SectionColorsPanel({ bgColor, colors = {}, onBgChange, onColorsChange }) {
+  const inputClass = 'flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white font-mono';
+  const colorRow = (label, value, onChange, onReset) => (
+    <div key={label} className="flex items-center gap-2">
+      <input type="color" value={value || '#ffffff'} onChange={e => onChange(e.target.value)}
+        className="w-7 h-7 rounded border border-gray-200 cursor-pointer p-0.5 flex-shrink-0" />
+      <span className="text-xs text-gray-500 w-28 flex-shrink-0 truncate">{label}</span>
+      <input type="text" value={value || ''} onChange={e => onChange(e.target.value)}
+        placeholder="theme default" className={inputClass} />
+      {value
+        ? <button onClick={onReset} className="text-xs text-gray-300 hover:text-red-400 flex-shrink-0">✕</button>
+        : <span className="text-xs text-gray-300 flex-shrink-0 w-4"></span>
+      }
+    </div>
+  );
+
+  return (
+    <div className="pt-4 border-t border-gray-100">
+      <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Section Colors</p>
+      <div className="space-y-2">
+        {colorRow('Background', bgColor, onBgChange, () => onBgChange(''))}
+        {onColorsChange && colorRow('Accent / Buttons', colors.primaryColor, v => onColorsChange('primaryColor', v), () => onColorsChange('primaryColor', ''))}
+        {onColorsChange && colorRow('Text Color', colors.textColor, v => onColorsChange('textColor', v), () => onColorsChange('textColor', ''))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
 // SECTION CONTENT FORM
 // ============================================
-function SectionContentForm({ section, onContentChange, sections }) {
+function SectionContentForm({ section, onContentChange, onColorsChange, sections }) {
   const fields = CONTENT_FIELDS[section.template];
 
   const prettyKey = (key) =>
@@ -783,15 +839,12 @@ function SectionContentForm({ section, onContentChange, sections }) {
             )}
           </div>
         ))}
-        {/* Background color override */}
-        <div className="pt-4 border-t border-gray-100">
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Section Background Color</label>
-          <div className="flex items-center gap-2">
-            <input type="color" value={section.content?.bgColor || '#ffffff'} onChange={e => onContentChange('bgColor', e.target.value)} className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer flex-shrink-0 p-0.5 bg-white" />
-            <input type="text" value={section.content?.bgColor || ''} onChange={e => onContentChange('bgColor', e.target.value)} placeholder="e.g. #f9fafb" className={inputClass + ' flex-1'} />
-            {section.content?.bgColor && <button onClick={() => onContentChange('bgColor', '')} className="text-xs text-gray-400 hover:text-gray-600 flex-shrink-0 px-2 py-1 rounded hover:bg-gray-100">Reset</button>}
-          </div>
-        </div>
+        <SectionColorsPanel
+          bgColor={section.content?.bgColor}
+          colors={section.colors}
+          onBgChange={val => onContentChange('bgColor', val)}
+          onColorsChange={onColorsChange}
+        />
       </div>
     );
   }
@@ -837,36 +890,13 @@ function SectionContentForm({ section, onContentChange, sections }) {
         </div>
       ))}
 
-      {/* Background color override — always available at the bottom */}
-      <div className="pt-4 border-t border-gray-100">
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-          Section Background Color
-        </label>
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={section.content?.bgColor || '#ffffff'}
-            onChange={e => onContentChange('bgColor', e.target.value)}
-            className="w-10 h-10 rounded-lg border border-gray-200 cursor-pointer flex-shrink-0 p-0.5 bg-white"
-          />
-          <input
-            type="text"
-            value={section.content?.bgColor || ''}
-            onChange={e => onContentChange('bgColor', e.target.value)}
-            placeholder="e.g. #f9fafb or rgb(249,250,251)"
-            className={inputClass + ' flex-1'}
-          />
-          {section.content?.bgColor && (
-            <button
-              onClick={() => onContentChange('bgColor', '')}
-              className="text-xs text-gray-400 hover:text-gray-600 flex-shrink-0 px-2 py-1 rounded hover:bg-gray-100"
-              title="Reset to theme default"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Section Colors — always available at the bottom */}
+      <SectionColorsPanel
+        bgColor={section.content?.bgColor}
+        colors={section.colors}
+        onBgChange={val => onContentChange('bgColor', val)}
+        onColorsChange={onColorsChange}
+      />
     </div>
   );
 }
@@ -874,29 +904,78 @@ function SectionContentForm({ section, onContentChange, sections }) {
 // ============================================
 // NAV CONTENT FORM
 // ============================================
-function NavContentForm({ navSection, onChange, sections }) {
+function NavContentForm({ navSection, onChange, onColorsChange, sections }) {
   if (!navSection) return (
     <div className="p-4 text-sm text-gray-400">No navigation found in this website.</div>
   );
   const c = navSection.content || {};
+  const navColors = navSection.colors || {};
 
   const updateField = (key, val) => onChange({ ...navSection, content: { ...c, [key]: val } });
   const links = Array.isArray(c.links) ? c.links : [];
 
   return (
     <div className="space-y-5 px-3 py-4">
-      {/* Logo Text */}
+      {/* Logo */}
       <div>
-        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Logo Text</label>
-        <input
-          type="text"
-          value={c.logo || c.brandName || ''}
-          onChange={e => {
-            const updated = { ...c, logo: e.target.value, brandName: e.target.value };
-            onChange({ ...navSection, content: updated });
-          }}
-          className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white"
-        />
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">Logo</label>
+        {/* Type toggle */}
+        <div className="flex gap-1 p-1 bg-gray-100 rounded-lg mb-3">
+          {['text', 'image'].map(type => (
+            <button
+              key={type}
+              onClick={() => updateField('logoType', type)}
+              className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition capitalize ${
+                (c.logoType || 'text') === type
+                  ? 'bg-white text-gray-800 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {type}
+            </button>
+          ))}
+        </div>
+        {(c.logoType || 'text') === 'image' ? (
+          <div className="space-y-2">
+            <ImageUploadField value={c.logoImage || ''} onChange={val => updateField('logoImage', val)} />
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Alt Text (for screen readers)</label>
+              <input
+                type="text"
+                value={c.logo || ''}
+                onChange={e => updateField('logo', e.target.value)}
+                placeholder="Business Name"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <input
+              type="text"
+              value={c.logo || c.brandName || ''}
+              onChange={e => {
+                const updated = { ...c, logo: e.target.value, brandName: e.target.value };
+                onChange({ ...navSection, content: updated });
+              }}
+              placeholder="Business Name"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white"
+            />
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-500 flex-shrink-0">Logo Color</label>
+              <input
+                type="color"
+                value={c.logoColor || '#ff6b35'}
+                onChange={e => updateField('logoColor', e.target.value)}
+                className="w-8 h-8 rounded border border-gray-200 cursor-pointer p-0.5 flex-shrink-0"
+              />
+              <span className="text-xs text-gray-400 font-mono flex-1 truncate">{c.logoColor || 'theme default'}</span>
+              {c.logoColor && (
+                <button onClick={() => updateField('logoColor', '')} className="text-xs text-gray-400 hover:text-red-500 flex-shrink-0">Reset</button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Navigation Links */}
@@ -990,6 +1069,33 @@ function NavContentForm({ navSection, onChange, sections }) {
           </div>
         </div>
       </div>
+
+      {/* Nav Colors */}
+      {onColorsChange && (
+        <div className="pt-3 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Nav Colors</p>
+          <div className="space-y-2">
+            {[
+              { key: 'primaryColor', label: 'CTA Button / Accent' },
+              { key: 'bgColor',      label: 'Background (scrolled)' },
+              { key: 'textColor',    label: 'Link Color' },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center gap-2">
+                <input type="color" value={navColors[key] || '#ffffff'} onChange={e => onColorsChange(key, e.target.value)}
+                  className="w-7 h-7 rounded border border-gray-200 cursor-pointer p-0.5 flex-shrink-0" />
+                <span className="text-xs text-gray-500 w-28 flex-shrink-0 truncate">{label}</span>
+                <input type="text" value={navColors[key] || ''} onChange={e => onColorsChange(key, e.target.value)}
+                  placeholder="theme default"
+                  className="flex-1 px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white font-mono" />
+                {navColors[key]
+                  ? <button onClick={() => onColorsChange(key, '')} className="text-xs text-gray-300 hover:text-red-400 flex-shrink-0">✕</button>
+                  : <span className="w-4 flex-shrink-0" />
+                }
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1267,6 +1373,25 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
     });
   }, [getSections, setSections]);
 
+  const updateSectionColors = useCallback((editableIdx, key, val) => {
+    setSchema(prev => {
+      const sections = getSections(prev);
+      const editables = sections.filter(s => !s.template?.startsWith('nav-') && !s.template?.startsWith('footer'));
+      const target = editables[editableIdx];
+      if (!target) return prev;
+      const actualIdx = sections.indexOf(target);
+      if (actualIdx === -1) return prev;
+      const updated = JSON.parse(JSON.stringify(prev));
+      const updatedSections = getSections(updated);
+      const current = updatedSections[actualIdx];
+      const newColors = { ...(current.colors || {}) };
+      if (val) newColors[key] = val;
+      else delete newColors[key];
+      updatedSections[actualIdx] = { ...current, colors: newColors };
+      return setSections(updated, updatedSections);
+    });
+  }, [getSections, setSections]);
+
   const moveSection = useCallback((idx, direction) => {
     const sections = [...getSections(schema)];
     const editables = sections.filter(s => !s.template?.startsWith('nav-') && !s.template?.startsWith('footer'));
@@ -1341,6 +1466,29 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
     });
   }, [getSections, setSections]);
 
+  const updateNavColors = useCallback((key, val) => {
+    setSchema(prev => {
+      const updated = JSON.parse(JSON.stringify(prev));
+      const applyColors = (nav) => {
+        const newColors = { ...(nav.colors || {}) };
+        if (val) newColors[key] = val;
+        else delete newColors[key];
+        return { ...nav, colors: newColors };
+      };
+      if (updated.nav) {
+        updated.nav = applyColors(updated.nav);
+        return updated;
+      }
+      const sections = getSections(updated);
+      const navIdx = sections.findIndex(s => (s.template || '').startsWith('nav-'));
+      if (navIdx !== -1) {
+        sections[navIdx] = applyColors(sections[navIdx]);
+        return setSections(updated, sections);
+      }
+      return updated;
+    });
+  }, [getSections, setSections]);
+
   const updateFooterContent = useCallback((key, val) => {
     setSchema(prev => {
       const updated = JSON.parse(JSON.stringify(prev));
@@ -1363,6 +1511,33 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
       const idx = (updated.sections || []).findIndex(s => (s.template || '').startsWith('footer'));
       if (idx === -1) return prev;
       updated.sections[idx] = { ...updated.sections[idx], content: { ...updated.sections[idx].content, [key]: val } };
+      return updated;
+    });
+  }, []);
+
+  const updateFooterColors = useCallback((key, val) => {
+    setSchema(prev => {
+      const updated = JSON.parse(JSON.stringify(prev));
+      const applyColors = (section) => {
+        const newColors = { ...(section.colors || {}) };
+        if (val) newColors[key] = val;
+        else delete newColors[key];
+        return { ...section, colors: newColors };
+      };
+      if (updated.footer && (updated.footer.template || '').startsWith('footer')) {
+        updated.footer = applyColors(updated.footer);
+        return updated;
+      }
+      if (updated.multiPage && Array.isArray(updated.pages)) {
+        for (const page of updated.pages) {
+          const idx = (page.sections || []).findIndex(s => (s.template || '').startsWith('footer'));
+          if (idx !== -1) { page.sections[idx] = applyColors(page.sections[idx]); return updated; }
+        }
+        return prev;
+      }
+      const idx = (updated.sections || []).findIndex(s => (s.template || '').startsWith('footer'));
+      if (idx === -1) return prev;
+      updated.sections[idx] = applyColors(updated.sections[idx]);
       return updated;
     });
   }, []);
@@ -1618,12 +1793,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
         <div className="w-80 flex-shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col overflow-hidden">
           <div className="flex-1 overflow-y-auto">
 
-            {/* Navigation */}
-            <SidebarCard id="nav" label="Navigation" icon={Navigation} openCard={openCard} setOpenCard={setOpenCard}>
-              <NavContentForm navSection={navSection} onChange={updateNav} sections={editableSections} />
-            </SidebarCard>
-
-            {/* Page selector — shown between Navigation and Sections for multi-page schemas */}
+            {/* Page selector — shown above Navigation for multi-page schemas */}
             {schema.multiPage && Array.isArray(schema.pages) && schema.pages.length > 0 && (() => {
               const page = schema.pages[activePage];
               const inNav = page ? isPageInNav(page) : false;
@@ -1704,6 +1874,11 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                 </div>
               );
             })()}
+
+            {/* Navigation */}
+            <SidebarCard id="nav" label="Navigation" icon={Navigation} openCard={openCard} setOpenCard={setOpenCard}>
+              <NavContentForm navSection={navSection} onChange={updateNav} onColorsChange={updateNavColors} sections={editableSections} />
+            </SidebarCard>
 
             {/* Sections */}
             <SidebarCard id="sections" label="Sections" icon={Layers} openCard={openCard} setOpenCard={setOpenCard} badge={editableSections.length}>
@@ -1798,6 +1973,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                       section={editableSections[selectedIdx]}
                       sections={editableSections}
                       onContentChange={(key, val) => updateSectionContent(selectedIdx, key, val)}
+                      onColorsChange={(key, val) => updateSectionColors(selectedIdx, key, val)}
                     />
                   )}
                 </div>
@@ -1811,6 +1987,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                   section={footerSection}
                   sections={editableSections}
                   onContentChange={updateFooterContent}
+                  onColorsChange={updateFooterColors}
                 />
               </SidebarCard>
             )}

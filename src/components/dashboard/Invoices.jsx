@@ -16,6 +16,101 @@ const processorLabel = { square: 'Square', stripe: 'Stripe', paypal: 'PayPal' };
 
 const fmt = (val) => parseFloat(val || 0).toFixed(2);
 
+function InvoicePreview({ form, editingInvoice, subtotal, taxAmount }) {
+  const total = subtotal + taxAmount;
+  const invoiceNum = editingInvoice?.invoice_number || 'PREVIEW';
+  const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  const dueDateDisplay = form.dueDate
+    ? new Date(form.dueDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '—';
+  const lineItems = form.items.filter(it => it.description || parseFloat(it.unitPrice) > 0);
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-7 text-sm shadow-sm">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-7 pb-5 border-b border-gray-100">
+        <div>
+          <h3 className="text-2xl font-black text-gray-900 tracking-tight mb-0.5">INVOICE</h3>
+          <p className="text-xs text-gray-400 font-mono">{invoiceNum}</p>
+        </div>
+        <div className="text-right text-xs">
+          <p className="text-gray-400 mb-0.5">Date</p>
+          <p className="font-semibold text-gray-700">{today}</p>
+          <p className="text-gray-400 mt-2 mb-0.5">Due Date</p>
+          <p className="font-semibold text-gray-700">{dueDateDisplay}</p>
+        </div>
+      </div>
+
+      {/* Bill To */}
+      {(form.customerName || form.customerEmail) && (
+        <div className="mb-6">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">Bill To</p>
+          {form.customerName && <p className="font-bold text-gray-900">{form.customerName}</p>}
+          {form.customerEmail && <p className="text-gray-500 text-xs">{form.customerEmail}</p>}
+          {form.customerPhone && <p className="text-gray-500 text-xs">{form.customerPhone}</p>}
+        </div>
+      )}
+
+      {/* Line Items */}
+      <div className="mb-5">
+        <table className="w-full">
+          <thead>
+            <tr className="border-b-2 border-gray-200">
+              <th className="text-left pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Description</th>
+              <th className="text-center pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider w-10">Qty</th>
+              <th className="text-right pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider w-16">Price</th>
+              <th className="text-right pb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider w-16">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lineItems.length === 0 ? (
+              <tr><td colSpan={4} className="py-4 text-center text-gray-300 text-xs">No line items yet</td></tr>
+            ) : lineItems.map((item, idx) => (
+              <tr key={idx} className="border-b border-gray-50">
+                <td className="py-2 text-gray-700 pr-2">{item.description || '—'}</td>
+                <td className="py-2 text-center text-gray-500">{item.quantity}</td>
+                <td className="py-2 text-right text-gray-500">${parseFloat(item.unitPrice || 0).toFixed(2)}</td>
+                <td className="py-2 text-right font-semibold text-gray-800">${(item.quantity * parseFloat(item.unitPrice || 0)).toFixed(2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Totals */}
+      <div className="space-y-1.5 pt-3 border-t border-gray-200">
+        <div className="flex justify-between text-gray-500 text-xs">
+          <span>Subtotal</span><span>${subtotal.toFixed(2)}</span>
+        </div>
+        {taxAmount > 0 && (
+          <div className="flex justify-between text-gray-500 text-xs">
+            <span>Tax ({form.taxRate}%)</span><span>${taxAmount.toFixed(2)}</span>
+          </div>
+        )}
+        <div className="flex justify-between text-gray-900 font-bold text-base pt-2 border-t border-gray-200 mt-1">
+          <span>Total</span><span>${total.toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* Notes */}
+      {form.notes && (
+        <div className="mt-5 pt-4 border-t border-gray-100">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Notes</p>
+          <p className="text-gray-600 text-xs leading-relaxed">{form.notes}</p>
+        </div>
+      )}
+
+      {/* Terms */}
+      {form.terms && (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Terms</p>
+          <p className="text-gray-400 text-xs leading-relaxed">{form.terms}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Invoices({ apiUrl, user, authFetch }) {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -267,9 +362,12 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   const selectService = (index, serviceId) => {
     const service = services.find(s => s.id === parseInt(serviceId));
     if (service) {
-      updateLineItem(index, 'description', service.name);
-      updateLineItem(index, 'unitPrice', parseFloat(service.price));
-      updateLineItem(index, 'serviceId', service.id);
+      setForm(prev => {
+        const items = prev.items.map((item, i) => i === index
+          ? { ...item, description: service.name, unitPrice: parseFloat(service.price), serviceId: service.id }
+          : item);
+        return { ...prev, items };
+      });
     }
   };
 
@@ -277,16 +375,21 @@ export default function Invoices({ apiUrl, user, authFetch }) {
     const item = catalog.find(c => c.id === parseInt(itemId));
     if (!item) return;
     if (item.amount_type === 'percentage') {
-      // Calculate against current subtotal of other items
       const subtotalOthers = form.items.reduce((s, it, idx) => idx !== index ? s + (it.quantity * it.unitPrice) : s, 0);
       const calculated = Math.round(subtotalOthers * (parseFloat(item.amount) / 100) * 100) / 100;
-      updateLineItem(index, 'description', `${item.name} (${item.amount}%)`);
-      updateLineItem(index, 'unitPrice', calculated);
-      updateLineItem(index, 'quantity', 1);
+      setForm(prev => {
+        const items = prev.items.map((it, i) => i === index
+          ? { ...it, description: `${item.name} (${item.amount}%)`, unitPrice: calculated, quantity: 1 }
+          : it);
+        return { ...prev, items };
+      });
     } else {
-      updateLineItem(index, 'description', item.name);
-      updateLineItem(index, 'unitPrice', parseFloat(item.amount));
-      updateLineItem(index, 'quantity', 1);
+      setForm(prev => {
+        const items = prev.items.map((it, i) => i === index
+          ? { ...it, description: item.name, unitPrice: parseFloat(item.amount), quantity: 1 }
+          : it);
+        return { ...prev, items };
+      });
     }
   };
 
@@ -484,162 +587,185 @@ export default function Invoices({ apiUrl, user, authFetch }) {
         </div>
       )}
 
-      {/* Create / Edit Invoice Modal */}
+      {/* Create / Edit Invoice — Split Editor */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full p-8 max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {editingInvoice ? (canEdit ? 'Edit Invoice' : 'Invoice Details') : 'New Invoice'}
-                </h2>
-                {editingInvoice && !canEdit && (
-                  <p className="text-sm text-amber-600 mt-1">Only draft invoices can be edited</p>
-                )}
-              </div>
-              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-6 h-6" /></button>
-            </div>
-
-            {/* Customer */}
-            <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Customer</label>
-              {canEdit ? (
-                <>
-                  <select onChange={(e) => selectCustomer(e.target.value)} className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none mb-3">
-                    <option value="">Select existing customer...</option>
-                    {customers.map(c => <option key={c.id} value={c.id}>{c.name} - {c.email}</option>)}
-                  </select>
-                  <div className="grid grid-cols-3 gap-3">
-                    <input type="text" placeholder="Name" value={form.customerName} onChange={e => setForm({ ...form, customerName: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                    <input type="email" placeholder="Email" value={form.customerEmail} onChange={e => setForm({ ...form, customerEmail: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                    <input type="tel" placeholder="Phone" value={form.customerPhone} onChange={e => setForm({ ...form, customerPhone: e.target.value })} className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
-                  </div>
-                </>
-              ) : (
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <p className="font-semibold text-gray-900">{editingInvoice.customer_name}</p>
-                  <p className="text-sm text-gray-600">{editingInvoice.customer_email}</p>
-                </div>
+        <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col overflow-hidden">
+          {/* Top bar */}
+          <div className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200 flex-shrink-0">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingInvoice ? (canEdit ? 'Edit Invoice' : 'Invoice Details') : 'New Invoice'}
+              </h2>
+              {editingInvoice && !canEdit && (
+                <p className="text-xs text-amber-600 mt-0.5">Only draft invoices can be edited</p>
               )}
             </div>
-
-            {/* Line Items */}
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-2">
-                <label className="block text-sm font-semibold text-gray-700">Line Items</label>
-                {canEdit && services.length > 0 && (
-                  <span className="text-xs text-gray-400">Type a custom service or quick-fill from your saved services</span>
-                )}
-              </div>
-              {form.items.map((item, i) => (
-                <div key={i} className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="flex gap-3 mb-2 items-start">
-                    <input type="text" placeholder="Service description (e.g. Full detail, Oil change, Lawn mow...)" value={item.description}
-                      onChange={e => updateLineItem(i, 'description', e.target.value)}
-                      disabled={!canEdit}
-                      className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white" />
-                    <input type="number" min="1" value={item.quantity}
-                      onChange={e => updateLineItem(i, 'quantity', parseInt(e.target.value) || 1)}
-                      disabled={!canEdit}
-                      className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white text-center" placeholder="Qty" />
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
-                      <input type="number" step="0.01" min="0" value={item.unitPrice}
-                        onChange={e => updateLineItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
-                        disabled={!canEdit}
-                        className="w-28 pl-6 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white" placeholder="0.00" />
-                    </div>
-                    <span className="py-2 text-sm font-bold text-gray-700 w-20 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</span>
-                    {canEdit && form.items.length > 1 && (
-                      <button onClick={() => removeLineItem(i)} className="p-2 text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
-                    )}
-                  </div>
-                  {canEdit && (services.length > 0 || catalog.length > 0) && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">Quick-fill:</span>
-                      {services.length > 0 && (
-                        <select value="" onChange={(e) => { if (e.target.value) selectService(i, e.target.value); }}
-                          className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
-                          <option value="">— service —</option>
-                          {services.map(s => <option key={s.id} value={s.id}>{s.name} (${parseFloat(s.price).toFixed(2)})</option>)}
-                        </select>
-                      )}
-                      {catalog.length > 0 && (
-                        <select value="" onChange={(e) => { if (e.target.value) selectCatalogItem(i, e.target.value); }}
-                          className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
-                          <option value="">— fee / supply —</option>
-                          {catalog.map(c => (
-                            <option key={c.id} value={c.id}>
-                              {c.name} {c.amount_type === 'percentage' ? `(${c.amount}%)` : `($${parseFloat(c.amount).toFixed(2)})`}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {canEdit && (
-                <button onClick={addLineItem} className="text-sm text-amber-600 hover:text-amber-700 font-medium">+ Add Line Item</button>
-              )}
-            </div>
-
-            {/* Totals */}
-            <div className="bg-gray-50 rounded-xl p-4 mb-6">
-              <div className="flex justify-between text-sm mb-2"><span>Subtotal</span><span className="font-bold">${subtotal.toFixed(2)}</span></div>
-              <div className="flex justify-between text-sm mb-2 items-center">
-                <span>Tax (%)</span>
-                {canEdit ? (
-                  <input type="number" step="0.01" min="0" value={form.taxRate} onChange={e => setForm({ ...form, taxRate: parseFloat(e.target.value) || 0 })}
-                    className="w-20 px-2 py-1 border border-gray-200 rounded text-right text-sm" />
-                ) : (
-                  <span>{(parseFloat(editingInvoice?.tax_rate || 0) * 100).toFixed(1)}%</span>
-                )}
-              </div>
-              {taxAmount > 0 && <div className="flex justify-between text-sm mb-2"><span>Tax Amount</span><span>${taxAmount.toFixed(2)}</span></div>}
-              <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2">
-                <span>Total</span>
-                <span>${canEdit ? (subtotal + taxAmount).toFixed(2) : fmt(editingInvoice?.total_amount)}</span>
-              </div>
-            </div>
-
-            {/* Notes & Due Date */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
-                <input type="date" value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })}
-                  disabled={!canEdit}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
-                <input type="text" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })}
-                  disabled={!canEdit}
-                  placeholder="Optional notes..."
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
-              </div>
-            </div>
-
-            <div className="flex gap-3">
+            <div className="flex items-center gap-3">
               {canEdit ? (
-                <button onClick={handleSaveInvoice} className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
+                <button onClick={handleSaveInvoice}
+                  className="px-6 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
                   {editingInvoice ? 'Save Changes' : 'Create Invoice'}
                 </button>
               ) : (
-                /* Non-draft: show send options inline */
-                <div className="flex-1 flex gap-2">
+                <div className="flex gap-2">
                   {sendOptions().map(opt => (
                     <button key={opt.processor}
                       onClick={() => { closeModal(); handleSend(opt.processor, editingInvoice.id); }}
-                      className="flex-1 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold text-sm">
+                      className="px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold text-sm">
                       {opt.label}
                     </button>
                   ))}
                 </div>
               )}
-              <button onClick={closeModal} className="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition font-semibold">
-                {canEdit ? 'Cancel' : 'Close'}
+              <button onClick={closeModal} className="p-2 hover:bg-gray-100 rounded-lg transition">
+                <X className="w-5 h-5 text-gray-500" />
               </button>
+            </div>
+          </div>
+
+          {/* Body: form + preview */}
+          <div className="flex flex-1 overflow-hidden">
+            {/* Form */}
+            <div className="flex-1 min-w-0 overflow-y-auto p-8 space-y-6">
+
+              {/* Customer */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Customer</label>
+                {canEdit ? (
+                  <>
+                    <select onChange={(e) => selectCustomer(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none mb-3">
+                      <option value="">Select existing customer...</option>
+                      {customers.map(c => <option key={c.id} value={c.id}>{c.name} - {c.email}</option>)}
+                    </select>
+                    <div className="grid grid-cols-3 gap-3">
+                      <input type="text" placeholder="Name" value={form.customerName}
+                        onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
+                        className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                      <input type="email" placeholder="Email" value={form.customerEmail}
+                        onChange={e => setForm(f => ({ ...f, customerEmail: e.target.value }))}
+                        className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                      <input type="tel" placeholder="Phone" value={form.customerPhone}
+                        onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))}
+                        className="px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="font-semibold text-gray-900">{editingInvoice.customer_name}</p>
+                    <p className="text-sm text-gray-600">{editingInvoice.customer_email}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Line Items */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-semibold text-gray-700">Line Items</label>
+                  {canEdit && (services.length > 0 || catalog.length > 0) && (
+                    <span className="text-xs text-gray-400">Type a custom service or quick-fill from your saved services</span>
+                  )}
+                </div>
+                {form.items.map((item, i) => (
+                  <div key={i} className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex gap-3 mb-2 items-start">
+                      <input type="text" placeholder="Service description (e.g. Full detail, Oil change, Lawn mow...)" value={item.description}
+                        onChange={e => updateLineItem(i, 'description', e.target.value)}
+                        disabled={!canEdit}
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white" />
+                      <input type="number" min="1" value={item.quantity}
+                        onChange={e => updateLineItem(i, 'quantity', parseInt(e.target.value) || 1)}
+                        disabled={!canEdit}
+                        className="w-20 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white text-center" placeholder="Qty" />
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                        <input type="number" step="0.01" min="0" value={item.unitPrice}
+                          onChange={e => updateLineItem(i, 'unitPrice', parseFloat(e.target.value) || 0)}
+                          disabled={!canEdit}
+                          className="w-28 pl-6 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white" placeholder="0.00" />
+                      </div>
+                      <span className="py-2 text-sm font-bold text-gray-700 w-20 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                      {canEdit && form.items.length > 1 && (
+                        <button onClick={() => removeLineItem(i)} className="p-2 text-red-400 hover:text-red-600">
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    {canEdit && (services.length > 0 || catalog.length > 0) && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-400">Quick-fill:</span>
+                        {services.length > 0 && (
+                          <select value="" onChange={(e) => { if (e.target.value) selectService(i, e.target.value); }}
+                            className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
+                            <option value="">— service —</option>
+                            {services.map(s => <option key={s.id} value={s.id}>{s.name} (${parseFloat(s.price).toFixed(2)})</option>)}
+                          </select>
+                        )}
+                        {catalog.length > 0 && (
+                          <select value="" onChange={(e) => { if (e.target.value) selectCatalogItem(i, e.target.value); }}
+                            className="text-xs px-2 py-1 border border-gray-200 rounded-lg bg-white focus:border-amber-500 focus:outline-none text-gray-600 cursor-pointer">
+                            <option value="">— fee / supply —</option>
+                            {catalog.map(c => (
+                              <option key={c.id} value={c.id}>
+                                {c.name} {c.amount_type === 'percentage' ? `(${c.amount}%)` : `($${parseFloat(c.amount).toFixed(2)})`}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {canEdit && (
+                  <button onClick={addLineItem} className="text-sm text-amber-600 hover:text-amber-700 font-medium">+ Add Line Item</button>
+                )}
+              </div>
+
+              {/* Totals */}
+              <div className="bg-gray-50 rounded-xl p-4">
+                <div className="flex justify-between text-sm mb-2"><span>Subtotal</span><span className="font-bold">${subtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-sm mb-2 items-center">
+                  <span>Tax (%)</span>
+                  {canEdit ? (
+                    <input type="number" step="0.01" min="0" value={form.taxRate}
+                      onChange={e => setForm(f => ({ ...f, taxRate: parseFloat(e.target.value) || 0 }))}
+                      className="w-20 px-2 py-1 border border-gray-200 rounded text-right text-sm" />
+                  ) : (
+                    <span>{(parseFloat(editingInvoice?.tax_rate || 0) * 100).toFixed(1)}%</span>
+                  )}
+                </div>
+                {taxAmount > 0 && <div className="flex justify-between text-sm mb-2"><span>Tax Amount</span><span>${taxAmount.toFixed(2)}</span></div>}
+                <div className="flex justify-between text-lg font-bold border-t border-gray-200 pt-2 mt-2">
+                  <span>Total</span>
+                  <span>${canEdit ? (subtotal + taxAmount).toFixed(2) : fmt(editingInvoice?.total_amount)}</span>
+                </div>
+              </div>
+
+              {/* Notes & Due Date */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Due Date</label>
+                  <input type="date" value={form.dueDate}
+                    onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))}
+                    disabled={!canEdit}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
+                  <input type="text" value={form.notes}
+                    onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
+                    disabled={!canEdit}
+                    placeholder="Optional notes..."
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none disabled:bg-gray-50" />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Preview Panel */}
+            <div className="w-1/3 min-w-72 flex-shrink-0 overflow-y-auto bg-gray-100 border-l border-gray-200 p-6">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-4">Preview</p>
+              <InvoicePreview form={form} editingInvoice={editingInvoice} subtotal={subtotal} taxAmount={taxAmount} />
             </div>
           </div>
         </div>

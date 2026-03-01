@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Wand2, Sparkles } from 'lucide-react';
 import GenerationProgress from '../components/GenerationProgress';
@@ -102,30 +103,29 @@ export default function WebsiteGenerator() {
 
   const handleGenerate = async (e, preFilledData = null) => {
     if (e) e.preventDefault();
-    
-    const dataToSubmit = preFilledData || formData;
-    
-    setIsGenerating(true);
-    setError(null);
-    setProgress(0);
-    setBuildStatus('Starting AI generation...');
-    simulateBuildProgress();
-    
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-      const token = localStorage.getItem('token');
 
-      console.log('🔍 API URL:', apiUrl);
-      console.log('🔍 Has token:', !!token);
-      
-      if (!token) {
-        setError('Please log in to generate a website');
-        setIsGenerating(false);
-        setProgress(0);
-        setBuildStatus('');
-        navigate('/login');
-        return;
-      }
+    const dataToSubmit = preFilledData || formData;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+    const token = localStorage.getItem('token');
+
+    // Check token BEFORE setting isGenerating so the loading screen always shows
+    if (!token) {
+      setError('Please log in to generate a website');
+      navigate('/login');
+      return;
+    }
+
+    // flushSync forces React to commit these updates to the DOM *right now*,
+    // before the async fetch begins — guarantees the loading screen appears.
+    flushSync(() => {
+      setIsGenerating(true);
+      setError(null);
+      setProgress(0);
+      setBuildStatus('Starting AI generation...');
+    });
+    simulateBuildProgress();
+
+    try {
       
       // V2 endpoint - also saves business info to DB
       const response = await fetch(`${apiUrl}/api/generate-v2`, {
@@ -160,32 +160,20 @@ export default function WebsiteGenerator() {
       if (data.success && data.html) {
         setBuildStatus('Complete! 🎉');
         setProgress(100);
-        
+
         setTimeout(() => {
-          console.log('✅ Setting generated website, length:', data.html.length);
           const pages = data.pages || { 'index.html': data.html };
-          setGeneratedWebsite(data.html);
-          setGeneratedPages(pages);
-          setActivePreviewPage('index.html');
-          
-          // Auto-save if logged in
-         // if (token) {
-           // fetch(`${apiUrl}/api/website`, {
-             // method: 'POST',
-             // headers: {
-               // 'Content-Type': 'application/json',
-               // 'Authorization': `Bearer ${token}`
-            //  },
-            //  body: JSON.stringify({
-              //  htmlContent: data.html,
-               // pages: data.pages || { 'index.html': data.html }
-            //  })
-          //  }).then(() => console.log('✅ Website auto-saved'))
-           //   .catch(err => console.error('⚠️ Could not auto-save:', err));
-        //  }
-          
           setIsGenerating(false);
           setError(null);
+
+          // If this came from the dashboard regenerate flow, go back there
+          if (location.state?.isRegeneration) {
+            navigate('/dashboard?tab=website', { state: { showSuccess: true } });
+          } else {
+            setGeneratedWebsite(data.html);
+            setGeneratedPages(pages);
+            setActivePreviewPage('index.html');
+          }
         }, 500);
       } else {
         throw new Error('Invalid response from server');

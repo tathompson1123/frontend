@@ -37,6 +37,7 @@ import EmailCampaigns from '../components/dashboard/EmailCampaigns';
 import SettingsPage from '../components/dashboard/Settings';
 import FeatureGate from '../components/dashboard/FeatureGate';
 import Invoices from '../components/dashboard/Invoices';
+import Estimates from '../components/dashboard/Estimates';
 import PaymentProcessors from '../components/dashboard/PaymentSettings';
 import Transactions from '../components/dashboard/Transactions';
 import DomainPolicyModal from '../components/dashboard/DomainPolicyModal';
@@ -47,6 +48,7 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
   const tabs = [
     { key: 'processors', label: 'Payment Processors' },
     { key: 'invoices', label: 'Invoices' },
+    { key: 'estimates', label: 'Estimates' },
     { key: 'transactions', label: 'Transactions' },
   ];
   return (
@@ -72,6 +74,7 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
       </div>
       {subTab === 'processors' && <PaymentProcessors apiUrl={apiUrl} user={user} authFetch={authFetch} justConnected={justConnected} />}
       {subTab === 'invoices' && <Invoices apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'estimates' && <Estimates apiUrl={apiUrl} user={user} authFetch={authFetch} />}
       {subTab === 'transactions' && <Transactions apiUrl={apiUrl} user={user} authFetch={authFetch} />}
     </div>
   );
@@ -107,6 +110,7 @@ export default function Dashboard() {
   const [currentView, setCurrentView] = useState('overview');
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
+  const [savedFlash, setSavedFlash] = useState(false);
 
   // DEFINE user AND apiUrl FIRST
 const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
@@ -277,6 +281,10 @@ useEffect(() => {
       const connected = params.get('connected');
       if (connected) {
         setJustConnectedProcessor(connected);
+      }
+      if (params.get('saved') === '1') {
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 4000);
       }
       window.history.replaceState({}, '', '/dashboard');
     }
@@ -622,20 +630,29 @@ useEffect(() => {
           )}
 
           {currentView === 'website' && (
-            <MyWebsite
-              apiUrl={apiUrl}
-              user={user}
-              navigate={navigate}
-              websiteData={websiteData}
-              authFetch={authFetch}
-              setCurrentView={setCurrentView}
-              refreshWebsiteData={refreshWebsiteData}
-              onUserPlanUpdate={(plan) => {
-                const updatedUser = { ...user, plan };
-                localStorage.setItem('user', JSON.stringify(updatedUser));
-                setUser(updatedUser);
-              }}
-            />
+            <>
+              {savedFlash && (
+                <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-medium shadow-sm">
+                  <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  Changes successfully saved and published.
+                  <button onClick={() => setSavedFlash(false)} className="ml-auto text-green-600 hover:text-green-800">✕</button>
+                </div>
+              )}
+              <MyWebsite
+                apiUrl={apiUrl}
+                user={user}
+                navigate={navigate}
+                websiteData={websiteData}
+                authFetch={authFetch}
+                setCurrentView={setCurrentView}
+                refreshWebsiteData={refreshWebsiteData}
+                onUserPlanUpdate={(plan) => {
+                  const updatedUser = { ...user, plan };
+                  localStorage.setItem('user', JSON.stringify(updatedUser));
+                  setUser(updatedUser);
+                }}
+              />
+            </>
           )}
 
           {currentView === 'google-business' && (
