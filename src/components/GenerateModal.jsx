@@ -169,31 +169,12 @@ export default function GenerateModal({ isOpen, onClose, defaultValues = {}, isR
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Business Type *</label>
-              <select
-                name="businessType" value={formData.businessType}
+              <input
+                type="text" name="businessType" value={formData.businessType}
                 onChange={handleChange} required
+                placeholder="e.g. Plumbing, HVAC, Photography, Cleaning..."
                 className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none text-sm"
-              >
-                <option value="">Select a business type...</option>
-                <option value="plumbing">Plumbing</option>
-                <option value="hvac">HVAC</option>
-                <option value="landscaping">Landscaping</option>
-                <option value="cleaning">Cleaning</option>
-                <option value="electrical">Electrical</option>
-                <option value="carpentry">Carpentry</option>
-                <option value="painting">Painting</option>
-                <option value="roofing">Roofing</option>
-                <option value="auto-detailing">Auto Detailing</option>
-                <option value="auto-repair">Auto Repair</option>
-                <option value="salon">Hair Salon / Barbershop</option>
-                <option value="spa">Spa / Massage</option>
-                <option value="fitness">Personal Training / Gym</option>
-                <option value="photography">Photography</option>
-                <option value="pet-grooming">Pet Grooming</option>
-                <option value="catering">Catering</option>
-                <option value="handyman">Handyman / Renovation</option>
-                <option value="other">Other</option>
-              </select>
+              />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Tagline / Slogan</label>
