@@ -463,66 +463,69 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
       <div className="flex-1 overflow-hidden grid grid-cols-2 gap-0">
 
         {/* LEFT: Settings + Tone + Focus */}
-        <div className="overflow-y-auto border-r border-gray-200 p-4 space-y-3">
+        <div className="overflow-y-auto border-r border-gray-200 p-5 space-y-4">
 
           {/* Autopilot + From */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3">
-            <div className="flex items-center justify-between mb-2.5">
-              <span className="text-xs font-semibold text-gray-700">Autopilot Mode</span>
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <span className="text-sm font-semibold text-gray-800">Autopilot Mode</span>
+                <p className="text-xs text-gray-500">Auto-send every week</p>
+              </div>
               <label className="relative inline-flex items-center cursor-pointer">
                 <input type="checkbox" checked={config.enabled}
                   onChange={e => setConfig({ ...config, enabled: e.target.checked })}
                   className="sr-only peer" />
-                <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+                <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
-                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">From Name</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">From Name</label>
                 <input type="text" value={config.from_name} onChange={e => setConfig({ ...config, from_name: e.target.value })}
                   placeholder="Business Name"
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">From Email</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">From Email</label>
                 <input type="email" value={config.from_email} onChange={e => setConfig({ ...config, from_email: e.target.value })}
                   placeholder="hello@business.com"
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-2 mb-2.5">
+            <div className="grid grid-cols-2 gap-3 mb-4">
               <div>
-                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Send Day</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Send Day</label>
                 <select value={config.send_day} onChange={e => setConfig({ ...config, send_day: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500">
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                   {DAYS.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Time (UTC)</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Time (UTC)</label>
                 <select value={config.send_hour} onChange={e => setConfig({ ...config, send_hour: parseInt(e.target.value) })}
-                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500">
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                   {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
               </div>
             </div>
             <button onClick={save} disabled={saving}
-              className="w-full py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-60 transition-all">
+              className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 transition-all">
               {saving ? 'Saving…' : 'Save Settings'}
             </button>
           </div>
 
           {/* Tone */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3">
-            <label className="block text-xs font-semibold text-gray-700 mb-2">Email Tone</label>
-            <div className="space-y-1">
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <label className="block text-sm font-semibold text-gray-800 mb-3">Email Tone</label>
+            <div className="space-y-2">
               {TONES.map(t => (
                 <button key={t.value} onClick={() => setConfig({ ...config, tone: t.value })}
-                  className={`w-full px-2.5 py-2 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${config.tone === t.value ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`} />
+                  className={`w-full px-3 py-2.5 rounded-lg border-2 text-left transition-all flex items-center gap-3 ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${config.tone === t.value ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`} />
                   <div>
-                    <p className={`text-xs font-semibold leading-none ${config.tone === t.value ? 'text-blue-700' : 'text-gray-800'}`}>{t.label}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{t.desc}</p>
+                    <p className={`text-sm font-semibold ${config.tone === t.value ? 'text-blue-700' : 'text-gray-800'}`}>{t.label}</p>
+                    <p className="text-xs text-gray-500">{t.desc}</p>
                   </div>
                 </button>
               ))}
@@ -530,16 +533,16 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
           </div>
 
           {/* Focus */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3">
-            <label className="block text-xs font-semibold text-gray-700 mb-2">Campaign Focus</label>
-            <div className="space-y-1">
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <label className="block text-sm font-semibold text-gray-800 mb-3">Campaign Focus</label>
+            <div className="space-y-2">
               {FOCUSES.map(f => (
                 <button key={f.value} onClick={() => setConfig({ ...config, focus: f.value })}
-                  className={`w-full px-2.5 py-2 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${config.focus === f.value ? 'border-purple-500 bg-purple-500' : 'border-gray-300'}`} />
+                  className={`w-full px-3 py-2.5 rounded-lg border-2 text-left transition-all flex items-center gap-3 ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${config.focus === f.value ? 'border-purple-500 bg-purple-500' : 'border-gray-300'}`} />
                   <div>
-                    <p className={`text-xs font-semibold leading-none ${config.focus === f.value ? 'text-purple-700' : 'text-gray-800'}`}>{f.label}</p>
-                    <p className="text-[10px] text-gray-400 mt-0.5">{f.desc}</p>
+                    <p className={`text-sm font-semibold ${config.focus === f.value ? 'text-purple-700' : 'text-gray-800'}`}>{f.label}</p>
+                    <p className="text-xs text-gray-500">{f.desc}</p>
                   </div>
                 </button>
               ))}
@@ -548,13 +551,13 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         </div>
 
         {/* RIGHT: Offer Details + Generate + Drafts */}
-        <div className="overflow-y-auto p-4 space-y-3 bg-gray-50">
+        <div className="overflow-y-auto p-5 space-y-4 bg-gray-50">
 
-          {/* Offer details — inline, no outer card */}
-          <div className="bg-white border border-gray-200 rounded-xl p-3 space-y-2">
-            <div className="flex items-center gap-1.5 mb-1">
-              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
-              <p className="text-xs font-semibold text-purple-700">Tailor this campaign</p>
+          {/* Offer details */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Sparkles className="w-4 h-4 text-purple-500" />
+              <p className="text-sm font-semibold text-purple-700">Tailor this campaign</p>
             </div>
             {(() => {
               const prompts = OFFER_PROMPTS[config.focus] || OFFER_PROMPTS.seasonal;
@@ -567,13 +570,13 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                     { key: 'ctaLink', label: 'CTA link URL', placeholder: 'https://yourbusiness.com/book', type: 'url' },
                   ].map(({ key, label, placeholder, type }) => (
                     <div key={key}>
-                      <label className="block text-[10px] font-medium text-gray-500 mb-0.5">{label}</label>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
                       <input
                         type={type}
                         value={offerDetails[key]}
                         onChange={e => setOfferDetails({ ...offerDetails, [key]: e.target.value })}
                         placeholder={placeholder}
-                        className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
                       />
                     </div>
                   ))}
@@ -586,46 +589,46 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
           <button
             onClick={generatePreview}
             disabled={previewing}
-            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 flex items-center justify-center gap-2 shadow-md shadow-blue-200 transition-all"
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-base hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 flex items-center justify-center gap-2 shadow-md shadow-blue-200 transition-all"
           >
             {previewing ? (
-              <><Loader className="w-4 h-4 animate-spin" /> Generating…</>
+              <><Loader className="w-5 h-5 animate-spin" /> Generating…</>
             ) : (
-              <><Sparkles className="w-4 h-4" /> Generate & Save Draft <ArrowRight className="w-4 h-4" /></>
+              <><Sparkles className="w-5 h-5" /> Generate & Save Draft <ArrowRight className="w-5 h-5" /></>
             )}
           </button>
 
           {/* Divider */}
           <div className="flex items-center gap-2">
             <div className="flex-1 border-t border-gray-200" />
-            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-              <FileText className="w-3 h-3" /> Drafts {drafts.length > 0 && <span className="bg-gray-200 text-gray-500 rounded-full px-1.5">{drafts.length}</span>}
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+              <FileText className="w-3.5 h-3.5" /> Drafts {drafts.length > 0 && <span className="bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">{drafts.length}</span>}
             </span>
             <div className="flex-1 border-t border-gray-200" />
           </div>
 
           {/* Drafts list */}
           {drafts.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center">
-              <p className="text-xs text-gray-400">No drafts yet — generate a campaign above</p>
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
+              <p className="text-sm text-gray-400">No drafts yet — generate a campaign above</p>
             </div>
           ) : (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               {drafts.map(d => (
-                <div key={d.id} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 hover:border-gray-300 transition-all">
+                <div key={d.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-gray-300 transition-all">
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-800 truncate">{d.subject || 'Untitled Draft'}</p>
-                    <p className="text-[10px] text-gray-400">
-                      {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    <p className="text-sm font-semibold text-gray-800 truncate">{d.subject || 'Untitled Draft'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </p>
                   </div>
                   <button onClick={() => loadDraft(d)}
-                    className="px-2.5 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex-shrink-0">
+                    className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex-shrink-0">
                     Edit
                   </button>
                   <button onClick={() => deleteDraft(d.id)}
-                    className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0">
-                    <Trash2 className="w-3.5 h-3.5" />
+                    className="p-1.5 text-gray-400 hover:text-red-500 flex-shrink-0">
+                    <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               ))}
