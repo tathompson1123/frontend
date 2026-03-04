@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Mail, Send, Eye, Calendar, Clock, Users, CheckCircle, AlertCircle, Loader, Sparkles } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Mail, Send, Eye, Calendar, Clock, Users, CheckCircle, AlertCircle, Loader, Sparkles, BookmarkPlus, ChevronDown, Trash2, BookOpen } from 'lucide-react';
 import EmailBlockEditor from './email/EmailBlockEditor';
 import { emailBlocksToHtml } from '../../utils/emailBlocks';
 
@@ -82,6 +82,109 @@ function OfferDetailsPanel({ focus, offerDetails, onChange }) {
   );
 }
 
+function CampaignPresets({ presets, onLoad, onDelete, onSave, currentConfig, currentOfferDetails }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+  const [showSaveForm, setShowSaveForm] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleSave = async () => {
+    if (!nameInput.trim()) return;
+    setSaving(true);
+    await onSave(nameInput.trim());
+    setNameInput('');
+    setShowSaveForm(false);
+    setSaving(false);
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <div className="flex gap-2">
+        {/* Load preset dropdown */}
+        <button
+          onClick={() => { setOpen(!open); setShowSaveForm(false); }}
+          className="flex-1 flex items-center justify-between gap-2 px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+        >
+          <span className="flex items-center gap-1.5">
+            <BookOpen className="w-4 h-4 text-gray-400" />
+            {presets.length > 0 ? 'Load a preset' : 'No saved presets'}
+          </span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
+
+        {/* Save current as preset */}
+        <button
+          onClick={() => { setShowSaveForm(!showSaveForm); setOpen(false); }}
+          className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-300 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all"
+        >
+          <BookmarkPlus className="w-4 h-4 text-gray-400" />
+          Save
+        </button>
+      </div>
+
+      {/* Dropdown: saved presets list */}
+      {open && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 overflow-hidden">
+          {presets.length === 0 ? (
+            <p className="px-4 py-3 text-sm text-gray-400 text-center">No saved presets yet</p>
+          ) : (
+            <div className="max-h-56 overflow-y-auto">
+              {presets.map(p => (
+                <div key={p.id} className="flex items-center gap-2 px-3 py-2.5 hover:bg-gray-50 border-b border-gray-100 last:border-0">
+                  <button
+                    onClick={() => { onLoad(p); setOpen(false); }}
+                    className="flex-1 text-left text-sm font-medium text-gray-800 hover:text-blue-600"
+                  >
+                    {p.name}
+                    <span className="ml-2 text-xs text-gray-400 font-normal">
+                      {new Date(p.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => onDelete(p.id)}
+                    className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Save form */}
+      {showSaveForm && (
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg z-30 p-3">
+          <p className="text-xs font-semibold text-gray-600 mb-2">Save current settings as preset</p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setShowSaveForm(false); }}
+              placeholder="Preset name (e.g. Spring Seasonal)"
+              autoFocus
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <button onClick={handleSave} disabled={saving || !nameInput.trim()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+              {saving ? '…' : 'Save'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function EmailCampaigns({ apiUrl, authFetch, user }) {
   const [config, setConfig] = useState({
     enabled: false,
@@ -93,6 +196,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     focus: 'seasonal',
   });
   const [offerDetails, setOfferDetails] = useState({ offer: '', message: '', emotion: '', ctaLink: '' });
+  const [presets, setPresets] = useState([]);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -114,11 +218,45 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     Promise.all([
       authFetch(`${apiUrl}/api/email-campaigns/config`).then(r => r.json()),
       authFetch(`${apiUrl}/api/email-campaigns/history`).then(r => r.json()),
-    ]).then(([configData, histData]) => {
+      authFetch(`${apiUrl}/api/email-campaigns/presets`).then(r => r.json()),
+    ]).then(([configData, histData, presetsData]) => {
       if (configData.config) setConfig(prev => ({ ...prev, ...configData.config }));
       if (histData.campaigns) setHistory(histData.campaigns);
+      if (presetsData.presets) setPresets(presetsData.presets);
     }).finally(() => setLoading(false));
   }, []);
+
+  const savePreset = async (name) => {
+    const settings = { config, offerDetails };
+    const r = await authFetch(`${apiUrl}/api/email-campaigns/presets`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, settings }),
+    });
+    const data = await r.json();
+    if (data.preset) {
+      setPresets(prev => [data.preset, ...prev]);
+      showToast(`Preset "${name}" saved!`);
+    } else {
+      showToast(data.error || 'Failed to save preset', 'error');
+    }
+  };
+
+  const loadPreset = (preset) => {
+    const s = preset.settings || {};
+    if (s.config) setConfig(prev => ({ ...prev, ...s.config }));
+    if (s.offerDetails) setOfferDetails(s.offerDetails);
+    showToast(`Loaded preset "${preset.name}"`);
+  };
+
+  const deletePreset = async (id) => {
+    const r = await authFetch(`${apiUrl}/api/email-campaigns/presets/${id}`, { method: 'DELETE' });
+    if (r.ok) {
+      setPresets(prev => prev.filter(p => p.id !== id));
+    } else {
+      showToast('Failed to delete preset', 'error');
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -224,6 +362,16 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
 
         {/* LEFT HALF: Build the campaign */}
         <div className="flex flex-col gap-4 overflow-y-auto" style={{ maxHeight: '85vh' }}>
+
+          {/* Presets */}
+          <CampaignPresets
+            presets={presets}
+            onLoad={loadPreset}
+            onDelete={deletePreset}
+            onSave={savePreset}
+            currentConfig={config}
+            currentOfferDetails={offerDetails}
+          />
 
           {/* Autopilot + From (compact row) */}
           <div className="bg-white border border-gray-200 rounded-xl p-4">
