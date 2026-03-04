@@ -30,57 +30,6 @@ const OFFER_PROMPTS = {
   winback:      ['What\'s the win-back incentive?', 'What\'s the "we miss you" angle?', 'What emotion should it elicit?'],
 };
 
-function OfferDetailsPanel({ focus, offerDetails, onChange }) {
-  const prompts = OFFER_PROMPTS[focus] || OFFER_PROMPTS.seasonal;
-  return (
-    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-3">
-      <div className="flex items-center gap-2 mb-1">
-        <Sparkles className="w-4 h-4 text-purple-500" />
-        <p className="text-xs font-semibold text-purple-700">Tailor this campaign</p>
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{prompts[0]}</label>
-        <input
-          type="text"
-          value={offerDetails.offer}
-          onChange={e => onChange({ ...offerDetails, offer: e.target.value })}
-          placeholder="e.g. 20% off spring deep clean"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{prompts[1]}</label>
-        <input
-          type="text"
-          value={offerDetails.message}
-          onChange={e => onChange({ ...offerDetails, message: e.target.value })}
-          placeholder="e.g. Spring refresh — your home deserves it"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">{prompts[2]}</label>
-        <input
-          type="text"
-          value={offerDetails.emotion}
-          onChange={e => onChange({ ...offerDetails, emotion: e.target.value })}
-          placeholder="e.g. Excitement and FOMO"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
-        />
-      </div>
-      <div>
-        <label className="block text-xs font-medium text-gray-700 mb-1">CTA link URL <span className="text-gray-400 font-normal">(where the button goes)</span></label>
-        <input
-          type="url"
-          value={offerDetails.ctaLink}
-          onChange={e => onChange({ ...offerDetails, ctaLink: e.target.value })}
-          placeholder="https://yourbusiness.com/book"
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
-        />
-      </div>
-    </div>
-  );
-}
 
 function CampaignPresets({ presets, onLoad, onDelete, onSave, currentConfig, currentOfferDetails }) {
   const [open, setOpen] = useState(false);
@@ -479,7 +428,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
 
   // ─── CONFIG PAGE ──────────────────────────────────────────────────────
   return (
-    <div className="space-y-5 max-w-2xl mx-auto pb-10">
+    <div className="flex flex-col" style={{ height: 'calc(100vh - 80px)' }}>
       {toast && (
         <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
           {toast.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
@@ -487,199 +436,203 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         </div>
       )}
 
-      {/* Header */}
-      <div className="bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl p-6 text-white">
-        <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-            <Mail className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold">AI Email Marketing</h2>
-            <p className="text-blue-100 text-sm">AI generates irresistible weekly offers, sent to past customers</p>
-          </div>
+      {/* Compact header bar */}
+      <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 flex-shrink-0">
+        <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
+          <Mail className="w-4 h-4 text-white" />
         </div>
-        <div className="mt-4 flex items-center gap-4 text-sm text-blue-100">
-          <span className="flex items-center gap-1.5"><Users className="w-4 h-4" />{history.length > 0 ? `${history[0]?.recipient_count || 0} sent last campaign` : 'No campaigns sent yet'}</span>
-          <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" />Runs every {config.send_day}</span>
+        <div className="flex-1 min-w-0">
+          <h2 className="text-sm font-bold text-white">AI Email Marketing</h2>
+          <p className="text-xs text-blue-100">
+            {history.filter(c => c.status !== 'draft').length > 0
+              ? `${history.filter(c => c.status !== 'draft')[0]?.recipient_count || 0} sent last campaign · autopilot every ${config.send_day}`
+              : `Autopilot every ${config.send_day}`}
+          </p>
         </div>
+        <CampaignPresets
+          presets={presets}
+          onLoad={loadPreset}
+          onDelete={deletePreset}
+          onSave={savePreset}
+          currentConfig={config}
+          currentOfferDetails={offerDetails}
+        />
       </div>
 
-      {/* Presets */}
-      <CampaignPresets
-        presets={presets}
-        onLoad={loadPreset}
-        onDelete={deletePreset}
-        onSave={savePreset}
-        currentConfig={config}
-        currentOfferDetails={offerDetails}
-      />
+      {/* Two-column body — no outer scroll */}
+      <div className="flex-1 overflow-hidden grid grid-cols-2 gap-0">
 
-      {/* Settings */}
-      <div className="bg-white border border-gray-200 rounded-xl p-4">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h3 className="font-semibold text-gray-900 text-sm">Autopilot Mode</h3>
-            <p className="text-xs text-gray-500">Auto-send every week</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input type="checkbox" checked={config.enabled}
-              onChange={e => setConfig({ ...config, enabled: e.target.checked })}
-              className="sr-only peer" />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
-          </label>
-        </div>
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">From Name</label>
-            <input type="text" value={config.from_name} onChange={e => setConfig({ ...config, from_name: e.target.value })}
-              placeholder="Your Business Name"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">From Email</label>
-            <input type="email" value={config.from_email} onChange={e => setConfig({ ...config, from_email: e.target.value })}
-              placeholder="hello@yourbusiness.com"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Calendar className="w-3 h-3 text-gray-400" /> Send Day
-            </label>
-            <select value={config.send_day} onChange={e => setConfig({ ...config, send_day: e.target.value })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-              {DAYS.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-              <Clock className="w-3 h-3 text-gray-400" /> Time (UTC)
-            </label>
-            <select value={config.send_hour} onChange={e => setConfig({ ...config, send_hour: parseInt(e.target.value) })}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
-              {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
-            </select>
-          </div>
-        </div>
-        <button onClick={save} disabled={saving}
-          className="mt-3 w-full py-2 border border-gray-300 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-50 disabled:opacity-60 transition-all">
-          {saving ? 'Saving…' : 'Save Settings'}
-        </button>
-      </div>
+        {/* LEFT: Settings + Tone + Focus */}
+        <div className="overflow-y-auto border-r border-gray-200 p-4 space-y-3">
 
-      {/* Tone + Focus */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <label className="block text-xs font-semibold text-gray-700 mb-2">Email Tone</label>
-          <div className="space-y-1.5">
-            {TONES.map(t => (
-              <button key={t.value} onClick={() => setConfig({ ...config, tone: t.value })}
-                className={`w-full p-2 rounded-lg border-2 text-left transition-all ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <p className={`text-xs font-semibold ${config.tone === t.value ? 'text-blue-700' : 'text-gray-800'}`}>{t.label}</p>
-                <p className="text-[10px] text-gray-500 leading-tight">{t.desc}</p>
-              </button>
-            ))}
+          {/* Autopilot + From */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-xs font-semibold text-gray-700">Autopilot Mode</span>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={config.enabled}
+                  onChange={e => setConfig({ ...config, enabled: e.target.checked })}
+                  className="sr-only peer" />
+                <div className="w-9 h-5 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4" />
+              </label>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">From Name</label>
+                <input type="text" value={config.from_name} onChange={e => setConfig({ ...config, from_name: e.target.value })}
+                  placeholder="Business Name"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">From Email</label>
+                <input type="email" value={config.from_email} onChange={e => setConfig({ ...config, from_email: e.target.value })}
+                  placeholder="hello@business.com"
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mb-2.5">
+              <div>
+                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Send Day</label>
+                <select value={config.send_day} onChange={e => setConfig({ ...config, send_day: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500">
+                  {DAYS.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-medium text-gray-500 mb-0.5">Time (UTC)</label>
+                <select value={config.send_hour} onChange={e => setConfig({ ...config, send_hour: parseInt(e.target.value) })}
+                  className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:ring-2 focus:ring-blue-500">
+                  {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
+                </select>
+              </div>
+            </div>
+            <button onClick={save} disabled={saving}
+              className="w-full py-1.5 border border-gray-300 text-gray-600 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-60 transition-all">
+              {saving ? 'Saving…' : 'Save Settings'}
+            </button>
           </div>
-        </div>
 
-        <div className="bg-white border border-gray-200 rounded-xl p-4">
-          <label className="block text-xs font-semibold text-gray-700 mb-2">Campaign Focus</label>
-          <div className="space-y-1.5">
-            {FOCUSES.map(f => (
-              <button key={f.value} onClick={() => setConfig({ ...config, focus: f.value })}
-                className={`w-full p-2 rounded-lg border-2 text-left transition-all ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                <p className={`text-xs font-semibold ${config.focus === f.value ? 'text-purple-700' : 'text-gray-800'}`}>{f.label}</p>
-                <p className="text-[10px] text-gray-500 leading-tight">{f.desc}</p>
-              </button>
-            ))}
+          {/* Tone */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <label className="block text-xs font-semibold text-gray-700 mb-2">Email Tone</label>
+            <div className="space-y-1">
+              {TONES.map(t => (
+                <button key={t.value} onClick={() => setConfig({ ...config, tone: t.value })}
+                  className={`w-full px-2.5 py-2 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${config.tone === t.value ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`} />
+                  <div>
+                    <p className={`text-xs font-semibold leading-none ${config.tone === t.value ? 'text-blue-700' : 'text-gray-800'}`}>{t.label}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{t.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Focus */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3">
+            <label className="block text-xs font-semibold text-gray-700 mb-2">Campaign Focus</label>
+            <div className="space-y-1">
+              {FOCUSES.map(f => (
+                <button key={f.value} onClick={() => setConfig({ ...config, focus: f.value })}
+                  className={`w-full px-2.5 py-2 rounded-lg border-2 text-left transition-all flex items-center gap-2 ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <div className={`w-3 h-3 rounded-full border-2 flex-shrink-0 ${config.focus === f.value ? 'border-purple-500 bg-purple-500' : 'border-gray-300'}`} />
+                  <div>
+                    <p className={`text-xs font-semibold leading-none ${config.focus === f.value ? 'text-purple-700' : 'text-gray-800'}`}>{f.label}</p>
+                    <p className="text-[10px] text-gray-400 mt-0.5">{f.desc}</p>
+                  </div>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Offer Details */}
-      <OfferDetailsPanel focus={config.focus} offerDetails={offerDetails} onChange={setOfferDetails} />
+        {/* RIGHT: Offer Details + Generate + Drafts */}
+        <div className="overflow-y-auto p-4 space-y-3 bg-gray-50">
 
-      {/* Generate button */}
-      <button
-        onClick={generatePreview}
-        disabled={previewing}
-        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-2xl font-bold text-base hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 flex items-center justify-center gap-2.5 shadow-lg shadow-blue-200 transition-all"
-      >
-        {previewing ? (
-          <><Loader className="w-5 h-5 animate-spin" /> Generating your campaign…</>
-        ) : (
-          <><Sparkles className="w-5 h-5" /> Generate & Save Draft <ArrowRight className="w-5 h-5" /></>
-        )}
-      </button>
+          {/* Offer details — inline, no outer card */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3 space-y-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Sparkles className="w-3.5 h-3.5 text-purple-500" />
+              <p className="text-xs font-semibold text-purple-700">Tailor this campaign</p>
+            </div>
+            {(() => {
+              const prompts = OFFER_PROMPTS[config.focus] || OFFER_PROMPTS.seasonal;
+              return (
+                <>
+                  {[
+                    { key: 'offer', label: prompts[0], placeholder: 'e.g. 20% off spring deep clean', type: 'text' },
+                    { key: 'message', label: prompts[1], placeholder: 'e.g. Spring refresh — your home deserves it', type: 'text' },
+                    { key: 'emotion', label: prompts[2], placeholder: 'e.g. Excitement and FOMO', type: 'text' },
+                    { key: 'ctaLink', label: 'CTA link URL', placeholder: 'https://yourbusiness.com/book', type: 'url' },
+                  ].map(({ key, label, placeholder, type }) => (
+                    <div key={key}>
+                      <label className="block text-[10px] font-medium text-gray-500 mb-0.5">{label}</label>
+                      <input
+                        type={type}
+                        value={offerDetails[key]}
+                        onChange={e => setOfferDetails({ ...offerDetails, [key]: e.target.value })}
+                        placeholder={placeholder}
+                        className="w-full border border-gray-300 rounded-lg px-2.5 py-1.5 text-xs focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+                      />
+                    </div>
+                  ))}
+                </>
+              );
+            })()}
+          </div>
 
-      {/* Drafts */}
-      <div>
-        <div className="flex items-center gap-2 mb-3">
-          <FileText className="w-4 h-4 text-gray-400" />
-          <h3 className="text-sm font-semibold text-gray-700">Drafts</h3>
-          {drafts.length > 0 && (
-            <span className="text-xs bg-gray-100 text-gray-500 font-medium px-2 py-0.5 rounded-full">{drafts.length}</span>
+          {/* Generate button */}
+          <button
+            onClick={generatePreview}
+            disabled={previewing}
+            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 flex items-center justify-center gap-2 shadow-md shadow-blue-200 transition-all"
+          >
+            {previewing ? (
+              <><Loader className="w-4 h-4 animate-spin" /> Generating…</>
+            ) : (
+              <><Sparkles className="w-4 h-4" /> Generate & Save Draft <ArrowRight className="w-4 h-4" /></>
+            )}
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center gap-2">
+            <div className="flex-1 border-t border-gray-200" />
+            <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1">
+              <FileText className="w-3 h-3" /> Drafts {drafts.length > 0 && <span className="bg-gray-200 text-gray-500 rounded-full px-1.5">{drafts.length}</span>}
+            </span>
+            <div className="flex-1 border-t border-gray-200" />
+          </div>
+
+          {/* Drafts list */}
+          {drafts.length === 0 ? (
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-5 text-center">
+              <p className="text-xs text-gray-400">No drafts yet — generate a campaign above</p>
+            </div>
+          ) : (
+            <div className="space-y-1.5">
+              {drafts.map(d => (
+                <div key={d.id} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2.5 hover:border-gray-300 transition-all">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-800 truncate">{d.subject || 'Untitled Draft'}</p>
+                    <p className="text-[10px] text-gray-400">
+                      {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </p>
+                  </div>
+                  <button onClick={() => loadDraft(d)}
+                    className="px-2.5 py-1 text-[10px] font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex-shrink-0">
+                    Edit
+                  </button>
+                  <button onClick={() => deleteDraft(d.id)}
+                    className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
           )}
         </div>
-
-        {drafts.length === 0 ? (
-          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
-            <p className="text-sm text-gray-400">No drafts yet — generate a campaign to get started</p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {drafts.map(d => (
-              <div key={d.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-gray-300 transition-all">
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{d.subject || 'Untitled Draft'}</p>
-                  <p className="text-xs text-gray-400">
-                    {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    {d.preview_text && <span className="ml-2 text-gray-300">·</span>}
-                    {d.preview_text && <span className="ml-2 text-gray-400 truncate">{d.preview_text.slice(0, 50)}{d.preview_text.length > 50 ? '…' : ''}</span>}
-                  </p>
-                </div>
-                <button
-                  onClick={() => loadDraft(d)}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex-shrink-0"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => deleteDraft(d.id)}
-                  className="p-1.5 text-gray-400 hover:text-red-500 flex-shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
-
-      {/* Campaign History */}
-      {history.filter(c => c.status !== 'draft').length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 className="font-semibold text-gray-900 mb-4 text-sm">Campaign History</h3>
-          <div className="space-y-2">
-            {history.filter(c => c.status !== 'draft').map(c => (
-              <div key={c.id} className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${c.status === 'sent' ? 'bg-green-500' : c.status === 'failed' ? 'bg-red-500' : 'bg-gray-300'}`} />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{c.subject}</p>
-                  <p className="text-xs text-gray-400">
-                    {c.sent_at ? new Date(c.sent_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Pending'}
-                    {c.recipient_count > 0 && ` · ${c.recipient_count} recipients`}
-                  </p>
-                </div>
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${c.status === 'sent' ? 'bg-green-100 text-green-700' : c.status === 'failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {c.status}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
