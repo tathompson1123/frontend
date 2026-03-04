@@ -7,7 +7,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
-  GripVertical, Trash2, Copy, Monitor, Smartphone, Code, ChevronRight, Plus, Link, Upload, X,
+  GripVertical, Trash2, Copy, Monitor, Smartphone, ChevronRight, Plus, Link, Upload, X,
 } from 'lucide-react';
 import { BLOCK_TYPES, createBlock, emailBlocksToHtml } from '../../../utils/emailBlocks';
 import BlockProperties from './BlockProperties';
@@ -305,7 +305,7 @@ function SortableBlock({ block, selected, onSelect, onUpdate, onDelete, onDuplic
 // ============================================================
 export default function EmailBlockEditor({ blocks, onChange, subject, previewText, onSubjectChange, onPreviewTextChange, fromName, fromEmail }) {
   const [selectedId, setSelectedId] = useState(null);
-  const [viewMode, setViewMode] = useState('desktop'); // 'desktop' | 'mobile' | 'html'
+  const [viewMode, setViewMode] = useState('desktop'); // 'desktop' | 'mobile'
   const [activeDragId, setActiveDragId] = useState(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
@@ -361,7 +361,6 @@ export default function EmailBlockEditor({ blocks, onChange, subject, previewTex
   };
 
   const canvasWidth = viewMode === 'mobile' ? '375px' : '600px';
-  const htmlOutput = emailBlocksToHtml(blocks);
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -375,10 +374,6 @@ export default function EmailBlockEditor({ blocks, onChange, subject, previewTex
           <button onClick={() => setViewMode('mobile')}
             className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'mobile' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
             <Smartphone className="w-3 h-3" /> Mobile
-          </button>
-          <button onClick={() => setViewMode('html')}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'html' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
-            <Code className="w-3 h-3" /> HTML
           </button>
         </div>
 
@@ -422,64 +417,48 @@ export default function EmailBlockEditor({ blocks, onChange, subject, previewTex
 
           {/* CENTER: Canvas */}
           <div className="flex-1 overflow-y-auto bg-gray-100 flex justify-center py-4 min-h-0">
-            {viewMode === 'html' ? (
-              <div className="w-full max-w-2xl bg-gray-900 rounded-lg overflow-hidden">
-                <div className="bg-gray-800 px-4 py-2 flex items-center gap-2">
-                  <div className="flex gap-1.5">
-                    <div className="w-3 h-3 rounded-full bg-red-400" />
-                    <div className="w-3 h-3 rounded-full bg-yellow-400" />
-                    <div className="w-3 h-3 rounded-full bg-green-400" />
-                  </div>
-                  <span className="text-gray-400 text-xs ml-2">email.html</span>
-                </div>
-                <pre className="p-4 text-xs text-green-300 font-mono overflow-x-auto whitespace-pre-wrap leading-relaxed">
-                  {htmlOutput}
-                </pre>
-              </div>
-            ) : (
-              <div style={{ width: canvasWidth, maxWidth: '100%' }} className="transition-all duration-200">
-                {/* Email client chrome */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  {/* From/subject header */}
-                  <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
-                        {(fromName || 'YB').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-gray-900">{fromName || 'Your Business'}</p>
-                        <p className="text-xs text-gray-600 font-medium truncate mt-0.5">{subject || '(no subject)'}</p>
-                        {previewText && <p className="text-xs text-gray-400 truncate">{previewText}</p>}
-                      </div>
+            <div style={{ width: canvasWidth, maxWidth: '100%' }} className="transition-all duration-200">
+              {/* Email client chrome */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                {/* From/subject header */}
+                <div className="bg-gray-50 border-b border-gray-200 px-4 py-3">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                      {(fromName || 'YB').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900">{fromName || 'Your Business'}</p>
+                      <p className="text-xs text-gray-600 font-medium truncate mt-0.5">{subject || '(no subject)'}</p>
+                      {previewText && <p className="text-xs text-gray-400 truncate">{previewText}</p>}
                     </div>
                   </div>
+                </div>
 
-                  {/* Blocks canvas */}
-                  <div className="relative pl-5">
-                    <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                      {blocks.length === 0 ? (
-                        <div className="py-16 flex flex-col items-center justify-center text-gray-400">
-                          <p className="text-sm font-medium">No blocks yet</p>
-                          <p className="text-xs mt-1">Click a block type in the left panel to add it</p>
-                        </div>
-                      ) : (
-                        blocks.map(block => (
-                          <SortableBlock
-                            key={block.id}
-                            block={block}
-                            selected={selectedId === block.id}
-                            onSelect={id => setSelectedId(id === selectedId ? null : id)}
-                            onUpdate={handleUpdate}
-                            onDelete={handleDelete}
-                            onDuplicate={handleDuplicate}
-                          />
-                        ))
-                      )}
-                    </SortableContext>
-                  </div>
+                {/* Blocks canvas */}
+                <div className="relative pl-5">
+                  <SortableContext items={blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                    {blocks.length === 0 ? (
+                      <div className="py-16 flex flex-col items-center justify-center text-gray-400">
+                        <p className="text-sm font-medium">No blocks yet</p>
+                        <p className="text-xs mt-1">Click a block type in the left panel to add it</p>
+                      </div>
+                    ) : (
+                      blocks.map(block => (
+                        <SortableBlock
+                          key={block.id}
+                          block={block}
+                          selected={selectedId === block.id}
+                          onSelect={id => setSelectedId(id === selectedId ? null : id)}
+                          onUpdate={handleUpdate}
+                          onDelete={handleDelete}
+                          onDuplicate={handleDuplicate}
+                        />
+                      ))
+                    )}
+                  </SortableContext>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           <DragOverlay>

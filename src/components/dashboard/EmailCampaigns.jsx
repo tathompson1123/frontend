@@ -219,40 +219,47 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         </div>
       </div>
 
-      {/* Main split: Settings left, Editor right */}
-      <div className="grid lg:grid-cols-[340px,1fr] gap-6 items-start">
-        {/* LEFT: Settings */}
-        <div className="space-y-4">
-          {/* Autopilot toggle */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5">
-            <div className="flex items-center justify-between">
+      {/* Main: Build (left half) | Editor (right half) — one window view */}
+      <div className="grid lg:grid-cols-2 gap-6" style={{ minHeight: '85vh' }}>
+
+        {/* LEFT HALF: Build the campaign */}
+        <div className="flex flex-col gap-4 overflow-y-auto" style={{ maxHeight: '85vh' }}>
+
+          {/* Autopilot + From (compact row) */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
               <div>
-                <h3 className="font-semibold text-gray-900">Autopilot Mode</h3>
-                <p className="text-sm text-gray-500">Automatically send a campaign every week</p>
+                <h3 className="font-semibold text-gray-900 text-sm">Autopilot Mode</h3>
+                <p className="text-xs text-gray-500">Auto-send every week</p>
               </div>
               <label className="relative inline-flex items-center cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={config.enabled}
+                <input type="checkbox" checked={config.enabled}
                   onChange={e => setConfig({ ...config, enabled: e.target.checked })}
-                  className="sr-only peer"
-                />
+                  className="sr-only peer" />
                 <div className="w-11 h-6 bg-gray-200 peer-focus:ring-4 peer-focus:ring-blue-100 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
               </label>
             </div>
-          </div>
-
-          {/* Settings form */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
-            <h3 className="font-semibold text-gray-900">Campaign Settings</h3>
-
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">From Name</label>
+                <input type="text" value={config.from_name} onChange={e => setConfig({ ...config, from_name: e.target.value })}
+                  placeholder="Your Business Name"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">From Email</label>
+                <input type="email" value={config.from_email} onChange={e => setConfig({ ...config, from_email: e.target.value })}
+                  placeholder="hello@yourbusiness.com"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
+              </div>
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                   <Calendar className="w-3 h-3 text-gray-400" /> Send Day
                 </label>
                 <select value={config.send_day} onChange={e => setConfig({ ...config, send_day: e.target.value })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                   {DAYS.map(d => <option key={d} value={d}>{d.charAt(0).toUpperCase() + d.slice(1)}</option>)}
                 </select>
               </div>
@@ -261,58 +268,40 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                   <Clock className="w-3 h-3 text-gray-400" /> Time (UTC)
                 </label>
                 <select value={config.send_hour} onChange={e => setConfig({ ...config, send_hour: parseInt(e.target.value) })}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500">
                   {HOURS.map(h => <option key={h.value} value={h.value}>{h.label}</option>)}
                 </select>
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">From Name</label>
-                <input type="text" value={config.from_name} onChange={e => setConfig({ ...config, from_name: e.target.value })}
-                  placeholder="Your Business Name"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">From Email</label>
-                <input type="email" value={config.from_email} onChange={e => setConfig({ ...config, from_email: e.target.value })}
-                  placeholder="hello@yourbusiness.com"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                <p className="text-xs text-gray-400 mt-0.5">Must be verified in SendGrid</p>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Email Tone</label>
-              <div className="grid grid-cols-3 gap-2">
+          {/* Tone + Focus side by side */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Email Tone</label>
+              <div className="space-y-1.5">
                 {TONES.map(t => (
                   <button key={t.value} onClick={() => setConfig({ ...config, tone: t.value })}
-                    className={`p-2.5 rounded-lg border-2 text-left transition-all ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    className={`w-full p-2 rounded-lg border-2 text-left transition-all ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <p className={`text-xs font-semibold ${config.tone === t.value ? 'text-blue-700' : 'text-gray-800'}`}>{t.label}</p>
-                    <p className="text-xs text-gray-500 leading-tight">{t.desc}</p>
+                    <p className="text-[10px] text-gray-500 leading-tight">{t.desc}</p>
                   </button>
                 ))}
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Campaign Focus</label>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="bg-white border border-gray-200 rounded-xl p-4">
+              <label className="block text-xs font-semibold text-gray-700 mb-2">Campaign Focus</label>
+              <div className="space-y-1.5">
                 {FOCUSES.map(f => (
                   <button key={f.value} onClick={() => setConfig({ ...config, focus: f.value })}
-                    className={`p-2.5 rounded-lg border-2 text-left transition-all ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                    className={`w-full p-2 rounded-lg border-2 text-left transition-all ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
                     <p className={`text-xs font-semibold ${config.focus === f.value ? 'text-purple-700' : 'text-gray-800'}`}>{f.label}</p>
-                    <p className="text-xs text-gray-500 leading-tight">{f.desc}</p>
+                    <p className="text-[10px] text-gray-500 leading-tight">{f.desc}</p>
                   </button>
                 ))}
               </div>
             </div>
-
-            <button onClick={save} disabled={saving}
-              className="w-full py-2.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 disabled:opacity-60 transition-all">
-              {saving ? 'Saving…' : 'Save Settings'}
-            </button>
           </div>
 
           {/* Offer Details */}
@@ -323,13 +312,18 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
           />
 
           {/* Generate & Send */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
-            <h3 className="font-semibold text-gray-900">Generate & Send</h3>
-            <button onClick={generatePreview} disabled={previewing}
-              className="w-full py-2.5 border-2 border-blue-500 text-blue-600 rounded-xl font-semibold text-sm hover:bg-blue-50 disabled:opacity-60 flex items-center justify-center gap-2">
-              {previewing ? <Loader className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-              {previewing ? 'Generating…' : 'Generate Email Preview'}
-            </button>
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <button onClick={save} disabled={saving}
+                className="flex-1 py-2.5 border border-gray-300 text-gray-600 rounded-xl font-semibold text-sm hover:bg-gray-50 disabled:opacity-60 transition-all text-center">
+                {saving ? 'Saving…' : 'Save Settings'}
+              </button>
+              <button onClick={generatePreview} disabled={previewing}
+                className="flex-1 py-2.5 border-2 border-blue-500 text-blue-600 rounded-xl font-semibold text-sm hover:bg-blue-50 disabled:opacity-60 flex items-center justify-center gap-1.5">
+                {previewing ? <Loader className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
+                {previewing ? 'Generating…' : 'Generate'}
+              </button>
+            </div>
             <button onClick={sendNow} disabled={sendingNow}
               className="w-full py-2.5 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 disabled:opacity-60 flex items-center justify-center gap-2">
               {sendingNow ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -338,8 +332,8 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
           </div>
         </div>
 
-        {/* RIGHT: Block Editor */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden" style={{ minHeight: '600px', height: '80vh' }}>
+        {/* RIGHT HALF: Email Block Editor */}
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden flex flex-col" style={{ minHeight: '85vh' }}>
           {preview ? (
             <EmailBlockEditor
               blocks={editedBlocks}
@@ -352,7 +346,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
               fromEmail={config.from_email}
             />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center" style={{ minHeight: '600px' }}>
+            <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
               {previewing ? (
                 <div className="space-y-4">
                   <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto">
@@ -366,8 +360,8 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                   <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
                     <Mail className="w-8 h-8 text-blue-300" />
                   </div>
-                  <p className="font-semibold text-gray-700">Your email editor will appear here</p>
-                  <p className="text-sm text-gray-400 mt-1 max-w-xs">Fill in your offer details, then click "Generate Email Preview" to build your campaign with the visual editor.</p>
+                  <p className="font-semibold text-gray-700">Email editor appears here</p>
+                  <p className="text-sm text-gray-400 mt-1 max-w-xs">Fill in your offer details on the left, then click Generate to build your email.</p>
                   <div className="mt-6 grid grid-cols-3 gap-4 text-center">
                     {[['🎨', 'Visual blocks'], ['✏️', 'Inline editing'], ['🔀', 'Drag & drop']].map(([icon, label]) => (
                       <div key={label} className="text-xs text-gray-300">
