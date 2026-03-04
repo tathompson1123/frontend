@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mail, Send, Calendar, Clock, Users, CheckCircle, AlertCircle, Loader, Sparkles, BookmarkPlus, ChevronDown, Trash2, BookOpen, ArrowRight, ArrowLeft, FlaskConical, FileText } from 'lucide-react';
+import { Mail, Send, Calendar, Clock, CheckCircle, AlertCircle, Loader, Sparkles, BookmarkPlus, ChevronDown, Trash2, BookOpen, FlaskConical, FileText } from 'lucide-react';
 import EmailBlockEditor from './email/EmailBlockEditor';
 import { emailBlocksToHtml } from '../../utils/emailBlocks';
 
@@ -124,7 +124,6 @@ function CampaignPresets({ presets, onLoad, onDelete, onSave, currentConfig, cur
 }
 
 export default function EmailCampaigns({ apiUrl, authFetch, user }) {
-  const [page, setPage] = useState('config'); // 'config' | 'editor'
   const [config, setConfig] = useState({
     enabled: false,
     send_day: 'monday',
@@ -229,14 +228,12 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         setEditedPreviewText(data.campaign.previewText);
         setEditedBodyText(data.campaign.bodyText || '');
         setCurrentDraftId(data.draftId);
-        // Add draft to list
         setDrafts(prev => [{
           id: data.draftId,
           subject: data.campaign.subject,
           preview_text: data.campaign.previewText,
           created_at: new Date().toISOString(),
         }, ...prev]);
-        setPage('editor');
       } else {
         showToast(data.error || 'Failed to generate campaign', 'error');
       }
@@ -251,7 +248,6 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     setEditedPreviewText(draft.preview_text || '');
     setEditedBodyText(draft.body_text || '');
     setCurrentDraftId(draft.id);
-    setPage('editor');
   };
 
   const deleteDraft = async (id) => {
@@ -343,8 +339,10 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         setDrafts(prev => prev.filter(d => d.id !== currentDraftId));
         const h = await authFetch(`${apiUrl}/api/email-campaigns/history`).then(r => r.json());
         if (h.campaigns) setHistory(h.campaigns);
-        setPage('config');
         setCurrentDraftId(null);
+        setEditedBlocks([]);
+        setEditedSubject('');
+        setEditedPreviewText('');
       } else {
         showToast(data.error || 'Send failed', 'error');
       }
@@ -355,78 +353,9 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
 
   if (loading) return <div className="flex justify-center py-16"><Loader className="w-8 h-8 animate-spin text-blue-600" /></div>;
 
-  // ─── EDITOR PAGE ─────────────────────────────────────────────────────
-  if (page === 'editor') {
-    return (
-      <div className="flex flex-col" style={{ height: 'calc(100vh - 80px)' }}>
-        {toast && (
-          <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium flex items-center gap-2 ${toast.type === 'error' ? 'bg-red-600' : 'bg-green-600'}`}>
-            {toast.type === 'error' ? <AlertCircle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
-            {toast.msg}
-          </div>
-        )}
+  const hasPreview = editedBlocks.length > 0;
+  const prompts = OFFER_PROMPTS[config.focus] || OFFER_PROMPTS.seasonal;
 
-        {/* Sticky toolbar */}
-        <div className="flex items-center gap-2 px-4 py-3 bg-white border-b border-gray-200 flex-shrink-0">
-          <button
-            onClick={() => setPage('config')}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </button>
-
-          <div className="flex-1 min-w-0 mx-2">
-            <p className="text-sm font-semibold text-gray-800 truncate">{editedSubject || 'Untitled Draft'}</p>
-            {currentDraftId && <p className="text-xs text-gray-400">Draft #{currentDraftId}</p>}
-          </div>
-
-          <button
-            onClick={saveDraft}
-            disabled={savingDraft || !currentDraftId}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-all"
-          >
-            {savingDraft ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
-            Save Draft
-          </button>
-
-          <button
-            onClick={testSend}
-            disabled={testSending}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-blue-700 border border-blue-300 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-all"
-          >
-            {testSending ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
-            Test Send
-          </button>
-
-          <button
-            onClick={sendNow}
-            disabled={sendingNow}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-all"
-          >
-            {sendingNow ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-            {sendingNow ? 'Sending…' : 'Send to All'}
-          </button>
-        </div>
-
-        {/* Full-height editor */}
-        <div className="flex-1 overflow-hidden">
-          <EmailBlockEditor
-            blocks={editedBlocks}
-            onChange={setEditedBlocks}
-            subject={editedSubject}
-            previewText={editedPreviewText}
-            onSubjectChange={setEditedSubject}
-            onPreviewTextChange={setEditedPreviewText}
-            fromName={config.from_name}
-            fromEmail={config.from_email}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // ─── CONFIG PAGE ──────────────────────────────────────────────────────
   return (
     <div className="flex flex-col" style={{ height: 'calc(100vh - 80px)' }}>
       {toast && (
@@ -436,7 +365,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         </div>
       )}
 
-      {/* Compact header bar */}
+      {/* Header bar */}
       <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 flex-shrink-0">
         <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center">
           <Mail className="w-4 h-4 text-white" />
@@ -459,15 +388,15 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         />
       </div>
 
-      {/* Two-column body — no outer scroll */}
+      {/* Split: Left config | Right editor */}
       <div className="flex-1 overflow-hidden grid grid-cols-2 gap-0">
 
-        {/* LEFT: Settings + Tone + Focus */}
-        <div className="overflow-y-auto border-r border-gray-200 p-5 space-y-4">
+        {/* LEFT: Config */}
+        <div className="overflow-y-auto border-r border-gray-200 p-4 space-y-3 bg-white">
 
-          {/* Autopilot + From */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-4">
+          {/* Settings */}
+          <div className="border border-gray-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
               <div>
                 <span className="text-sm font-semibold text-gray-800">Autopilot Mode</span>
                 <p className="text-xs text-gray-500">Auto-send every week</p>
@@ -479,7 +408,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                 <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5" />
               </label>
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">From Name</label>
                 <input type="text" value={config.from_name} onChange={e => setConfig({ ...config, from_name: e.target.value })}
@@ -493,7 +422,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="grid grid-cols-2 gap-2 mb-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Send Day</label>
                 <select value={config.send_day} onChange={e => setConfig({ ...config, send_day: e.target.value })}
@@ -510,128 +439,155 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
               </div>
             </div>
             <button onClick={save} disabled={saving}
-              className="w-full py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 transition-all">
+              className="w-full py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 transition-all">
               {saving ? 'Saving…' : 'Save Settings'}
             </button>
           </div>
 
-          {/* Tone */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Email Tone</label>
-            <div className="space-y-2">
+          {/* Tone — horizontal pills */}
+          <div className="border border-gray-200 rounded-xl p-4">
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Email Tone</label>
+            <div className="flex gap-2">
               {TONES.map(t => (
                 <button key={t.value} onClick={() => setConfig({ ...config, tone: t.value })}
-                  className={`w-full px-3 py-2.5 rounded-lg border-2 text-left transition-all flex items-center gap-3 ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${config.tone === t.value ? 'border-blue-500 bg-blue-500' : 'border-gray-300'}`} />
-                  <div>
-                    <p className={`text-sm font-semibold ${config.tone === t.value ? 'text-blue-700' : 'text-gray-800'}`}>{t.label}</p>
-                    <p className="text-xs text-gray-500">{t.desc}</p>
-                  </div>
+                  className={`flex-1 py-2 rounded-lg border-2 text-center transition-all ${config.tone === t.value ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <p className={`text-sm font-semibold ${config.tone === t.value ? 'text-blue-700' : 'text-gray-700'}`}>{t.label}</p>
+                  <p className="text-xs text-gray-400 leading-tight hidden sm:block">{t.desc}</p>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Focus */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4">
-            <label className="block text-sm font-semibold text-gray-800 mb-3">Campaign Focus</label>
-            <div className="space-y-2">
+          {/* Focus — 2×2 grid */}
+          <div className="border border-gray-200 rounded-xl p-4">
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Campaign Focus</label>
+            <div className="grid grid-cols-2 gap-2">
               {FOCUSES.map(f => (
                 <button key={f.value} onClick={() => setConfig({ ...config, focus: f.value })}
-                  className={`w-full px-3 py-2.5 rounded-lg border-2 text-left transition-all flex items-center gap-3 ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
-                  <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 ${config.focus === f.value ? 'border-purple-500 bg-purple-500' : 'border-gray-300'}`} />
-                  <div>
-                    <p className={`text-sm font-semibold ${config.focus === f.value ? 'text-purple-700' : 'text-gray-800'}`}>{f.label}</p>
-                    <p className="text-xs text-gray-500">{f.desc}</p>
-                  </div>
+                  className={`px-3 py-2.5 rounded-lg border-2 text-left transition-all ${config.focus === f.value ? 'border-purple-500 bg-purple-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <p className={`text-sm font-semibold leading-tight ${config.focus === f.value ? 'text-purple-700' : 'text-gray-800'}`}>{f.label}</p>
+                  <p className="text-xs text-gray-400 mt-0.5 leading-tight">{f.desc}</p>
                 </button>
               ))}
             </div>
           </div>
-        </div>
-
-        {/* RIGHT: Offer Details + Generate + Drafts */}
-        <div className="overflow-y-auto p-5 space-y-4 bg-gray-50">
 
           {/* Offer details */}
-          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
+          <div className="border border-purple-200 bg-purple-50 rounded-xl p-4 space-y-2.5">
+            <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-purple-500" />
               <p className="text-sm font-semibold text-purple-700">Tailor this campaign</p>
             </div>
-            {(() => {
-              const prompts = OFFER_PROMPTS[config.focus] || OFFER_PROMPTS.seasonal;
-              return (
-                <>
-                  {[
-                    { key: 'offer', label: prompts[0], placeholder: 'e.g. 20% off spring deep clean', type: 'text' },
-                    { key: 'message', label: prompts[1], placeholder: 'e.g. Spring refresh — your home deserves it', type: 'text' },
-                    { key: 'emotion', label: prompts[2], placeholder: 'e.g. Excitement and FOMO', type: 'text' },
-                    { key: 'ctaLink', label: 'CTA link URL', placeholder: 'https://yourbusiness.com/book', type: 'url' },
-                  ].map(({ key, label, placeholder, type }) => (
-                    <div key={key}>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                      <input
-                        type={type}
-                        value={offerDetails[key]}
-                        onChange={e => setOfferDetails({ ...offerDetails, [key]: e.target.value })}
-                        placeholder={placeholder}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
-                      />
-                    </div>
-                  ))}
-                </>
-              );
-            })()}
+            {[
+              { key: 'offer', label: prompts[0], placeholder: 'e.g. 20% off spring deep clean', type: 'text' },
+              { key: 'message', label: prompts[1], placeholder: 'e.g. Spring refresh — your home deserves it', type: 'text' },
+              { key: 'emotion', label: prompts[2], placeholder: 'e.g. Excitement and FOMO', type: 'text' },
+              { key: 'ctaLink', label: 'CTA link URL', placeholder: 'https://yourbusiness.com/book', type: 'url' },
+            ].map(({ key, label, placeholder, type }) => (
+              <div key={key}>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                <input type={type} value={offerDetails[key]}
+                  onChange={e => setOfferDetails({ ...offerDetails, [key]: e.target.value })}
+                  placeholder={placeholder}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none" />
+              </div>
+            ))}
           </div>
 
           {/* Generate button */}
-          <button
-            onClick={generatePreview}
-            disabled={previewing}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-base hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 flex items-center justify-center gap-2 shadow-md shadow-blue-200 transition-all"
-          >
-            {previewing ? (
-              <><Loader className="w-5 h-5 animate-spin" /> Generating…</>
-            ) : (
-              <><Sparkles className="w-5 h-5" /> Generate & Save Draft <ArrowRight className="w-5 h-5" /></>
-            )}
+          <button onClick={generatePreview} disabled={previewing}
+            className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-bold text-base hover:from-blue-700 hover:to-purple-700 disabled:opacity-60 flex items-center justify-center gap-2 shadow-md shadow-blue-200 transition-all">
+            {previewing ? <><Loader className="w-5 h-5 animate-spin" /> Generating…</> : <><Sparkles className="w-5 h-5" /> Generate</>}
           </button>
 
-          {/* Divider */}
-          <div className="flex items-center gap-2">
-            <div className="flex-1 border-t border-gray-200" />
-            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-              <FileText className="w-3.5 h-3.5" /> Drafts {drafts.length > 0 && <span className="bg-gray-200 text-gray-600 rounded-full px-2 py-0.5">{drafts.length}</span>}
-            </span>
-            <div className="flex-1 border-t border-gray-200" />
-          </div>
-
-          {/* Drafts list */}
-          {drafts.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center">
-              <p className="text-sm text-gray-400">No drafts yet — generate a campaign above</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {drafts.map(d => (
-                <div key={d.id} className="flex items-center gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-gray-300 transition-all">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-800 truncate">{d.subject || 'Untitled Draft'}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                    </p>
+          {/* Drafts */}
+          {drafts.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                <FileText className="w-3.5 h-3.5" /> Drafts
+                <span className="bg-gray-200 text-gray-600 rounded-full px-1.5 text-[10px]">{drafts.length}</span>
+              </p>
+              <div className="space-y-1.5">
+                {drafts.map(d => (
+                  <div key={d.id} className={`flex items-center gap-2 border rounded-lg px-3 py-2 transition-all cursor-pointer ${d.id === currentDraftId ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white hover:border-gray-300'}`}>
+                    <div className="flex-1 min-w-0" onClick={() => loadDraft(d)}>
+                      <p className="text-sm font-medium text-gray-800 truncate">{d.subject || 'Untitled'}</p>
+                      <p className="text-xs text-gray-400">{new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                    </div>
+                    <button onClick={() => deleteDraft(d.id)} className="p-1 text-gray-400 hover:text-red-500 flex-shrink-0">
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
-                  <button onClick={() => loadDraft(d)}
-                    className="px-3 py-1.5 text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-all flex-shrink-0">
-                    Edit
-                  </button>
-                  <button onClick={() => deleteDraft(d.id)}
-                    className="p-1.5 text-gray-400 hover:text-red-500 flex-shrink-0">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: Editor */}
+        <div className="flex flex-col overflow-hidden bg-gray-50">
+          {hasPreview ? (
+            <>
+              {/* Action bar */}
+              <div className="flex items-center gap-2 px-3 py-2 bg-white border-b border-gray-200 flex-shrink-0">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-gray-500 truncate">{editedSubject || 'Untitled'}</p>
                 </div>
-              ))}
+                <button onClick={saveDraft} disabled={savingDraft || !currentDraftId}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-all">
+                  {savingDraft ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <FileText className="w-3.5 h-3.5" />}
+                  Save Draft
+                </button>
+                <button onClick={testSend} disabled={testSending}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 border border-blue-300 bg-blue-50 rounded-lg hover:bg-blue-100 disabled:opacity-50 transition-all">
+                  {testSending ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <FlaskConical className="w-3.5 h-3.5" />}
+                  Test Send
+                </button>
+                <button onClick={sendNow} disabled={sendingNow}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 disabled:opacity-50 transition-all">
+                  {sendingNow ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                  {sendingNow ? 'Sending…' : 'Send to All'}
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <EmailBlockEditor
+                  blocks={editedBlocks}
+                  onChange={setEditedBlocks}
+                  subject={editedSubject}
+                  previewText={editedPreviewText}
+                  onSubjectChange={setEditedSubject}
+                  onPreviewTextChange={setEditedPreviewText}
+                  fromName={config.from_name}
+                  fromEmail={config.from_email}
+                />
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center flex-1 p-8 text-center">
+              {previewing ? (
+                <div className="space-y-4">
+                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto">
+                    <Loader className="w-8 h-8 text-blue-400 animate-spin" />
+                  </div>
+                  <p className="font-semibold text-gray-700">Generating your campaign…</p>
+                  <p className="text-sm text-gray-400">AI is crafting your email.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
+                    <Mail className="w-8 h-8 text-blue-300" />
+                  </div>
+                  <p className="font-semibold text-gray-700">Email editor appears here</p>
+                  <p className="text-sm text-gray-400 mt-1 max-w-xs">Fill in your offer details on the left, then click Generate.</p>
+                  <div className="mt-6 flex gap-6 text-center">
+                    {[['🎨', 'Visual blocks'], ['✏️', 'Inline editing'], ['🔀', 'Drag & drop']].map(([icon, label]) => (
+                      <div key={label} className="text-xs text-gray-300">
+                        <div className="text-2xl mb-1">{icon}</div>{label}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
