@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
-import { Mail, Send, Eye, Calendar, Clock, Users, CheckCircle, AlertCircle, Loader, Edit3, X, Monitor, Smartphone, Code } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Mail, Send, Eye, Calendar, Clock, Users, CheckCircle, AlertCircle, Loader, Sparkles } from 'lucide-react';
+import EmailBlockEditor from './email/EmailBlockEditor';
+import { emailBlocksToHtml } from '../../utils/emailBlocks';
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const HOURS = Array.from({ length: 24 }, (_, i) => {
@@ -21,196 +23,61 @@ const FOCUSES = [
   { value: 'winback', label: 'Win-Back', desc: 'Re-engage customers who haven\'t booked in a while' },
 ];
 
-function EmailClientMock({ fromName, fromEmail, subject, previewText, bodyHtml, editingPreview, editedBodyHtml, onBodyChange, onSubjectChange, onPreviewTextChange, editedSubject, editedPreviewText }) {
-  const [viewMode, setViewMode] = useState('desktop'); // 'desktop' | 'mobile'
-  const [showSource, setShowSource] = useState(false);
-  const iframeRef = useRef(null);
-  const mobileIframeRef = useRef(null);
+const OFFER_PROMPTS = {
+  seasonal:     ['What\'s the seasonal offer?', 'What\'s the message angle?', 'What emotion should it elicit?'],
+  upsell:       ['What\'s the upsell or bundle?', 'What\'s the value proposition?', 'What emotion should it elicit?'],
+  referral:     ['What\'s the referral reward?', 'What\'s the loyalty message?', 'What emotion should it elicit?'],
+  winback:      ['What\'s the win-back incentive?', 'What\'s the "we miss you" angle?', 'What emotion should it elicit?'],
+};
 
-  const initials = (fromName || 'YB').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
-  const avatarColor = '#4f46e5';
-
-  const resizeIframe = (ref) => {
-    if (!ref.current) return;
-    try {
-      const doc = ref.current.contentDocument || ref.current.contentWindow?.document;
-      if (doc && doc.body) {
-        ref.current.style.height = (doc.body.scrollHeight + 32) + 'px';
-      }
-    } catch (e) {}
-  };
-
-  const htmlToRender = editingPreview ? editedBodyHtml : bodyHtml;
-
+function OfferDetailsPanel({ focus, offerDetails, onChange }) {
+  const prompts = OFFER_PROMPTS[focus] || OFFER_PROMPTS.seasonal;
   return (
-    <div className="flex flex-col h-full">
-      {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-200 flex-shrink-0">
-        <div className="flex items-center gap-1 bg-gray-200 rounded-lg p-0.5">
-          <button
-            onClick={() => { setViewMode('desktop'); setShowSource(false); }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'desktop' && !showSource ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <Monitor className="w-3 h-3" /> Desktop
-          </button>
-          <button
-            onClick={() => { setViewMode('mobile'); setShowSource(false); }}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${viewMode === 'mobile' && !showSource ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <Smartphone className="w-3 h-3" /> Mobile
-          </button>
-          <button
-            onClick={() => setShowSource(!showSource)}
-            className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium transition-all ${showSource ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-          >
-            <Code className="w-3 h-3" /> HTML
-          </button>
-        </div>
-        <span className="text-xs text-gray-400 font-medium">Preview</span>
+    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4 space-y-3">
+      <div className="flex items-center gap-2 mb-1">
+        <Sparkles className="w-4 h-4 text-purple-500" />
+        <p className="text-xs font-semibold text-purple-700">Tailor this campaign</p>
       </div>
-
-      {showSource ? (
-        /* HTML Source Editor */
-        <div className="flex-1 flex flex-col min-h-0">
-          <div className="bg-gray-800 px-4 py-2 flex items-center gap-2 flex-shrink-0">
-            <div className="flex gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-400" />
-              <div className="w-3 h-3 rounded-full bg-yellow-400" />
-              <div className="w-3 h-3 rounded-full bg-green-400" />
-            </div>
-            <span className="text-gray-400 text-xs ml-2">email.html — Edit HTML</span>
-          </div>
-          <div className="flex-1 bg-gray-900 p-1">
-            <textarea
-              value={editedBodyHtml}
-              onChange={e => onBodyChange(e.target.value)}
-              className="w-full h-full min-h-72 p-4 text-xs font-mono bg-gray-900 text-green-300 border-0 focus:outline-none resize-none leading-relaxed"
-              placeholder="Email HTML body…"
-              rows={24}
-              spellCheck={false}
-            />
-          </div>
-        </div>
-      ) : (
-        /* Email Client View */
-        <div className="flex-1 overflow-y-auto bg-gray-100" style={{ minHeight: 0 }}>
-          <div className={`mx-auto ${viewMode === 'mobile' ? 'py-6 flex justify-center' : 'py-4 px-4'}`}>
-            {viewMode === 'desktop' ? (
-              /* Desktop email client chrome */
-              <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200 max-w-[640px] mx-auto">
-                {/* Email client top bar */}
-                <div className="bg-gray-50 border-b border-gray-200 px-5 py-3">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0 mt-0.5"
-                      style={{ background: avatarColor }}
-                    >
-                      {initials}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-baseline justify-between gap-2">
-                        <div className="min-w-0">
-                          <span className="font-semibold text-sm text-gray-900">{fromName || 'Your Business'}</span>
-                          {fromEmail && <span className="text-xs text-gray-400 ml-1.5">&lt;{fromEmail}&gt;</span>}
-                        </div>
-                        <span className="text-xs text-gray-400 flex-shrink-0">Just now</span>
-                      </div>
-                      {/* Subject as editable or display */}
-                      {editingPreview ? (
-                        <div className="mt-1.5 space-y-1">
-                          <input
-                            type="text"
-                            value={editedSubject}
-                            onChange={e => onSubjectChange(e.target.value)}
-                            className="w-full text-sm font-semibold border border-blue-300 rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 focus:outline-none bg-blue-50"
-                            placeholder="Subject line"
-                          />
-                          <input
-                            type="text"
-                            value={editedPreviewText}
-                            onChange={e => onPreviewTextChange(e.target.value)}
-                            className="w-full text-xs border border-gray-200 rounded px-2 py-1 focus:ring-1 focus:ring-blue-400 focus:outline-none text-gray-500"
-                            placeholder="Preview text (shown in inbox)"
-                          />
-                        </div>
-                      ) : (
-                        <>
-                          <p className="text-sm font-semibold text-gray-900 mt-0.5">{subject}</p>
-                          {previewText && <p className="text-xs text-gray-400 mt-0.5 truncate">{previewText}</p>}
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
-                {/* Email body rendered in iframe */}
-                <div className="bg-white overflow-hidden">
-                  <iframe
-                    ref={iframeRef}
-                    srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><style>body{margin:0;padding:0;background:#ffffff}</style></head><body>${htmlToRender}</body></html>`}
-                    title="Email Preview Desktop"
-                    sandbox="allow-same-origin"
-                    style={{ width: '100%', border: 'none', display: 'block', minHeight: '200px' }}
-                    scrolling="no"
-                    onLoad={() => resizeIframe(iframeRef)}
-                  />
-                </div>
-              </div>
-            ) : (
-              /* Mobile phone frame */
-              <div className="relative" style={{ width: 320 }}>
-                <div className="bg-gray-900 rounded-[44px] p-3 shadow-2xl ring-1 ring-black/20">
-                  {/* Notch */}
-                  <div className="bg-gray-900 h-6 flex items-center justify-center mb-1 relative">
-                    <div className="w-20 h-4 bg-black rounded-full absolute top-1" />
-                    <div className="flex items-center justify-between w-full px-5 absolute">
-                      <span className="text-white text-[10px] font-semibold">9:41</span>
-                      <div className="flex gap-1 items-center">
-                        <div className="w-3 h-2 border border-white rounded-sm opacity-70" />
-                        <div className="w-1 h-1.5 bg-white rounded-sm opacity-70" />
-                      </div>
-                    </div>
-                  </div>
-                  {/* Phone screen */}
-                  <div className="bg-white rounded-[28px] overflow-hidden" style={{ height: 580 }}>
-                    {/* Mail app top bar */}
-                    <div className="bg-gray-50 border-b border-gray-200 px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0"
-                          style={{ background: avatarColor }}
-                        >
-                          {initials}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-semibold text-[11px] text-gray-900 leading-tight">{fromName || 'Your Business'}</p>
-                          <p className="text-[10px] text-gray-800 font-medium truncate leading-tight mt-0.5">{subject}</p>
-                          <p className="text-[10px] text-gray-400 truncate leading-tight">{previewText}</p>
-                        </div>
-                      </div>
-                    </div>
-                    {/* Mobile email body iframe */}
-                    <div style={{ height: 'calc(100% - 64px)', overflow: 'auto' }}>
-                      <iframe
-                        ref={mobileIframeRef}
-                        srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:0;background:#ffffff}</style></head><body>${htmlToRender}</body></html>`}
-                        title="Email Preview Mobile"
-                        sandbox="allow-same-origin"
-                        style={{ width: '100%', border: 'none', display: 'block', minHeight: '400px' }}
-                        scrolling="no"
-                        onLoad={() => resizeIframe(mobileIframeRef)}
-                      />
-                    </div>
-                  </div>
-                  {/* Home bar */}
-                  <div className="flex justify-center py-2">
-                    <div className="w-24 h-1 bg-gray-600 rounded-full" />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{prompts[0]}</label>
+        <input
+          type="text"
+          value={offerDetails.offer}
+          onChange={e => onChange({ ...offerDetails, offer: e.target.value })}
+          placeholder="e.g. 20% off spring deep clean"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{prompts[1]}</label>
+        <input
+          type="text"
+          value={offerDetails.message}
+          onChange={e => onChange({ ...offerDetails, message: e.target.value })}
+          placeholder="e.g. Spring refresh — your home deserves it"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">{prompts[2]}</label>
+        <input
+          type="text"
+          value={offerDetails.emotion}
+          onChange={e => onChange({ ...offerDetails, emotion: e.target.value })}
+          placeholder="e.g. Excitement and FOMO"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-700 mb-1">CTA link URL <span className="text-gray-400 font-normal">(where the button goes)</span></label>
+        <input
+          type="url"
+          value={offerDetails.ctaLink}
+          onChange={e => onChange({ ...offerDetails, ctaLink: e.target.value })}
+          placeholder="https://yourbusiness.com/book"
+          className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-purple-400 focus:border-purple-400 outline-none"
+        />
+      </div>
     </div>
   );
 }
@@ -225,16 +92,17 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     tone: 'friendly',
     focus: 'seasonal',
   });
+  const [offerDetails, setOfferDetails] = useState({ offer: '', message: '', emotion: '', ctaLink: '' });
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [sendingNow, setSendingNow] = useState(false);
+  // preview shape: { subject, previewText, blocks, bodyHtml, bodyText }
   const [preview, setPreview] = useState(null);
-  const [editingPreview, setEditingPreview] = useState(false);
+  const [editedBlocks, setEditedBlocks] = useState([]);
   const [editedSubject, setEditedSubject] = useState('');
   const [editedPreviewText, setEditedPreviewText] = useState('');
-  const [editedBodyHtml, setEditedBodyHtml] = useState('');
   const [toast, setToast] = useState(null);
 
   const showToast = (msg, type = 'success') => {
@@ -270,15 +138,19 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
   const generatePreview = async () => {
     setPreviewing(true);
     setPreview(null);
-    setEditingPreview(false);
+    setEditedBlocks([]);
     try {
-      const r = await authFetch(`${apiUrl}/api/email-campaigns/preview`, { method: 'POST' });
+      const r = await authFetch(`${apiUrl}/api/email-campaigns/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ offerDetails }),
+      });
       const data = await r.json();
       if (data.campaign) {
         setPreview(data.campaign);
+        setEditedBlocks(data.campaign.blocks || []);
         setEditedSubject(data.campaign.subject);
         setEditedPreviewText(data.campaign.previewText);
-        setEditedBodyHtml(data.campaign.bodyHtml);
       } else {
         showToast(data.error || 'Failed to generate preview', 'error');
       }
@@ -295,8 +167,9 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     if (!confirm('This will send the email to all your past customers right now. Continue?')) return;
     setSendingNow(true);
     try {
+      const bodyHtml = editedBlocks.length ? emailBlocksToHtml(editedBlocks) : (preview?.bodyHtml || '');
       const body = preview
-        ? { usePreview: { subject: editedSubject, previewText: editedPreviewText, bodyHtml: editedBodyHtml, bodyText: preview.bodyText } }
+        ? { usePreview: { subject: editedSubject, previewText: editedPreviewText, bodyHtml, bodyText: preview.bodyText } }
         : {};
       const r = await authFetch(`${apiUrl}/api/email-campaigns/send-now`, {
         method: 'POST',
@@ -309,6 +182,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         const h = await authFetch(`${apiUrl}/api/email-campaigns/history`).then(r => r.json());
         if (h.campaigns) setHistory(h.campaigns);
         setPreview(null);
+        setEditedBlocks([]);
       } else {
         showToast(data.error || 'Send failed', 'error');
       }
@@ -345,8 +219,8 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         </div>
       </div>
 
-      {/* Main split: Settings left, Preview right */}
-      <div className="grid lg:grid-cols-2 gap-6 items-start">
+      {/* Main split: Settings left, Editor right */}
+      <div className="grid lg:grid-cols-[340px,1fr] gap-6 items-start">
         {/* LEFT: Settings */}
         <div className="space-y-4">
           {/* Autopilot toggle */}
@@ -441,6 +315,13 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
             </button>
           </div>
 
+          {/* Offer Details */}
+          <OfferDetailsPanel
+            focus={config.focus}
+            offerDetails={offerDetails}
+            onChange={setOfferDetails}
+          />
+
           {/* Generate & Send */}
           <div className="bg-white border border-gray-200 rounded-xl p-5 space-y-3">
             <h3 className="font-semibold text-gray-900">Generate & Send</h3>
@@ -449,15 +330,6 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
               {previewing ? <Loader className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
               {previewing ? 'Generating…' : 'Generate Email Preview'}
             </button>
-            {preview && (
-              <button
-                onClick={() => setEditingPreview(!editingPreview)}
-                className={`w-full py-2.5 border-2 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all ${editingPreview ? 'border-orange-400 bg-orange-50 text-orange-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
-              >
-                <Edit3 className="w-4 h-4" />
-                {editingPreview ? 'Stop Editing' : 'Edit Email'}
-              </button>
-            )}
             <button onClick={sendNow} disabled={sendingNow}
               className="w-full py-2.5 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 disabled:opacity-60 flex items-center justify-center gap-2">
               {sendingNow ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
@@ -466,46 +338,43 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
           </div>
         </div>
 
-        {/* RIGHT: Preview Panel */}
-        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden" style={{ minHeight: '560px' }}>
+        {/* RIGHT: Block Editor */}
+        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden" style={{ minHeight: '600px', height: '80vh' }}>
           {preview ? (
-            <div className="flex flex-col" style={{ minHeight: '560px' }}>
-              <EmailClientMock
-                fromName={config.from_name}
-                fromEmail={config.from_email}
-                subject={editedSubject}
-                previewText={editedPreviewText}
-                bodyHtml={preview.bodyHtml}
-                editingPreview={editingPreview}
-                editedBodyHtml={editedBodyHtml}
-                editedSubject={editedSubject}
-                editedPreviewText={editedPreviewText}
-                onBodyChange={setEditedBodyHtml}
-                onSubjectChange={setEditedSubject}
-                onPreviewTextChange={setEditedPreviewText}
-              />
-            </div>
+            <EmailBlockEditor
+              blocks={editedBlocks}
+              onChange={setEditedBlocks}
+              subject={editedSubject}
+              previewText={editedPreviewText}
+              onSubjectChange={setEditedSubject}
+              onPreviewTextChange={setEditedPreviewText}
+              fromName={config.from_name}
+              fromEmail={config.from_email}
+            />
           ) : (
-            <div className="flex flex-col items-center justify-center h-full p-8 text-center" style={{ minHeight: '560px' }}>
+            <div className="flex flex-col items-center justify-center h-full p-8 text-center" style={{ minHeight: '600px' }}>
               {previewing ? (
                 <div className="space-y-4">
                   <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto">
                     <Loader className="w-8 h-8 text-blue-400 animate-spin" />
                   </div>
                   <p className="font-semibold text-gray-700">Generating your campaign…</p>
-                  <p className="text-sm text-gray-400 max-w-xs">AI is writing a high-converting email with hero image, offer, and urgency.</p>
+                  <p className="text-sm text-gray-400 max-w-xs">AI is crafting your email with the offer details you provided.</p>
                 </div>
               ) : (
                 <>
                   <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
                     <Mail className="w-8 h-8 text-blue-300" />
                   </div>
-                  <p className="font-semibold text-gray-700">Email preview will appear here</p>
-                  <p className="text-sm text-gray-400 mt-1 max-w-xs">Click "Generate Email Preview" to see your AI-generated campaign. Preview it on desktop or mobile, edit if needed, then send.</p>
-                  <div className="mt-6 flex items-center gap-6 text-xs text-gray-300">
-                    <span className="flex items-center gap-1"><Monitor className="w-3 h-3" /> Desktop view</span>
-                    <span className="flex items-center gap-1"><Smartphone className="w-3 h-3" /> Mobile view</span>
-                    <span className="flex items-center gap-1"><Code className="w-3 h-3" /> HTML editor</span>
+                  <p className="font-semibold text-gray-700">Your email editor will appear here</p>
+                  <p className="text-sm text-gray-400 mt-1 max-w-xs">Fill in your offer details, then click "Generate Email Preview" to build your campaign with the visual editor.</p>
+                  <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+                    {[['🎨', 'Visual blocks'], ['✏️', 'Inline editing'], ['🔀', 'Drag & drop']].map(([icon, label]) => (
+                      <div key={label} className="text-xs text-gray-300">
+                        <div className="text-2xl mb-1">{icon}</div>
+                        {label}
+                      </div>
+                    ))}
                   </div>
                 </>
               )}
