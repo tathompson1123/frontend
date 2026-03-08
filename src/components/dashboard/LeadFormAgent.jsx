@@ -131,7 +131,8 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
       const response = await authFetch(`${apiUrl}/api/auth/user`);
       if (response.ok) {
         const userData = await response.json();
-        setPhoneNumber(userData.user?.twilio_phone_number || null);
+        // Prefer Telnyx number, fall back to Twilio
+        setPhoneNumber(userData.user?.telnyx_phone_number || userData.user?.twilio_phone_number || null);
       }
     } catch (error) {
       console.error('Error loading phone number:', error);
@@ -381,6 +382,27 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
     </div>
   </div>
 )}
+
+        {/* Assigned Business Phone Number */}
+        <div className={`rounded-xl border-2 p-5 flex items-start gap-4 ${phoneNumber ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${phoneNumber ? 'bg-green-600' : 'bg-gray-300'}`}>
+            <Phone className="w-5 h-5 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-gray-900 text-sm">Assigned Business Phone Number</p>
+            {phoneNumber ? (
+              <>
+                <p className="text-lg font-bold text-green-700 tracking-wide mt-0.5">{phoneNumber}</p>
+                <p className="text-xs text-gray-500 mt-1">This is the number your leads will receive SMS messages from. When a customer replies, your AI agent responds automatically.</p>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-gray-500 mt-0.5">No number assigned yet.</p>
+                <p className="text-xs text-gray-400 mt-1">A local phone number matching your area code is automatically provisioned when you deploy the agent with SMS enabled.</p>
+              </>
+            )}
+          </div>
+        </div>
 
         {/* Configuration and Deploy Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

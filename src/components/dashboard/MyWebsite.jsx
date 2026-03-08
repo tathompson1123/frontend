@@ -460,6 +460,10 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         onClose={() => setShowEditWebsite(false)}
         defaultValues={websiteForm}
         isRegeneration={!!currentWebsite}
+        onSuccess={() => {
+          setShowEditWebsite(false);
+          refreshWebsiteData();
+        }}
       />
 
       {/* Connect Existing Website Modal */}

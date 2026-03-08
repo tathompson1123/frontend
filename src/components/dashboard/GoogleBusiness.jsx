@@ -27,6 +27,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   const [reviewLink, setReviewLink] = useState('');
   const [savingReviewLink, setSavingReviewLink] = useState(false);
   const [showLinkInfo, setShowLinkInfo] = useState(false);
+  const [assignedPhone, setAssignedPhone] = useState(null);
   const [reviewSettingsTab, setReviewSettingsTab] = useState('customization');
 
   useEffect(() => {
@@ -53,6 +54,8 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
       if (data.user?.google_review_link) {
         setReviewLink(data.user.google_review_link);
       }
+      // Prefer Telnyx number, fall back to Twilio
+      setAssignedPhone(data.user?.telnyx_phone_number || data.user?.twilio_phone_number || null);
     } catch (error) {
       console.error('Error fetching review link:', error);
     }
@@ -510,6 +513,28 @@ const saveReviewConfig = async () => {
           {/* REVIEW REQUESTS TAB */}
           {activeTab === 'review-requests' && (
             <div className="space-y-6">
+
+              {/* Assigned Business Phone Number */}
+              <div className={`rounded-xl border-2 p-5 flex items-start gap-4 ${assignedPhone ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${assignedPhone ? 'bg-green-600' : 'bg-gray-300'}`}>
+                  <Phone className="w-5 h-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-gray-900 text-sm">Assigned Business Phone Number</p>
+                  {assignedPhone ? (
+                    <>
+                      <p className="text-lg font-bold text-green-700 tracking-wide mt-0.5">{assignedPhone}</p>
+                      <p className="text-xs text-gray-500 mt-1">Review request SMS messages are sent from this number. Customers can reply to this number and your AI agent will respond.</p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-500 mt-0.5">No number assigned yet.</p>
+                      <p className="text-xs text-gray-400 mt-1">A dedicated phone number is provisioned when you upgrade to a Pro plan, so review requests come from a consistent local number.</p>
+                    </>
+                  )}
+                </div>
+              </div>
+
               {/* Setup Section */}
               {!reviewLink && (
                 <div className="bg-gradient-to-r from-blue-50 to-amber-50 border-2 border-blue-300 rounded-xl p-6">

@@ -13,7 +13,7 @@ import GenerationProgress from './GenerationProgress';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-export default function GenerateModal({ isOpen, onClose, defaultValues = {}, isRegeneration = false }) {
+export default function GenerateModal({ isOpen, onClose, defaultValues = {}, isRegeneration = false, onSuccess }) {
   const navigate = useNavigate();
   const [isGenerating, setIsGenerating] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -106,7 +106,11 @@ export default function GenerateModal({ isOpen, onClose, defaultValues = {}, isR
         setProgress(100);
         setTimeout(() => {
           setIsGenerating(false);
-          navigate('/dashboard?tab=website', { state: { showSuccess: true } });
+          if (onSuccess) {
+            onSuccess();
+          } else {
+            navigate('/dashboard?tab=website', { state: { showSuccess: true } });
+          }
         }, 600);
       } else {
         throw new Error('Invalid response from server');
