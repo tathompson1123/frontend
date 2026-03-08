@@ -11,6 +11,9 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [devicePreview, setDevicePreview] = useState('desktop');
   const [customDomain, setCustomDomain] = useState('');
   const [domainVerified, setDomainVerified] = useState(false);
+  const [domainManagedByUs, setDomainManagedByUs] = useState(false);
+  const [domainPurchaseDate, setDomainPurchaseDate] = useState(null);
+  const [dnsPropagated, setDnsPropagated] = useState(false);
   const [vercelUrl, setVercelUrl] = useState('');
   const [showEditWebsite, setShowEditWebsite] = useState(false);
   const [showConnectWebsite, setShowConnectWebsite] = useState(false);
@@ -79,9 +82,30 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       setIsPublished(websiteData.is_published || false);
       setCustomDomain(websiteData.custom_domain || '');
       setDomainVerified(websiteData.domain_verified || false);
+      setDomainManagedByUs(websiteData.domain_managed_by_us || false);
+      setDomainPurchaseDate(websiteData.domain_purchase_date || null);
       setVercelUrl(websiteData.vercel_url || '');
     }
   }, [websiteData]);
+
+  // Poll DNS propagation status every 2 minutes when domain is managed by us and not yet propagated
+  useEffect(() => {
+    if (!domainManagedByUs || !customDomain || !authFetch || !apiUrl) return;
+
+    const checkDns = async () => {
+      try {
+        const res = await authFetch(`${apiUrl}/api/website/domain-dns-status?domain=${customDomain}`);
+        const data = await res.json();
+        if (data.propagated) setDnsPropagated(true);
+      } catch {}
+    };
+
+    checkDns();
+    if (!dnsPropagated) {
+      const interval = setInterval(checkDns, 2 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [domainManagedByUs, customDomain, dnsPropagated, authFetch, apiUrl]);
 
   // Pre-fill form from saved business info when modal opens
   useEffect(() => {
@@ -265,13 +289,26 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       {subTab === 'website' && currentWebsite ? (
         <div className="space-y-4">
           {/* Inline Status Bar */}
+          {isPublished && domainManagedByUs && customDomain && !dnsPropagated && (
+            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 flex items-center gap-2 text-sm text-amber-800">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-500" />
+              <span>DNS is propagating — <strong>{customDomain}</strong> may take 1–12 hours to go live worldwide.</span>
+            </div>
+          )}
           {isPublished && (
             <div className="bg-white rounded-lg border border-gray-200 px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <span className="flex items-center gap-1.5 text-sm font-medium text-green-700">
-                  <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  Live
-                </span>
+                {domainManagedByUs && customDomain && !dnsPropagated ? (
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-amber-700">
+                    <span className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></span>
+                    Processing
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-sm font-medium text-green-700">
+                    <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    Live
+                  </span>
+                )}
                 {customDomain ? (
                   <a href={`https://${customDomain}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
                     {customDomain} <ExternalLink className="w-3 h-3" />
