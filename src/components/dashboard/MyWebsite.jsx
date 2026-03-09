@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Code } from 'lucide-react';
+import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Code, Wand2 } from 'lucide-react';
 import PublishWizard from './PublishWizard';
 import EmbedCode from './EmbedCode';
 import FeatureGate from './FeatureGate';
 import GenerateModal from '../GenerateModal';
+import LeadMagnetEditor from './LeadMagnetEditor';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData, onUserPlanUpdate }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
@@ -29,6 +30,10 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     yearsInBusiness: '', certifications: '', description: '', uniqueSellingPoints: '', targetCustomer: '',
     phone: '', email: '', city: '', state: '',
   });
+
+  // Lead magnet editor
+  const [showLeadMagnetEditor, setShowLeadMagnetEditor] = useState(false);
+  const [leadMagnetSection, setLeadMagnetSection] = useState(null);
 
   // Business settings gate
   const [businessSettingsComplete, setBusinessSettingsComplete] = useState(null);
@@ -85,6 +90,34 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       setDomainManagedByUs(websiteData.domain_managed_by_us || false);
       setDomainPurchaseDate(websiteData.domain_purchase_date || null);
       setVercelUrl(websiteData.vercel_url || '');
+
+      // Find any lead magnet section in page_data
+      const pageData = websiteData.page_data;
+      if (pageData) {
+        const LEAD_MAGNET_IDS = [
+          'lead-magnet-auto-wrap',
+          'lead-magnet-cleaning',
+          'lead-magnet-landscaping',
+          'lead-magnet-renovation',
+          'lead-magnet-photography',
+        ];
+        let found = null;
+        const searchSections = (sections) => {
+          if (!Array.isArray(sections)) return;
+          for (const s of sections) {
+            if (LEAD_MAGNET_IDS.includes(s.template)) { found = s; return; }
+          }
+        };
+        if (pageData.multiPage && Array.isArray(pageData.pages)) {
+          for (const page of pageData.pages) {
+            searchSections(page.sections);
+            if (found) break;
+          }
+        } else {
+          searchSections(pageData.sections);
+        }
+        setLeadMagnetSection(found);
+      }
     }
   }, [websiteData]);
 
@@ -358,6 +391,16 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   <Edit className="w-4 h-4" />
                   Edit Website
                 </button>
+                {leadMagnetSection && (
+                  <button
+                    type="button"
+                    onClick={() => setShowLeadMagnetEditor(true)}
+                    className="px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md hover:from-purple-600 hover:to-purple-700 hover:shadow-lg transition-all"
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    Edit Quiz
+                  </button>
+                )}
                 <div className="w-px h-5 bg-gray-300" />
                 <button
                   type="button"
@@ -472,6 +515,21 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           </div>
         </div>
       ) : null}
+
+      {/* Lead Magnet Editor */}
+      {showLeadMagnetEditor && leadMagnetSection && (
+        <LeadMagnetEditor
+          section={leadMagnetSection}
+          theme={websiteData?.page_data?.theme || {}}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+          onSave={() => {
+            setShowLeadMagnetEditor(false);
+            if (refreshWebsiteData) refreshWebsiteData();
+          }}
+          onClose={() => setShowLeadMagnetEditor(false)}
+        />
+      )}
 
       {/* Publish Wizard */}
       {showPublishWizard && (
