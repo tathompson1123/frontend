@@ -832,6 +832,23 @@ export default function BusinessInformation({
                 <input type="email" value={businessInfo.email} onChange={(e) => setBusinessInfo({ ...businessInfo, email: e.target.value })} placeholder="contact@business.com" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
               </div>
             </div>
+            {(user?.telnyx_phone_number || user?.twilio_phone_number) && (
+              <div className="mt-4 pt-4 border-t border-gray-100">
+                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-blue-500" />
+                  Assigned Business Phone Number
+                </label>
+                <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-blue-800 font-mono font-medium text-sm">
+                    {user?.telnyx_phone_number || user?.twilio_phone_number}
+                  </span>
+                  <span className="text-xs text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full">
+                    {user?.telnyx_phone_number ? 'Telnyx' : 'Twilio'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">This is the number used for SMS notifications and lead follow-ups.</p>
+              </div>
+            )}
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">

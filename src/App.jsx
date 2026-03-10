@@ -7,6 +7,7 @@ import WebsiteEditor from './pages/WebsiteEditor';
 import PublicBookingPage from './pages/PublicBookingPage';
 import WebsiteEditorNew from './pages/WebsiteEditorNew';
 import PaymentPage from './pages/PaymentPage';
+import LeadMagnetPage from './pages/LeadMagnetPage';
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
         <Route path="/editor-v2" element={<WebsiteEditorNew />} />
         <Route path="/book/:businessId" element={<PublicBookingPage />} />
         <Route path="/pay/:token" element={<PaymentPage />} />
+        <Route path="/lead/:userId/:type" element={<LeadMagnetPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

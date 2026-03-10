@@ -1,15 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Monitor, Send, Smartphone, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Code, Wand2 } from 'lucide-react';
+import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Send, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Code } from 'lucide-react';
 import PublishWizard from './PublishWizard';
 import EmbedCode from './EmbedCode';
 import FeatureGate from './FeatureGate';
 import GenerateModal from '../GenerateModal';
-import LeadMagnetEditor from './LeadMagnetEditor';
 
 export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData, onUserPlanUpdate }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
   const [isPublished, setIsPublished] = useState(false);
-  const [devicePreview, setDevicePreview] = useState('desktop');
   const [customDomain, setCustomDomain] = useState('');
   const [domainVerified, setDomainVerified] = useState(false);
   const [domainManagedByUs, setDomainManagedByUs] = useState(false);
@@ -30,10 +28,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
     yearsInBusiness: '', certifications: '', description: '', uniqueSellingPoints: '', targetCustomer: '',
     phone: '', email: '', city: '', state: '',
   });
-
-  // Lead magnet editor
-  const [showLeadMagnetEditor, setShowLeadMagnetEditor] = useState(false);
-  const [leadMagnetSection, setLeadMagnetSection] = useState(null);
 
   // Business settings gate
   const [businessSettingsComplete, setBusinessSettingsComplete] = useState(null);
@@ -91,33 +85,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       setDomainPurchaseDate(websiteData.domain_purchase_date || null);
       setVercelUrl(websiteData.vercel_url || '');
 
-      // Find any lead magnet section in page_data
-      const pageData = websiteData.page_data;
-      if (pageData) {
-        const LEAD_MAGNET_IDS = [
-          'lead-magnet-auto-wrap',
-          'lead-magnet-cleaning',
-          'lead-magnet-landscaping',
-          'lead-magnet-renovation',
-          'lead-magnet-photography',
-        ];
-        let found = null;
-        const searchSections = (sections) => {
-          if (!Array.isArray(sections)) return;
-          for (const s of sections) {
-            if (LEAD_MAGNET_IDS.includes(s.template)) { found = s; return; }
-          }
-        };
-        if (pageData.multiPage && Array.isArray(pageData.pages)) {
-          for (const page of pageData.pages) {
-            searchSections(page.sections);
-            if (found) break;
-          }
-        } else {
-          searchSections(pageData.sections);
-        }
-        setLeadMagnetSection(found);
-      }
     }
   }, [websiteData]);
 
@@ -386,105 +353,34 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 <button
                   type="button"
                   onClick={() => navigate('/editor-v2')}
-                  className="px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md hover:from-amber-600 hover:to-amber-700 hover:shadow-lg transition-all"
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 bg-white text-gray-800 shadow-lg shadow-gray-200 hover:shadow-gray-300 hover:bg-gray-50 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-gray-200"
                 >
                   <Edit className="w-4 h-4" />
                   Edit Website
                 </button>
-                {leadMagnetSection && (
-                  <button
-                    type="button"
-                    onClick={() => setShowLeadMagnetEditor(true)}
-                    className="px-4 py-1.5 rounded-lg text-sm font-semibold flex items-center gap-1.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md hover:from-purple-600 hover:to-purple-700 hover:shadow-lg transition-all"
-                  >
-                    <Wand2 className="w-4 h-4" />
-                    Edit Quiz
-                  </button>
-                )}
-                <div className="w-px h-5 bg-gray-300" />
-                <button
-                  type="button"
-                  onClick={() => setDevicePreview('desktop')}
-                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 transition ${devicePreview === 'desktop' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
-                >
-                  <Monitor className="w-4 h-4" />
-                  <span className="hidden sm:inline">Desktop</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setDevicePreview('mobile')}
-                  className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 transition ${devicePreview === 'mobile' ? 'bg-amber-600 text-white' : 'bg-white text-gray-600 border border-gray-300'}`}
-                >
-                  <Smartphone className="w-4 h-4" />
-                  <span className="hidden sm:inline">Mobile</span>
-                </button>
               </div>
             </div>
-            <div className={`flex items-center justify-center p-8 bg-gradient-to-br from-gray-100 to-gray-200 transition-all`} style={{ minHeight: devicePreview === 'desktop' ? '450px' : '800px' }}>
-              {devicePreview === 'desktop' ? (
-                <div className="w-full bg-white rounded-lg shadow-2xl overflow-hidden border-8 border-gray-800">
-                  <div className="bg-gray-800 px-4 py-2 flex items-center gap-2">
-                    <div className="flex gap-1.5">
-                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                    </div>
-                    <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">
-                      {customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}
-                    </div>
+            <div className="flex items-center justify-center p-8 bg-gradient-to-br from-gray-100 to-gray-200" style={{ minHeight: '450px' }}>
+              <div className="w-full bg-white rounded-lg shadow-2xl overflow-hidden border-8 border-gray-800">
+                <div className="bg-gray-800 px-4 py-2 flex items-center gap-2">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   </div>
-                  <div className="overflow-hidden" style={{ height: '600px' }}>
-                    <iframe
-                      srcDoc={currentWebsite || ''}
-                      title="Desktop Website Preview"
-                      className="w-full h-full bg-white border-0 pointer-events-none"
-                      sandbox="allow-scripts allow-same-origin"
-                    />
+                  <div className="flex-1 bg-gray-700 rounded px-3 py-1 text-xs text-gray-300 text-center">
+                    {customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}
                   </div>
                 </div>
-              ) : (
-                <div className="flex justify-center items-center w-full">
-                  <div className="relative w-[375px] h-[667px] bg-black rounded-[3rem] shadow-2xl p-3 border-[14px] border-gray-900 flex-shrink-0">
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-black rounded-b-3xl z-10"></div>
-                    <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative">
-                      <div className="absolute top-0 left-0 right-0 h-11 bg-white z-10 flex items-center justify-between px-6 text-xs font-semibold">
-                        <span>9:41</span>
-                        <div className="flex items-center gap-1">
-                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-                          </svg>
-                          <span>100%</span>
-                        </div>
-                      </div>
-                      <div className="absolute top-11 left-0 right-0 h-12 bg-gray-100 z-10 flex items-center px-3 border-b border-gray-200">
-                        <div className="flex-1 bg-white rounded-full px-4 py-2 text-xs text-gray-500 flex items-center gap-2 min-w-0">
-                          <Globe className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">{customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}</span>
-                        </div>
-                      </div>
-                      <div
-                        className="absolute top-[92px] left-0 right-0 bottom-0 overflow-hidden"
-                        style={{ overflow: 'hidden' }}
-                      >
-                        <iframe
-                          srcDoc={currentWebsite || ''}
-                          title="Mobile Website Preview"
-                          className="border-0 bg-white pointer-events-none"
-                          sandbox="allow-scripts allow-same-origin"
-                          style={{
-                            width: '375px',
-                            height: 'calc(667px - 92px)',
-                            display: 'block',
-                            overflow: 'hidden'
-                          }}
-                          scrolling="no"
-                        />
-                      </div>
-                    </div>
-                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-white rounded-full opacity-50"></div>
-                  </div>
+                <div className="overflow-hidden" style={{ height: '600px' }}>
+                  <iframe
+                    srcDoc={currentWebsite || ''}
+                    title="Website Preview"
+                    className="w-full h-full bg-white border-0 pointer-events-none"
+                    sandbox="allow-scripts allow-same-origin"
+                  />
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
@@ -515,21 +411,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           </div>
         </div>
       ) : null}
-
-      {/* Lead Magnet Editor */}
-      {showLeadMagnetEditor && leadMagnetSection && (
-        <LeadMagnetEditor
-          section={leadMagnetSection}
-          theme={websiteData?.page_data?.theme || {}}
-          apiUrl={apiUrl}
-          authFetch={authFetch}
-          onSave={() => {
-            setShowLeadMagnetEditor(false);
-            if (refreshWebsiteData) refreshWebsiteData();
-          }}
-          onClose={() => setShowLeadMagnetEditor(false)}
-        />
-      )}
 
       {/* Publish Wizard */}
       {showPublishWizard && (

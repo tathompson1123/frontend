@@ -423,7 +423,8 @@ const PAGE_OPTIONS = [
   { label: 'Home', value: '/' },
   { label: 'About', value: '/about' },
   { label: 'Services', value: '/services' },
-  { label: 'Contact', value: '/contact' },
+  { label: 'Contact Form', value: '/contact' },
+  { label: 'Online Booking', value: '/booking' },
   { label: 'Portfolio', value: '/portfolio' },
   { label: 'Gallery', value: '/gallery' },
   { label: 'Blog', value: '/blog' },
@@ -1058,13 +1059,43 @@ function NavContentForm({ navSection, onChange, onColorsChange, sections }) {
       <div className="pt-1 border-t border-gray-100">
         <p className="text-xs font-semibold text-gray-500 mb-3 uppercase tracking-wide">Nav Button</p>
         <div className="space-y-3">
+          {/* CTA Destination Toggle */}
+          <div>
+            <label className="block text-xs text-gray-500 mb-2">Button Destination</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => updateField('ctaLink', '/contact')}
+                className={`px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
+                  (c.ctaLink || '/contact') === '/contact' || (!c.ctaLink)
+                    ? 'bg-amber-50 border-amber-400 text-amber-700'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-sm mb-0.5">📋</div>
+                Contact Form
+              </button>
+              <button
+                type="button"
+                onClick={() => updateField('ctaLink', '/booking')}
+                className={`px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
+                  c.ctaLink === '/booking'
+                    ? 'bg-blue-50 border-blue-400 text-blue-700'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-sm mb-0.5">📅</div>
+                Online Booking
+              </button>
+            </div>
+          </div>
           <div>
             <label className="block text-xs text-gray-500 mb-1.5">Button Text</label>
             <input type="text" value={c.ctaText || ''} onChange={e => updateField('ctaText', e.target.value)}
               className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white" />
           </div>
           <div>
-            <label className="block text-xs text-gray-500 mb-1.5">Button Link</label>
+            <label className="block text-xs text-gray-500 mb-1.5">Custom Link (optional)</label>
             <LinkPickerField value={c.ctaLink || ''} onChange={val => updateField('ctaLink', val)} sections={sections} includePages={true} />
           </div>
         </div>
