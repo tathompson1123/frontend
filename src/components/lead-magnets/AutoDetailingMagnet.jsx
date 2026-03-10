@@ -1,90 +1,65 @@
 import { useState } from 'react';
-import { CheckCircle, ChevronRight, Car } from 'lucide-react';
+import { AlertTriangle, Info, Shield, User, Mail, Phone, CheckCircle } from 'lucide-react';
 
-const HOTSPOTS = [
-  {
-    id: 'paint',
-    label: 'Paint Correction & Ceramic',
-    description: 'Multi-stage paint correction with ceramic coating protection.',
-    top: '18%',
-    left: '52%',
-    priceMin: 299,
-    priceMax: 599,
-  },
-  {
-    id: 'wheels',
-    label: 'Wheel & Caliper Detail',
-    description: 'Deep clean, decontamination, and caliper color coating.',
-    top: '68%',
-    left: '22%',
-    priceMin: 79,
-    priceMax: 149,
-  },
-  {
-    id: 'glass',
-    label: 'Glass Polishing',
-    description: 'Remove water spots, haze, and apply rain-repellent treatment.',
-    top: '25%',
-    left: '30%',
-    priceMin: 99,
-    priceMax: 179,
-  },
-  {
-    id: 'interior',
-    label: 'Interior Restoration',
-    description: 'Deep steam clean, leather conditioning, and odor elimination.',
-    top: '38%',
-    left: '68%',
-    priceMin: 199,
-    priceMax: 399,
-  },
-];
+function getPaintHealth(months) {
+  if (months <= 3)  return { label: 'Good',     color: 'text-emerald-400', bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', discount: 20,  pollenPct: 10,  uvPct: 5,  oxidationPct: 5  };
+  if (months <= 9)  return { label: 'Caution',  color: 'text-yellow-400',  bg: 'bg-yellow-500/10',  border: 'border-yellow-500/20',  discount: 40,  pollenPct: 35,  uvPct: 25, oxidationPct: 20 };
+  if (months <= 18) return { label: 'Warning',  color: 'text-orange-400',  bg: 'bg-orange-500/10',  border: 'border-orange-500/20',  discount: 60,  pollenPct: 65,  uvPct: 55, oxidationPct: 45 };
+  return             { label: 'Critical', color: 'text-red-400',    bg: 'bg-red-500/10',     border: 'border-red-500/20',     discount: 80,  pollenPct: 90,  uvPct: 85, oxidationPct: 75 };
+}
+
+function StatBar({ label, pct, color }) {
+  return (
+    <div>
+      <div className="flex justify-between text-xs mb-1">
+        <span className="text-zinc-400">{label}</span>
+        <span className={`font-bold ${color}`}>{pct}%</span>
+      </div>
+      <div className="h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{
+            width: `${pct}%`,
+            background: pct < 30 ? '#10b981' : pct < 60 ? '#f59e0b' : '#ef4444',
+          }}
+        />
+      </div>
+    </div>
+  );
+}
 
 export default function AutoDetailingMagnet({ userId, businessName, apiUrl }) {
-  const [selected, setSelected] = useState(new Set());
-  const [activeTooltip, setActiveTooltip] = useState(null);
-  const [step, setStep] = useState('hotspots'); // hotspots | form | result
-  const [form, setForm] = useState({ vehicle: '', email: '', phone: '' });
+  const [months, setMonths] = useState(8);
+  const [submitted, setSubmitted] = useState(false);
+  const [form, setForm] = useState({ name: '', email: '', phone: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const toggleHotspot = (id) => {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
+  const health = getPaintHealth(months);
 
-  const selectedItems = HOTSPOTS.filter((h) => selected.has(h.id));
-  const totalMin = selectedItems.reduce((s, h) => s + h.priceMin, 0);
-  const totalMax = selectedItems.reduce((s, h) => s + h.priceMax, 0);
+  const degradation = Math.min(months / 24, 1);
+  const imgFilter = `brightness(${1 - degradation * 0.3}) saturate(${1 - degradation * 0.55}) sepia(${degradation * 0.35}) contrast(${1 + degradation * 0.15})`;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.vehicle || !form.email) {
-      setError('Please fill in your vehicle and email.');
-      return;
-    }
     setSubmitting(true);
-    const services = selectedItems.map((h) => h.label).join(', ') || 'General detail inquiry';
-    const message = `Selected services: ${services} | Estimated Range: $${totalMin}–$${totalMax} | Vehicle: ${form.vehicle}`;
+    const message = `Paint health: ${health.label} | Months since detail: ${months} | Pollen: ${health.pollenPct}% | UV Damage: ${health.uvPct}% | Oxidation: ${health.oxidationPct}% | Discount: ${health.discount}% off`;
     try {
       const res = await fetch(`${apiUrl}/api/leads/public/${userId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.vehicle,
+          name: form.name,
           email: form.email,
-          phone: form.phone || '0000000000',
+          phone: form.phone,
           service: 'Auto Detailing',
           message,
           sms_consent: true,
         }),
       });
       if (!res.ok) throw new Error('Submission failed');
-      setStep('result');
+      setSubmitted(true);
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -92,217 +67,165 @@ export default function AutoDetailingMagnet({ userId, businessName, apiUrl }) {
     }
   };
 
-  if (step === 'result') {
+  if (submitted) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-12">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8 text-center">
-          <CheckCircle className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Your Quote is Ready!</h2>
-          <p className="text-gray-500 mb-6">
-            We'll send your detailed quote to <span className="font-semibold text-gray-700">{form.email}</span>
+      <div className="min-h-full bg-zinc-950 flex items-center justify-center py-16 px-4">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-8 max-w-md w-full text-center shadow-2xl">
+          <CheckCircle className="w-14 h-14 text-amber-400 mx-auto mb-5" />
+          <h2 className="text-2xl font-bold text-white mb-2">Your Paint Report is Ready!</h2>
+          <p className="text-zinc-400 mb-6">
+            We'll reach out to <span className="text-white font-semibold">{form.name}</span> within a few hours.
           </p>
-          <div className="bg-blue-50 rounded-xl p-4 mb-6 text-left">
-            <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-3">Selected Services</p>
-            {selectedItems.length > 0 ? (
-              <ul className="space-y-2">
-                {selectedItems.map((h) => (
-                  <li key={h.id} className="flex justify-between text-sm">
-                    <span className="text-gray-700">{h.label}</span>
-                    <span className="font-semibold text-gray-900">${h.priceMin}–${h.priceMax}</span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">Full detail package — our team will assess on-site.</p>
-            )}
-            <div className="border-t border-blue-200 mt-3 pt-3 flex justify-between">
-              <span className="font-bold text-gray-900">Estimated Total</span>
-              <span className="font-bold text-blue-600 text-lg">${totalMin}–${totalMax}</span>
+          <div className={`${health.bg} border ${health.border} rounded-xl p-4 mb-5 text-left space-y-2`}>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">Paint Health</span>
+              <span className={`font-bold ${health.color}`}>{health.label}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">Months unprotected</span>
+              <span className="text-white font-semibold">{months} months</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">Pollen / Grime</span>
+              <span className="text-white font-semibold">{health.pollenPct}% coverage</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-zinc-400">UV Damage</span>
+              <span className="text-white font-semibold">{health.uvPct}%</span>
+            </div>
+            <div className="border-t border-zinc-700 pt-3 flex justify-between items-center">
+              <span className="text-white font-bold">Urgency Discount</span>
+              <span className="text-2xl font-black text-amber-400">{health.discount}% OFF</span>
             </div>
           </div>
-          <p className="text-sm text-gray-500">Expect a call or text within 24 hours to confirm your appointment.</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (step === 'form') {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-12">
-        <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-8">
-          <button
-            onClick={() => setStep('hotspots')}
-            className="text-sm text-blue-600 hover:text-blue-800 mb-4 flex items-center gap-1"
-          >
-            ← Back to services
-          </button>
-          <h2 className="text-2xl font-bold text-gray-900 mb-1">Get Your Quote</h2>
-          {selectedItems.length > 0 ? (
-            <p className="text-gray-500 text-sm mb-6">
-              {selectedItems.length} service{selectedItems.length > 1 ? 's' : ''} selected — estimated{' '}
-              <span className="font-semibold text-blue-600">${totalMin}–${totalMax}</span>
-            </p>
-          ) : (
-            <p className="text-gray-500 text-sm mb-6">We'll put together a custom quote for you.</p>
-          )}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Vehicle Make &amp; Model</label>
-              <input
-                type="text"
-                placeholder="e.g. 2021 Honda Accord"
-                value={form.vehicle}
-                onChange={(e) => setForm({ ...form, vehicle: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-              <input
-                type="email"
-                placeholder="you@email.com"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phone <span className="text-gray-400 font-normal">(optional)</span>
-              </label>
-              <input
-                type="tel"
-                placeholder="(555) 000-0000"
-                value={form.phone}
-                onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <p className="text-xs text-gray-400">
-              By submitting, you consent to receive SMS updates about your quote.
-            </p>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl transition-colors disabled:opacity-60"
-            >
-              {submitting ? 'Sending...' : 'Get My Quote →'}
-            </button>
-          </form>
+          <p className="text-sm text-zinc-500">Expect a call or text to confirm your booking. No obligation.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 py-8">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">Build Your Detail Package</h2>
-        <p className="text-gray-500 mt-1 text-sm">Tap the hotspots on the car to select services</p>
-      </div>
+    <div className="min-h-full bg-zinc-950 py-12 lg:py-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
 
-      {/* Progress bar */}
-      <div className="mb-6">
-        <div className="flex justify-between text-sm text-gray-500 mb-1">
-          <span>{selected.size} of 4 areas selected</span>
-          {selected.size > 0 && (
-            <span className="font-semibold text-blue-600">${totalMin}–${totalMax}</span>
-          )}
-        </div>
-        <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-blue-500 rounded-full transition-all duration-500"
-            style={{ width: `${(selected.size / 4) * 100}%` }}
-          />
-        </div>
-      </div>
-
-      {/* Car image with hotspots */}
-      <div className="relative rounded-2xl overflow-hidden bg-gray-900 select-none">
-        <img
-          src="https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80"
-          alt="Car"
-          className="w-full object-cover"
-          style={{ maxHeight: '360px', objectPosition: 'center' }}
-          draggable={false}
-        />
-        {/* Dark overlay */}
-        <div className="absolute inset-0 bg-black/30" />
-
-        {HOTSPOTS.map((h) => (
-          <div
-            key={h.id}
-            className="absolute"
-            style={{ top: h.top, left: h.left, transform: 'translate(-50%, -50%)' }}
-          >
-            {/* Tooltip */}
-            {activeTooltip === h.id && (
-              <div
-                className="absolute z-20 bottom-full mb-3 left-1/2 -translate-x-1/2 bg-white text-gray-900 rounded-xl shadow-2xl p-3 w-48 text-center"
-                onMouseLeave={() => setActiveTooltip(null)}
-              >
-                <p className="font-semibold text-sm">{h.label}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{h.description}</p>
-                <p className="text-blue-600 font-bold text-sm mt-1">${h.priceMin}–${h.priceMax}</p>
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-white" />
-              </div>
-            )}
-            {/* Pulsing dot */}
-            <button
-              onClick={() => {
-                toggleHotspot(h.id);
-                setActiveTooltip(activeTooltip === h.id ? null : h.id);
-              }}
-              onMouseEnter={() => setActiveTooltip(h.id)}
-              onMouseLeave={() => setActiveTooltip(null)}
-              className={`relative w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 focus:outline-none ${
-                selected.has(h.id)
-                  ? 'bg-blue-600 shadow-lg shadow-blue-500/50 scale-110'
-                  : 'bg-white/90 hover:bg-blue-100'
-              }`}
-            >
-              {selected.has(h.id) ? (
-                <CheckCircle className="w-5 h-5 text-white" />
-              ) : (
-                <span className="w-3 h-3 rounded-full bg-blue-600" />
-              )}
-              {/* Pulse ring */}
-              {!selected.has(h.id) && (
-                <span className="absolute inset-0 rounded-full bg-blue-400 opacity-40 animate-ping" />
-              )}
-            </button>
+        <div className="text-center max-w-3xl mx-auto mb-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-semibold mb-4 bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <AlertTriangle className="w-4 h-4" /> Paint Health Analyzer
           </div>
-        ))}
-      </div>
-
-      {/* Selected services list */}
-      {selected.size > 0 && (
-        <div className="mt-5 bg-blue-50 rounded-xl p-4">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-wider mb-2">Selected</p>
-          <ul className="space-y-1">
-            {selectedItems.map((h) => (
-              <li key={h.id} className="flex justify-between text-sm">
-                <span className="text-gray-700">{h.label}</span>
-                <span className="font-medium text-gray-900">${h.priceMin}–${h.priceMax}</span>
-              </li>
-            ))}
-          </ul>
+          <h2 className="text-4xl sm:text-5xl font-extrabold text-white mb-4 tracking-tight">
+            What's Happening to Your Paint?
+          </h2>
+          <p className="text-lg text-zinc-400">
+            Pollen, grime, and UV rays attack your clear coat every day. Move the slider to see the invisible damage building up over time.
+          </p>
         </div>
-      )}
 
-      <button
-        onClick={() => setStep('form')}
-        className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition-colors"
-      >
-        {selected.size === 0 ? 'Request a Quote' : 'Get My Quote'}
-        <ChevronRight className="w-5 h-5" />
-      </button>
-      <p className="text-center text-xs text-gray-400 mt-3">
-        Select 0–4 services · Free estimate · No obligation
-      </p>
+        <div className="lg:grid lg:grid-cols-2 lg:gap-16 items-start">
+
+          {/* Interactive Visualizer */}
+          <div className="mb-12 lg:mb-0">
+            <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-6 sm:p-8 shadow-2xl">
+              <label className="block text-sm font-bold text-zinc-300 mb-4">
+                Months since last professional detail:{' '}
+                <span className={`text-xl ml-2 ${health.color}`}>{months}{months === 24 ? '+' : ''}</span>
+              </label>
+              <input
+                type="range" min="1" max="24" value={months}
+                onChange={(e) => setMonths(parseInt(e.target.value))}
+                className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer accent-amber-500 mb-8"
+              />
+
+              <div className="relative rounded-xl overflow-hidden aspect-video mb-6 bg-zinc-800 ring-1 ring-white/10">
+                <img
+                  src="https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80"
+                  alt="Car paint condition"
+                  className="w-full h-full object-cover transition-all duration-700"
+                  style={{ filter: imgFilter }}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-5">
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-xs text-zinc-400 uppercase tracking-wider font-bold mb-1">Paint Health</p>
+                      <p className={`text-2xl font-black uppercase ${health.color}`}>{health.label}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs text-zinc-400 uppercase tracking-wider font-bold mb-1">Your Discount</p>
+                      <p className="text-2xl font-black text-amber-400">{health.discount}% OFF</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-3 mb-5">
+                <StatBar label="Pollen & Grime Coverage" pct={health.pollenPct} color={health.color} />
+                <StatBar label="UV Damage Severity" pct={health.uvPct} color={health.color} />
+                <StatBar label="Clear Coat Oxidation" pct={health.oxidationPct} color={health.color} />
+              </div>
+
+              <div className={`flex items-start gap-3 p-4 ${health.bg} border ${health.border} rounded-xl text-sm`}>
+                <Info className="w-5 h-5 shrink-0 mt-0.5 text-amber-400" />
+                <p className="text-zinc-300">
+                  At {months} month{months > 1 ? 's' : ''}, pollen acid and UV rays have begun{' '}
+                  {months > 18 ? <strong className="text-red-300">permanently etching</strong> : months > 9 ? 'visibly dulling' : 'lightly affecting'}{' '}
+                  your clear coat. {months > 12 && 'Without treatment, this damage becomes irreversible.'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Lead Capture — always visible */}
+          <div>
+            <div className="bg-zinc-900/50 border border-zinc-800 rounded-3xl p-8 lg:p-10">
+              <h3 className="text-3xl font-bold text-white mb-2">Claim Your {health.discount}% Discount</h3>
+              <p className={`text-sm font-semibold ${health.color} mb-6`}>
+                Paint Status: {health.label} · {months} month{months !== 1 ? 's' : ''} since last detail
+              </p>
+
+              <div className={`flex items-center justify-between p-4 ${health.bg} border ${health.border} rounded-2xl mb-7`}>
+                <div>
+                  <p className="text-sm font-semibold text-zinc-300">Your urgency discount</p>
+                  <p className="text-xs text-zinc-500 mt-0.5">Based on {months} months unprotected</p>
+                </div>
+                <div className={`text-4xl font-black ${health.color}`}>{health.discount}%<span className="text-xl"> OFF</span></div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="relative">
+                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <input type="text" placeholder="Your Name" value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors"
+                    required />
+                </div>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <input type="email" placeholder="Email Address" value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors"
+                    required />
+                </div>
+                <div className="relative">
+                  <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
+                  <input type="tel" placeholder="Phone Number" value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3.5 bg-zinc-950 border border-zinc-800 rounded-xl text-white placeholder-zinc-500 focus:border-amber-500 focus:ring-1 focus:ring-amber-500 outline-none transition-colors"
+                    required />
+                </div>
+                {error && <p className="text-red-400 text-sm">{error}</p>}
+                <p className="text-xs text-zinc-600">By submitting, you consent to receive SMS updates about your appointment.</p>
+                <button type="submit" disabled={submitting}
+                  className="w-full py-4 bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-zinc-950 rounded-xl font-bold transition-all shadow-lg text-lg mt-2">
+                  {submitting ? 'Sending...' : `Lock In My ${health.discount}% Discount →`}
+                </button>
+              </form>
+              <p className="text-xs text-zinc-600 mt-4 flex items-center justify-center gap-1">
+                <Shield className="w-3 h-3" /> No commitment · Free inspection included
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 }
