@@ -319,15 +319,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   </a>
                 ) : null}
               </div>
-              {!customDomain && isPublished && (
-                <button
-                  onClick={() => { setWizardStartStep(3); setShowPublishWizard(true); }}
-                  className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
-                >
-                  <Globe className="w-3 h-3" />
-                  Add Custom Domain
-                </button>
-              )}
             </div>
           )}
 
@@ -376,7 +367,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   <iframe
                     srcDoc={currentWebsite || ''}
                     title="Website Preview"
-                    className="w-full h-full bg-white border-0 pointer-events-none"
+                    className="w-full h-full bg-white border-0"
                     sandbox="allow-scripts allow-same-origin"
                   />
                 </div>
