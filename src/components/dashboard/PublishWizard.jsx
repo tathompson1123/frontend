@@ -795,23 +795,28 @@ export default function PublishWizard({
                       </div>
                     </div>
                   ) : (
-                    // Step B: Nameserver instructions + AI assistant
+                    // Step B: DNS instructions + AI assistant
                     <div className="space-y-4">
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-2">
                         <Check className="w-5 h-5 text-green-600" />
-                        <p className="text-sm text-green-800">Domain <strong>{domainInput}</strong> registered. Now update your nameservers.</p>
+                        <p className="text-sm text-green-800">Domain <strong>{domainInput}</strong> registered. Now add these DNS records.</p>
                       </div>
 
-                      {/* Nameservers */}
+                      {/* DNS Records (primary method) */}
                       <div className="bg-white rounded-xl p-5 border-2 border-amber-200">
-                        <h4 className="font-semibold text-gray-900 mb-3">Update your nameservers to:</h4>
+                        <h4 className="font-semibold text-gray-900 mb-1">Add these DNS records at your registrar:</h4>
+                        <p className="text-xs text-gray-500 mb-3">Log into where you bought your domain and add these two records under DNS settings.</p>
                         <div className="space-y-2 mb-4">
-                          {['ns1.vercel-dns.com', 'ns2.vercel-dns.com'].map(ns => (
-                            <div key={ns} className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                              <span className="font-mono text-amber-900 font-semibold flex-1">{ns}</span>
+                          {[
+                            { type: 'A', host: '@', value: '76.76.21.21' },
+                            { type: 'CNAME', host: 'www', value: 'cname.vercel-dns.com' },
+                          ].map(rec => (
+                            <div key={rec.type} className="flex items-center gap-2 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                              <span className="text-xs font-bold text-amber-700 bg-amber-200 px-2 py-0.5 rounded w-14 text-center shrink-0">{rec.type}</span>
+                              <span className="font-mono text-amber-900 text-sm flex-1">{rec.host} → {rec.value}</span>
                               <button
-                                onClick={() => { copyToClipboard(ns); }}
-                                className="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700 flex items-center gap-1"
+                                onClick={() => { copyToClipboard(rec.value); }}
+                                className="px-3 py-1 bg-amber-600 text-white text-xs rounded hover:bg-amber-700 flex items-center gap-1 shrink-0"
                               >
                                 <Copy className="w-3 h-3" /> Copy
                               </button>
@@ -819,14 +824,15 @@ export default function PublishWizard({
                           ))}
                         </div>
 
-                        {/* CNAME alternative */}
+                        {/* Nameserver alternative */}
                         <details className="text-sm">
                           <summary className="text-blue-600 cursor-pointer hover:underline font-medium">
-                            Alternative: Use CNAME/A records instead
+                            Alternative: Change nameservers instead
                           </summary>
                           <div className="mt-2 p-3 bg-blue-50 rounded-lg text-gray-700 space-y-1">
-                            <p><strong>A Record:</strong> @ → 76.76.21.21</p>
-                            <p><strong>CNAME Record:</strong> www → cname.vercel-dns.com</p>
+                            <p className="text-xs text-gray-500 mb-2">Only use this if your registrar doesn't support individual DNS records.</p>
+                            <p><strong>NS1:</strong> ns1.vercel-dns.com</p>
+                            <p><strong>NS2:</strong> ns2.vercel-dns.com</p>
                           </div>
                         </details>
                       </div>
@@ -846,7 +852,6 @@ export default function PublishWizard({
                               <p className="text-xs text-gray-500">
                                 GoDaddy &bull; Namecheap &bull; Google Domains &bull; Cloudflare &bull; Hostinger &bull; Bluehost &bull; IONOS &bull; Porkbun &bull; Hover &bull; Name.com
                               </p>
-                              <p className="text-xs text-gray-400">I can also help with CNAME/A record setup as an alternative to nameservers.</p>
                               <p className="text-xs text-blue-500 font-medium">Tell me which registrar you use and I'll walk you through it!</p>
                             </div>
                           )}
