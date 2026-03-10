@@ -344,10 +344,11 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 <button
                   type="button"
                   onClick={() => navigate('/editor-v2')}
-                  className="px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2 bg-white text-gray-800 shadow-lg shadow-gray-200 hover:shadow-gray-300 hover:bg-gray-50 hover:-translate-y-0.5 transition-all duration-200 ring-1 ring-gray-200"
+                  className="group relative overflow-hidden px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2.5 bg-gray-900 text-white hover:-translate-y-0.5 transition-all duration-200 shadow-lg hover:shadow-xl"
                 >
-                  <Edit className="w-4 h-4" />
-                  Edit Website
+                  <span className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                  <Edit className="w-3.5 h-3.5 relative z-10" />
+                  <span className="relative z-10 tracking-wide">Edit Website</span>
                 </button>
               </div>
             </div>
@@ -369,6 +370,8 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     title="Website Preview"
                     className="w-full h-full bg-white border-0"
                     sandbox="allow-scripts allow-same-origin"
+                    scrolling="no"
+                    style={{ overflow: 'hidden' }}
                   />
                 </div>
               </div>
