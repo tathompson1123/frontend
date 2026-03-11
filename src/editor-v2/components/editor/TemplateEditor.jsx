@@ -25,7 +25,7 @@ window.addEventListener('message',function(e){
   if(!e.data)return;
   if(e.data.type==='sorce-highlight'){
     document.querySelectorAll('.sorce-glow').forEach(function(el){el.classList.remove('sorce-glow');});
-    if(e.data.id){var el=document.getElementById(e.data.id);if(el)el.classList.add('sorce-glow');}
+    if(e.data.id){var el=document.getElementById(e.data.id);if(el){el.classList.add('sorce-glow');if(e.data.scroll){el.scrollIntoView({behavior:'smooth',block:'center'});}}}
   }
   if(e.data.type==='sorce-get-scroll'){
     try{window.parent.postMessage({type:'sorce-scroll-pos',y:window.scrollY},'*');}catch(err){}
@@ -64,30 +64,30 @@ const COLOR = 'color';
 
 const CONTENT_FIELDS = {
   'hero-fullscreen-dark': [
-    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'headline', label: 'Headline', type: TEXT },
     { key: 'highlightText', label: 'Highlight Text (colored accent)', type: TEXT },
+    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle / Description', type: TEXTAREA },
+    { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
     { key: 'ctaText', label: 'Primary Button Text', type: TEXT },
     { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD },
     { key: 'ctaText2', label: 'Secondary Button Text', type: TEXT },
     { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
-    { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
   ],
   'hero-fullscreen-light': [
-    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'headline', label: 'Headline', type: TEXT },
     { key: 'highlightText', label: 'Highlight Text (colored accent)', type: TEXT },
+    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle / Description', type: TEXTAREA },
+    { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
     { key: 'ctaText', label: 'Primary Button Text', type: TEXT },
     { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD },
     { key: 'ctaText2', label: 'Secondary Button Text', type: TEXT },
     { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
-    { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
   ],
   'hero-gradient': [
-    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle / Description', type: TEXTAREA },
     { key: 'features', label: 'Feature Pills', type: ARRAY, itemFields: [
       { key: 'text', label: 'Feature Text', type: TEXT },
@@ -99,18 +99,48 @@ const CONTENT_FIELDS = {
     { key: 'bgImage', label: 'Background Image', type: IMAGE },
   ],
   'hero-split-portrait': [
-    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'headline', label: 'Headline', type: TEXT },
     { key: 'highlightText', label: 'Highlight Text (italic color)', type: TEXT },
+    { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle', type: TEXTAREA },
+    { key: 'portraitImage', label: 'Portrait / Profile Image', type: IMAGE },
+    { key: 'bgImage', label: 'Background Image (low opacity overlay)', type: IMAGE },
     { key: 'ctaText', label: 'Primary Button Text', type: TEXT },
     { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD },
     { key: 'ctaText2', label: 'Secondary Button Text', type: TEXT },
     { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
-    { key: 'portraitImage', label: 'Portrait / Profile Image', type: IMAGE },
-    { key: 'bgImage', label: 'Background Image (low opacity overlay)', type: IMAGE },
     { key: 'floatBadge', label: 'Floating Badge Number (e.g. "25+")', type: TEXT },
     { key: 'floatBadgeLabel', label: 'Floating Badge Label', type: TEXT },
+  ],
+  'hero-cleaning-split': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'highlightText', label: 'Highlight Word (colored)', type: TEXT },
+    { key: 'badge', label: 'Badge Text (above headline)', type: TEXT },
+    { key: 'subtitle', label: 'Subtitle', type: TEXTAREA },
+    { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
+    { key: 'heroImage1', label: 'Main Side Image (large)', type: IMAGE },
+    { key: 'heroImage2', label: 'Inset Side Image (smaller)', type: IMAGE },
+    { key: 'ctaText', label: 'Primary CTA', type: TEXT },
+    { key: 'ctaLink', label: 'Primary CTA Link', type: URL_FIELD },
+    { key: 'ctaText2', label: 'Secondary CTA', type: TEXT },
+    { key: 'ctaLink2', label: 'Secondary CTA Link', type: URL_FIELD },
+    { key: 'yearsText', label: 'Years Badge (e.g. "12+ Years")', type: TEXT },
+    { key: 'locationText', label: 'Location for Badge', type: TEXT },
+  ],
+  'hero-auto-split': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'highlightText', label: 'Highlight Word (colored)', type: TEXT },
+    { key: 'badge', label: 'Badge Text (above headline)', type: TEXT },
+    { key: 'subtitle', label: 'Subtitle', type: TEXTAREA },
+    { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
+    { key: 'heroImage1', label: 'Main Side Image (large)', type: IMAGE },
+    { key: 'heroImage2', label: 'Inset Side Image (smaller)', type: IMAGE },
+    { key: 'ctaText', label: 'Primary CTA', type: TEXT },
+    { key: 'ctaLink', label: 'Primary CTA Link', type: URL_FIELD },
+    { key: 'ctaText2', label: 'Secondary CTA', type: TEXT },
+    { key: 'ctaLink2', label: 'Secondary CTA Link', type: URL_FIELD },
+    { key: 'yearsText', label: 'Years Badge (e.g. "10+ Years")', type: TEXT },
+    { key: 'locationText', label: 'Location for Badge', type: TEXT },
   ],
   'features-icon-row': [
     { key: 'features', label: 'Features', type: ARRAY, itemFields: [
@@ -263,6 +293,53 @@ const CONTENT_FIELDS = {
     { key: 'buttonText', label: 'Button Text (optional)', type: TEXT },
     { key: 'buttonLink', label: 'Button Link (optional)', type: URL_FIELD },
   ],
+  'media-row': [
+    { key: 'title', label: 'Section Title (optional)', type: TEXT },
+    { key: 'items', label: 'Images / Videos (1–5)', type: ARRAY, itemFields: [
+      { key: 'src', label: 'Image or Video URL (paste YouTube, Vimeo, or image URL)', type: IMAGE },
+      { key: 'caption', label: 'Caption (optional)', type: TEXT },
+    ]},
+  ],
+  'lead-magnet-slider-auto': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+    { key: 'ctaText', label: 'Button Text', type: TEXT },
+    { key: 'image', label: 'Vehicle Image', type: IMAGE },
+  ],
+  'lead-magnet-slider-cleaning': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+    { key: 'ctaText', label: 'Button Text', type: TEXT },
+    { key: 'image', label: 'Carpet Image', type: IMAGE },
+  ],
+  'lead-magnet-auto-wrap': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  ],
+  'lead-magnet-cleaning': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  ],
+  'lead-magnet-landscaping': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  ],
+  'lead-magnet-renovation': [
+    { key: 'headline', label: 'Headline', type: TEXT },
+    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  ],
   'footer-4col-dark': [
     { key: 'logo',            label: 'Business Name',         type: TEXT },
     { key: 'tagline',         label: 'Tagline',               type: TEXTAREA },
@@ -300,6 +377,13 @@ const SECTION_DEFAULTS = {
   'gallery-mixed-grid': { title: 'Our Work', items: [] },
   'split-image-cta': { headline: 'About Us', body: 'Tell your story here.', ctaText: 'Learn More', ctaLink: '#contact', image: '' },
   'content-block': { heading: 'About Us', text: 'Tell your story here.' },
+  'media-row': { title: '', items: [{ src: '', caption: '' }, { src: '', caption: '' }] },
+  'lead-magnet-slider-auto': { headline: "What's Happening to Your Paint?", subheadline: 'Pollen, grime, and UV rays attack your clear coat every day. Move the slider to see the damage.', ctaText: 'Lock In My Discount', image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80' },
+  'lead-magnet-slider-cleaning': { headline: 'Carpet Grime Calculator', subheadline: "See what's hiding in your carpet right now", ctaText: 'Claim My Discount', image: 'https://images.unsplash.com/photo-1558618047-f18c8def4765?w=800&q=80' },
+  'lead-magnet-auto-wrap': { headline: 'Design Your Custom Vehicle Wrap', subheadline: 'Answer 4 quick questions to get a personalized wrap estimate.', ctaText: 'Start My Design', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your personalized estimate?' },
+  'lead-magnet-cleaning': { headline: 'Get an Instant Cleaning Quote', subheadline: 'Answer 4 quick questions and see your price range in seconds.', ctaText: 'Get My Free Quote', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your quote?' },
+  'lead-magnet-landscaping': { headline: 'Get Your Free Landscape Estimate', subheadline: 'Answer 4 quick questions and we\'ll send you a personalized estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
+  'lead-magnet-renovation': { headline: 'What Will Your Project Cost?', subheadline: 'Answer 4 quick questions and get a free project estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
 };
 
 // Section template picker options
@@ -314,7 +398,20 @@ const SECTION_TEMPLATES_LIST = [
   { id: 'benefits-numbered', name: 'Benefits', icon: '✅', desc: 'Numbered list of key benefits' },
   { id: 'gallery-mixed-grid', name: 'Photo Gallery', icon: '🖼️', desc: 'Grid of photos / portfolio' },
   { id: 'split-image-cta', name: 'Image + Text', icon: '🖼️', desc: 'Side-by-side image and text block' },
+  { id: 'media-row', name: 'Media Row', icon: '🎞️', desc: '1–5 images or videos in a horizontal row' },
   { id: 'content-block', name: 'Text Block', icon: '📝', desc: 'Simple text content block' },
+  { id: 'lead-magnet', name: 'Lead Magnet', icon: '🧲', desc: 'Interactive quiz with lead capture' },
+];
+
+const LEAD_MAGNET_SUB_TYPES = [
+  // Slider-based (interactive visualizers — default)
+  { id: 'lead-magnet-slider-auto', name: 'Paint Health Analyzer', icon: '🚗', desc: 'Slider showing paint degradation over time' },
+  { id: 'lead-magnet-slider-cleaning', name: 'Carpet Grime Calculator', icon: '🧹', desc: 'Slider showing carpet contamination buildup' },
+  // Quiz-based (multi-step estimators)
+  { id: 'lead-magnet-auto-wrap', name: 'Auto Quiz Estimator', icon: '🏎️', desc: 'Multi-step vehicle wrap cost quiz' },
+  { id: 'lead-magnet-cleaning', name: 'Cleaning Quiz Estimator', icon: '🧽', desc: 'Multi-step cleaning quote quiz' },
+  { id: 'lead-magnet-landscaping', name: 'Landscaping Estimator', icon: '🌿', desc: 'Multi-step landscape design quiz' },
+  { id: 'lead-magnet-renovation', name: 'Renovation Estimator', icon: '🔨', desc: 'Multi-step renovation project quiz' },
 ];
 
 function getSectionName(template) {
@@ -439,6 +536,9 @@ function normPath(p = '') {
 }
 
 function LinkPickerField({ value, onChange, sections = [], includePages = false }) {
+  const actionOptions = [
+    { label: 'Book Online (opens booking widget)', value: '#book-online' },
+  ];
   const sectionOptions = [
     { label: 'Top of Page', value: '#top' },
     ...sections.map(s => ({
@@ -446,7 +546,7 @@ function LinkPickerField({ value, onChange, sections = [], includePages = false 
       value: `#${s.id || s.template}`,
     })),
   ];
-  const allKnown = includePages ? [...PAGE_OPTIONS, ...sectionOptions] : sectionOptions;
+  const allKnown = includePages ? [...actionOptions, ...PAGE_OPTIONS, ...sectionOptions] : [...actionOptions, ...sectionOptions];
   // Normalize match so gallery.html matches /gallery, about.html matches /about, etc.
   const matchedOption = value
     ? allKnown.find(o => o.value === value || (includePages && !value.startsWith('#') && normPath(o.value) === normPath(value)))
@@ -462,6 +562,11 @@ function LinkPickerField({ value, onChange, sections = [], includePages = false 
           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white"
         >
           <option value="">— Select destination —</option>
+          <optgroup label="Actions">
+            {actionOptions.map((opt, i) => (
+              <option key={`a${i}`} value={opt.value}>{opt.label}</option>
+            ))}
+          </optgroup>
           <optgroup label="Pages">
             {PAGE_OPTIONS.map((opt, i) => (
               <option key={i} value={opt.value}>{opt.label}</option>
@@ -480,6 +585,11 @@ function LinkPickerField({ value, onChange, sections = [], includePages = false 
           className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white"
         >
           <option value="">— Select section —</option>
+          <optgroup label="Actions">
+            {actionOptions.map((opt, i) => (
+              <option key={`a${i}`} value={opt.value}>{opt.label}</option>
+            ))}
+          </optgroup>
           {sectionOptions.map((opt, i) => (
             <option key={i} value={opt.value}>{opt.label}</option>
           ))}
@@ -1065,27 +1175,27 @@ function NavContentForm({ navSection, onChange, onColorsChange, sections }) {
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => updateField('ctaLink', '/contact')}
+                onClick={() => { updateField('ctaLink', '#book-online'); if (!c.ctaText || c.ctaText === 'Get a Quote' || c.ctaText === 'Contact Us') updateField('ctaText', 'Book Online'); }}
                 className={`px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                  (c.ctaLink || '/contact') === '/contact' || (!c.ctaLink)
+                  c.ctaLink === '#book-online' || (!c.ctaLink)
+                    ? 'bg-blue-50 border-blue-400 text-blue-700'
+                    : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
+                }`}
+              >
+                <div className="text-sm mb-0.5">📅</div>
+                Book Online
+              </button>
+              <button
+                type="button"
+                onClick={() => { updateField('ctaLink', '#contact'); if (!c.ctaText || c.ctaText === 'Book Online') updateField('ctaText', 'Contact Us'); }}
+                className={`px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
+                  c.ctaLink === '#contact' || c.ctaLink === '/contact'
                     ? 'bg-amber-50 border-amber-400 text-amber-700'
                     : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
                 }`}
               >
                 <div className="text-sm mb-0.5">📋</div>
                 Contact Form
-              </button>
-              <button
-                type="button"
-                onClick={() => updateField('ctaLink', '/booking')}
-                className={`px-3 py-2.5 rounded-lg text-xs font-semibold border transition-all text-left ${
-                  c.ctaLink === '/booking'
-                    ? 'bg-blue-50 border-blue-400 text-blue-700'
-                    : 'bg-white border-gray-200 text-gray-500 hover:border-gray-300'
-                }`}
-              >
-                <div className="text-sm mb-0.5">📅</div>
-                Online Booking
               </button>
             </div>
           </div>
@@ -1278,6 +1388,8 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddSection, setShowAddSection] = useState(false);
+  const [insertAfterIdx, setInsertAfterIdx] = useState(null); // null = at end, number = after editable[n], -1 = before first
+  const [leadMagnetPicker, setLeadMagnetPicker] = useState(false); // sub-picker for lead magnet types
   const [devicePreview, setDevicePreview] = useState('desktop');
   const [activePage, setActivePage] = useState(0);
   const [pendingDelete, setPendingDelete] = useState(null); // index of section awaiting inline confirm
@@ -1288,6 +1400,8 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
   useEffect(() => {
     setSelectedIdx(null);
     setShowAddSection(false);
+    setInsertAfterIdx(null);
+    setLeadMagnetPicker(false);
     setPendingDelete(null);
     setPendingPageDelete(false);
     if (isFirstPageSwitch.current) { isFirstPageSwitch.current = false; return; }
@@ -1468,17 +1582,49 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
 
     const newSection = { id: genId(), template: templateId, content: defaultContent };
     const sections = [...getSections(schema)];
-    const footerIdx = sections.findIndex(s => (s.template || '').startsWith('footer'));
-    if (footerIdx !== -1) sections.splice(footerIdx, 0, newSection);
-    else sections.push(newSection);
+    let insertPos;
+    let newSelectedIdx;
+
+    if (typeof insertAfterIdx === 'number' && insertAfterIdx >= 0 && insertAfterIdx < editableSections.length) {
+      // Insert after the section at editableSections[insertAfterIdx]
+      const afterSection = editableSections[insertAfterIdx];
+      const fullIdx = sections.findIndex(s => s.id === afterSection.id);
+      insertPos = fullIdx !== -1 ? fullIdx + 1 : sections.length;
+      newSelectedIdx = insertAfterIdx + 1;
+    } else if (insertAfterIdx === -1) {
+      // Insert before the first editable section
+      const firstEditable = editableSections[0];
+      if (firstEditable) {
+        const fullIdx = sections.findIndex(s => s.id === firstEditable.id);
+        insertPos = fullIdx !== -1 ? fullIdx : 0;
+      } else {
+        const footerIdx = sections.findIndex(s => (s.template || '').startsWith('footer'));
+        insertPos = footerIdx !== -1 ? footerIdx : sections.length;
+      }
+      newSelectedIdx = 0;
+    } else {
+      // Default: insert before footer or at end
+      const footerIdx = sections.findIndex(s => (s.template || '').startsWith('footer'));
+      insertPos = footerIdx !== -1 ? footerIdx : sections.length;
+      newSelectedIdx = editableSections.length;
+    }
+
+    sections.splice(insertPos, 0, newSection);
     const newSchema = setSections(JSON.parse(JSON.stringify(schema)), sections);
     setSchema(newSchema);
     setShowAddSection(false);
-    setSelectedIdx(editableSections.length);
+    setInsertAfterIdx(null);
+    setLeadMagnetPicker(false);
+    setSelectedIdx(newSelectedIdx);
     setOpenCard('sections');
     const filename = newSchema.multiPage ? newSchema.pages?.[activePage]?.filename : null;
     doRenderPreview(newSchema, filename);
-  }, [schema, getSections, setSections, editableSections.length, activePage, doRenderPreview]);
+
+    // Scroll iframe to the new section after render
+    setTimeout(() => {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-highlight', id: newSection.id, scroll: true }, '*');
+    }, 800);
+  }, [schema, getSections, setSections, editableSections, insertAfterIdx, activePage, doRenderPreview]);
 
   const updateNav = useCallback((updatedNav) => {
     setSchema(prev => {
@@ -1737,12 +1883,12 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [schema]);
 
-  // Highlight selected section in iframe via postMessage
+  // Highlight selected section in iframe via postMessage + scroll into view
   useEffect(() => {
     const section = selectedIdx !== null ? editableSections[selectedIdx] : null;
     const id = section?.id || null;
     const send = () => {
-      iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-highlight', id }, '*');
+      iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-highlight', id, scroll: !!id }, '*');
     };
     send();
     const iframe = iframeRef.current;
@@ -1917,49 +2063,74 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                 <div>
                   <div className="divide-y divide-gray-100">
                     {editableSections.map((section, i) => (
-                      <div
-                        key={section.id || i}
-                        className="flex items-center gap-2 px-3 py-3 hover:bg-white group cursor-pointer transition"
-                        onClick={() => setSelectedIdx(i)}
-                      >
-                        <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                        <span className="text-xl flex-shrink-0">{getSectionIcon(section.template)}</span>
-                        <span className="flex-1 text-sm text-gray-700 font-medium truncate">{getSectionName(section.template)}</span>
-                        {pendingDelete === i ? (
-                          <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
-                            <span className="text-xs text-gray-500">Delete?</span>
+                      <div key={section.id || i}>
+                        {/* Insert-here button before this section */}
+                        {i === 0 && (
+                          <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => { deleteSection(i); setPendingDelete(null); }}
-                              className="px-2 py-0.5 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-md"
-                            >Yes</button>
-                            <button
-                              onClick={() => setPendingDelete(null)}
-                              className="px-2 py-0.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md"
-                            >No</button>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                            <button onClick={e => { e.stopPropagation(); moveSection(i, 'up'); }} disabled={i === 0}
-                              className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
-                              <ChevronUp className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={e => { e.stopPropagation(); moveSection(i, 'down'); }} disabled={i === editableSections.length - 1}
-                              className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </button>
-                            <button onClick={e => { e.stopPropagation(); setPendingDelete(i); }}
-                              className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50">
-                              <Trash2 className="w-3.5 h-3.5" />
+                              onClick={() => { setInsertAfterIdx(-1); setShowAddSection(true); setLeadMagnetPicker(false); }}
+                              className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
+                              title="Insert section here"
+                            >
+                              <Plus className="w-3 h-3" />
                             </button>
                           </div>
                         )}
+
+                        <div
+                          className="flex items-center gap-2 px-3 py-3 hover:bg-white group cursor-pointer transition"
+                          onClick={() => setSelectedIdx(i)}
+                        >
+                          <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
+                          <span className="text-xl flex-shrink-0">{getSectionIcon(section.template)}</span>
+                          <span className="flex-1 text-sm text-gray-700 font-medium truncate">{getSectionName(section.template)}</span>
+                          {pendingDelete === i ? (
+                            <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
+                              <span className="text-xs text-gray-500">Delete?</span>
+                              <button
+                                onClick={() => { deleteSection(i); setPendingDelete(null); }}
+                                className="px-2 py-0.5 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-md"
+                              >Yes</button>
+                              <button
+                                onClick={() => setPendingDelete(null)}
+                                className="px-2 py-0.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md"
+                              >No</button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+                              <button onClick={e => { e.stopPropagation(); moveSection(i, 'up'); }} disabled={i === 0}
+                                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
+                                <ChevronUp className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); moveSection(i, 'down'); }} disabled={i === editableSections.length - 1}
+                                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
+                                <ChevronDown className="w-3.5 h-3.5" />
+                              </button>
+                              <button onClick={e => { e.stopPropagation(); setPendingDelete(i); }}
+                                className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50">
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Insert-here button after this section */}
+                        <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => { setInsertAfterIdx(i); setShowAddSection(true); setLeadMagnetPicker(false); }}
+                            className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
+                            title="Insert section here"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
                       </div>
                     ))}
                   </div>
 
                   {!showAddSection ? (
                     <div className="p-3 border-t border-gray-100">
-                      <button onClick={() => setShowAddSection(true)}
+                      <button onClick={() => { setInsertAfterIdx(null); setShowAddSection(true); setLeadMagnetPicker(false); }}
                         className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-amber-600 border border-dashed border-amber-300 rounded-xl hover:bg-amber-50 transition font-semibold">
                         <Plus className="w-4 h-4" /> Add Section
                       </button>
@@ -1967,22 +2138,48 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                   ) : (
                     <div className="p-3 border-t border-gray-100 space-y-2">
                       <div className="flex items-center justify-between">
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Choose Section Type</span>
-                        <button onClick={() => setShowAddSection(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                          {leadMagnetPicker ? 'Choose Lead Magnet Type' : (insertAfterIdx !== null && insertAfterIdx >= 0 ? `Insert after ${getSectionName(editableSections[insertAfterIdx]?.template || '')}` : insertAfterIdx === -1 ? 'Insert at top' : 'Choose Section Type')}
+                        </span>
+                        <button onClick={() => { if (leadMagnetPicker) { setLeadMagnetPicker(false); } else { setShowAddSection(false); setInsertAfterIdx(null); } }} className="text-xs text-gray-400 hover:text-gray-600">
+                          {leadMagnetPicker ? '← Back' : 'Cancel'}
+                        </button>
                       </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        {SECTION_TEMPLATES_LIST.map(tmpl => (
-                          <button
-                            key={tmpl.id}
-                            onClick={() => addSection(tmpl.id)}
-                            className="flex flex-col items-start gap-1 p-3 border border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition text-left bg-white"
-                          >
-                            <span className="text-2xl">{tmpl.icon}</span>
-                            <span className="text-xs font-semibold text-gray-700 leading-tight">{tmpl.name}</span>
-                            <span className="text-xs text-gray-400 leading-tight">{tmpl.desc}</span>
-                          </button>
-                        ))}
-                      </div>
+                      {leadMagnetPicker ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {LEAD_MAGNET_SUB_TYPES.map(sub => (
+                            <button
+                              key={sub.id}
+                              onClick={() => addSection(sub.id)}
+                              className="flex flex-col items-start gap-1 p-3 border border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition text-left bg-white"
+                            >
+                              <span className="text-2xl">{sub.icon}</span>
+                              <span className="text-xs font-semibold text-gray-700 leading-tight">{sub.name}</span>
+                              <span className="text-xs text-gray-400 leading-tight">{sub.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-2">
+                          {SECTION_TEMPLATES_LIST.map(tmpl => (
+                            <button
+                              key={tmpl.id}
+                              onClick={() => {
+                                if (tmpl.id === 'lead-magnet') {
+                                  setLeadMagnetPicker(true);
+                                } else {
+                                  addSection(tmpl.id);
+                                }
+                              }}
+                              className="flex flex-col items-start gap-1 p-3 border border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition text-left bg-white"
+                            >
+                              <span className="text-2xl">{tmpl.icon}</span>
+                              <span className="text-xs font-semibold text-gray-700 leading-tight">{tmpl.name}</span>
+                              <span className="text-xs text-gray-400 leading-tight">{tmpl.desc}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

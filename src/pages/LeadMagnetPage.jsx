@@ -59,8 +59,10 @@ export default function LeadMagnetPage() {
 
   const magnetProps = { userId, businessName: displayName, apiUrl };
 
+  const isDark = type === 'auto-detailing' || type === 'window-cleaning';
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className={`min-h-screen flex flex-col ${isDark ? 'bg-zinc-950' : 'bg-gray-50'}`}>
       {/* Header */}
       <header className="bg-gray-900 text-white shadow-lg">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center justify-between">
