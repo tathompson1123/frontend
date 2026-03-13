@@ -303,13 +303,17 @@ const CONTENT_FIELDS = {
   'lead-magnet-slider-auto': [
     { key: 'headline', label: 'Headline', type: TEXT },
     { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Button Text', type: TEXT },
+    { key: 'ctaText', label: 'Analyze Button Text', type: TEXT },
+    { key: 'submitText', label: 'Submit Button Text', type: TEXT },
+    { key: 'services', label: 'Services (comma-separated)', type: TEXT },
     { key: 'image', label: 'Vehicle Image', type: IMAGE },
   ],
   'lead-magnet-slider-cleaning': [
     { key: 'headline', label: 'Headline', type: TEXT },
     { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Button Text', type: TEXT },
+    { key: 'ctaText', label: 'Analyze Button Text', type: TEXT },
+    { key: 'submitText', label: 'Submit Button Text', type: TEXT },
+    { key: 'services', label: 'Services (comma-separated)', type: TEXT },
     { key: 'image', label: 'Carpet Image', type: IMAGE },
   ],
   'lead-magnet-auto-wrap': [
@@ -378,8 +382,8 @@ const SECTION_DEFAULTS = {
   'split-image-cta': { headline: 'About Us', body: 'Tell your story here.', ctaText: 'Learn More', ctaLink: '#contact', image: '' },
   'content-block': { heading: 'About Us', text: 'Tell your story here.' },
   'media-row': { title: '', items: [{ src: '', caption: '' }, { src: '', caption: '' }] },
-  'lead-magnet-slider-auto': { headline: "What's Happening to Your Paint?", subheadline: 'Pollen, grime, and UV rays attack your clear coat every day. Move the slider to see the damage.', ctaText: 'Lock In My Discount', image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80' },
-  'lead-magnet-slider-cleaning': { headline: 'Carpet Grime Calculator', subheadline: "See what's hiding in your carpet right now", ctaText: 'Claim My Discount', image: 'https://images.unsplash.com/photo-1558618047-f18c8def4765?w=800&q=80' },
+  'lead-magnet-slider-auto': { headline: "What's Happening to Your Paint?", subheadline: 'Pollen, grime, and UV rays attack your clear coat every day. Move the slider to see the damage.', ctaText: 'Analyze My Paint', submitText: 'Get My Free Assessment', services: 'Full Detail, Paint Correction, Ceramic Coating, Interior Detail, Engine Bay Clean', image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80' },
+  'lead-magnet-slider-cleaning': { headline: "What's Hiding in Your Carpet?", subheadline: 'Dust mites, bacteria, and allergens multiply every day. Move the slider to see the contamination.', ctaText: 'Check My Carpet', submitText: 'Get My Free Assessment', services: 'Deep Carpet Clean, Stain Removal, Pet Odor Treatment, Upholstery Cleaning, Move-Out Clean', image: 'https://images.unsplash.com/photo-1558618047-f18c8def4765?w=800&q=80' },
   'lead-magnet-auto-wrap': { headline: 'Design Your Custom Vehicle Wrap', subheadline: 'Answer 4 quick questions to get a personalized wrap estimate.', ctaText: 'Start My Design', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your personalized estimate?' },
   'lead-magnet-cleaning': { headline: 'Get an Instant Cleaning Quote', subheadline: 'Answer 4 quick questions and see your price range in seconds.', ctaText: 'Get My Free Quote', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your quote?' },
   'lead-magnet-landscaping': { headline: 'Get Your Free Landscape Estimate', subheadline: 'Answer 4 quick questions and we\'ll send you a personalized estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
@@ -405,8 +409,8 @@ const SECTION_TEMPLATES_LIST = [
 
 const LEAD_MAGNET_SUB_TYPES = [
   // Slider-based (interactive visualizers — default)
-  { id: 'lead-magnet-slider-auto', name: 'Paint Health Analyzer', icon: '🚗', desc: 'Slider showing paint degradation over time' },
-  { id: 'lead-magnet-slider-cleaning', name: 'Carpet Grime Calculator', icon: '🧹', desc: 'Slider showing carpet contamination buildup' },
+  { id: 'lead-magnet-slider-auto', name: 'Paint Health Analyzer', icon: '🚗', desc: 'Slider → damage report → service selection' },
+  { id: 'lead-magnet-slider-cleaning', name: 'Carpet Health Analyzer', icon: '🧹', desc: 'Slider → contamination report → service selection' },
   // Quiz-based (multi-step estimators)
   { id: 'lead-magnet-auto-wrap', name: 'Auto Quiz Estimator', icon: '🏎️', desc: 'Multi-step vehicle wrap cost quiz' },
   { id: 'lead-magnet-cleaning', name: 'Cleaning Quiz Estimator', icon: '🧽', desc: 'Multi-step cleaning quote quiz' },
@@ -521,7 +525,6 @@ const PAGE_OPTIONS = [
   { label: 'About', value: '/about' },
   { label: 'Services', value: '/services' },
   { label: 'Contact Form', value: '/contact' },
-  { label: 'Online Booking', value: '/booking' },
   { label: 'Portfolio', value: '/portfolio' },
   { label: 'Gallery', value: '/gallery' },
   { label: 'Blog', value: '/blog' },
