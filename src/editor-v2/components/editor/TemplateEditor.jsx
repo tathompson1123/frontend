@@ -1,13 +1,91 @@
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   ArrowLeft, Save, RefreshCw, ChevronDown, ChevronRight,
   GripVertical, Trash2, Plus, ChevronUp, Navigation, Layers,
   Palette, Upload, X, Monitor, Smartphone, Tablet, PanelBottom, CalendarCheck,
   Eye, EyeOff,
 } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import BookingWidgetEditor from '../../../components/dashboard/BookingWidgetEditor';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+// ── Sortable section item for drag-and-drop reordering ──
+function SortableSectionItem({ id, section, index, totalCount, selectedIdx, setSelectedIdx, pendingDelete, setPendingDelete, moveSection, deleteSection, setInsertAfterIdx, setShowAddSection, setAddSectionCategory, getSectionIcon, getSectionName }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : 'auto',
+  };
+  const i = index;
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      {i === 0 && (
+        <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => { setInsertAfterIdx(-1); setShowAddSection(true); setAddSectionCategory(null); }}
+            className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
+            title="Insert section here"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+      <div
+        className={`flex items-center gap-2 px-3 py-3 hover:bg-white group cursor-pointer transition ${isDragging ? 'bg-amber-50 rounded-lg' : ''}`}
+        onClick={() => setSelectedIdx(i)}
+      >
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
+          <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0 hover:text-gray-500 transition-colors" />
+        </div>
+        <span className="text-xl flex-shrink-0">{getSectionIcon(section.template)}</span>
+        <span className="flex-1 text-sm text-gray-700 font-medium truncate">{getSectionName(section.template)}</span>
+        {pendingDelete === i ? (
+          <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
+            <span className="text-xs text-gray-500">Delete?</span>
+            <button
+              onClick={() => { deleteSection(i); setPendingDelete(null); }}
+              className="px-2 py-0.5 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-md"
+            >Yes</button>
+            <button
+              onClick={() => setPendingDelete(null)}
+              className="px-2 py-0.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md"
+            >No</button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
+            <button onClick={e => { e.stopPropagation(); moveSection(i, 'up'); }} disabled={i === 0}
+              className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={e => { e.stopPropagation(); moveSection(i, 'down'); }} disabled={i === totalCount - 1}
+              className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+            <button onClick={e => { e.stopPropagation(); setPendingDelete(i); }}
+              className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50">
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
+      </div>
+      <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
+        <button
+          onClick={() => { setInsertAfterIdx(i); setShowAddSection(true); setAddSectionCategory(null); }}
+          className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
+          title="Insert section here"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 // Inject highlight listener into rendered HTML so the iframe can respond to postMessage
 function injectHighlightScript(html) {
@@ -15,10 +93,12 @@ function injectHighlightScript(html) {
 .sorce-glow{outline:3px solid #f59e0b!important;box-shadow:0 0 0 6px rgba(245,158,11,0.18)!important;transition:outline 0.15s,box-shadow 0.15s;position:relative;z-index:1;}
 a[class*="logo"],a[class*="brand"],[class*="logo"]>a,[class*="brand"]>a,[class*="-nav-"]>a:first-child{pointer-events:none!important;cursor:default!important;}
 </style><script>
-// Prevent page/app navigation in editor preview; allow # anchors, empty hrefs, and javascript: calls
+// Prevent ALL navigation and button clicks in editor preview — this is read-only
 document.addEventListener('click',function(e){
   var a=e.target.closest('a');
-  if(a){var h=a.getAttribute('href')||'';if(h&&!h.startsWith('#')&&!h.startsWith('javascript:'))e.preventDefault();}
+  if(a){e.preventDefault();e.stopPropagation();return false;}
+  var btn=e.target.closest('button');
+  if(btn){e.preventDefault();e.stopPropagation();return false;}
 },true);
 // Prevent form submissions from navigating the iframe
 document.addEventListener('submit',function(e){e.preventDefault();},true);
@@ -1606,7 +1686,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
     setSelectedIdx(null);
     setShowAddSection(false);
     setInsertAfterIdx(null);
-    setLeadMagnetPicker(false);
+    setAddSectionCategory(null);
     setPendingDelete(null);
     setPendingPageDelete(false);
     if (isFirstPageSwitch.current) { isFirstPageSwitch.current = false; return; }
@@ -1757,6 +1837,37 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
     doRenderPreview(newSchema, filename);
   }, [schema, getSections, setSections, activePage, doRenderPreview]);
 
+  const reorderSection = useCallback((fromIdx, toIdx) => {
+    if (fromIdx === toIdx) return;
+    const sections = [...getSections(schema)];
+    const editables = sections.filter(s => !s.template?.startsWith('nav-') && !s.template?.startsWith('footer'));
+    const movedSection = editables[fromIdx];
+    const actualFrom = sections.indexOf(movedSection);
+    // Remove from current position
+    sections.splice(actualFrom, 1);
+    // Find where to insert based on toIdx
+    const targetSection = editables[toIdx];
+    let actualTo = sections.indexOf(targetSection);
+    if (fromIdx < toIdx) actualTo += 1; // insert after
+    sections.splice(actualTo, 0, movedSection);
+    const newSchema = setSections(JSON.parse(JSON.stringify(schema)), sections);
+    setSchema(newSchema);
+    setSelectedIdx(null);
+    const filename = newSchema.multiPage ? newSchema.pages?.[activePage]?.filename : null;
+    doRenderPreview(newSchema, filename);
+  }, [schema, getSections, setSections, activePage, doRenderPreview]);
+
+  const dndSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = useCallback((event) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const editables = getSections(schema).filter(s => !s.template?.startsWith('nav-') && !s.template?.startsWith('footer'));
+    const oldIdx = editables.findIndex((s, i) => (s.id || `${s.template}__${i}`) === active.id);
+    const newIdx = editables.findIndex((s, i) => (s.id || `${s.template}__${i}`) === over.id);
+    if (oldIdx !== -1 && newIdx !== -1) reorderSection(oldIdx, newIdx);
+  }, [schema, getSections, reorderSection]);
+
   const deleteSection = useCallback((idx) => {
     const sections = getSections(schema);
     const editables = sections.filter(s => !s.template?.startsWith('nav-') && !s.template?.startsWith('footer'));
@@ -1819,7 +1930,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
     setSchema(newSchema);
     setShowAddSection(false);
     setInsertAfterIdx(null);
-    setLeadMagnetPicker(false);
+    setAddSectionCategory(null);
     setSelectedIdx(newSelectedIdx);
     setOpenCard('sections');
     const filename = newSchema.multiPage ? newSchema.pages?.[activePage]?.filename : null;
@@ -2300,72 +2411,32 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
             <SidebarCard id="sections" label="Sections" icon={Layers} openCard={openCard} setOpenCard={setOpenCard} badge={editableSections.length}>
               {selectedIdx === null ? (
                 <div>
-                  <div className="divide-y divide-gray-100">
-                    {editableSections.map((section, i) => (
-                      <div key={section.id || i}>
-                        {/* Insert-here button before this section */}
-                        {i === 0 && (
-                          <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => { setInsertAfterIdx(-1); setShowAddSection(true); setAddSectionCategory(null); }}
-                              className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
-                              title="Insert section here"
-                            >
-                              <Plus className="w-3 h-3" />
-                            </button>
-                          </div>
-                        )}
-
-                        <div
-                          className="flex items-center gap-2 px-3 py-3 hover:bg-white group cursor-pointer transition"
-                          onClick={() => setSelectedIdx(i)}
-                        >
-                          <GripVertical className="w-4 h-4 text-gray-300 flex-shrink-0" />
-                          <span className="text-xl flex-shrink-0">{getSectionIcon(section.template)}</span>
-                          <span className="flex-1 text-sm text-gray-700 font-medium truncate">{getSectionName(section.template)}</span>
-                          {pendingDelete === i ? (
-                            <div className="flex items-center gap-1.5 ml-auto" onClick={e => e.stopPropagation()}>
-                              <span className="text-xs text-gray-500">Delete?</span>
-                              <button
-                                onClick={() => { deleteSection(i); setPendingDelete(null); }}
-                                className="px-2 py-0.5 text-xs font-bold text-white bg-red-500 hover:bg-red-600 rounded-md"
-                              >Yes</button>
-                              <button
-                                onClick={() => setPendingDelete(null)}
-                                className="px-2 py-0.5 text-xs font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-md"
-                              >No</button>
-                            </div>
-                          ) : (
-                            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition">
-                              <button onClick={e => { e.stopPropagation(); moveSection(i, 'up'); }} disabled={i === 0}
-                                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
-                                <ChevronUp className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={e => { e.stopPropagation(); moveSection(i, 'down'); }} disabled={i === editableSections.length - 1}
-                                className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 rounded hover:bg-gray-100">
-                                <ChevronDown className="w-3.5 h-3.5" />
-                              </button>
-                              <button onClick={e => { e.stopPropagation(); setPendingDelete(i); }}
-                                className="p-1 text-gray-400 hover:text-red-500 rounded hover:bg-red-50">
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Insert-here button after this section */}
-                        <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => { setInsertAfterIdx(i); setShowAddSection(true); setAddSectionCategory(null); }}
-                            className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
-                            title="Insert section here"
-                          >
-                            <Plus className="w-3 h-3" />
-                          </button>
-                        </div>
+                  <DndContext sensors={dndSensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                    <SortableContext items={editableSections.map((s, i) => s.id || `${s.template}__${i}`)} strategy={verticalListSortingStrategy}>
+                      <div className="divide-y divide-gray-100">
+                        {editableSections.map((section, i) => (
+                          <SortableSectionItem
+                            key={section.id || `${section.template}-${i}`}
+                            id={section.id || `${section.template}__${i}`}
+                            section={section}
+                            index={i}
+                            totalCount={editableSections.length}
+                            selectedIdx={selectedIdx}
+                            setSelectedIdx={setSelectedIdx}
+                            pendingDelete={pendingDelete}
+                            setPendingDelete={setPendingDelete}
+                            moveSection={moveSection}
+                            deleteSection={deleteSection}
+                            setInsertAfterIdx={setInsertAfterIdx}
+                            setShowAddSection={setShowAddSection}
+                            setAddSectionCategory={setAddSectionCategory}
+                            getSectionIcon={getSectionIcon}
+                            getSectionName={getSectionName}
+                          />
+                        ))}
                       </div>
-                    ))}
-                  </div>
+                    </SortableContext>
+                  </DndContext>
 
                   {!showAddSection ? (
                     <div className="p-3 border-t border-gray-100">

@@ -1,10 +1,12 @@
-import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight, Building2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function Overview({ bookings, services, employees, setCurrentView, user, apiUrl, authFetch }) {
   const [weekOffset, setWeekOffset] = useState(0);
   const [customers, setCustomers] = useState([]);
   const [leads, setLeads] = useState([]);
+  const [activeCard, setActiveCard] = useState(0);
+  const autoPlayRef = useRef(null);
 
   // Fetch customers and leads
   useEffect(() => {
@@ -14,12 +16,12 @@ export default function Overview({ bookings, services, employees, setCurrentView
           authFetch(`${apiUrl}/api/customers`),
           authFetch(`${apiUrl}/api/leads`)
         ]);
-        
+
         if (customersRes.ok) {
           const customersData = await customersRes.json();
           setCustomers(customersData.customers || []);
         }
-        
+
         if (leadsRes.ok) {
           const leadsData = await leadsRes.json();
           setLeads(leadsData.leads || []);
@@ -32,21 +34,46 @@ export default function Overview({ bookings, services, employees, setCurrentView
     fetchData();
   }, [apiUrl, authFetch]);
 
+  // Auto-rotate performance cards
+  const startAutoPlay = useCallback(() => {
+    if (autoPlayRef.current) clearInterval(autoPlayRef.current);
+    autoPlayRef.current = setInterval(() => {
+      setActiveCard(prev => (prev + 1) % 4);
+    }, 5000);
+  }, []);
+
+  useEffect(() => {
+    startAutoPlay();
+    return () => { if (autoPlayRef.current) clearInterval(autoPlayRef.current); };
+  }, [startAutoPlay]);
+
+  const goToCard = (idx) => {
+    setActiveCard(idx);
+    startAutoPlay();
+  };
+
+  const prevCard = () => {
+    setActiveCard(prev => (prev - 1 + 4) % 4);
+    startAutoPlay();
+  };
+
+  const nextCard = () => {
+    setActiveCard(prev => (prev + 1) % 4);
+    startAutoPlay();
+  };
+
   // Calculate date range for current week view
   const getWeekRange = (offset) => {
     const today = new Date();
     const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - today.getDay() + (offset * 7)); // Sunday
-    
+    startOfWeek.setDate(today.getDate() - today.getDay() + (offset * 7));
     const endOfWeek = new Date(startOfWeek);
-    endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
-    
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
     return { startOfWeek, endOfWeek };
   };
 
   const { startOfWeek, endOfWeek } = getWeekRange(weekOffset);
 
-  // Format date range display
   const formatDateRange = () => {
     const options = { month: 'short', day: 'numeric' };
     const start = startOfWeek.toLocaleDateString('en-US', options);
@@ -63,25 +90,20 @@ export default function Overview({ bookings, services, employees, setCurrentView
 
   const weekRevenue = weekBookings.reduce((sum, b) => sum + (parseFloat(b.total_amount) || 0), 0);
   const weekCompleted = weekBookings.filter(b => b.status === 'completed').length;
-  const completionRate = weekBookings.length > 0 ? ((weekCompleted / weekBookings.length) * 100).toFixed(1) : 0;
 
-  // Calculate week leads
   const weekLeads = leads.filter(lead => {
     const leadDate = new Date(lead.created_at);
     return leadDate >= startOfWeek && leadDate <= endOfWeek;
   });
 
-  // Calculate week customers
   const weekCustomers = customers.filter(customer => {
     const customerDate = new Date(customer.created_at);
     return customerDate >= startOfWeek && customerDate <= endOfWeek;
   });
 
-  // Calculate today's bookings
   const today = new Date().toDateString();
   const todayBookings = bookings.filter(b => new Date(b.booking_date).toDateString() === today);
 
-  // Real data stats
   const weekStats = {
     websiteChat: {
       conversationsStarted: weekLeads.filter(l => l.source === 'website_chat').length,
@@ -108,7 +130,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
       requestsSent: weekBookings.filter(b => b.review_request_sent).length,
       reviewsReceived: weekBookings.filter(b => b.review_received).length,
       aiRepliesGenerated: weekBookings.filter(b => b.ai_reply_sent).length,
-      responseRate: weekBookings.filter(b => b.review_request_sent).length > 0 
+      responseRate: weekBookings.filter(b => b.review_request_sent).length > 0
         ? ((weekBookings.filter(b => b.review_received).length / weekBookings.filter(b => b.review_request_sent).length) * 100).toFixed(0)
         : 0,
       timeSaved: (weekBookings.filter(b => b.ai_reply_sent).length * 0.1).toFixed(2)
@@ -117,258 +139,229 @@ export default function Overview({ bookings, services, employees, setCurrentView
 
   const totalLeads = weekLeads.length;
 
+  // Performance cards data
+  const performanceCards = [
+    {
+      title: 'Website Chat Agent',
+      icon: MessageSquare,
+      iconBg: 'bg-blue-100',
+      iconColor: 'text-blue-600',
+      hoverBorder: 'border-blue-400',
+      stats: [
+        { label: 'Conversations Started', value: weekStats.websiteChat.conversationsStarted, color: 'text-blue-600' },
+        { label: 'Bookings Made', value: weekStats.websiteChat.bookingsMade, color: 'text-green-600' },
+        { label: 'Phone Numbers Collected', value: weekStats.websiteChat.phoneNumbersCollected, color: 'text-orange-600' },
+        { label: 'Added to "Follow Up" List', value: `${weekStats.websiteChat.followUpLeads} leads`, color: 'text-amber-600' },
+      ],
+      footer: { bg: 'bg-green-50', color: 'text-green-700', text: `Conversion Rate: ${weekStats.websiteChat.conversionRate}%` }
+    },
+    {
+      title: 'Lead Form Submissions',
+      icon: Sparkles,
+      iconBg: 'bg-amber-100',
+      iconColor: 'text-amber-600',
+      hoverBorder: 'border-amber-400',
+      stats: [
+        { label: 'Total Submissions', value: weekStats.leadForms.totalSubmissions, color: 'text-blue-600' },
+        { label: 'Email Conversions', value: weekStats.leadForms.emailConversions, color: 'text-green-600' },
+        { label: 'SMS Conversions', value: weekStats.leadForms.smsConversions, color: 'text-orange-600' },
+        { label: 'AI Qualified', value: weekStats.leadForms.qualificationSuccess, color: 'text-amber-600' },
+      ],
+      footer: { bg: 'bg-yellow-50', color: 'text-yellow-700', text: `Cost Savings: $${weekStats.leadForms.costSavings} this week` }
+    },
+    {
+      title: 'New Bookings',
+      icon: Calendar,
+      iconBg: 'bg-green-100',
+      iconColor: 'text-green-600',
+      hoverBorder: 'border-green-400',
+      stats: [
+        { label: 'Total Bookings', value: weekStats.newBookings.total, color: 'text-blue-600' },
+        { label: 'From Website Chat', value: weekStats.newBookings.fromChat, color: 'text-green-600' },
+        { label: 'From Lead Forms', value: weekStats.newBookings.fromLeadForms, color: 'text-orange-600' },
+        { label: 'Manual Entry', value: weekStats.newBookings.manualEntry, color: 'text-amber-600' },
+      ],
+      footer: { bg: 'bg-blue-50', color: 'text-blue-700', text: `Revenue: $${weekStats.newBookings.revenue.toFixed(0)}` }
+    },
+    {
+      title: 'Review System',
+      icon: Star,
+      iconBg: 'bg-yellow-100',
+      iconColor: 'text-yellow-600',
+      hoverBorder: 'border-yellow-400',
+      stats: [
+        { label: 'Requests Sent', value: weekStats.reviewSystem.requestsSent, color: 'text-blue-600' },
+        { label: 'Reviews Received', value: weekStats.reviewSystem.reviewsReceived, color: 'text-green-600' },
+        { label: 'AI Replies Generated', value: weekStats.reviewSystem.aiRepliesGenerated, color: 'text-orange-600' },
+        { label: 'Response Rate', value: `${weekStats.reviewSystem.responseRate}%`, color: 'text-amber-600' },
+      ],
+      footer: { bg: 'bg-orange-50', color: 'text-orange-700', text: `Time Saved: ${weekStats.reviewSystem.timeSaved} hours` }
+    }
+  ];
+
+  const currentCard = performanceCards[activeCard];
+  const CardIcon = currentCard.icon;
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">📊 Overview Dashboard</h1>
+        <h1 className="text-3xl font-bold text-gray-900">Overview Dashboard</h1>
         <p className="text-gray-600 mt-1">Weekly stats with navigation</p>
       </div>
 
       {/* Week Navigation */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900">
-            {weekOffset === 0 ? "This Week's Performance" : `Week of ${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-          </h2>
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setWeekOffset(weekOffset - 1)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+      <div className="flex items-center justify-between bg-white rounded-xl px-6 py-3 shadow-sm border border-gray-200">
+        <h2 className="text-lg font-bold text-gray-900">
+          {weekOffset === 0 ? "This Week's Performance" : `Week of ${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+        </h2>
+        <div className="flex items-center gap-3">
+          <button onClick={() => setWeekOffset(weekOffset - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+            <ArrowLeft className="w-4 h-4 text-gray-600" />
+          </button>
+          <span className="font-semibold text-gray-700 text-sm min-w-[180px] text-center">{formatDateRange()}</span>
+          {weekOffset < 0 ? (
+            <button onClick={() => setWeekOffset(weekOffset + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+              <ArrowRight className="w-4 h-4 text-gray-600" />
             </button>
-            <span className="font-semibold text-gray-700 min-w-[200px] text-center">
-              {formatDateRange()}
-            </span>
-            {weekOffset < 0 ? (
-              <button
-                onClick={() => setWeekOffset(weekOffset + 1)}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <ArrowRight className="w-5 h-5 text-gray-600" />
-              </button>
-            ) : (
-              <div className="w-9 h-9" />
-            )}
-          </div>
+          ) : (
+            <div className="w-7 h-7" />
+          )}
         </div>
+      </div>
 
-        {/* Week Summary - GREEN BANNER AT TOP */}
-        <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border-l-4 border-emerald-500 mb-6">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-lg font-bold text-gray-900">Week Summary</h3>
-          </div>
-          <div className="grid grid-cols-4 gap-6">
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Total Leads Captured</div>
-              <div className="text-3xl font-bold text-gray-900">{totalLeads}</div>
-              <div className="text-xs text-gray-500 mt-1">+{weekCustomers.length} new customers</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Lead Conversion Rate</div>
-              <div className="text-3xl font-bold text-gray-900">
-                {totalLeads > 0 ? ((weekBookings.length / totalLeads) * 100).toFixed(1) : '0'}%
-              </div>
-              <div className="text-xs text-gray-500 mt-1">{weekBookings.length} bookings from {totalLeads} leads</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">Revenue This Week</div>
-              <div className="text-3xl font-bold text-gray-900">${weekRevenue.toFixed(0)}</div>
-              <div className="text-xs text-gray-500 mt-1">from {weekBookings.length} bookings</div>
-            </div>
-            <div>
-              <div className="text-sm text-gray-600 mb-1">AI Cost Savings</div>
-              <div className="text-3xl font-bold text-gray-900">${weekStats.leadForms.costSavings}</div>
-              <div className="text-xs text-gray-500 mt-1">automated lead qualification</div>
-            </div>
-          </div>
+      {/* Week Summary Banner */}
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5 border-l-4 border-emerald-500">
+        <div className="flex items-center gap-2 mb-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+          <h3 className="text-lg font-bold text-gray-900">Week Summary</h3>
         </div>
-
-        {/* Performance Cards - 4 columns */}
-        <div className="grid md:grid-cols-4 gap-6">
-          {/* Website Chat Agent */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-blue-300 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                <MessageSquare className="w-5 h-5 text-blue-600" />
-              </div>
-              <h3 className="font-bold text-gray-900">Website Chat Agent</h3>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Conversations Started</span>
-                <span className="font-bold text-blue-600">{weekStats.websiteChat.conversationsStarted}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Bookings Made</span>
-                <span className="font-bold text-green-600">{weekStats.websiteChat.bookingsMade}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Phone Numbers Collected</span>
-                <span className="font-bold text-orange-600">{weekStats.websiteChat.phoneNumbersCollected}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Added to "Follow Up" List</span>
-                <span className="font-bold text-amber-600">{weekStats.websiteChat.followUpLeads} leads</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="bg-green-50 px-3 py-2 rounded-lg text-center">
-                <span className="text-sm font-semibold text-green-700">
-                  Conversion Rate: {weekStats.websiteChat.conversionRate}%
-                </span>
-              </div>
-            </div>
+        <div className="grid grid-cols-4 gap-6">
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Total Leads Captured</div>
+            <div className="text-3xl font-bold text-gray-900">{totalLeads}</div>
+            <div className="text-xs text-gray-500 mt-1">+{weekCustomers.length} new customers</div>
           </div>
-
-          {/* Lead Form Submissions */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-amber-300 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-amber-600" />
-              </div>
-              <h3 className="font-bold text-gray-900">Lead Form Submissions</h3>
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Lead Conversion Rate</div>
+            <div className="text-3xl font-bold text-gray-900">
+              {totalLeads > 0 ? ((weekBookings.length / totalLeads) * 100).toFixed(1) : '0'}%
             </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Submissions</span>
-                <span className="font-bold text-blue-600">{weekStats.leadForms.totalSubmissions}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Email Conversions</span>
-                <span className="font-bold text-green-600">{weekStats.leadForms.emailConversions}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">SMS Conversions</span>
-                <span className="font-bold text-orange-600">{weekStats.leadForms.smsConversions}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">AI Qualified</span>
-                <span className="font-bold text-amber-600 whitespace-nowrap">{weekStats.leadForms.qualificationSuccess}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="bg-yellow-50 px-3 py-2 rounded-lg text-center">
-                <span className="text-sm font-semibold text-yellow-700">
-                  Cost Savings: ${weekStats.leadForms.costSavings} this week
-                </span>
-              </div>
-            </div>
+            <div className="text-xs text-gray-500 mt-1">{weekBookings.length} bookings from {totalLeads} leads</div>
           </div>
-
-          {/* New Bookings */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-green-300 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-green-600" />
-              </div>
-              <h3 className="font-bold text-gray-900">New Bookings</h3>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Total Bookings</span>
-                <span className="font-bold text-blue-600">{weekStats.newBookings.total}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">From Website Chat</span>
-                <span className="font-bold text-green-600">{weekStats.newBookings.fromChat}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">From Lead Forms</span>
-                <span className="font-bold text-orange-600">{weekStats.newBookings.fromLeadForms}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Manual Entry</span>
-                <span className="font-bold text-amber-600">{weekStats.newBookings.manualEntry}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="bg-blue-50 px-3 py-2 rounded-lg text-center">
-                <span className="text-sm font-semibold text-blue-700">
-                  Revenue: ${weekStats.newBookings.revenue.toFixed(0)}
-                </span>
-              </div>
-            </div>
+          <div>
+            <div className="text-sm text-gray-600 mb-1">Revenue This Week</div>
+            <div className="text-3xl font-bold text-gray-900">${weekRevenue.toFixed(0)}</div>
+            <div className="text-xs text-gray-500 mt-1">from {weekBookings.length} bookings</div>
           </div>
-
-          {/* Review System */}
-          <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 border-2 border-gray-200 hover:border-yellow-300 transition-all">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <Star className="w-5 h-5 text-yellow-600" />
-              </div>
-              <h3 className="font-bold text-gray-900">Review System</h3>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Requests Sent</span>
-                <span className="font-bold text-blue-600">{weekStats.reviewSystem.requestsSent}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Reviews Received</span>
-                <span className="font-bold text-green-600">{weekStats.reviewSystem.reviewsReceived}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">AI Replies Generated</span>
-                <span className="font-bold text-orange-600">{weekStats.reviewSystem.aiRepliesGenerated}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-gray-600">Response Rate</span>
-                <span className="font-bold text-amber-600">{weekStats.reviewSystem.responseRate}%</span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <div className="bg-orange-50 px-3 py-2 rounded-lg text-center">
-                <span className="text-sm font-semibold text-orange-700">
-                  Time Saved: {weekStats.reviewSystem.timeSaved} hours
-                </span>
-              </div>
-            </div>
+          <div>
+            <div className="text-sm text-gray-600 mb-1">AI Cost Savings</div>
+            <div className="text-3xl font-bold text-gray-900">${weekStats.leadForms.costSavings}</div>
+            <div className="text-xs text-gray-500 mt-1">automated lead qualification</div>
           </div>
         </div>
       </div>
 
-      {/* Today's Activity */}
-      {todayBookings.length > 0 && (
-        <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Today's Bookings</h2>
-          <div className="space-y-3">
-            {todayBookings.slice(0, 5).map((booking) => (
-              <div key={booking.id} className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg hover:from-blue-50 hover:to-white transition-all border border-gray-100">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-                    {booking.start_time?.substring(0, 5) || '--'}
+      {/* Main 2-Column Layout: Today's Bookings (left) + Revolving Performance Cards (right) */}
+      <div className="grid lg:grid-cols-2 gap-6">
+        {/* LEFT: Today's Bookings */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            Today's Bookings
+          </h2>
+          {todayBookings.length > 0 ? (
+            <div className="space-y-3">
+              {todayBookings.slice(0, 8).map((booking) => (
+                <div key={booking.id} className="flex items-center justify-between p-3 bg-gradient-to-r from-gray-50 to-white rounded-lg hover:from-blue-50 hover:to-white transition-all border border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                      {booking.start_time?.substring(0, 5) || '--'}
+                    </div>
+                    <div>
+                      <div className="font-semibold text-gray-900 text-sm">{booking.customer_name}</div>
+                      <div className="text-xs text-gray-600">{booking.items?.[0]?.service_name || 'Service'}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="font-semibold text-gray-900">{booking.customer_name}</div>
-                    <div className="text-sm text-gray-600">{booking.items?.[0]?.service_name || 'Service'}</div>
+                  <div className="text-right">
+                    <div className="font-bold text-gray-900 text-sm">${parseFloat(booking.total_amount || 0).toFixed(0)}</div>
+                    <div className={`text-xs px-2 py-0.5 rounded-full inline-block ${
+                      booking.status === 'completed' ? 'bg-green-100 text-green-700' :
+                      booking.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {booking.status}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold text-gray-900">${parseFloat(booking.total_amount || 0).toFixed(0)}</div>
-                  <div className={`text-xs px-2 py-1 rounded-full inline-block ${
-                    booking.status === 'completed' ? 'bg-green-100 text-green-700' :
-                    booking.status === 'confirmed' ? 'bg-blue-100 text-blue-700' :
-                    'bg-gray-100 text-gray-700'
-                  }`}>
-                    {booking.status}
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+              <Calendar className="w-12 h-12 mb-3 opacity-30" />
+              <p className="text-sm font-medium">No bookings today</p>
+              <p className="text-xs mt-1">Bookings will appear here as they come in</p>
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: Revolving Performance Cards */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 relative">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Performance</h2>
+            <div className="flex items-center gap-2">
+              <button onClick={prevCard} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <ChevronLeft className="w-4 h-4 text-gray-500" />
+              </button>
+              <button onClick={nextCard} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <ChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+          </div>
+
+          {/* Card content with transition */}
+          <div className="transition-all duration-300 ease-in-out">
+            <div className={`bg-gradient-to-br from-white to-gray-50 rounded-xl p-5 border-2 border-gray-200 hover:${currentCard.hoverBorder} transition-all`}>
+              <div className="flex items-center gap-3 mb-5">
+                <div className={`w-10 h-10 ${currentCard.iconBg} rounded-lg flex items-center justify-center`}>
+                  <CardIcon className={`w-5 h-5 ${currentCard.iconColor}`} />
+                </div>
+                <h3 className="font-bold text-gray-900">{currentCard.title}</h3>
+              </div>
+
+              <div className="space-y-3">
+                {currentCard.stats.map((stat, i) => (
+                  <div key={i} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">{stat.label}</span>
+                    <span className={`font-bold ${stat.color}`}>{stat.value}</span>
                   </div>
+                ))}
+              </div>
+
+              <div className="mt-5 pt-4 border-t border-gray-200">
+                <div className={`${currentCard.footer.bg} px-3 py-2 rounded-lg text-center`}>
+                  <span className={`text-sm font-semibold ${currentCard.footer.color}`}>
+                    {currentCard.footer.text}
+                  </span>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Dot indicators */}
+          <div className="flex items-center justify-center gap-2 mt-4">
+            {performanceCards.map((card, idx) => (
+              <button
+                key={idx}
+                onClick={() => goToCard(idx)}
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  idx === activeCard ? 'bg-blue-600 scale-110' : 'bg-gray-300 hover:bg-gray-400'
+                }`}
+              />
             ))}
           </div>
         </div>
-      )}
+      </div>
 
       {/* Quick Actions */}
       <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">

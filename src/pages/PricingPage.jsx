@@ -21,34 +21,36 @@ export default function PricingPage() {
 
   const plans = [
     {
-      id: null,
-      name: 'Free',
-      price: 0,
-      description: 'Start building with no risk',
+      id: 'basic',
+      name: 'Basic',
+      price: 29.95,
+      description: 'Essential tools to get started',
       icon: Sparkles,
-      gradient: 'from-gray-400 to-gray-600',
+      gradient: 'from-gray-500 to-gray-600',
+      trial: '2-week Pro trial included',
       features: [
         { text: 'AI Website Generator', included: true },
         { text: 'Publish & Host Your Website', included: true },
         { text: 'Online Booking Calendar', included: true },
         { text: 'Customer & Lead Management', included: true },
         { text: 'Team Management', included: true },
+        { text: '2-Week PRO Features Trial', included: true, highlight: true },
         { text: 'AI Chat Agent', included: false },
         { text: 'SMS Lead Follow-Up Agent', included: false },
-        { text: 'Automated Google Reviews', included: false },
         { text: 'Weekly AI Email Marketing', included: false },
       ],
-      cta: 'Get Started Free',
+      cta: 'Get 2 weeks of Pro for free',
       ctaClass: 'bg-gray-700 hover:bg-gray-800',
     },
     {
       id: 'pro',
       name: 'Pro',
-      price: 95.50,
+      price: 99.95,
       description: 'Full AI automation for growing businesses',
       icon: Crown,
       gradient: 'from-blue-600 to-purple-600',
       popular: true,
+      trial: '1-week free trial',
       smsLimit: 100,
       features: [
         { text: 'Everything in Free', included: true, bold: true },
@@ -62,16 +64,17 @@ export default function PricingPage() {
         { text: 'SEO Blog Writing (4 posts/month)', included: true },
         { text: 'Priority Support', included: true },
       ],
-      cta: 'Start Pro — $95.50/mo',
+      cta: 'Start free trial',
       ctaClass: 'bg-gradient-to-r from-blue-600 to-purple-600 hover:shadow-xl',
     },
     {
       id: 'scale',
       name: 'Scale',
-      price: 175.50,
+      price: 175.95,
       description: 'More capacity for high-volume businesses',
       icon: TrendingUp,
       gradient: 'from-purple-600 to-pink-600',
+      trial: '1-week free trial',
       smsLimit: 500,
       features: [
         { text: 'Everything in Pro', included: true, bold: true },
@@ -81,7 +84,7 @@ export default function PricingPage() {
         { text: 'Dedicated account manager', included: true, soon: true },
         { text: 'Custom API integrations', included: true, soon: true },
       ],
-      cta: 'Start Scale — $175.50/mo',
+      cta: 'Start free trial',
       ctaClass: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-xl',
     },
   ];
@@ -109,7 +112,7 @@ export default function PricingPage() {
 
         {/* Value breakdown */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-12 border border-blue-100">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Pro Plan = $427/month of tools for $95.50</h2>
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Pro Plan = $427/month of tools for $99.95 — try free for 1 week</h2>
           <p className="text-center text-gray-500 text-sm mb-8">Everything bundled — no separate subscriptions needed</p>
           <div className="grid md:grid-cols-4 gap-4">
             {valueItems.map((item) => {
@@ -129,7 +132,7 @@ export default function PricingPage() {
           <div className="text-center mt-6">
             <span className="text-gray-500 line-through mr-2">$427/month</span>
             <ArrowRight className="inline w-4 h-4 text-gray-400 mr-2" />
-            <span className="text-2xl font-bold text-green-600">$95.50/month</span>
+            <span className="text-2xl font-bold text-green-600">$99.95/month</span>
             <span className="ml-3 bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full">Save 78%</span>
           </div>
         </div>
@@ -168,6 +171,9 @@ export default function PricingPage() {
                       </span>
                       {plan.price > 0 && <span className="text-gray-500">/month</span>}
                     </div>
+                    {plan.trial && (
+                      <p className="text-xs text-green-600 font-semibold mt-1 bg-green-50 inline-block px-2 py-0.5 rounded-full">{plan.trial}</p>
+                    )}
                     {plan.smsLimit && (
                       <p className="text-xs text-blue-600 font-medium mt-1">{plan.smsLimit} SMS leads/month</p>
                     )}

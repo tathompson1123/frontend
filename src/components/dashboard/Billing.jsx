@@ -35,73 +35,73 @@ export default function Billing({ user, apiUrl, authFetch }) {
     }
   };
 
-  const SMS_LIMIT = { free: 0, pro: 100, scale: 500, basic: 100, expert: 200 };
+  const SMS_LIMIT = { free: 0, basic: 100, pro: 100, scale: 500, expert: 200 };
   const planSmsLimit = SMS_LIMIT[currentPlan] || 0;
 
   const plans = [
     {
-      id: null,
-      name: 'Free',
-      tagline: 'Get started at no cost',
-      price: 0,
+      id: 'basic',
+      name: 'Basic',
+      tagline: 'Essential tools to get started',
+      price: 29.95,
       icon: Sparkles,
-      gradient: 'from-gray-400 to-gray-500',
+      gradient: 'from-gray-500 to-gray-600',
+      trial: '2-week Pro trial included',
       features: [
         { text: 'AI Website Generator', included: true },
         { text: 'Publish & Host Your Website', included: true },
         { text: 'Online Booking Calendar', included: true },
         { text: 'Customer & Lead Management', included: true },
         { text: 'Team Management', included: true },
+        { text: '2-Week PRO Features Trial', included: true, highlight: true },
         { text: 'AI Chat Agent', included: false },
         { text: 'SMS Lead Follow-Up Agent', included: false },
         { text: 'Automated Google Reviews', included: false },
-        { text: 'Embed on Any Website', included: false },
-        { text: 'AI Email Marketing', included: false },
-        { text: 'Market Research Reports', included: false },
       ],
-      cta: 'Current Plan',
-      isFree: true,
+      cta: 'Get 2 weeks of Pro for free',
     },
     {
       id: 'pro',
       name: 'Pro',
       tagline: 'Full AI automation for growth',
-      price: 95.50,
+      price: 99.95,
       icon: Crown,
       gradient: 'from-blue-500 to-purple-600',
       popular: true,
+      trial: '1-week free trial',
       smsLimit: 100,
       features: [
-        { text: 'Everything in Free', included: true, bold: true },
+        { text: 'Everything in Basic', included: true, bold: true },
         { text: 'AI Chat Agent (24/7 on your website)', included: true, highlight: true },
         { text: 'SMS Lead Follow-Up Agent', included: true, highlight: true },
         { text: '100 SMS / month', included: true, highlight: true },
         { text: 'Automated Google Review Requests', included: true, highlight: true },
-        { text: 'Embed on Any Website (Wix, Squarespace…)', included: true, highlight: true },
+        { text: 'Embed on Any Website (Wix, Squarespace...)', included: true, highlight: true },
         { text: 'Weekly AI Email Marketing', included: true, highlight: true },
         { text: 'Market Research Reports', included: true },
         { text: 'SEO Blog Writing (4 posts/month)', included: true },
         { text: 'Priority Support', included: true },
       ],
-      cta: 'Upgrade to Pro',
+      cta: 'Start free trial',
     },
     {
       id: 'scale',
       name: 'Scale',
       tagline: 'Higher limits for busy businesses',
-      price: 175.50,
+      price: 175.95,
       icon: TrendingUp,
       gradient: 'from-purple-500 to-pink-600',
+      trial: '1-week free trial',
       smsLimit: 500,
       features: [
         { text: 'Everything in Pro', included: true, bold: true },
-        { text: '500 SMS / month (5× more)', included: true, highlight: true },
+        { text: '500 SMS / month (5x more)', included: true, highlight: true },
         { text: 'Higher chat conversation limits', included: true, highlight: true },
         { text: 'White-label options', included: true, soon: true },
         { text: 'Dedicated account manager', included: true, soon: true },
         { text: 'Custom API integrations', included: true, soon: true },
       ],
-      cta: 'Upgrade to Scale',
+      cta: 'Start free trial',
     },
   ];
 
@@ -115,7 +115,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
 
         {!currentPlan && (
           <div className="mt-5 mx-auto max-w-xl p-4 bg-amber-50 border-2 border-amber-300 rounded-xl">
-            <p className="text-amber-900 font-semibold">⚠️ You're on the Free plan — upgrade to unlock AI agents & automation</p>
+            <p className="text-amber-900 font-semibold">You need a plan to get started — choose one below</p>
           </div>
         )}
       </div>
@@ -145,15 +145,15 @@ export default function Billing({ user, apiUrl, authFetch }) {
         </div>
         <p className="text-center text-sm text-gray-600 mt-4">
           Total standalone value: <span className="font-bold text-gray-900 line-through">$427/mo</span>
-          {' '}→ <span className="font-bold text-green-600">$95.50/mo with Pro</span>
-          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">78% OFF</span>
+          {' '} → <span className="font-bold text-green-600">$99.95/mo with Pro</span>
+          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">76% OFF</span>
         </p>
       </div>
 
       {/* Plans grid */}
       <div className="grid md:grid-cols-3 gap-6">
         {plans.map((plan) => {
-          const isActive = currentPlan === plan.id || (plan.id === null && !currentPlan);
+          const isActive = currentPlan === plan.id;
           const Icon = plan.icon;
           return (
             <div
@@ -165,7 +165,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-5 py-1 rounded-full text-sm font-bold shadow">
-                    ⭐ MOST POPULAR
+                    MOST POPULAR
                   </div>
                 </div>
               )}
@@ -182,11 +182,12 @@ export default function Billing({ user, apiUrl, authFetch }) {
 
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">
-                      {plan.price === 0 ? 'Free' : `$${plan.price}`}
-                    </span>
-                    {plan.price > 0 && <span className="text-gray-500 text-sm">/month</span>}
+                    <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
+                    <span className="text-gray-500 text-sm">/month</span>
                   </div>
+                  {plan.trial && (
+                    <p className="text-xs text-green-600 font-semibold mt-1 bg-green-50 inline-block px-2 py-0.5 rounded-full">{plan.trial}</p>
+                  )}
                   {plan.smsLimit && (
                     <p className="text-xs text-blue-600 font-medium mt-1">{plan.smsLimit} SMS leads/month included</p>
                   )}
@@ -207,17 +208,15 @@ export default function Billing({ user, apiUrl, authFetch }) {
                 </div>
 
                 <button
-                  onClick={() => !plan.isFree && handleUpgrade(plan.id)}
-                  disabled={isActive || loading || plan.isFree}
+                  onClick={() => handleUpgrade(plan.id)}
+                  disabled={isActive || loading}
                   className={`w-full py-3 rounded-xl font-bold transition-all text-sm ${
                     isActive
                       ? 'bg-green-100 text-green-700 cursor-default'
-                      : plan.isFree
-                      ? 'bg-gray-100 text-gray-400 cursor-default'
                       : `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`
                   }`}
                 >
-                  {isActive ? '✓ Current Plan' : loading ? 'Processing…' : plan.cta}
+                  {isActive ? '✓ Current Plan' : loading ? 'Processing...' : plan.cta}
                 </button>
               </div>
             </div>
@@ -225,7 +224,6 @@ export default function Billing({ user, apiUrl, authFetch }) {
         })}
       </div>
 
-      {/* SMS usage for current paid users */}
       {isCurrentPlanPaid && (
         <div className="mt-8 bg-gray-50 rounded-xl p-5 border border-gray-200 text-sm text-gray-600">
           <p className="font-semibold text-gray-800 mb-1">Your plan: <span className="capitalize">{currentPlan}</span></p>
@@ -236,7 +234,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
       )}
 
       <div className="mt-10 text-center text-sm text-gray-500 flex items-center justify-center gap-8">
-        <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />14-day money-back guarantee</span>
+        <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />Free trial included</span>
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />Cancel anytime</span>
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />No setup fees</span>
       </div>
