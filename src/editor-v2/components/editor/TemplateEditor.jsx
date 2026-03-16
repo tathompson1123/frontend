@@ -2,8 +2,10 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import {
   ArrowLeft, Save, RefreshCw, ChevronDown, ChevronRight,
   GripVertical, Trash2, Plus, ChevronUp, Navigation, Layers,
-  Palette, Upload, X, Monitor, Smartphone, Tablet, PanelBottom,
+  Palette, Upload, X, Monitor, Smartphone, Tablet, PanelBottom, CalendarCheck,
+  Eye, EyeOff,
 } from 'lucide-react';
+import BookingWidgetEditor from '../../../components/dashboard/BookingWidgetEditor';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -61,6 +63,8 @@ const URL_FIELD = 'url';
 const IMAGE = 'image';
 const ARRAY = 'array';
 const COLOR = 'color';
+const RANGE = 'range';
+const SELECT = 'select';
 
 const CONTENT_FIELDS = {
   'hero-fullscreen-dark': [
@@ -69,10 +73,11 @@ const CONTENT_FIELDS = {
     { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle / Description', type: TEXTAREA },
     { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
-    { key: 'ctaText', label: 'Primary Button Text', type: TEXT },
-    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD },
-    { key: 'ctaText2', label: 'Secondary Button Text', type: TEXT },
-    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
+    { key: 'overlayOpacity', label: 'Overlay Darkness', type: RANGE, min: 0, max: 100, step: 5, defaultValue: 100, unit: '%' },
+    { key: 'ctaText', label: 'Primary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD, showWhen: 'ctaText' },
+    { key: 'ctaText2', label: 'Secondary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD, showWhen: 'ctaText2' },
   ],
   'hero-fullscreen-light': [
     { key: 'headline', label: 'Headline', type: TEXT },
@@ -80,10 +85,11 @@ const CONTENT_FIELDS = {
     { key: 'badge', label: 'Badge / Small Label (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle / Description', type: TEXTAREA },
     { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
-    { key: 'ctaText', label: 'Primary Button Text', type: TEXT },
-    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD },
-    { key: 'ctaText2', label: 'Secondary Button Text', type: TEXT },
-    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
+    { key: 'overlayOpacity', label: 'Overlay Darkness', type: RANGE, min: 0, max: 50, step: 2, defaultValue: 12, unit: '%' },
+    { key: 'ctaText', label: 'Primary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD, showWhen: 'ctaText' },
+    { key: 'ctaText2', label: 'Secondary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD, showWhen: 'ctaText2' },
   ],
   'hero-gradient': [
     { key: 'headline', label: 'Headline', type: TEXT },
@@ -97,6 +103,7 @@ const CONTENT_FIELDS = {
     { key: 'title', label: 'Title', type: TEXT },
     { key: 'subtitle', label: 'Subtitle', type: TEXTAREA },
     { key: 'bgImage', label: 'Background Image', type: IMAGE },
+    { key: 'overlayOpacity', label: 'Overlay Darkness', type: RANGE, min: 0, max: 100, step: 5, defaultValue: 100, unit: '%' },
   ],
   'hero-split-portrait': [
     { key: 'headline', label: 'Headline', type: TEXT },
@@ -105,10 +112,11 @@ const CONTENT_FIELDS = {
     { key: 'subtitle', label: 'Subtitle', type: TEXTAREA },
     { key: 'portraitImage', label: 'Portrait / Profile Image', type: IMAGE },
     { key: 'bgImage', label: 'Background Image (low opacity overlay)', type: IMAGE },
-    { key: 'ctaText', label: 'Primary Button Text', type: TEXT },
-    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD },
-    { key: 'ctaText2', label: 'Secondary Button Text', type: TEXT },
-    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD },
+    { key: 'overlayOpacity', label: 'Overlay Darkness', type: RANGE, min: 0, max: 100, step: 5, defaultValue: 100, unit: '%' },
+    { key: 'ctaText', label: 'Primary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD, showWhen: 'ctaText' },
+    { key: 'ctaText2', label: 'Secondary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD, showWhen: 'ctaText2' },
     { key: 'floatBadge', label: 'Floating Badge Number (e.g. "25+")', type: TEXT },
     { key: 'floatBadgeLabel', label: 'Floating Badge Label', type: TEXT },
   ],
@@ -118,12 +126,13 @@ const CONTENT_FIELDS = {
     { key: 'badge', label: 'Badge Text (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle', type: TEXTAREA },
     { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
+    { key: 'overlayOpacity', label: 'Overlay Darkness', type: RANGE, min: 0, max: 100, step: 5, defaultValue: 100, unit: '%' },
     { key: 'heroImage1', label: 'Main Side Image (large)', type: IMAGE },
     { key: 'heroImage2', label: 'Inset Side Image (smaller)', type: IMAGE },
-    { key: 'ctaText', label: 'Primary CTA', type: TEXT },
-    { key: 'ctaLink', label: 'Primary CTA Link', type: URL_FIELD },
-    { key: 'ctaText2', label: 'Secondary CTA', type: TEXT },
-    { key: 'ctaLink2', label: 'Secondary CTA Link', type: URL_FIELD },
+    { key: 'ctaText', label: 'Primary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD, showWhen: 'ctaText' },
+    { key: 'ctaText2', label: 'Secondary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD, showWhen: 'ctaText2' },
     { key: 'yearsText', label: 'Years Badge (e.g. "12+ Years")', type: TEXT },
     { key: 'locationText', label: 'Location for Badge', type: TEXT },
   ],
@@ -133,12 +142,13 @@ const CONTENT_FIELDS = {
     { key: 'badge', label: 'Badge Text (above headline)', type: TEXT },
     { key: 'subtitle', label: 'Subtitle', type: TEXTAREA },
     { key: 'backgroundImage', label: 'Background Image', type: IMAGE },
+    { key: 'overlayOpacity', label: 'Overlay Darkness', type: RANGE, min: 0, max: 100, step: 5, defaultValue: 100, unit: '%' },
     { key: 'heroImage1', label: 'Main Side Image (large)', type: IMAGE },
     { key: 'heroImage2', label: 'Inset Side Image (smaller)', type: IMAGE },
-    { key: 'ctaText', label: 'Primary CTA', type: TEXT },
-    { key: 'ctaLink', label: 'Primary CTA Link', type: URL_FIELD },
-    { key: 'ctaText2', label: 'Secondary CTA', type: TEXT },
-    { key: 'ctaLink2', label: 'Secondary CTA Link', type: URL_FIELD },
+    { key: 'ctaText', label: 'Primary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink', label: 'Primary Button Link', type: URL_FIELD, showWhen: 'ctaText' },
+    { key: 'ctaText2', label: 'Secondary Button', type: TEXT, hideable: true },
+    { key: 'ctaLink2', label: 'Secondary Button Link', type: URL_FIELD, showWhen: 'ctaText2' },
     { key: 'yearsText', label: 'Years Badge (e.g. "10+ Years")', type: TEXT },
     { key: 'locationText', label: 'Location for Badge', type: TEXT },
   ],
@@ -160,13 +170,15 @@ const CONTENT_FIELDS = {
     ]},
     { key: 'image', label: 'Side Image', type: IMAGE },
     { key: 'imageAlt', label: 'Image Alt Text', type: TEXT },
+    { key: 'imagePosition', label: 'Image Position', type: SELECT, options: [{ value: 'right', label: 'Right' }, { value: 'left', label: 'Left' }], defaultValue: 'right' },
   ],
   'split-image-cta': [
     { key: 'headline', label: 'Headline', type: TEXT },
     { key: 'body', label: 'Body Text', type: TEXTAREA },
-    { key: 'ctaText', label: 'Button Text', type: TEXT },
-    { key: 'ctaLink', label: 'Button Link', type: URL_FIELD },
+    { key: 'ctaText', label: 'Button', type: TEXT, hideable: true },
+    { key: 'ctaLink', label: 'Button Link', type: URL_FIELD, showWhen: 'ctaText' },
     { key: 'image', label: 'Side Image', type: IMAGE },
+    { key: 'imagePosition', label: 'Image Position', type: SELECT, options: [{ value: 'left', label: 'Left' }, { value: 'right', label: 'Right' }], defaultValue: 'left' },
   ],
   'services-cards-3col': [
     { key: 'title', label: 'Section Title', type: TEXT },
@@ -370,61 +382,172 @@ const CONTENT_FIELDS = {
 
 // Default content for adding new sections
 const SECTION_DEFAULTS = {
+  // Heroes
   'hero-fullscreen-dark': { headline: 'Your Headline Here', subtitle: 'Describe what makes you different in one sentence.', ctaText: 'Get Started', ctaLink: '#contact', backgroundImage: '' },
+  'hero-fullscreen-light': { headline: 'Your Headline Here', subtitle: 'A clean, bright hero for a modern look.', backgroundImage: '', overlayOpacity: 12 },
+  'hero-gradient': { badge: '', headline: 'Your Headline Here', subtitle: 'A compelling description of your business.', features: [] },
+  'hero-split-portrait': { badge: '', headline: 'Your Headline Here', highlightText: '', subtitle: 'Describe what you offer.', ctaText: 'Get Started', ctaLink: '#contact', ctaText2: 'Learn More', ctaLink2: '#services', portraitImage: '', bgImage: '' },
+  'hero-page-banner': { title: 'Page Title', subtitle: 'A brief description of this page.', bgImage: '' },
+  'hero-cleaning-split': { badge: 'Professional', headline: 'Quality Cleaning', highlightText: 'You Can Trust', subtitle: 'Reliable and thorough cleaning services.', ctaText: 'Get a Quote', ctaLink: '#contact', ctaText2: 'Our Services', ctaLink2: '#services', backgroundImage: '' },
+  'hero-auto-split': { badge: 'Premium', headline: 'Expert Auto', highlightText: 'Detailing', subtitle: 'Professional auto care for your vehicle.', ctaText: 'Book Now', ctaLink: '#contact', ctaText2: 'Our Services', ctaLink2: '#services', backgroundImage: '' },
+  // Features
   'features-icon-row': { title: 'Our Features', subtitle: '', features: [{ icon: '⭐', title: 'Feature 1', text: 'What makes this feature great.' }, { icon: '🚀', title: 'Feature 2', text: 'What makes this feature great.' }, { icon: '💡', title: 'Feature 3', text: 'What makes this feature great.' }] },
+  'importance-split': { badge: '', headline: 'Why This Matters', body1: 'Explain the importance of your service.', body2: 'Add supporting details here.', highlights: ['Quality Work', 'Fast Turnaround', 'Fair Pricing'], image: '', imageAlt: '' },
+  'split-image-cta': { headline: 'About Us', body: 'Tell your story here.', ctaText: 'Learn More', ctaLink: '#contact', image: '' },
+  'before-after-cards': { title: 'Before & After', subtitle: 'See the difference we make.', cards: [{ title: 'Project 1', before: '', after: '', description: '' }] },
+  // Services
   'services-cards-3col': { title: 'Our Services', subtitle: '', ctaText: 'Get a Quote', ctaLink: '#contact', services: [{ name: 'Service 1', description: 'Description of this service.', price: '', icon: '🔧' }, { name: 'Service 2', description: 'Description of this service.', price: '', icon: '⚡' }, { name: 'Service 3', description: 'Description of this service.', price: '', icon: '✅' }] },
+  'services-carousel': { title: 'Our Services', subtitle: 'Swipe to explore what we offer.', services: [{ name: 'Service 1', description: 'Description of this service.', price: '', image: '' }, { name: 'Service 2', description: 'Description of this service.', price: '', image: '' }] },
+  // Benefits
+  'benefits-numbered': { title: 'Why Choose Us', subtitle: '', benefits: [{ title: 'Benefit 1', description: 'Why this matters to your customers.' }, { title: 'Benefit 2', description: 'Why this matters to your customers.' }] },
+  'benefits-cards': { title: 'Why Choose Us', subtitle: '', benefits: [{ title: 'Benefit 1', description: 'Why this matters.', icon: '✅' }, { title: 'Benefit 2', description: 'Why this matters.', icon: '⭐' }] },
+  // Gallery
+  'gallery-mixed-grid': { title: 'Our Work', items: [] },
+  'gallery-filtered': { title: 'Our Portfolio', subtitle: '', highlight: '', categories: ['All'], items: [] },
+  'gallery-masonry-full-width': { eyebrow: 'Portfolio', title: 'Our Best Work', ctaText: 'View All', ctaLink: '#contact', items: [] },
+  // Testimonials
   'testimonials-3col': { title: 'What Customers Say', testimonials: [{ quote: 'Amazing service! Highly recommend to everyone.', author: 'Customer Name', role: 'Happy Client', rating: 5 }] },
+  // Trust
+  'trust-banner-scroll': { reviews: [{ text: '5-Star Service!', author: 'Customer' }, { text: 'Highly Recommended!', author: 'Client' }] },
+  'review-marquee': { reviews: [{ quote: 'Incredible work, would recommend!', author: 'Happy Customer', rating: 5 }] },
+  // CTA
   'cta-gradient-full': { headline: 'Ready to Get Started?', subtitle: 'Contact us today for a free consultation.', ctaText: 'Contact Us', ctaLink: '#contact' },
   'cta-card': { headline: 'Ready to Get Started?', subtitle: 'We\'re here to help.', ctaText: 'Contact Us', ctaLink: '#contact' },
-  'contact-split': { formTitle: 'Get in Touch', formSubtitle: 'We\'d love to hear from you.', phone: '', email: '', hours: 'Mon–Fri: 8am–6pm', submitText: 'Send Message' },
-  'benefits-numbered': { title: 'Why Choose Us', subtitle: '', benefits: [{ title: 'Benefit 1', description: 'Why this matters to your customers.' }, { title: 'Benefit 2', description: 'Why this matters to your customers.' }] },
-  'gallery-mixed-grid': { title: 'Our Work', items: [] },
-  'split-image-cta': { headline: 'About Us', body: 'Tell your story here.', ctaText: 'Learn More', ctaLink: '#contact', image: '' },
+  // Content
   'content-block': { heading: 'About Us', text: 'Tell your story here.' },
   'media-row': { title: '', items: [{ src: '', caption: '' }, { src: '', caption: '' }] },
+  // Contact
+  'contact-split': { formTitle: 'Get in Touch', formSubtitle: 'We\'d love to hear from you.', phone: '', email: '', hours: 'Mon–Fri: 8am–6pm', submitText: 'Send Message' },
+  // Footer
+  'footer-4col-dark': { logo: '', tagline: 'Your business tagline.', services: [], hours: '', phone: '', email: '' },
+  // Lead Magnets — Full interactive
   'lead-magnet-slider-auto': { headline: "What's Happening to Your Paint?", subheadline: 'Pollen, grime, and UV rays attack your clear coat every day. Move the slider to see the damage.', ctaText: 'Analyze My Paint', submitText: 'Get My Free Assessment', services: 'Full Detail, Paint Correction, Ceramic Coating, Interior Detail, Engine Bay Clean', image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80' },
   'lead-magnet-slider-cleaning': { headline: "What's Hiding in Your Carpet?", subheadline: 'Dust mites, bacteria, and allergens multiply every day. Move the slider to see the contamination.', ctaText: 'Check My Carpet', submitText: 'Get My Free Assessment', services: 'Deep Carpet Clean, Stain Removal, Pet Odor Treatment, Upholstery Cleaning, Move-Out Clean', image: 'https://images.unsplash.com/photo-1558618047-f18c8def4765?w=800&q=80' },
   'lead-magnet-auto-wrap': { headline: 'Design Your Custom Vehicle Wrap', subheadline: 'Answer 4 quick questions to get a personalized wrap estimate.', ctaText: 'Start My Design', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your personalized estimate?' },
   'lead-magnet-cleaning': { headline: 'Get an Instant Cleaning Quote', subheadline: 'Answer 4 quick questions and see your price range in seconds.', ctaText: 'Get My Free Quote', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your quote?' },
   'lead-magnet-landscaping': { headline: 'Get Your Free Landscape Estimate', subheadline: 'Answer 4 quick questions and we\'ll send you a personalized estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
   'lead-magnet-renovation': { headline: 'What Will Your Project Cost?', subheadline: 'Answer 4 quick questions and get a free project estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
+  'lead-magnet-photography': { headline: 'Find Your Perfect Package', subheadline: 'Answer a few questions and we\'ll match you with the right photography package.', ctaText: 'Find My Package', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your recommendation?' },
+  // Lead Magnets — Teasers
+  'lead-magnet-teaser-auto': { badge: 'Free Assessment', headline: 'How healthy is your paint?', subheadline: 'Get a free paint health report in 30 seconds.', ctaText: 'Check My Paint', features: [] },
+  'lead-magnet-teaser-landscaping': { badge: 'Free Estimate', headline: 'What will your project cost?', subheadline: 'Get a personalized landscape estimate in minutes.', ctaText: 'Get My Estimate', features: [] },
+  'lead-magnet-teaser-cleaning': { badge: 'Free Quote', headline: 'How clean is your home really?', subheadline: 'Get an instant cleaning quote in 30 seconds.', ctaText: 'Get My Quote', features: [] },
+  'lead-magnet-teaser-renovation': { badge: 'Free Estimate', headline: 'What will your renovation cost?', subheadline: 'Get a free project estimate in minutes.', ctaText: 'Get My Estimate', features: [] },
 };
 
-// Section template picker options
-const SECTION_TEMPLATES_LIST = [
-  { id: 'hero-fullscreen-dark', name: 'Hero Banner', icon: '🦸', desc: 'Big hero with headline and CTA buttons' },
-  { id: 'features-icon-row', name: 'Features', icon: '⭐', desc: 'Grid of feature highlights with icons' },
-  { id: 'services-cards-3col', name: 'Services', icon: '📦', desc: 'Service cards in a 3-column grid' },
-  { id: 'testimonials-3col', name: 'Testimonials', icon: '💬', desc: 'Customer reviews and ratings' },
-  { id: 'cta-gradient-full', name: 'Call to Action', icon: '🎯', desc: 'Full-width CTA with gradient' },
-  { id: 'cta-card', name: 'CTA Card', icon: '📣', desc: 'Compact call-to-action card' },
-  { id: 'contact-split', name: 'Contact Form', icon: '📩', desc: 'Contact details and lead form' },
-  { id: 'benefits-numbered', name: 'Benefits', icon: '✅', desc: 'Numbered list of key benefits' },
-  { id: 'gallery-mixed-grid', name: 'Photo Gallery', icon: '🖼️', desc: 'Grid of photos / portfolio' },
-  { id: 'split-image-cta', name: 'Image + Text', icon: '🖼️', desc: 'Side-by-side image and text block' },
-  { id: 'media-row', name: 'Media Row', icon: '🎞️', desc: '1–5 images or videos in a horizontal row' },
-  { id: 'content-block', name: 'Text Block', icon: '📝', desc: 'Simple text content block' },
-  { id: 'lead-magnet', name: 'Lead Magnet', icon: '🧲', desc: 'Interactive quiz with lead capture' },
+// Section template picker — organized by category
+const SECTION_CATEGORIES = [
+  {
+    id: 'hero', name: 'Hero Banners', icon: '🎯',
+    templates: [
+      { id: 'hero-fullscreen-dark', name: 'Fullscreen Dark', desc: 'Dark overlay hero with CTA buttons' },
+      { id: 'hero-fullscreen-light', name: 'Fullscreen Light', desc: 'Light, airy hero with soft overlay' },
+      { id: 'hero-gradient', name: 'Gradient Banner', desc: 'Colorful gradient hero with badge' },
+      { id: 'hero-split-portrait', name: 'Split Portrait', desc: 'Image on one side, text on other' },
+      { id: 'hero-page-banner', name: 'Page Banner', desc: 'Compact header for inner pages' },
+      { id: 'hero-cleaning-split', name: 'Cleaning Split', desc: 'Split hero for cleaning businesses' },
+      { id: 'hero-auto-split', name: 'Auto Split', desc: 'Split hero for auto detailing' },
+    ],
+  },
+  {
+    id: 'features', name: 'Features', icon: '✨',
+    templates: [
+      { id: 'features-icon-row', name: 'Icon Row', desc: 'Grid of features with icons' },
+      { id: 'importance-split', name: 'Importance Split', desc: 'Image + text split with highlights' },
+      { id: 'split-image-cta', name: 'Image + Text', desc: 'Side-by-side image and text block' },
+      { id: 'before-after-cards', name: 'Before & After', desc: 'Before/after comparison cards' },
+    ],
+  },
+  {
+    id: 'services', name: 'Services', icon: '📦',
+    templates: [
+      { id: 'services-cards-3col', name: '3-Column Cards', desc: 'Service cards in a grid' },
+      { id: 'services-carousel', name: 'Carousel', desc: 'Swipeable service carousel' },
+    ],
+  },
+  {
+    id: 'benefits', name: 'Benefits', icon: '💎',
+    templates: [
+      { id: 'benefits-numbered', name: 'Numbered List', desc: 'Numbered benefit highlights' },
+      { id: 'benefits-cards', name: 'Benefit Cards', desc: 'Card-style benefits with icons' },
+    ],
+  },
+  {
+    id: 'gallery', name: 'Gallery', icon: '🖼️',
+    templates: [
+      { id: 'gallery-mixed-grid', name: 'Mixed Grid', desc: 'Varied-size photo grid' },
+      { id: 'gallery-filtered', name: 'Filtered Gallery', desc: 'Gallery with category filters' },
+      { id: 'gallery-masonry-full-width', name: 'Masonry Full Width', desc: 'Edge-to-edge masonry layout' },
+    ],
+  },
+  {
+    id: 'testimonials', name: 'Testimonials', icon: '💬',
+    templates: [
+      { id: 'testimonials-3col', name: '3-Column Reviews', desc: 'Customer reviews in columns' },
+    ],
+  },
+  {
+    id: 'trust', name: 'Trust & Reviews', icon: '⭐',
+    templates: [
+      { id: 'trust-banner-scroll', name: 'Scrolling Trust Banner', desc: 'Auto-scrolling review ticker' },
+      { id: 'review-marquee', name: 'Review Marquee', desc: 'Animated review marquee strip' },
+    ],
+  },
+  {
+    id: 'cta', name: 'Call to Action', icon: '📣',
+    templates: [
+      { id: 'cta-gradient-full', name: 'Full Width Gradient', desc: 'Bold full-width CTA block' },
+      { id: 'cta-card', name: 'CTA Card', desc: 'Compact CTA card' },
+    ],
+  },
+  {
+    id: 'content', name: 'Content', icon: '📝',
+    templates: [
+      { id: 'content-block', name: 'Text Block', desc: 'Simple heading + text content' },
+      { id: 'media-row', name: 'Media Row', desc: 'Horizontal row of images/videos' },
+    ],
+  },
+  {
+    id: 'contact', name: 'Contact', icon: '📞',
+    templates: [
+      { id: 'contact-split', name: 'Split Layout', desc: 'Contact info + lead form' },
+    ],
+  },
+  {
+    id: 'footer', name: 'Footer', icon: '📍',
+    templates: [
+      { id: 'footer-4col-dark', name: '4-Column Dark', desc: 'Full footer with links & info' },
+    ],
+  },
+  {
+    id: 'lead-magnet', name: 'Lead Magnets', icon: '🧲',
+    templates: [
+      { id: 'lead-magnet-teaser-auto', name: 'Auto Detailing Teaser', desc: 'CTA block that opens quiz modal' },
+      { id: 'lead-magnet-teaser-landscaping', name: 'Landscaping Teaser', desc: 'CTA block that opens quiz modal' },
+      { id: 'lead-magnet-teaser-cleaning', name: 'Cleaning Teaser', desc: 'CTA block that opens quiz modal' },
+      { id: 'lead-magnet-teaser-renovation', name: 'Renovation Teaser', desc: 'CTA block that opens quiz modal' },
+      { id: 'lead-magnet-slider-auto', name: 'Paint Health Analyzer', desc: 'Interactive slider lead capture' },
+      { id: 'lead-magnet-slider-cleaning', name: 'Carpet Health Analyzer', desc: 'Interactive slider lead capture' },
+      { id: 'lead-magnet-auto-wrap', name: 'Auto Wrap Estimator', desc: 'Multi-step quiz estimator' },
+      { id: 'lead-magnet-cleaning', name: 'Cleaning Estimator', desc: 'Multi-step quiz estimator' },
+      { id: 'lead-magnet-landscaping', name: 'Landscaping Estimator', desc: 'Multi-step quiz estimator' },
+      { id: 'lead-magnet-renovation', name: 'Renovation Estimator', desc: 'Multi-step quiz estimator' },
+      { id: 'lead-magnet-photography', name: 'Photography Finder', desc: 'Multi-step package matcher' },
+    ],
+  },
 ];
 
-const LEAD_MAGNET_SUB_TYPES = [
-  // Slider-based (interactive visualizers — default)
-  { id: 'lead-magnet-slider-auto', name: 'Paint Health Analyzer', icon: '🚗', desc: 'Slider → damage report → service selection' },
-  { id: 'lead-magnet-slider-cleaning', name: 'Carpet Health Analyzer', icon: '🧹', desc: 'Slider → contamination report → service selection' },
-  // Quiz-based (multi-step estimators)
-  { id: 'lead-magnet-auto-wrap', name: 'Auto Quiz Estimator', icon: '🏎️', desc: 'Multi-step vehicle wrap cost quiz' },
-  { id: 'lead-magnet-cleaning', name: 'Cleaning Quiz Estimator', icon: '🧽', desc: 'Multi-step cleaning quote quiz' },
-  { id: 'lead-magnet-landscaping', name: 'Landscaping Estimator', icon: '🌿', desc: 'Multi-step landscape design quiz' },
-  { id: 'lead-magnet-renovation', name: 'Renovation Estimator', icon: '🔨', desc: 'Multi-step renovation project quiz' },
-];
+// Flat list for lookups
+const ALL_SECTION_TEMPLATES = SECTION_CATEGORIES.flatMap(cat => cat.templates.map(t => ({ ...t, category: cat.id, categoryName: cat.name, categoryIcon: cat.icon })));
 
 function getSectionName(template) {
-  const found = SECTION_TEMPLATES_LIST.find(t => t.id === template);
+  const found = ALL_SECTION_TEMPLATES.find(t => t.id === template);
   if (found) return found.name;
   return (template || 'Section').replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 }
 function getSectionIcon(template) {
-  return SECTION_TEMPLATES_LIST.find(t => t.id === template)?.icon || '📄';
+  const found = ALL_SECTION_TEMPLATES.find(t => t.id === template);
+  return found?.categoryIcon || '📄';
 }
 function genId() {
   return Math.random().toString(36).slice(2, 10);
@@ -810,6 +933,40 @@ function FieldInput({ field, value, onChange, sections }) {
     );
   }
 
+  if (field.type === RANGE) {
+    const numVal = value !== undefined && value !== '' ? Number(value) : (field.defaultValue ?? 50);
+    return (
+      <div className="flex items-center gap-3">
+        <input
+          type="range"
+          min={field.min ?? 0}
+          max={field.max ?? 100}
+          step={field.step ?? 1}
+          value={numVal}
+          onChange={e => onChange(Number(e.target.value))}
+          className="flex-1 h-2 accent-amber-500 cursor-pointer"
+        />
+        <span className="text-sm font-semibold text-gray-600 w-12 text-right tabular-nums">
+          {numVal}{field.unit || ''}
+        </span>
+      </div>
+    );
+  }
+
+  if (field.type === SELECT) {
+    return (
+      <select
+        value={value || field.defaultValue || ''}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white"
+      >
+        {(field.options || []).map(opt => (
+          <option key={opt.value} value={opt.value}>{opt.label}</option>
+        ))}
+      </select>
+    );
+  }
+
   if (field.type === URL_FIELD) {
     return <LinkPickerField value={value || ''} onChange={onChange} sections={sections} includePages={true} />;
   }
@@ -978,19 +1135,54 @@ function SectionContentForm({ section, onContentChange, onColorsChange, sections
       {reviewField && (
         <ReviewImportButton onImport={reviews => onContentChange(reviewField.key, reviews)} />
       )}
-      {fields.map(field => (
-        <div key={field.key}>
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-            {field.label}
-          </label>
-          <FieldInput
-            field={field}
-            value={section.content?.[field.key]}
-            sections={sections}
-            onChange={val => onContentChange(field.key, val)}
-          />
-        </div>
-      ))}
+      {fields.map(field => {
+        // Hide link fields when their parent button is hidden
+        if (field.showWhen && !section.content?.[field.showWhen]) return null;
+
+        const isHidden = field.hideable && section.content?.[field.key] === '';
+        const savedText = field.hideable ? (section.content?.['_saved_' + field.key] || '') : '';
+
+        return (
+          <div key={field.key}>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {field.label}
+              </label>
+              {field.hideable && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isHidden) {
+                      // Restore previous text or default
+                      onContentChange(field.key, savedText || field.label);
+                    } else {
+                      // Save current text and hide
+                      onContentChange('_saved_' + field.key, section.content?.[field.key] || '');
+                      onContentChange(field.key, '');
+                    }
+                  }}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded text-xs transition ${isHidden ? 'text-red-400 hover:text-red-600 hover:bg-red-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}`}
+                  title={isHidden ? 'Show button' : 'Hide button'}
+                >
+                  {isHidden ? <><EyeOff className="w-3.5 h-3.5" /> Hidden</> : <Eye className="w-3.5 h-3.5" />}
+                </button>
+              )}
+            </div>
+            {isHidden ? (
+              <div className="px-3 py-2 text-xs text-gray-400 bg-gray-50 border border-gray-200 rounded-lg italic">
+                Button hidden — click the eye icon to show
+              </div>
+            ) : (
+              <FieldInput
+                field={field}
+                value={section.content?.[field.key]}
+                sections={sections}
+                onChange={val => onContentChange(field.key, val)}
+              />
+            )}
+          </div>
+        );
+      })}
       {extraEntries.map(([key, val]) => (
         <div key={key}>
           <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
@@ -1382,7 +1574,7 @@ function SidebarCard({ id, label, icon: Icon, openCard, setOpenCard, badge, chil
 // ============================================
 // MAIN TEMPLATE EDITOR
 // ============================================
-export default function TemplateEditor({ initialSchema, initialHtml, onSave, onBack }) {
+export default function TemplateEditor({ initialSchema, initialHtml, onSave, onSaveDraft, onBack }) {
   const [schema, setSchema] = useState(() => JSON.parse(JSON.stringify(initialSchema || {})));
   const [previewHtml, setPreviewHtml] = useState(() => initialHtml ? injectHighlightScript(initialHtml) : '');
   const iframeRef = useRef(null);
@@ -1392,11 +1584,21 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddSection, setShowAddSection] = useState(false);
   const [insertAfterIdx, setInsertAfterIdx] = useState(null); // null = at end, number = after editable[n], -1 = before first
-  const [leadMagnetPicker, setLeadMagnetPicker] = useState(false); // sub-picker for lead magnet types
+  const [addSectionCategory, setAddSectionCategory] = useState(null); // null = show categories, string = show templates in that category
   const [devicePreview, setDevicePreview] = useState('desktop');
   const [activePage, setActivePage] = useState(0);
   const [pendingDelete, setPendingDelete] = useState(null); // index of section awaiting inline confirm
   const [pendingPageDelete, setPendingPageDelete] = useState(false); // page delete inline confirm
+  const [showBookingEditor, setShowBookingEditor] = useState(false);
+
+  // authFetch wrapper for BookingWidgetEditor (same pattern used elsewhere in this file)
+  const editorAuthFetch = useCallback((url, opts = {}) => {
+    const token = localStorage.getItem('token');
+    return fetch(url, {
+      ...opts,
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, ...(opts.headers || {}) }
+    });
+  }, []);
 
   // Reset section selection and refresh preview when switching pages
   const isFirstPageSwitch = useRef(true);
@@ -1911,6 +2113,19 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
     }
   };
 
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const handleSaveDraft = async () => {
+    if (!onSaveDraft) return;
+    setIsSavingDraft(true);
+    try {
+      await onSaveDraft(schema);
+    } catch (err) {
+      alert('Draft save failed: ' + err.message);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
   // Canvas widths for device preview
   const canvasWidth = devicePreview === 'mobile' ? '390px' : devicePreview === 'tablet' ? '768px' : '100%';
 
@@ -1956,6 +2171,16 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
             <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
           </button>
+          {onSaveDraft && (
+            <button
+              onClick={handleSaveDraft}
+              disabled={isSavingDraft}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-700 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition disabled:opacity-60"
+            >
+              <Save className="w-4 h-4" />
+              {isSavingDraft ? 'Saving...' : 'Save Draft'}
+            </button>
+          )}
           <button
             onClick={handleSave}
             disabled={isSaving}
@@ -2006,7 +2231,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                       <div className="flex items-center gap-1.5">
                         <input
                           type="text"
-                          value={getPageNavName(page)}
+                          value={page.name || ''}
                           onChange={e => { updatePageName(activePage, e.target.value); setPendingPageDelete(false); }}
                           className="flex-1 px-2 py-1 text-xs font-semibold text-gray-800 border border-gray-200 rounded-md focus:outline-none focus:border-amber-400 bg-white min-w-0"
                           placeholder="Page name"
@@ -2055,6 +2280,17 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
               );
             })()}
 
+            {/* Configure Online Booking */}
+            <div className="px-3 py-2.5 border-b border-gray-200">
+              <button
+                onClick={() => setShowBookingEditor(true)}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-sm font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition"
+              >
+                <CalendarCheck className="w-4 h-4" />
+                Configure Online Booking
+              </button>
+            </div>
+
             {/* Navigation */}
             <SidebarCard id="nav" label="Navigation" icon={Navigation} openCard={openCard} setOpenCard={setOpenCard}>
               <NavContentForm navSection={navSection} onChange={updateNav} onColorsChange={updateNavColors} sections={editableSections} />
@@ -2071,7 +2307,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                         {i === 0 && (
                           <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
                             <button
-                              onClick={() => { setInsertAfterIdx(-1); setShowAddSection(true); setLeadMagnetPicker(false); }}
+                              onClick={() => { setInsertAfterIdx(-1); setShowAddSection(true); setAddSectionCategory(null); }}
                               className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
                               title="Insert section here"
                             >
@@ -2120,7 +2356,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                         {/* Insert-here button after this section */}
                         <div className="flex justify-center py-0.5 opacity-0 hover:opacity-100 transition-opacity">
                           <button
-                            onClick={() => { setInsertAfterIdx(i); setShowAddSection(true); setLeadMagnetPicker(false); }}
+                            onClick={() => { setInsertAfterIdx(i); setShowAddSection(true); setAddSectionCategory(null); }}
                             className="flex items-center gap-1 px-2 py-0.5 text-xs text-amber-500 hover:text-amber-700 hover:bg-amber-50 rounded-full transition"
                             title="Insert section here"
                           >
@@ -2133,7 +2369,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
 
                   {!showAddSection ? (
                     <div className="p-3 border-t border-gray-100">
-                      <button onClick={() => { setInsertAfterIdx(null); setShowAddSection(true); setLeadMagnetPicker(false); }}
+                      <button onClick={() => { setInsertAfterIdx(null); setShowAddSection(true); setAddSectionCategory(null); }}
                         className="w-full flex items-center justify-center gap-2 py-2.5 text-sm text-amber-600 border border-dashed border-amber-300 rounded-xl hover:bg-amber-50 transition font-semibold">
                         <Plus className="w-4 h-4" /> Add Section
                       </button>
@@ -2142,43 +2378,47 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
                     <div className="p-3 border-t border-gray-100 space-y-2">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                          {leadMagnetPicker ? 'Choose Lead Magnet Type' : (insertAfterIdx !== null && insertAfterIdx >= 0 ? `Insert after ${getSectionName(editableSections[insertAfterIdx]?.template || '')}` : insertAfterIdx === -1 ? 'Insert at top' : 'Choose Section Type')}
+                          {addSectionCategory
+                            ? SECTION_CATEGORIES.find(c => c.id === addSectionCategory)?.name || 'Templates'
+                            : (insertAfterIdx !== null && insertAfterIdx >= 0
+                              ? `Insert after ${getSectionName(editableSections[insertAfterIdx]?.template || '')}`
+                              : insertAfterIdx === -1 ? 'Insert at top' : 'Choose Category')}
                         </span>
-                        <button onClick={() => { if (leadMagnetPicker) { setLeadMagnetPicker(false); } else { setShowAddSection(false); setInsertAfterIdx(null); } }} className="text-xs text-gray-400 hover:text-gray-600">
-                          {leadMagnetPicker ? '← Back' : 'Cancel'}
+                        <button onClick={() => {
+                          if (addSectionCategory) { setAddSectionCategory(null); }
+                          else { setShowAddSection(false); setInsertAfterIdx(null); }
+                        }} className="text-xs text-gray-400 hover:text-gray-600">
+                          {addSectionCategory ? '← Back' : 'Cancel'}
                         </button>
                       </div>
-                      {leadMagnetPicker ? (
+                      {addSectionCategory ? (
+                        /* Templates within selected category */
                         <div className="grid grid-cols-2 gap-2">
-                          {LEAD_MAGNET_SUB_TYPES.map(sub => (
+                          {(SECTION_CATEGORIES.find(c => c.id === addSectionCategory)?.templates || []).map(tmpl => (
                             <button
-                              key={sub.id}
-                              onClick={() => addSection(sub.id)}
+                              key={tmpl.id}
+                              onClick={() => addSection(tmpl.id)}
                               className="flex flex-col items-start gap-1 p-3 border border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition text-left bg-white"
                             >
-                              <span className="text-2xl">{sub.icon}</span>
-                              <span className="text-xs font-semibold text-gray-700 leading-tight">{sub.name}</span>
-                              <span className="text-xs text-gray-400 leading-tight">{sub.desc}</span>
+                              <span className="text-xs font-semibold text-gray-700 leading-tight">{tmpl.name}</span>
+                              <span className="text-xs text-gray-400 leading-tight">{tmpl.desc}</span>
                             </button>
                           ))}
                         </div>
                       ) : (
+                        /* Category grid */
                         <div className="grid grid-cols-2 gap-2">
-                          {SECTION_TEMPLATES_LIST.map(tmpl => (
+                          {SECTION_CATEGORIES.map(cat => (
                             <button
-                              key={tmpl.id}
-                              onClick={() => {
-                                if (tmpl.id === 'lead-magnet') {
-                                  setLeadMagnetPicker(true);
-                                } else {
-                                  addSection(tmpl.id);
-                                }
-                              }}
-                              className="flex flex-col items-start gap-1 p-3 border border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition text-left bg-white"
+                              key={cat.id}
+                              onClick={() => setAddSectionCategory(cat.id)}
+                              className="flex items-center gap-2 p-3 border border-gray-200 rounded-xl hover:border-amber-400 hover:bg-amber-50 transition text-left bg-white"
                             >
-                              <span className="text-2xl">{tmpl.icon}</span>
-                              <span className="text-xs font-semibold text-gray-700 leading-tight">{tmpl.name}</span>
-                              <span className="text-xs text-gray-400 leading-tight">{tmpl.desc}</span>
+                              <span className="text-xl">{cat.icon}</span>
+                              <div>
+                                <span className="text-xs font-semibold text-gray-700 block leading-tight">{cat.name}</span>
+                                <span className="text-xs text-gray-400">{cat.templates.length} template{cat.templates.length !== 1 ? 's' : ''}</span>
+                              </div>
                             </button>
                           ))}
                         </div>
@@ -2279,6 +2519,15 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onB
           </div>
         </div>
       </div>
+
+      {/* Booking Widget Editor Slide-over */}
+      {showBookingEditor && (
+        <BookingWidgetEditor
+          apiUrl={API_URL}
+          authFetch={editorAuthFetch}
+          onClose={() => setShowBookingEditor(false)}
+        />
+      )}
     </div>
   );
 }

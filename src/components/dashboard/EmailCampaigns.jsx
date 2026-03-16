@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Mail, Send, Calendar, Clock, CheckCircle, AlertCircle, Loader, Sparkles, BookmarkPlus, ChevronDown, Trash2, BookOpen, FlaskConical, FileText } from 'lucide-react';
+import { Mail, Send, Calendar, Clock, CheckCircle, AlertCircle, Loader, Sparkles, BookmarkPlus, ChevronDown, Trash2, BookOpen, FlaskConical, FileText, Shield } from 'lucide-react';
 import EmailBlockEditor from './email/EmailBlockEditor';
 import { emailBlocksToHtml } from '../../utils/emailBlocks';
 
@@ -149,13 +149,43 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
   const [editedPreviewText, setEditedPreviewText] = useState('');
   const [editedBodyText, setEditedBodyText] = useState('');
   const [toast, setToast] = useState(null);
+  const [sgStatus, setSgStatus] = useState('loading');
+  const [sgLoading, setSgLoading] = useState(false);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
   };
 
+  const handleSendGridVerify = async () => {
+    setSgLoading(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/user/sendgrid/verify`, { method: 'POST' });
+      const data = await res.json();
+      if (data.status === 'pending') {
+        setSgStatus('pending');
+        showToast('Verification email sent! Check your inbox.');
+      } else {
+        showToast(data.error || 'Verification failed', 'error');
+      }
+    } catch { showToast('Failed to send verification', 'error'); }
+    setSgLoading(false);
+  };
+
+  const handleCheckSgStatus = async () => {
+    setSgLoading(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/user/sendgrid/status`);
+      const data = await res.json();
+      setSgStatus(data.status);
+      if (data.status === 'verified') showToast('Email verified!');
+      else if (data.status === 'pending') showToast('Still pending — check your inbox');
+    } catch {}
+    setSgLoading(false);
+  };
+
   useEffect(() => {
+    authFetch(`${apiUrl}/api/user/sendgrid/status`).then(r => r.json()).then(d => setSgStatus(d.status)).catch(() => setSgStatus('unknown'));
     Promise.all([
       authFetch(`${apiUrl}/api/email-campaigns/config`).then(r => r.json()),
       authFetch(`${apiUrl}/api/email-campaigns/history`).then(r => r.json()),
@@ -421,6 +451,32 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                   placeholder="hello@business.com"
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" />
               </div>
+            </div>
+            {/* SendGrid email verification status */}
+            <div className="mb-3">
+              {sgStatus === 'verified' ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span className="text-green-700 text-xs font-semibold">Email verified</span>
+                  <span className="text-xs text-green-500 ml-auto">Campaigns will send from your business email</span>
+                </div>
+              ) : sgStatus === 'pending' ? (
+                <button onClick={handleCheckSgStatus} disabled={sgLoading} className="w-full flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-xs font-semibold hover:bg-amber-100 transition disabled:opacity-50">
+                  <Mail className="w-4 h-4" />
+                  <span>{sgLoading ? 'Checking...' : 'Verification pending — click to re-check'}</span>
+                </button>
+              ) : sgStatus !== 'unconfigured' && sgStatus !== 'loading' ? (
+                <button onClick={handleSendGridVerify} disabled={sgLoading} className="w-full flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-xs font-semibold hover:bg-blue-100 transition disabled:opacity-50">
+                  <Mail className="w-4 h-4" />
+                  <span>{sgLoading ? 'Sending...' : 'Verify your email to send campaigns from your address'}</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  <span className="text-gray-400 text-xs">{sgStatus === 'loading' ? 'Loading...' : 'Email verification not available'}</span>
+                </div>
+              )}
+              <p className="text-xs text-gray-400 mt-1">Verify your email so campaigns are sent from your business address instead of a generic sender. This improves deliverability and trust.</p>
             </div>
             <div className="grid grid-cols-2 gap-2 mb-3">
               <div>

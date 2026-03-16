@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2 } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer } from 'lucide-react';
 
 function TimeInput({ value, onChange, className }) {
   const toDisplay = (hhmm) => {
@@ -98,14 +98,70 @@ export default function BusinessInformation({
   const centerMarkerRef = useRef(null);
   const [leafletReady, setLeafletReady] = useState(!!window.L);
 
+  // SendGrid verification state
+  const [sgStatus, setSgStatus] = useState('loading'); // loading, not_setup, pending, verified, unconfigured
+  const [sgLoading, setSgLoading] = useState(false);
+
+  useEffect(() => {
+    authFetch(`${apiUrl}/api/user/sendgrid/status`).then(r => r.json()).then(d => setSgStatus(d.status)).catch(() => setSgStatus('unknown'));
+  }, [apiUrl, authFetch]);
+
+  const handleSendGridVerify = async () => {
+    if (!businessInfo.email) return alert('Enter a business email first');
+    setSgLoading(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/user/sendgrid/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: businessInfo.email, businessName: businessInfo.businessName || user?.business_name })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSgStatus(data.status);
+        alert(data.message);
+      } else {
+        alert(data.error || 'Verification failed');
+      }
+    } catch { alert('Failed to send verification'); }
+    setSgLoading(false);
+  };
+
+  const handleCheckSgStatus = async () => {
+    setSgLoading(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/user/sendgrid/status`);
+      const data = await res.json();
+      setSgStatus(data.status);
+      if (data.status === 'verified') alert('Email verified!');
+      else if (data.status === 'pending') alert('Still pending — check your email for the verification link');
+    } catch {}
+    setSgLoading(false);
+  };
+
   // Services State
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState(null);
-  const [serviceForm, setServiceForm] = useState({ 
-    name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: ''
+  const [serviceForm, setServiceForm] = useState({
+    name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '',
+    categoryId: '', bufferMinutes: '', isAddon: false
   });
   const [isSavingService, setIsSavingService] = useState(false);
   const [saveError, setSaveError] = useState('');
+  const [serviceSubTab, setServiceSubTab] = useState('categories');
+
+  // Categories State
+  const [categories, setCategories] = useState([]);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
+  const [categoryForm, setCategoryForm] = useState({ name: '', description: '', imageUrl: '' });
+  const [editingCategory, setEditingCategory] = useState(null);
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+
+  // Addons State
+  const [showAddonsModal, setShowAddonsModal] = useState(false);
+  const [addonsService, setAddonsService] = useState(null);
+  const [addonSelections, setAddonSelections] = useState([]);
+  const [isSavingAddons, setIsSavingAddons] = useState(false);
 
   // Team State
   const colorPalette = [
@@ -242,6 +298,9 @@ export default function BusinessInformation({
   useEffect(() => {
     if (activeTab === 'app-settings') {
       fetchStatusTemplates();
+    }
+    if (activeTab === 'services') {
+      fetchCategories();
     }
   }, [activeTab]);
 
@@ -599,6 +658,86 @@ export default function BusinessInformation({
   };
 
 
+  // Category Functions
+  const fetchCategories = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/service-categories`);
+      if (res.ok) {
+        const data = await res.json();
+        setCategories(data.categories || []);
+      }
+    } catch (err) { console.error('Error fetching categories:', err); }
+  };
+
+  const handleSaveCategory = async (e) => {
+    e.preventDefault();
+    if (!categoryForm.name.trim()) return;
+    setIsSavingCategory(true);
+    try {
+      const url = editingCategory
+        ? `${apiUrl}/api/service-categories/${editingCategory.id}`
+        : `${apiUrl}/api/service-categories`;
+      const res = await authFetch(url, {
+        method: editingCategory ? 'PUT' : 'POST',
+        body: JSON.stringify(categoryForm)
+      });
+      if (!res.ok) throw new Error('Failed to save category');
+      setCategoryForm({ name: '', description: '', imageUrl: '' });
+      setEditingCategory(null);
+      fetchCategories();
+    } catch (err) {
+      console.error('Error saving category:', err);
+      alert('Failed to save category');
+    } finally { setIsSavingCategory(false); }
+  };
+
+  const handleCategoryImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setCategoryForm(prev => ({ ...prev, imageUrl: reader.result }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDeleteCategory = async (id) => {
+    if (!confirm('Delete this category? Services in it will become uncategorized.')) return;
+    try {
+      await authFetch(`${apiUrl}/api/service-categories/${id}`, { method: 'DELETE' });
+      fetchCategories();
+    } catch (err) { console.error('Error deleting category:', err); }
+  };
+
+  // Addon Functions
+  const openAddonsModal = async (service) => {
+    setAddonsService(service);
+    try {
+      const res = await authFetch(`${apiUrl}/api/services/${service.id}/addons`);
+      if (res.ok) {
+        const data = await res.json();
+        setAddonSelections((data.addons || []).map(a => a.id));
+      }
+    } catch (err) { console.error(err); setAddonSelections([]); }
+    setShowAddonsModal(true);
+  };
+
+  const handleSaveAddons = async () => {
+    if (!addonsService) return;
+    setIsSavingAddons(true);
+    try {
+      await authFetch(`${apiUrl}/api/services/${addonsService.id}/addons`, {
+        method: 'PUT',
+        body: JSON.stringify({ addonServiceIds: addonSelections })
+      });
+      setShowAddonsModal(false);
+      setAddonsService(null);
+    } catch (err) {
+      console.error('Error saving addons:', err);
+      alert('Failed to save add-ons');
+    } finally { setIsSavingAddons(false); }
+  };
+
   // Services Functions
   const handleMediaUpload = (e) => {
     const file = e.target.files[0];
@@ -628,14 +767,17 @@ export default function BusinessInformation({
           durationHours: parseFloat(serviceForm.durationHours),
           price: parseFloat(serviceForm.price),
           mediaUrl: serviceForm.mediaUrl,
-          mediaType: serviceForm.mediaType
+          mediaType: serviceForm.mediaType,
+          categoryId: serviceForm.categoryId ? parseInt(serviceForm.categoryId) : null,
+          bufferMinutes: serviceForm.bufferMinutes ? parseInt(serviceForm.bufferMinutes) : 0,
+          isAddon: serviceForm.isAddon
         })
       });
 
       if (!response.ok) throw new Error('Failed to save service');
       setShowAddService(false);
       setEditingService(null);
-      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '' });
+      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
       fetchServices();
     } catch (error) {
       setSaveError(error.message);
@@ -652,20 +794,25 @@ export default function BusinessInformation({
       durationHours: service.duration_hours,
       price: service.price,
       mediaUrl: service.media_url || '',
-      mediaType: service.media_type || ''
+      mediaType: service.media_type || '',
+      categoryId: service.category_id || '',
+      bufferMinutes: service.buffer_minutes || '',
+      isAddon: service.is_addon || false
     });
+    setServiceSubTab(service.is_addon ? 'addons' : 'main');
     setShowAddService(true);
   };
 
-  const handleToggleService = async (id, active) => {
+  const handleDeleteService = async (id) => {
+    if (!confirm('Are you sure you want to delete this service? This cannot be undone.')) return;
     try {
       await authFetch(`${apiUrl}/api/services/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ active })
+        body: JSON.stringify({ active: false })
       });
       fetchServices();
     } catch (error) {
-      console.error('Error toggling service:', error);
+      console.error('Error deleting service:', error);
     }
   };
 
@@ -822,33 +969,64 @@ export default function BusinessInformation({
               <Phone className="w-5 h-5 text-blue-600" />
               Contact Information
             </h3>
+            {/* Phone row — half input, half assigned number */}
             <div className="grid md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Business Phone Number</label>
                 <input type="tel" value={businessInfo.phone} onChange={(e) => setBusinessInfo({ ...businessInfo, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Assigned SMS Number</label>
+                {(user?.telnyx_phone_number || user?.twilio_phone_number) ? (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+                    <Smartphone className="w-4 h-4 text-blue-500" />
+                    <span className="text-blue-800 font-mono text-sm font-medium">{user?.telnyx_phone_number || user?.twilio_phone_number}</span>
+                    <span className="text-xs text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full ml-auto">{user?.telnyx_phone_number ? 'Telnyx' : 'Twilio'}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                    <Smartphone className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-400 text-sm">No SMS number assigned</span>
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1.5">This is your dedicated number for sending automated SMS messages to leads and customers. It gets assigned when SMS is activated for your account.</p>
+              </div>
+            </div>
+
+            {/* Email row — half input, half sendgrid setup */}
+            <div className="grid md:grid-cols-2 gap-4 mt-4">
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Business Email</label>
                 <input type="email" value={businessInfo.email} onChange={(e) => setBusinessInfo({ ...businessInfo, email: e.target.value })} placeholder="contact@business.com" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
               </div>
-            </div>
-            {(user?.telnyx_phone_number || user?.twilio_phone_number) && (
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
-                  <Smartphone className="w-4 h-4 text-blue-500" />
-                  Assigned Business Phone Number
-                </label>
-                <div className="flex items-center gap-3 px-4 py-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <span className="text-blue-800 font-mono font-medium text-sm">
-                    {user?.telnyx_phone_number || user?.twilio_phone_number}
-                  </span>
-                  <span className="text-xs text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full">
-                    {user?.telnyx_phone_number ? 'Telnyx' : 'Twilio'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-1.5">This is the number used for SMS notifications and lead follow-ups.</p>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Email Confirmations</label>
+                {sgStatus === 'verified' ? (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                    <Shield className="w-4 h-4 text-green-600" />
+                    <span className="text-green-700 text-sm font-semibold">Verified</span>
+                    <span className="text-xs text-green-500 ml-auto">Booking emails sent from your address</span>
+                  </div>
+                ) : sgStatus === 'pending' ? (
+                  <button onClick={handleCheckSgStatus} disabled={sgLoading} className="w-full flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm font-semibold hover:bg-amber-100 transition disabled:opacity-50">
+                    <Mail className="w-4 h-4" />
+                    <span>{sgLoading ? 'Checking...' : 'Verification pending'}</span>
+                    <span className="text-xs text-amber-500 ml-auto">Click to re-check</span>
+                  </button>
+                ) : sgStatus !== 'unconfigured' && sgStatus !== 'loading' ? (
+                  <button onClick={handleSendGridVerify} disabled={sgLoading} className="w-full flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm font-semibold hover:bg-blue-100 transition disabled:opacity-50">
+                    <Mail className="w-4 h-4" />
+                    <span>{sgLoading ? 'Sending...' : 'Setup Email Confirmations'}</span>
+                  </button>
+                ) : (
+                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
+                    <Mail className="w-4 h-4 text-gray-400" />
+                    <span className="text-gray-400 text-sm">{sgStatus === 'loading' ? 'Loading...' : 'Not available'}</span>
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1.5">Verify your email so booking confirmations are sent directly from your business email address instead of a generic sender. This builds trust with your customers.</p>
               </div>
-            )}
+            </div>
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -1093,89 +1271,473 @@ export default function BusinessInformation({
       {/* Services Tab */}
       {activeTab === 'services' && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Services</h2>
-              <p className="text-gray-600 mt-1">Manage your service offerings</p>
-            </div>
-            <div className="flex gap-3">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Services</h2>
+            <p className="text-gray-600 mt-1">Manage your service offerings</p>
+          </div>
+
+          <div className="flex gap-6">
+          {/* Left side — Management */}
+          <div className="flex-1 min-w-0 space-y-6">
+
+          {/* Categories / Main Services / Add-ons Sub-tabs */}
+          <div className="flex border-b border-gray-200">
+            <button
+              type="button"
+              onClick={() => setServiceSubTab('categories')}
+              className={`px-6 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                serviceSubTab === 'categories'
+                  ? 'border-blue-500 text-blue-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Categories
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                serviceSubTab === 'categories' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {categories.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setServiceSubTab('main')}
+              className={`px-6 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                serviceSubTab === 'main'
+                  ? 'border-amber-500 text-amber-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Main Services
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                serviceSubTab === 'main' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {services.filter(s => !s.is_addon).length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setServiceSubTab('addons')}
+              className={`px-6 py-3 text-sm font-semibold border-b-2 transition-colors ${
+                serviceSubTab === 'addons'
+                  ? 'border-violet-500 text-violet-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Add-ons / Upsells
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                serviceSubTab === 'addons' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'
+              }`}>
+                {services.filter(s => s.is_addon).length}
+              </span>
+            </button>
+          </div>
+
+          {/* Add button below tabs */}
+          {serviceSubTab !== 'categories' && (
+            <div className="flex justify-start">
               <button
                 type="button"
-                onClick={() => setShowAddService(true)}
+                onClick={() => {
+                  setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: serviceSubTab === 'addons' });
+                  setEditingService(null);
+                  setShowAddService(true);
+                }}
                 className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
               >
                 <Plus className="w-5 h-5" />
-                Add Service
+                {serviceSubTab === 'addons' ? 'Add Add-on' : 'Add Service'}
               </button>
             </div>
-          </div>
+          )}
 
-          {services.length === 0 ? (
-            <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
-              <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No services yet</h3>
-              <p className="text-gray-600 mb-6">Add your first service to get started</p>
-              <button
-                type="button"
-                onClick={() => setShowAddService(true)}
-                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
-              >
-                Create First Service
-              </button>
-            </div>
-          ) : (
-            <div className="grid gap-4">
-              {services.map((service) => (
-                <div key={service.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                  <div className="flex gap-6">
-                    {service.media_url && (
-                      <div className="flex-shrink-0">
-                        {service.media_type === 'image' ? (
-                          <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
-                        ) : (
-                          <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
-                        )}
-                      </div>
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                          service.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
-                        }`}>
-                          {service.active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
-                      <div className="flex gap-6 text-sm">
-                        <div className="flex items-center gap-2 text-gray-700">
-                          <Clock className="w-4 h-4" />
-                          <span>{service.duration_hours} {service.duration_hours === 1 ? 'hour' : 'hours'}</span>
+          {/* Category Manager */}
+          {serviceSubTab === 'categories' && (
+            <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <FolderOpen className="w-5 h-5 text-amber-600" />
+                  Service Categories
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingCategory(null);
+                    setCategoryForm({ name: '', description: '', imageUrl: '' });
+                    setShowCategoryModal(true);
+                  }}
+                  className="px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition-colors text-sm flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  Add Category
+                </button>
+              </div>
+              {categories.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-8">No categories yet. Add one to organize your services for online booking.</p>
+              ) : (
+                <div className="grid gap-3">
+                  {categories.map(cat => (
+                    <div key={cat.id} className="flex items-center gap-4 p-4 bg-gray-50 rounded-xl border border-gray-100">
+                      {cat.image_url ? (
+                        <img src={cat.image_url} alt={cat.name} className="w-16 h-16 rounded-lg object-cover flex-shrink-0" />
+                      ) : (
+                        <div className="w-16 h-16 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0">
+                          <FolderOpen className="w-6 h-6 text-gray-400" />
                         </div>
-                        <div className="flex items-center gap-2 text-gray-700 font-semibold">
-                          <span className="text-green-600">${service.price}</span>
-                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <span className="font-semibold text-gray-900">{cat.name}</span>
+                        {cat.description && <p className="text-sm text-gray-500 mt-0.5">{cat.description}</p>}
+                        <p className="text-xs text-gray-400 mt-1">
+                          {services.filter(s => s.category_id === cat.id && !s.is_addon).length} services
+                        </p>
+                      </div>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setEditingCategory(cat);
+                            setCategoryForm({ name: cat.name, description: cat.description || '', imageUrl: cat.image_url || '' });
+                            setShowCategoryModal(true);
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          title="Edit category"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCategory(cat.id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete category"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
                       </div>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEditService(service)}
-                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        <Edit className="w-5 h-5" />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleService(service.id, !service.active)}
-                        className="px-4 py-2 text-gray-600 hover:bg-gray-50 rounded-lg transition-colors text-sm font-medium"
-                      >
-                        {service.active ? 'Deactivate' : 'Activate'}
-                      </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Category Add/Edit Modal */}
+          {showCategoryModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  {editingCategory ? 'Edit Category' : 'Add New Category'}
+                </h2>
+                <form onSubmit={(e) => { handleSaveCategory(e); setShowCategoryModal(false); }} className="space-y-5">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category Name *</label>
+                    <input
+                      type="text"
+                      value={categoryForm.name}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })}
+                      placeholder="e.g., Interior Detailing, Lawn Maintenance"
+                      required
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Description</label>
+                    <textarea
+                      value={categoryForm.description}
+                      onChange={(e) => setCategoryForm({ ...categoryForm, description: e.target.value })}
+                      placeholder="Brief description of this category..."
+                      rows={2}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Category Image *</label>
+                    <p className="text-xs text-gray-500 mb-3">This image is shown in the online booking flow when customers select a category.</p>
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                      {categoryForm.imageUrl ? (
+                        <div className="space-y-4">
+                          <img src={categoryForm.imageUrl} alt="Preview" className="max-h-48 mx-auto rounded-lg object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setCategoryForm({ ...categoryForm, imageUrl: '' })}
+                            className="text-red-600 hover:text-red-700 text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ) : (
+                        <div>
+                          <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                          <label className="cursor-pointer">
+                            <span className="text-amber-600 hover:text-amber-700 font-medium">Upload an image</span>
+                            <input type="file" accept="image/*" onChange={handleCategoryImageUpload} className="hidden" />
+                          </label>
+                          <p className="text-xs text-gray-500 mt-2">PNG, JPG up to 10MB</p>
+                        </div>
+                      )}
                     </div>
                   </div>
+                  <div className="flex gap-4 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCategoryModal(false);
+                        setEditingCategory(null);
+                        setCategoryForm({ name: '', description: '', imageUrl: '' });
+                      }}
+                      className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSavingCategory || !categoryForm.imageUrl}
+                      className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                    >
+                      {isSavingCategory ? 'Saving...' : (editingCategory ? 'Update Category' : 'Create Category')}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* Main Services Sub-tab */}
+          {serviceSubTab === 'main' && (
+            <>
+              {services.filter(s => !s.is_addon).length === 0 ? (
+                <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
+                  <Briefcase className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No main services yet</h3>
+                  <p className="text-gray-600 mb-6">Add your first service to get started</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
+                      setShowAddService(true);
+                    }}
+                    className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                  >
+                    Create First Service
+                  </button>
                 </div>
-              ))}
+              ) : (
+                <div className="grid gap-4">
+                  {services.filter(s => !s.is_addon).map((service) => (
+                    <div key={service.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+                      <div className="flex gap-6">
+                        {service.media_url && (
+                          <div className="flex-shrink-0">
+                            {service.media_type === 'image' ? (
+                              <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
+                            ) : (
+                              <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
+                            )}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
+                            <button
+                              type="button"
+                              onClick={() => handleEditService(service)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            {service.category_id && categories.find(c => c.id === service.category_id) && (
+                              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                                {categories.find(c => c.id === service.category_id).name}
+                              </span>
+                            )}
+                          </div>
+                          {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
+                          <div className="flex gap-6 text-sm flex-wrap">
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <Clock className="w-4 h-4" />
+                              <span>{service.duration_hours} {service.duration_hours === 1 ? 'hour' : 'hours'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-700 font-semibold">
+                              <span className="text-green-600">${service.price}</span>
+                            </div>
+                            {service.buffer_minutes > 0 && (
+                              <div className="flex items-center gap-2 text-gray-500">
+                                <Timer className="w-4 h-4" />
+                                <span>{service.buffer_minutes}min buffer</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Linked add-ons preview */}
+                          {services.filter(s => s.is_addon).length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => openAddonsModal(service)}
+                              className="mt-3 text-sm text-violet-600 hover:text-violet-800 font-medium flex items-center gap-1.5"
+                            >
+                              <Link className="w-3.5 h-3.5" />
+                              Configure add-ons for this service
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteService(service.id)}
+                            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Service
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Add-ons Sub-tab */}
+          {serviceSubTab === 'addons' && (
+            <>
+              <div className="bg-violet-50 border border-violet-200 rounded-xl p-4 flex items-start gap-3">
+                <div className="text-violet-600 mt-0.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <p className="text-sm text-violet-800">
+                  Add-on services are upsells offered to customers during online booking after they select a main service. Go to a main service and click "Configure add-ons" to link them.
+                </p>
+              </div>
+              {services.filter(s => s.is_addon).length === 0 ? (
+                <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
+                  <Plus className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No add-on services yet</h3>
+                  <p className="text-gray-600 mb-6">Create add-on services that can be upsold with your main services</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: true });
+                      setShowAddService(true);
+                    }}
+                    className="bg-gradient-to-r from-violet-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
+                  >
+                    Create First Add-on
+                  </button>
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {services.filter(s => s.is_addon).map((service) => (
+                    <div key={service.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 border-l-4 border-l-violet-400 hover:shadow-md transition-shadow">
+                      <div className="flex gap-6">
+                        {service.media_url && (
+                          <div className="flex-shrink-0">
+                            {service.media_type === 'image' ? (
+                              <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
+                            ) : (
+                              <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
+                            )}
+                          </div>
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2 flex-wrap">
+                            <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
+                            <button
+                              type="button"
+                              onClick={() => handleEditService(service)}
+                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                              title="Edit"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">Add-on</span>
+                          </div>
+                          {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
+                          <div className="flex gap-6 text-sm flex-wrap">
+                            <div className="flex items-center gap-2 text-gray-700">
+                              <Clock className="w-4 h-4" />
+                              <span>{service.duration_hours} {service.duration_hours === 1 ? 'hour' : 'hours'}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-700 font-semibold">
+                              <span className="text-green-600">${service.price}</span>
+                            </div>
+                            {service.buffer_minutes > 0 && (
+                              <div className="flex items-center gap-2 text-gray-500">
+                                <Timer className="w-4 h-4" />
+                                <span>{service.buffer_minutes}min buffer</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteService(service.id)}
+                            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Service
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Addons Configuration Modal */}
+          {showAddonsModal && addonsService && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 max-h-[90vh] overflow-y-auto">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Configure Add-ons for "{addonsService.name}"
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">Select which services should be offered as add-ons when a customer books this service.</p>
+                <div className="space-y-2 mb-6">
+                  {services.filter(s => s.id !== addonsService.id && s.is_addon).length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-6">No add-on services available. Mark a service as "Add-on" first.</p>
+                  ) : (
+                    services.filter(s => s.id !== addonsService.id && s.is_addon).map(s => (
+                      <label key={s.id} className={`flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer transition-colors ${
+                        addonSelections.includes(s.id) ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:border-gray-300'
+                      }`}>
+                        <input
+                          type="checkbox"
+                          checked={addonSelections.includes(s.id)}
+                          onChange={(e) => {
+                            setAddonSelections(prev =>
+                              e.target.checked ? [...prev, s.id] : prev.filter(id => id !== s.id)
+                            );
+                          }}
+                          className="w-5 h-5 rounded border-gray-300 text-violet-600 focus:ring-violet-500"
+                        />
+                        <div className="flex-1">
+                          <span className="font-semibold text-gray-900">{s.name}</span>
+                          <span className="text-green-600 ml-2 text-sm">${s.price}</span>
+                        </div>
+                      </label>
+                    ))
+                  )}
+                </div>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddonsModal(false); setAddonsService(null); }}
+                    className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleSaveAddons}
+                    disabled={isSavingAddons}
+                    className="flex-1 bg-gradient-to-r from-violet-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50"
+                  >
+                    {isSavingAddons ? 'Saving...' : 'Save Add-ons'}
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -1235,6 +1797,52 @@ export default function BusinessInformation({
                       />
                     </div>
                   </div>
+                  {/* Category + Buffer Time */}
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Category</label>
+                      <select
+                        value={serviceForm.categoryId}
+                        onChange={(e) => setServiceForm({ ...serviceForm, categoryId: e.target.value })}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none bg-white"
+                      >
+                        <option value="">Uncategorized</option>
+                        {categories.map(cat => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Buffer Time (minutes)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="15"
+                        value={serviceForm.bufferMinutes}
+                        onChange={(e) => setServiceForm({ ...serviceForm, bufferMinutes: e.target.value })}
+                        placeholder="0"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Break time after this service before next booking</p>
+                    </div>
+                  </div>
+
+                  {/* Service Type Indicator */}
+                  <div className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
+                    serviceForm.isAddon ? 'border-violet-200 bg-violet-50' : 'border-amber-200 bg-amber-50'
+                  }`}>
+                    <div className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      serviceForm.isAddon ? 'bg-violet-200 text-violet-800' : 'bg-amber-200 text-amber-800'
+                    }`}>
+                      {serviceForm.isAddon ? 'ADD-ON' : 'MAIN SERVICE'}
+                    </div>
+                    <p className="text-xs text-gray-600">
+                      {serviceForm.isAddon
+                        ? 'This will appear as an upsell option when linked to a main service'
+                        : 'This will appear in the booking flow for customers to select'}
+                    </p>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Service Image/Video (Optional)</label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
@@ -1274,7 +1882,7 @@ export default function BusinessInformation({
                       onClick={() => {
                         setShowAddService(false);
                         setEditingService(null);
-                        setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '' });
+                        setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
                         setSaveError('');
                       }}
                       className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
@@ -1293,6 +1901,158 @@ export default function BusinessInformation({
               </div>
             </div>
           )}
+
+          </div>
+
+          {/* Right side — Booking Preview */}
+          <div className="w-[380px] flex-shrink-0">
+            <div className="sticky top-6">
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+                {/* Phone frame header */}
+                <div className="bg-gray-900 px-4 py-3 flex items-center justify-center gap-2">
+                  <div className="w-16 h-1 bg-gray-700 rounded-full"></div>
+                </div>
+                <div className="bg-gray-50 px-2 py-2 border-b border-gray-200">
+                  <div className="bg-white rounded-lg px-3 py-1.5 text-center text-xs text-gray-400 font-medium">Book Online Preview</div>
+                </div>
+
+                {/* Preview content */}
+                <div className="p-5 max-h-[600px] overflow-y-auto" style={{ background: '#fff' }}>
+                  {/* Step dots */}
+                  <div className="flex items-center justify-center gap-1.5 mb-4">
+                    {['categories', 'main', 'addons'].map((tab, i) => (
+                      <div key={tab} className={`w-2 h-2 rounded-full transition-colors ${
+                        (serviceSubTab === 'categories' && i === 0) ||
+                        (serviceSubTab === 'main' && i === 1) ||
+                        (serviceSubTab === 'addons' && i === 2)
+                          ? 'bg-blue-600' : 'bg-gray-200'
+                      }`} />
+                    ))}
+                    <div className="w-2 h-2 rounded-full bg-gray-200" />
+                    <div className="w-2 h-2 rounded-full bg-gray-200" />
+                  </div>
+
+                  {/* Categories Preview */}
+                  {serviceSubTab === 'categories' && (
+                    <>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">Our Services</h3>
+                      <p className="text-sm text-gray-500 mb-4">Select a category to get started</p>
+                      {categories.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 text-sm">
+                          <FolderOpen className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                          Add categories to see them here
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-2 gap-3">
+                          {categories.map(cat => (
+                            <div
+                              key={cat.id}
+                              className="relative rounded-xl h-24 overflow-hidden cursor-default flex flex-col justify-end p-3"
+                              style={{
+                                background: cat.image_url
+                                  ? `url(${cat.image_url}) center/cover`
+                                  : '#374151'
+                              }}
+                            >
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent rounded-xl" />
+                              <span className="relative z-10 text-white font-bold text-sm">{cat.name}</span>
+                              <span className="relative z-10 text-white/70 text-xs mt-0.5">
+                                {services.filter(s => s.category_id === cat.id && !s.is_addon).length} services
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Services Preview */}
+                  {serviceSubTab === 'main' && (
+                    <>
+                      <button className="text-sm text-gray-500 mb-3 flex items-center gap-1 hover:text-gray-700">{'\u2190'} Back</button>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">Select a Service</h3>
+                      <p className="text-sm text-gray-500 mb-4">Choose a service to book</p>
+                      {services.filter(s => !s.is_addon).length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 text-sm">
+                          <Briefcase className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                          Add services to see them here
+                        </div>
+                      ) : (
+                        <div className="space-y-2.5">
+                          {services.filter(s => !s.is_addon).map(svc => (
+                            <div key={svc.id} className="border-2 border-gray-200 rounded-xl p-3 hover:border-blue-400 transition-colors cursor-default">
+                              <div className="flex items-center gap-3">
+                                {svc.media_url ? (
+                                  <img src={svc.media_url} alt="" className="w-12 h-12 rounded-full object-cover flex-shrink-0" />
+                                ) : (
+                                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+                                    <Briefcase className="w-5 h-5 text-gray-400" />
+                                  </div>
+                                )}
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-sm text-gray-900 truncate">{svc.name}</div>
+                                  {svc.description && <div className="text-xs text-gray-500 truncate">{svc.description}</div>}
+                                  <div className="flex items-center gap-3 mt-1">
+                                    <span className="text-sm font-bold text-blue-600">${parseFloat(svc.price).toFixed(2)}</span>
+                                    <span className="text-xs text-gray-400">{svc.duration_hours}h</span>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Add-ons Preview */}
+                  {serviceSubTab === 'addons' && (
+                    <>
+                      <button className="text-sm text-gray-500 mb-3 flex items-center gap-1 hover:text-gray-700">{'\u2190'} Back</button>
+                      <h3 className="text-lg font-bold text-gray-900 mb-1">Add Extras</h3>
+                      <p className="text-sm text-gray-500 mb-4">Enhance your experience</p>
+                      {services.filter(s => s.is_addon).length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 text-sm">
+                          <Plus className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                          Add add-on services to see them here
+                        </div>
+                      ) : (
+                        <>
+                          <div className="divide-y divide-gray-100">
+                            {services.filter(s => s.is_addon).map(addon => (
+                              <div key={addon.id} className="flex items-center py-3 gap-3">
+                                <input type="checkbox" className="w-5 h-5 rounded border-gray-300 text-blue-600 accent-blue-600 cursor-default" readOnly />
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-semibold text-sm text-gray-900">{addon.name}</div>
+                                  {addon.description && <div className="text-xs text-gray-500">{addon.description}</div>}
+                                </div>
+                                <span className="text-sm font-bold text-blue-600 flex-shrink-0">+${parseFloat(addon.price).toFixed(2)}</span>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-4 pt-3 border-t-2 border-gray-100 flex justify-between items-center">
+                            <div>
+                              <span className="text-xs text-gray-500">Total</span>
+                              <div className="text-lg font-bold text-gray-900">$0.00</div>
+                            </div>
+                            <div className="bg-blue-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold">
+                              Continue {'\u2192'}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
+
+                {/* Phone frame bottom */}
+                <div className="bg-gray-900 px-4 py-2 flex justify-center">
+                  <div className="w-28 h-1 bg-gray-700 rounded-full"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          </div>
 
         </div>
       )}

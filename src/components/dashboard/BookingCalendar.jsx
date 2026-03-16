@@ -425,7 +425,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
           <div className="space-y-1 mb-2">
             <div className="flex items-center gap-2 text-xs text-gray-600">
               <Calendar className="w-3 h-3" />
-              {new Date(booking.booking_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              {(() => { const p = booking.booking_date.toString().slice(0,10).split('-'); return new Date(p[0], p[1]-1, p[2]).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); })()}
             </div>
             <div className="flex items-center gap-2 text-xs text-gray-600">
               <Clock className="w-3 h-3" />
@@ -726,7 +726,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         {calendarView === 'week' && (
           <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
             <div className="flex-1 overflow-y-auto time-slots-container scroll-smooth">
-              <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-20">
                 <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
                   Time
                 </div>
@@ -977,12 +977,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   <div>
                     <label className="text-sm font-medium text-gray-600">Date</label>
                     <p className="text-gray-900 font-medium">
-                      {new Date(selectedBooking.booking_date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })}
+                      {(() => { const p = selectedBooking.booking_date.toString().slice(0,10).split('-'); return new Date(p[0], p[1]-1, p[2]).toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }); })()}
                     </p>
                   </div>
                   <div>

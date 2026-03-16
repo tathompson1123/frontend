@@ -100,6 +100,26 @@ export default function WebsiteEditorNew() {
     navigate('/dashboard?tab=website&saved=1');
   };
 
+  // Template draft save: same as above but passes draft: true to skip Vercel redeployment
+  const handleTemplateSaveDraft = async (schema) => {
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${API_URL}/api/website/save-schema`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ page_data: schema, draft: true }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Save failed');
+    }
+
+    navigate('/dashboard?tab=website&saved=draft');
+  };
+
   // Widget save: render HTML on frontend, send pre-rendered HTML + schema
   const handleWidgetSave = async (data) => {
     const token = localStorage.getItem('token');
@@ -133,6 +153,37 @@ export default function WebsiteEditorNew() {
     navigate('/dashboard?tab=website&saved=1');
   };
 
+  // Widget draft save: same but passes draft: true
+  const handleWidgetSaveDraft = async (data) => {
+    const token = localStorage.getItem('token');
+    const { renderPageToHtml, renderSiteToHtml } = await import('../editor-v2/utils/htmlRenderer');
+
+    let html_content, pages_html;
+    if (data.multiPage && Array.isArray(data.pages)) {
+      pages_html = renderSiteToHtml(data);
+      html_content = pages_html['index.html'] || Object.values(pages_html)[0];
+    } else {
+      html_content = renderPageToHtml(data);
+      pages_html = { 'index.html': html_content };
+    }
+
+    const res = await fetch(`${API_URL}/api/website/save-schema`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ page_data: data, html_content, pages_html, draft: true }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Save failed');
+    }
+
+    navigate('/dashboard?tab=website&saved=draft');
+  };
+
   if (isLoading || editorMode === null) {
     return (
       <div className="h-screen flex items-center justify-center bg-gray-100">
@@ -150,6 +201,7 @@ export default function WebsiteEditorNew() {
         initialSchema={pageData}
         initialHtml={htmlContent}
         onSave={handleTemplateSave}
+        onSaveDraft={handleTemplateSaveDraft}
         onBack={() => navigate('/dashboard?tab=website')}
       />
     );
@@ -159,6 +211,7 @@ export default function WebsiteEditorNew() {
     <PageEditor
       initialData={pageData}
       onSave={handleWidgetSave}
+      onSaveDraft={handleWidgetSaveDraft}
       onBack={() => navigate('/dashboard?tab=website')}
     />
   );

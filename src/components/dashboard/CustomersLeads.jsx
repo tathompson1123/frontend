@@ -1416,7 +1416,7 @@ function CustomersTable({ customers, columns, editingCell, editValue, handleCell
                     ) : col.key === 'phone' ? (
                       <a href={`tel:${customer[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{customer[col.key]}</a>
                     ) : col.key === 'last_service_date' ? (
-                      customer[col.key] ? new Date(customer[col.key]).toLocaleDateString() : <span className="text-gray-400">-</span>
+                      customer[col.key] ? (() => { const d = customer[col.key].toString().slice(0, 10).split('-'); return new Date(d[0], d[1] - 1, d[2]).toLocaleDateString(); })() : <span className="text-gray-400">-</span>
                     ) : (
                       customer[col.key] || <span className="text-gray-400">-</span>
                     )}

@@ -271,20 +271,6 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         )}
       </div>
 
-      {/* Sub-tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-        <button
-          onClick={() => setSubTab('website')}
-          className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-md text-sm font-semibold transition-all ${
-            subTab === 'website'
-              ? 'bg-white text-gray-900 shadow-sm'
-              : 'text-gray-500 hover:text-gray-700'
-          }`}
-        >
-          <Globe className="w-4 h-4" />
-          Website
-        </button>
-      </div>
 
       {subTab === 'website' && currentWebsite ? (
         <div className="space-y-4">
@@ -344,11 +330,10 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                 <button
                   type="button"
                   onClick={() => navigate('/editor-v2')}
-                  className="group relative overflow-hidden px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2.5 bg-gray-900 text-white hover:-translate-y-0.5 transition-all duration-200 shadow-lg hover:shadow-xl"
+                  className="group relative overflow-hidden px-5 py-2.5 rounded-xl text-sm font-bold flex items-center gap-2.5 bg-blue-100 text-blue-700 hover:bg-blue-200 hover:-translate-y-0.5 transition-all duration-200 shadow-sm hover:shadow-md"
                 >
-                  <span className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
-                  <Edit className="w-3.5 h-3.5 relative z-10" />
-                  <span className="relative z-10 tracking-wide">Edit Website</span>
+                  <Edit className="w-3.5 h-3.5" />
+                  <span className="tracking-wide">Edit Website</span>
                 </button>
               </div>
             </div>

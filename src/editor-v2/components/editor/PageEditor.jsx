@@ -38,6 +38,7 @@ import { createWidget, createSection, createPageEntry, SECTION_TEMPLATES } from 
 export default function PageEditor({
   initialData,
   onSave,
+  onSaveDraft,
   onBack,
   onAddPage,
   pages = [],
@@ -392,6 +393,19 @@ export default function PageEditor({
     }
   };
 
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const handleSaveDraft = async () => {
+    if (!onSaveDraft) return;
+    setIsSavingDraft(true);
+    try {
+      await onSaveDraft(pageData);
+    } catch (error) {
+      console.error('Draft save failed:', error);
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
   // ============================================
   // RENDER
   // ============================================
@@ -500,13 +514,23 @@ export default function PageEditor({
               Preview
             </button>
 
+            {onSaveDraft && (
+              <button
+                onClick={handleSaveDraft}
+                disabled={isSavingDraft}
+                className="flex items-center gap-2 px-3 py-2 text-gray-700 border border-gray-300 rounded-lg font-semibold hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                {isSavingDraft ? 'Saving...' : 'Save Draft'}
+              </button>
+            )}
             <button
               onClick={handleSave}
               disabled={isSaving}
               className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
             >
               <Save className="w-4 h-4" />
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? 'Saving...' : 'Save & Publish'}
             </button>
           </div>
         </header>
