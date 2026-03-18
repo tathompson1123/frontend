@@ -361,11 +361,11 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     srcDoc={currentWebsite || ''}
                     title="Website Preview"
                     className="w-full h-full bg-white border-0"
-                    sandbox="allow-scripts allow-same-origin"
+                    sandbox="allow-scripts"
                     scrolling="no"
                     style={{ overflow: 'hidden' }}
                   />
-                  <div className="absolute inset-0" style={{ cursor: 'default' }} />
+                  <div className="absolute inset-0 z-10" style={{ cursor: 'default', pointerEvents: 'all' }} />
                 </div>
               </div>
             </div>
