@@ -303,8 +303,8 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                   </span>
                 )}
                 {customDomain ? (
-                  <a href={`https://${customDomain}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
-                    {customDomain} <ExternalLink className="w-3 h-3" />
+                  <a href={`https://${customDomain.replace(/^https?:?\/*/, '')}`} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
+                    {customDomain.replace(/^https?:?\/*/, '')} <ExternalLink className="w-3 h-3" />
                   </a>
                 ) : vercelUrl ? (
                   <a href={vercelUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline flex items-center gap-1">
