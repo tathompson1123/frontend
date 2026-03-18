@@ -83,10 +83,11 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       setDomainVerified(websiteData.domain_verified || false);
       setDomainManagedByUs(websiteData.domain_managed_by_us || false);
       setDomainPurchaseDate(websiteData.domain_purchase_date || null);
-      // Normalize vercel_url — strip any malformed protocol prefix and ensure https://
+      // Normalize vercel_url — strip ALL protocol prefixes and ensure single https://
       let rawUrl = websiteData.vercel_url || '';
       if (rawUrl) {
-        rawUrl = rawUrl.replace(/^https?:?\/\//, '').replace(/^https?\/\//, '');
+        // Remove any combination of http/https with or without colon and slashes
+        rawUrl = rawUrl.replace(/^(https?:?\/?\/?\/?)+/i, '');
         rawUrl = `https://${rawUrl}`;
       }
       setVercelUrl(rawUrl);
@@ -355,7 +356,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     {customDomain || vercelUrl?.replace('https://', '') || 'your-website.com'}
                   </div>
                 </div>
-                <div className="overflow-hidden" style={{ height: '600px' }}>
+                <div className="overflow-hidden relative" style={{ height: '600px' }}>
                   <iframe
                     srcDoc={currentWebsite || ''}
                     title="Website Preview"
@@ -364,6 +365,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
                     scrolling="no"
                     style={{ overflow: 'hidden' }}
                   />
+                  <div className="absolute inset-0" style={{ cursor: 'default' }} />
                 </div>
               </div>
             </div>
