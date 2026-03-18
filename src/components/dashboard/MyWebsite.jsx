@@ -83,7 +83,13 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       setDomainVerified(websiteData.domain_verified || false);
       setDomainManagedByUs(websiteData.domain_managed_by_us || false);
       setDomainPurchaseDate(websiteData.domain_purchase_date || null);
-      setVercelUrl(websiteData.vercel_url || '');
+      // Normalize vercel_url — strip any malformed protocol prefix and ensure https://
+      let rawUrl = websiteData.vercel_url || '';
+      if (rawUrl) {
+        rawUrl = rawUrl.replace(/^https?:?\/\//, '').replace(/^https?\/\//, '');
+        rawUrl = `https://${rawUrl}`;
+      }
+      setVercelUrl(rawUrl);
 
     }
   }, [websiteData]);

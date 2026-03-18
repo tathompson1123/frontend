@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail } from 'lucide-react';
+import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle } from 'lucide-react';
 
 export default function Billing({ user, apiUrl, authFetch }) {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [showCancel, setShowCancel] = useState(false);
+  const [cancelStep, setCancelStep] = useState(0);
+  const [canceling, setCanceling] = useState(false);
 
   useEffect(() => {
     setCurrentPlan(user?.plan || null);
@@ -238,6 +241,108 @@ export default function Billing({ user, apiUrl, authFetch }) {
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />Cancel anytime</span>
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />No setup fees</span>
       </div>
+
+      {/* Cancel Subscription - small, tucked away */}
+      {isCurrentPlanPaid && (
+        <div className="mt-6 text-center">
+          {!showCancel ? (
+            <button
+              onClick={() => setShowCancel(true)}
+              className="text-[11px] text-gray-400 hover:text-gray-500 underline"
+            >
+              Cancel subscription
+            </button>
+          ) : cancelStep === 0 ? (
+            <div className="max-w-sm mx-auto bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="w-4 h-4 text-red-500" />
+                <span className="text-xs font-semibold text-red-700">Cancel your subscription?</span>
+              </div>
+              <p className="text-[11px] text-red-600 mb-3 leading-relaxed">
+                You will lose <strong>immediate access</strong> to:
+              </p>
+              <ul className="text-[11px] text-red-600 space-y-1 mb-3 text-left pl-2">
+                <li className="flex items-start gap-1.5">
+                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
+                  <span>Your published website will go offline</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
+                  <span>Online booking system will be disabled</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
+                  <span>AI lead agents will stop running</span>
+                </li>
+                <li className="flex items-start gap-1.5">
+                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
+                  <span>Automated review system will be turned off</span>
+                </li>
+              </ul>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCancelStep(1)}
+                  className="text-[10px] px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  I understand, continue
+                </button>
+                <button
+                  onClick={() => { setShowCancel(false); setCancelStep(0); }}
+                  className="text-[10px] px-3 py-1 text-gray-500 hover:text-gray-700"
+                >
+                  Keep my plan
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="max-w-sm mx-auto bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-[11px] text-red-700 font-semibold mb-2">
+                Are you sure? This cannot be undone easily.
+              </p>
+              <p className="text-[10px] text-red-500 mb-3">
+                Your subscription will remain active until the end of your current billing period, then all services will be deactivated.
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={async () => {
+                    setCanceling(true);
+                    try {
+                      const res = await authFetch(`${apiUrl}/api/billing/cancel-subscription`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                      });
+                      if (res.ok) {
+                        setCancelStep(2);
+                      } else {
+                        alert('Failed to cancel. Please contact support.');
+                      }
+                    } catch (err) {
+                      alert('Something went wrong. Please try again.');
+                    } finally {
+                      setCanceling(false);
+                    }
+                  }}
+                  disabled={canceling}
+                  className="text-[10px] px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+                >
+                  {canceling ? 'Canceling...' : 'Yes, cancel my subscription'}
+                </button>
+                <button
+                  onClick={() => { setShowCancel(false); setCancelStep(0); }}
+                  className="text-[10px] px-3 py-1 text-gray-500 hover:text-gray-700"
+                >
+                  Never mind
+                </button>
+              </div>
+              {cancelStep === 2 && (
+                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-[10px] text-yellow-700">
+                  Your subscription has been canceled. You'll retain access until the end of your billing period.
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
