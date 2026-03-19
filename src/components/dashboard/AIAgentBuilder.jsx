@@ -295,8 +295,11 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
       if (response.ok) {
         alert('Agent deployed successfully!');
         loadDeploymentStatus();
+        // Notify onboarding widget that "Deploy an AI agent" step is complete
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 4 } }));
       } else {
-        alert('Failed to deploy agent');
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || 'Failed to deploy agent');
       }
     } catch (error) {
       console.error('Error deploying:', error);
