@@ -160,7 +160,14 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
   const handleSendGridVerify = async () => {
     setSgLoading(true);
     try {
-      const res = await authFetch(`${apiUrl}/api/user/sendgrid/verify`, { method: 'POST' });
+      const res = await authFetch(`${apiUrl}/api/user/sendgrid/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: config.from_email,
+          businessName: config.from_name,
+        }),
+      });
       const data = await res.json();
       if (data.status === 'pending') {
         setSgStatus('pending');
