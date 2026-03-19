@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import {
   Bot, MessageCircle, Sparkles, ChevronDown, ChevronRight, Save, Rocket,
-  Crown, Settings, User, Brain, Phone, Send, RefreshCw,
+  Crown, Settings, User, Brain, Phone, PhoneOff, Send, RefreshCw,
   BookOpen, Target, MessageSquare, Loader2, Calendar, Wrench
 } from 'lucide-react';
+import MissedCallTextBack from './MissedCallTextBack';
 
 export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch }) {
-  const [activeAgent, setActiveAgent] = useState('chat'); // 'chat' or 'leadform'
+  const [activeAgent, setActiveAgent] = useState('chat'); // 'chat', 'leadform', or 'missedcall'
   const [setupMode, setSetupMode] = useState('ai'); // 'manual' or 'ai'
   const [chatAgentDeployed, setChatAgentDeployed] = useState(false);
   const [leadAgentDeployed, setLeadAgentDeployed] = useState(false);
+  const [missedCallDeployed, setMissedCallDeployed] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [expandedSections, setExpandedSections] = useState(['personality']);
@@ -99,9 +101,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
 
   const loadDeploymentStatus = async () => {
     try {
-      const [chatRes, leadRes] = await Promise.all([
+      const [chatRes, leadRes, missedCallRes] = await Promise.all([
         authFetch(`${apiUrl}/api/agents/website/status`),
-        authFetch(`${apiUrl}/api/agents/leadform/status`)
+        authFetch(`${apiUrl}/api/agents/leadform/status`),
+        authFetch(`${apiUrl}/api/voice/status`)
       ]);
 
       if (chatRes.ok) {
@@ -111,6 +114,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
       if (leadRes.ok) {
         const data = await leadRes.json();
         setLeadAgentDeployed(data.isDeployed || false);
+      }
+      if (missedCallRes.ok) {
+        const data = await missedCallRes.json();
+        setMissedCallDeployed(data.deployed || false);
       }
     } catch (error) {
       console.error('Error loading deployment status:', error);
@@ -765,12 +772,36 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               SMS Lead Agent
               {leadAgentDeployed && <span className="w-2 h-2 bg-green-500 rounded-full" />}
             </button>
+            <button
+              onClick={() => setActiveAgent('missedcall')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                activeAgent === 'missedcall'
+                  ? 'bg-white text-amber-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <PhoneOff className="w-4 h-4" />
+              Missed Call
+              {missedCallDeployed && <span className="w-2 h-2 bg-green-500 rounded-full" />}
+            </button>
           </div>
         </div>
       </div>
 
-      {/* Main Content - Split Panel */}
-      <div className="flex-1 flex gap-4 min-h-0">
+      {/* Missed Call Text-Back - separate panel */}
+      {activeAgent === 'missedcall' && (
+        <MissedCallTextBack
+          user={user}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+          setCurrentView={setCurrentView}
+          isDeployed={missedCallDeployed}
+          onDeploymentChange={loadDeploymentStatus}
+        />
+      )}
+
+      {/* Main Content - Split Panel (chat & leadform only) */}
+      {activeAgent !== 'missedcall' && <div className="flex-1 flex gap-4 min-h-0">
         {/* Left Side - Configuration (2/3 width) */}
         <div className="w-2/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
           {/* Setup Mode Toggle + Actions */}
@@ -1035,7 +1066,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             </ul>
           </div>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }

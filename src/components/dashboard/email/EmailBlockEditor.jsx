@@ -303,7 +303,7 @@ function SortableBlock({ block, selected, onSelect, onUpdate, onDelete, onDuplic
 // ============================================================
 // MAIN EMAIL BLOCK EDITOR
 // ============================================================
-export default function EmailBlockEditor({ blocks, onChange, subject, previewText, onSubjectChange, onPreviewTextChange, fromName, fromEmail }) {
+export default function EmailBlockEditor({ blocks, onChange, subject, previewText, onSubjectChange, onPreviewTextChange, fromName, fromEmail, apiUrl, authFetch }) {
   const [selectedId, setSelectedId] = useState(null);
   const [viewMode, setViewMode] = useState('desktop'); // 'desktop' | 'mobile'
   const [activeDragId, setActiveDragId] = useState(null);
@@ -483,6 +483,8 @@ export default function EmailBlockEditor({ blocks, onChange, subject, previewTex
               <BlockProperties
                 block={selectedBlock}
                 onChange={updatedBlock => handleUpdate(updatedBlock)}
+                apiUrl={apiUrl}
+                authFetch={authFetch}
               />
             </>
           ) : (

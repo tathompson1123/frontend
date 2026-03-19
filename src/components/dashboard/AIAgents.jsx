@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { Bot, MessageCircle, Mail, Sparkles } from 'lucide-react';
+import { Bot, MessageCircle, Mail, Phone, Sparkles } from 'lucide-react';
 import WebsiteChatAgent from './WebsiteChatAgent';
 import LeadFormAgent from './LeadFormAgent';
+import MissedCallTextBack from './MissedCallTextBack';
 
 export default function AIAgents({ user, setCurrentView, apiUrl, authFetch }) {
   const [activeTab, setActiveTab] = useState('chat');
   const [chatAgentDeployed, setChatAgentDeployed] = useState(false);
   const [leadAgentDeployed, setLeadAgentDeployed] = useState(false);
+  const [missedCallDeployed, setMissedCallDeployed] = useState(false);
 
   // Load deployment status on mount
   useEffect(() => {
@@ -38,10 +40,22 @@ const loadDeploymentStatus = async () => {
       console.warn('Failed to load lead agent status');
       setLeadAgentDeployed(false);
     }
+
+    // Load missed call text-back status
+    const missedCallResponse = await authFetch(`${apiUrl}/api/voice/status`);
+    if (missedCallResponse.ok) {
+      const missedCallData = await missedCallResponse.json();
+      console.log('📞 Missed call agent status:', missedCallData.deployed);
+      setMissedCallDeployed(missedCallData.deployed || false);
+    } else {
+      console.warn('Failed to load missed call status');
+      setMissedCallDeployed(false);
+    }
   } catch (error) {
     console.error('❌ Error loading deployment status:', error);
     setChatAgentDeployed(false);
     setLeadAgentDeployed(false);
+    setMissedCallDeployed(false);
   }
 };
 
@@ -50,7 +64,7 @@ const loadDeploymentStatus = async () => {
     loadDeploymentStatus();
   };
 
-  const activeAgentsCount = (chatAgentDeployed ? 1 : 0) + (leadAgentDeployed ? 1 : 0);
+  const activeAgentsCount = (chatAgentDeployed ? 1 : 0) + (leadAgentDeployed ? 1 : 0) + (missedCallDeployed ? 1 : 0);
 
   return (
     <div className="space-y-6">
@@ -108,6 +122,23 @@ const loadDeploymentStatus = async () => {
               <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
             )}
           </button>
+          <button
+            onClick={() => setActiveTab('missedcall')}
+            className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all relative ${
+              activeTab === 'missedcall'
+                ? 'text-primary-600 bg-blue-50'
+                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <Phone className="w-5 h-5" />
+            Missed Call Text-Back
+            {missedCallDeployed && (
+              <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+            )}
+            {activeTab === 'missedcall' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
+            )}
+          </button>
         </div>
       </div>
 
@@ -130,6 +161,17 @@ const loadDeploymentStatus = async () => {
           authFetch={authFetch}
           setCurrentView={setCurrentView}
           isDeployed={leadAgentDeployed}
+          onDeploymentChange={handleDeploymentChange}
+        />
+      )}
+
+      {activeTab === 'missedcall' && (
+        <MissedCallTextBack
+          user={user}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+          setCurrentView={setCurrentView}
+          isDeployed={missedCallDeployed}
           onDeploymentChange={handleDeploymentChange}
         />
       )}

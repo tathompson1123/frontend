@@ -1,10 +1,53 @@
-import { Link, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Link, Plus, Trash2, Upload } from 'lucide-react';
+
+// ============================================================
+// Image upload button — uploads to Cloudinary via /api/upload
+// ============================================================
+function ImageUpload({ onUploaded, apiUrl, authFetch }) {
+  const [uploading, setUploading] = useState(false);
+
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${apiUrl}/api/upload`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+        body: formData
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onUploaded(data.url);
+      } else {
+        const err = await res.json();
+        alert('Upload failed: ' + (err.error || 'Unknown error'));
+      }
+    } catch (err) {
+      alert('Upload failed: ' + err.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <label className="flex items-center justify-center gap-2 w-full py-2.5 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors">
+      <Upload className="w-4 h-4 text-gray-500" />
+      <span className="text-sm text-gray-600">{uploading ? 'Uploading...' : 'Upload image'}</span>
+      <input type="file" accept="image/*" className="hidden" onChange={handleFile} disabled={uploading} />
+    </label>
+  );
+}
 
 // ============================================================
 // Block Properties Panel
 // Renders editing controls based on the selected block type
 // ============================================================
-export default function BlockProperties({ block, onChange }) {
+export default function BlockProperties({ block, onChange, apiUrl, authFetch }) {
   if (!block) {
     return (
       <div className="p-4 text-center">
@@ -38,12 +81,18 @@ export default function BlockProperties({ block, onChange }) {
 
   const ColorInput = ({ field, label: lbl }) => (
     <div className="flex items-center gap-2">
-      <input
-        type="color"
-        value={c[field] || '#000000'}
-        onChange={e => update(field, e.target.value)}
-        className="w-8 h-8 rounded cursor-pointer border border-gray-200"
-      />
+      <label className="relative w-8 h-8 flex-shrink-0 cursor-pointer">
+        <input
+          type="color"
+          value={c[field] || '#000000'}
+          onChange={e => update(field, e.target.value)}
+          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+        />
+        <div
+          className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm"
+          style={{ backgroundColor: c[field] || '#000000' }}
+        />
+      </label>
       <input
         type="text"
         value={c[field] || ''}
@@ -68,19 +117,29 @@ export default function BlockProperties({ block, onChange }) {
       case 'hero_image':
         return (
           <>
-            <Field label="Image URL">
-              <div className="flex gap-1">
+            <Field label="Image">
+              {/* Upload button */}
+              <ImageUpload
+                onUploaded={url => update('src', url)}
+                apiUrl={apiUrl}
+                authFetch={authFetch}
+              />
+              {/* URL input */}
+              <div className="flex gap-1 mt-2">
                 <div className="relative flex-1">
                   <Link className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
                   <input
                     type="url"
                     value={c.src || ''}
                     onChange={e => update('src', e.target.value)}
-                    placeholder="https://..."
+                    placeholder="Or paste image URL..."
                     className="w-full pl-7 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
               </div>
+              {c.src && (
+                <img src={c.src} alt="Preview" className="mt-2 rounded-lg max-h-24 object-cover w-full" />
+              )}
             </Field>
             <Field label="Alt Text"><TextInput field="alt" placeholder="Describe the image" /></Field>
           </>

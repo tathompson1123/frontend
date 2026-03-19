@@ -615,6 +615,8 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                   onPreviewTextChange={setEditedPreviewText}
                   fromName={config.from_name}
                   fromEmail={config.from_email}
+                  apiUrl={apiUrl}
+                  authFetch={authFetch}
                 />
               </div>
             </>
