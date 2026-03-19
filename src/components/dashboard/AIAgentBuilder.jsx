@@ -22,8 +22,34 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const previewRef = useRef(null);
 
+  // Business info state — loaded once, used for smarter initial messages
+  const [businessInfo, setBusinessInfo] = useState(null);
+  const [businessServices, setBusinessServices] = useState([]);
+  const businessInfoLoaded = useRef(false);
+
   // Initial messages for each agent type
-  const getInitialAiMessage = (agentType) => {
+  const getInitialAiMessage = (agentType, bizInfo, services) => {
+    const businessName = user?.business_name || user?.businessName || '';
+    const hasInfo = businessName || bizInfo?.phone || (services && services.length > 0);
+
+    if (hasInfo) {
+      const svcList = services?.length > 0
+        ? ` offering ${services.slice(0, 3).map(s => s.name).join(', ')}${services.length > 3 ? ` and ${services.length - 3} more` : ''}`
+        : '';
+      const bizDesc = businessName ? `I can see you run **${businessName}**${svcList}.` : `I see you already have${svcList} set up.`;
+      if (agentType === 'chat') {
+        return {
+          role: 'assistant',
+          content: `Hi! I'm the SORCE AI Assistant and I'll help you configure your Website Chat Agent.\n\n${bizDesc} I've pulled your business details from your settings so we can skip the basics.\n\n**What name should the chat agent use when greeting visitors?** (e.g., Kurt, Alex, Sarah)`
+        };
+      } else {
+        return {
+          role: 'assistant',
+          content: `Hi! I'm the SORCE AI Assistant and I'll help you configure your SMS Lead Form Agent.\n\n${bizDesc} I've pulled your business details from your settings so we can skip the basics.\n\n**When a new lead comes in, what should the first SMS say?** Write it out exactly how you want it.`
+        };
+      }
+    }
+
     if (agentType === 'chat') {
       return {
         role: 'assistant',
@@ -37,8 +63,8 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
-  // AI Assistant state - starts with a guided question
-  const [aiMessages, setAiMessages] = useState([getInitialAiMessage('chat')]);
+  // AI Assistant state - starts with a guided question (updated after business info loads)
+  const [aiMessages, setAiMessages] = useState([getInitialAiMessage('chat', null, [])]);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const aiChatRef = useRef(null);
@@ -88,7 +114,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           : `Welcome back! Your SMS Lead Agent is already configured (agent name: **${config.agentName || 'Kurt'}**). What would you like to change?`
       }]);
     } else {
-      setAiMessages([getInitialAiMessage(activeAgent)]);
+      setAiMessages([getInitialAiMessage(activeAgent, businessInfo, businessServices)]);
     }
   }, [activeAgent]);
 
@@ -137,13 +163,17 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
 
   const loadConfigs = async () => {
     try {
-      const [chatRes, leadRes] = await Promise.all([
+      const [chatRes, leadRes, bizRes, svcRes] = await Promise.all([
         authFetch(`${apiUrl}/api/agents/website/config`),
-        authFetch(`${apiUrl}/api/agents/leadform/config`)
+        authFetch(`${apiUrl}/api/agents/leadform/config`),
+        authFetch(`${apiUrl}/api/business-info`),
+        authFetch(`${apiUrl}/api/services`)
       ]);
 
       let chatLoaded = null;
       let leadLoaded = null;
+      let bizInfo = null;
+      let services = [];
 
       if (chatRes.ok) {
         const data = await chatRes.json();
@@ -159,8 +189,30 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           setLeadConfig(prev => ({ ...prev, ...data.config }));
         }
       }
+      if (bizRes.ok) {
+        const data = await bizRes.json();
+        bizInfo = data.businessInfo;
+        setBusinessInfo(bizInfo);
+      }
+      if (svcRes.ok) {
+        const data = await svcRes.json();
+        services = data.services || [];
+        setBusinessServices(services);
+      }
+      businessInfoLoaded.current = true;
 
-      // Update initial AI message if agent is already configured
+      // Pre-populate lead config fields from business settings if they're still empty
+      const businessName = user?.business_name || user?.businessName || '';
+      if (!leadLoaded?.businessContext && (businessName || bizInfo)) {
+        const ctx = [businessName, bizInfo?.city, bizInfo?.state].filter(Boolean).join(', ');
+        if (ctx) setLeadConfig(prev => prev.businessContext ? prev : { ...prev, businessContext: ctx });
+      }
+      if (!leadLoaded?.servicesInfo && services.length > 0) {
+        const svcText = services.filter(s => !s.is_addon).map(s => `${s.name}${s.price ? ` - $${s.price}` : ''}`).join('\n');
+        if (svcText) setLeadConfig(prev => prev.servicesInfo ? prev : { ...prev, servicesInfo: svcText });
+      }
+
+      // Update initial AI message — prioritize "already configured" over "has business info"
       const currentType = activeAgent;
       const loadedConfig = currentType === 'chat' ? chatLoaded : leadLoaded;
       if (loadedConfig && isConfigured(loadedConfig, currentType)) {
@@ -170,6 +222,9 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             ? `Welcome back! Your Website Chat Agent is already configured (agent name: **${loadedConfig.agentName || 'Kurt'}**). What would you like to change?`
             : `Welcome back! Your SMS Lead Agent is already configured (agent name: **${loadedConfig.agentName || 'Kurt'}**). What would you like to change?`
         }]);
+      } else {
+        // Not configured yet — use business-info-aware initial message
+        setAiMessages([getInitialAiMessage(currentType, bizInfo, services)]);
       }
     } catch (error) {
       console.error('Error loading configs:', error);
