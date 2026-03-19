@@ -503,14 +503,21 @@ export default function BookingWidgetEditor({ apiUrl, user, authFetch, onClose }
     });
   }, [config.paymentMode]);
 
+  const navigateToStep = (stepKey) => {
+    setPreviewStep(stepKey);
+    if (stepKey === 'contact') setSettingsTab('contact');
+    else if (stepKey === 'payment') setSettingsTab('payment');
+    else setSettingsTab('steps');
+  };
+
   const goNextPreview = () => {
     const idx = visibleSteps.indexOf(previewStep);
-    if (idx < visibleSteps.length - 1) setPreviewStep(visibleSteps[idx + 1]);
+    if (idx < visibleSteps.length - 1) navigateToStep(visibleSteps[idx + 1]);
   };
 
   const goPrevPreview = () => {
     const idx = visibleSteps.indexOf(previewStep);
-    if (idx > 0) setPreviewStep(visibleSteps[idx - 1]);
+    if (idx > 0) navigateToStep(visibleSteps[idx - 1]);
   };
 
   // ── Settings Tabs ──────────────────────────────────────
@@ -834,7 +841,12 @@ export default function BookingWidgetEditor({ apiUrl, user, authFetch, onClose }
                   {visibleSteps.map(k => (
                     <button
                       key={k}
-                      onClick={() => setPreviewStep(k)}
+                      onClick={() => {
+                        setPreviewStep(k);
+                        if (k === 'contact') setSettingsTab('contact');
+                        else if (k === 'payment') setSettingsTab('payment');
+                        else setSettingsTab('steps');
+                      }}
                       className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition-all ${
                         previewStep === k
                           ? 'bg-white text-gray-900 shadow-sm'
