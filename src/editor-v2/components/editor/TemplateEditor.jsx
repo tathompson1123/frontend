@@ -1653,7 +1653,7 @@ function SidebarCard({ id, label, icon: Icon, openCard, setOpenCard, badge, chil
 // ============================================
 // MAIN TEMPLATE EDITOR
 // ============================================
-export default function TemplateEditor({ initialSchema, initialHtml, onSave, onSaveDraft, onBack }) {
+export default function TemplateEditor({ initialSchema, initialHtml, onSave, onSaveDraft, onBack, onUpgrade }) {
   const [schema, setSchema] = useState(() => JSON.parse(JSON.stringify(initialSchema || {})));
   const [previewHtml, setPreviewHtml] = useState(() => initialHtml ? injectHighlightScript(initialHtml) : '');
   const iframeRef = useRef(null);
@@ -2303,14 +2303,23 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
               {isSavingDraft ? 'Saving...' : 'Save Draft'}
             </button>
           )}
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition disabled:opacity-60"
-          >
-            <Save className="w-4 h-4" />
-            {isSaving ? 'Saving...' : 'Save & Publish'}
-          </button>
+          {onSave ? (
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-amber-500 text-white rounded-lg font-semibold hover:bg-amber-600 transition disabled:opacity-60"
+            >
+              <Save className="w-4 h-4" />
+              {isSaving ? 'Saving...' : 'Save & Publish'}
+            </button>
+          ) : onUpgrade ? (
+            <button
+              onClick={onUpgrade}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-sm bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition"
+            >
+              Upgrade to Publish
+            </button>
+          ) : null}
         </div>
       </div>
 

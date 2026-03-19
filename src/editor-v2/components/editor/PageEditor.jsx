@@ -44,6 +44,7 @@ export default function PageEditor({
   pages = [],
   currentPageId,
   onPageChange,
+  onUpgrade,
 }) {
   // ============================================
   // STATE
@@ -524,14 +525,23 @@ export default function PageEditor({
                 {isSavingDraft ? 'Saving...' : 'Save Draft'}
               </button>
             )}
-            <button
-              onClick={handleSave}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? 'Saving...' : 'Save & Publish'}
-            </button>
+            {onSave ? (
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition disabled:opacity-50"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Saving...' : 'Save & Publish'}
+              </button>
+            ) : onUpgrade ? (
+              <button
+                onClick={onUpgrade}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg font-semibold hover:from-amber-600 hover:to-orange-600 transition"
+              >
+                Upgrade to Publish
+              </button>
+            ) : null}
           </div>
         </header>
 

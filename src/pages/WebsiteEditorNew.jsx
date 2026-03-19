@@ -31,6 +31,8 @@ export default function WebsiteEditorNew() {
   const [htmlContent, setHtmlContent] = useState('');
   const [editorMode, setEditorMode] = useState(null); // 'template' | 'widget'
   const [isLoading, setIsLoading] = useState(true);
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const userPlan = user?.plan || null;
 
   useEffect(() => {
     loadData();
@@ -81,6 +83,7 @@ export default function WebsiteEditorNew() {
 
   // Template save: send schema WITHOUT html_content → backend uses full template renderer
   // This preserves all CSS, animations, fonts, and JavaScript from the original generation
+  // If site isn't published yet, automatically publish after saving
   const handleTemplateSave = async (schema) => {
     const token = localStorage.getItem('token');
     const res = await fetch(`${API_URL}/api/website/save-schema`, {
@@ -89,12 +92,38 @@ export default function WebsiteEditorNew() {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ page_data: schema }), // no html_content → triggers template re-render
+      body: JSON.stringify({ page_data: schema }),
     });
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
       throw new Error(err.error || 'Save failed');
+    }
+
+    const saveData = await res.json();
+
+    // If the backend already auto-redeployed, we're done
+    if (saveData.deployed) {
+      navigate('/dashboard?tab=website&saved=1');
+      return;
+    }
+
+    // Site wasn't published yet — call publish endpoint to deploy for the first time
+    const publishRes = await fetch(`${API_URL}/api/website/publish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        html_content: saveData.html,
+        pages: saveData.pages,
+      }),
+    });
+
+    if (!publishRes.ok) {
+      const err = await publishRes.json().catch(() => ({}));
+      throw new Error(err.error || 'Publish failed');
     }
 
     navigate('/dashboard?tab=website&saved=1');
@@ -150,6 +179,32 @@ export default function WebsiteEditorNew() {
       throw new Error(err.error || 'Save failed');
     }
 
+    const saveData = await res.json();
+
+    // If the backend already auto-redeployed, we're done
+    if (saveData.deployed) {
+      navigate('/dashboard?tab=website&saved=1');
+      return;
+    }
+
+    // Site wasn't published yet — call publish endpoint to deploy for the first time
+    const publishRes = await fetch(`${API_URL}/api/website/publish`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        html_content: html_content,
+        pages: pages_html,
+      }),
+    });
+
+    if (!publishRes.ok) {
+      const err = await publishRes.json().catch(() => ({}));
+      throw new Error(err.error || 'Publish failed');
+    }
+
     navigate('/dashboard?tab=website&saved=1');
   };
 
@@ -195,14 +250,17 @@ export default function WebsiteEditorNew() {
     );
   }
 
+  const handleUpgrade = () => navigate('/dashboard?tab=billing');
+
   if (editorMode === 'template') {
     return (
       <TemplateEditor
         initialSchema={pageData}
         initialHtml={htmlContent}
-        onSave={handleTemplateSave}
+        onSave={userPlan ? handleTemplateSave : null}
         onSaveDraft={handleTemplateSaveDraft}
         onBack={() => navigate('/dashboard?tab=website')}
+        onUpgrade={!userPlan ? handleUpgrade : null}
       />
     );
   }
@@ -210,9 +268,10 @@ export default function WebsiteEditorNew() {
   return (
     <PageEditor
       initialData={pageData}
-      onSave={handleWidgetSave}
+      onSave={userPlan ? handleWidgetSave : null}
       onSaveDraft={handleWidgetSaveDraft}
       onBack={() => navigate('/dashboard?tab=website')}
+      onUpgrade={!userPlan ? handleUpgrade : null}
     />
   );
 }
