@@ -191,8 +191,20 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
       authFetch(`${apiUrl}/api/email-campaigns/history`).then(r => r.json()),
       authFetch(`${apiUrl}/api/email-campaigns/presets`).then(r => r.json()),
       authFetch(`${apiUrl}/api/email-campaigns/drafts`).then(r => r.json()),
-    ]).then(([configData, histData, presetsData, draftsData]) => {
-      if (configData.config) setConfig(prev => ({ ...prev, ...configData.config }));
+      authFetch(`${apiUrl}/api/business-info`).then(r => r.json()).catch(() => ({})),
+    ]).then(([configData, histData, presetsData, draftsData, bizData]) => {
+      const savedConfig = configData.config || {};
+      const bizInfo = bizData.businessInfo || {};
+      const businessName = user?.business_name || user?.businessName || '';
+      const bizEmail = bizInfo.email || user?.email || '';
+
+      // Pre-fill from_name and from_email from business settings when not already saved
+      setConfig(prev => ({
+        ...prev,
+        ...savedConfig,
+        from_name: savedConfig.from_name || prev.from_name || businessName,
+        from_email: savedConfig.from_email || prev.from_email || bizEmail,
+      }));
       if (histData.campaigns) setHistory(histData.campaigns);
       if (presetsData.presets) setPresets(presetsData.presets);
       if (draftsData.drafts) setDrafts(draftsData.drafts);

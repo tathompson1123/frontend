@@ -61,7 +61,7 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [googleUrl, setGoogleUrl] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(user?.business_name || user?.businessName || '');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
   const [showResults, setShowResults] = useState(false);

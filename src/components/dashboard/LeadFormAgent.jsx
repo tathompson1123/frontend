@@ -47,18 +47,42 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
 
   const loadTrainingData = async () => {
     try {
-      const response = await authFetch(`${apiUrl}/api/agents/lead-form/training`);
-      if (response.ok) {
-        const data = await response.json();
-        setTrainingData({
-          responseTone: data.responseTone || 'friendly',
-          agentName: data.agentName || '',
-          businessContext: data.businessContext || '',
-          servicesInfo: data.servicesInfo || '',
-          faqs: data.faqs || [],
-          commonObjections: data.commonObjections || []
-        });
+      const [trainingRes, bizRes, svcRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/agents/lead-form/training`),
+        authFetch(`${apiUrl}/api/business-info`).catch(() => ({ ok: false })),
+        authFetch(`${apiUrl}/api/services`).catch(() => ({ ok: false })),
+      ]);
+
+      let savedTraining = {};
+      if (trainingRes.ok) {
+        savedTraining = await trainingRes.json();
       }
+
+      // Pre-fill businessContext and servicesInfo from business settings when empty
+      let bizContext = savedTraining.businessContext || '';
+      let svcInfo = savedTraining.servicesInfo || '';
+      if (!bizContext) {
+        const bizData = bizRes.ok ? await bizRes.json() : {};
+        const bizInfo = bizData.businessInfo || {};
+        const businessName = user?.business_name || user?.businessName || '';
+        bizContext = [businessName, bizInfo.city, bizInfo.state].filter(Boolean).join(', ');
+      }
+      if (!svcInfo && svcRes.ok) {
+        const svcData = await svcRes.json();
+        const services = (svcData.services || []).filter(s => !s.is_addon);
+        if (services.length > 0) {
+          svcInfo = services.map(s => `${s.name}${s.price ? ` - $${s.price}` : ''}`).join('\n');
+        }
+      }
+
+      setTrainingData({
+        responseTone: savedTraining.responseTone || 'friendly',
+        agentName: savedTraining.agentName || '',
+        businessContext: bizContext,
+        servicesInfo: svcInfo,
+        faqs: savedTraining.faqs || [],
+        commonObjections: savedTraining.commonObjections || []
+      });
     } catch (error) {
       console.error('Error loading training data:', error);
     }

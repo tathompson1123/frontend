@@ -46,20 +46,46 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
 
   const loadConfig = async () => {
     try {
-      const response = await authFetch(`${apiUrl}/api/voice/config`);
-      if (response.ok) {
-        const data = await response.json();
-        setConfig(data.config || {
-          enabled: false,
-          smsEnabled: true,
-          forwardingNumber: '',
-          ringTimeout: 20,
-          delayMin: 30,
-          delayMax: 60,
-          training: { responseTone: 'friendly', agentName: '', businessContext: '', servicesInfo: '' }
-        });
+      const [voiceRes, bizRes, svcRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/voice/config`),
+        authFetch(`${apiUrl}/api/business-info`).catch(() => ({ ok: false })),
+        authFetch(`${apiUrl}/api/services`).catch(() => ({ ok: false })),
+      ]);
+
+      const defaults = {
+        enabled: false,
+        smsEnabled: true,
+        forwardingNumber: '',
+        ringTimeout: 20,
+        delayMin: 30,
+        delayMax: 60,
+        training: { responseTone: 'friendly', agentName: '', businessContext: '', servicesInfo: '' }
+      };
+
+      let savedConfig = defaults;
+      if (voiceRes.ok) {
+        const data = await voiceRes.json();
+        savedConfig = data.config || defaults;
         setSmsTemplate(data.smsTemplate || getDefaultTemplate());
       }
+
+      // Pre-fill training fields from business settings when empty
+      const training = savedConfig.training || defaults.training;
+      if (!training.businessContext) {
+        const bizData = bizRes.ok ? await bizRes.json() : {};
+        const bizInfo = bizData.businessInfo || {};
+        const businessName = user?.business_name || user?.businessName || '';
+        training.businessContext = [businessName, bizInfo.city, bizInfo.state].filter(Boolean).join(', ');
+      }
+      if (!training.servicesInfo && svcRes.ok) {
+        const svcData = await svcRes.json();
+        const services = (svcData.services || []).filter(s => !s.is_addon);
+        if (services.length > 0) {
+          training.servicesInfo = services.map(s => `${s.name}${s.price ? ` - $${s.price}` : ''}`).join('\n');
+        }
+      }
+
+      setConfig({ ...savedConfig, training });
     } catch (error) {
       console.error('Error loading voice config:', error);
     }
