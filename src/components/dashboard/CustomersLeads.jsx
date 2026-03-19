@@ -241,12 +241,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               leads: [
                 {
                   id: 'demo-1',
-                  name: 'John Smith',
+                  name: 'John Doe - Test Lead',
                   status: 'new',
                   phone: '+1234567890',
-                  email: 'john.smith@example.com',
+                  email: 'johndoe@example.com',
                   source: 'lead_form',
-                  notes: 'Interested in ceramic coating'
+                  notes: 'This is a test lead — add your first real lead to replace it'
                 }
               ]
             }
@@ -303,13 +303,13 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           setCustomers([
             {
               id: 'demo-1',
-              name: 'Jane Doe',
-              phone: '+1987654321',
-              email: 'jane.doe@example.com',
-              last_service: 'Paint Correction',
+              name: 'John Doe - Test Customer',
+              phone: '+1234567890',
+              email: 'johndoe@example.com',
+              last_service: 'Example Service',
               last_service_date: '2024-01-15',
-              left_review: 'Y',
-              notes: 'Great customer, always on time'
+              left_review: 'N',
+              notes: 'This is a test customer — add your first real customer to replace it'
             }
           ]);
         } else {

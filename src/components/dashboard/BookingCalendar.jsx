@@ -21,7 +21,9 @@ import {
   TrendingUp,
   Loader2,
   DollarSign,
-  Lightbulb
+  Lightbulb,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
@@ -374,10 +376,65 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     });
   };
 
-  // Recompute filtered bookings when week or search changes
+  // Get the month range based on currentDate
+  const getMonthRange = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0);
+    return { start, end };
+  };
+
+  // Filter bookings to current month + search query
+  const getMonthBookings = () => {
+    const { start, end } = getMonthRange();
+    const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+    const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+
+    let filtered = allBookings.filter(booking => {
+      const bookingDate = booking.booking_date.split('T')[0];
+      return bookingDate >= startStr && bookingDate <= endStr;
+    });
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(booking =>
+        booking.customer_name?.toLowerCase().includes(q) ||
+        booking.customer_email?.toLowerCase().includes(q) ||
+        booking.customer_phone?.includes(q) ||
+        booking.service_name?.toLowerCase().includes(q)
+      );
+    }
+
+    return filtered.sort((a, b) => {
+      const aCompleted = a.status === 'completed' || a.status === 'cancelled';
+      const bCompleted = b.status === 'completed' || b.status === 'cancelled';
+      if (aCompleted && !bCompleted) return 1;
+      if (!aCompleted && bCompleted) return -1;
+      return new Date(a.booking_date + 'T' + (a.start_time || '00:00')) - new Date(b.booking_date + 'T' + (b.start_time || '00:00'));
+    });
+  };
+
+  // Get calendar grid days for month view (includes padding days from prev/next months)
+  const getMonthGridDays = () => {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    const days = [];
+    const current = new Date(startDate);
+    for (let i = 0; i < 42; i++) {
+      days.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    }
+    return days;
+  };
+
+  // Recompute filtered bookings when week/month or search changes
   useEffect(() => {
-    setFilteredBookings(getWeekBookings());
-  }, [currentDate, allBookings, searchQuery]);
+    setFilteredBookings(calendarView === 'month' ? getMonthBookings() : getWeekBookings());
+  }, [currentDate, allBookings, searchQuery, calendarView]);
 
   const [collapsedCompleted, setCollapsedCompleted] = useState(true);
 
@@ -592,12 +649,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     <div className="h-full flex gap-6">
       <div className="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-140px)]">
         <div className="p-4 border-b border-gray-200">
-          <h3 className="font-bold text-gray-900 mb-1">This Week's Bookings</h3>
+          <h3 className="font-bold text-gray-900 mb-1">
+            {calendarView === 'month' ? "This Month's Bookings" : "This Week's Bookings"}
+          </h3>
           <p className="text-xs text-gray-500 mb-3">
-            {(() => {
-              const { start, end } = getWeekRange();
-              return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-            })()}
+            {calendarView === 'month'
+              ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+              : (() => {
+                  const { start, end } = getWeekRange();
+                  return `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} — ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+                })()}
           </p>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -668,7 +729,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 type="button"
                 onClick={() => {
                   const newDate = new Date(currentDate);
-                  newDate.setDate(currentDate.getDate() - 7);
+                  if (calendarView === 'month') {
+                    newDate.setMonth(currentDate.getMonth() - 1);
+                  } else {
+                    newDate.setDate(currentDate.getDate() - 7);
+                  }
                   setCurrentDate(newDate);
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
@@ -686,12 +751,42 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 type="button"
                 onClick={() => {
                   const newDate = new Date(currentDate);
-                  newDate.setDate(currentDate.getDate() + 7);
+                  if (calendarView === 'month') {
+                    newDate.setMonth(currentDate.getMonth() + 1);
+                  } else {
+                    newDate.setDate(currentDate.getDate() + 7);
+                  }
                   setCurrentDate(newDate);
                 }}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
                 <ChevronRight className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <div className="flex bg-gray-100 rounded-lg p-1">
+              <button
+                type="button"
+                onClick={() => setCalendarView('week')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                  calendarView === 'week'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <List className="w-4 h-4" />
+                Week
+              </button>
+              <button
+                type="button"
+                onClick={() => setCalendarView('month')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                  calendarView === 'month'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Month
               </button>
             </div>
           </div>
@@ -741,7 +836,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   const isToday = date.getFullYear() === today.getFullYear() &&
                                  date.getMonth() === today.getMonth() &&
                                  date.getDate() === today.getDate();
-                  
+
                   return (
                     <div
                       key={offset}
@@ -775,7 +870,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     const dayOfWeek = baseDate.getDay();
                     const date = new Date(year, month, day - dayOfWeek + offset);
                     const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                    
+
                     const dayBookings = allBookings.filter(booking => {
                       const bookingDateOnly = booking.booking_date.split('T')[0];
                       if (bookingDateOnly !== dateStr) return false;
@@ -800,7 +895,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                           const employee = employees?.find(emp => emp.id === booking.employee_id);
                           const employeeColor = employee?.color || '#3b82f6';
                           const employeeName = employee?.name || 'Unassigned';
-                          
+
                           return (
                             <button
                               key={booking.id}
@@ -843,6 +938,93 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   })}
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {calendarView === 'month' && (
+          <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
+            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                <div key={day} className={`p-3 text-center text-sm font-medium text-gray-600 ${day !== 'Sat' ? 'border-r border-gray-200' : ''}`}>
+                  {day}
+                </div>
+              ))}
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              <div className="grid grid-cols-7 auto-rows-fr" style={{ minHeight: '100%' }}>
+                {getMonthGridDays().map((day, idx) => {
+                  const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                  const today = new Date();
+                  const isToday = day.getFullYear() === today.getFullYear() &&
+                                 day.getMonth() === today.getMonth() &&
+                                 day.getDate() === today.getDate();
+                  const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+                  const dayBookings = allBookings.filter(b => b.booking_date.split('T')[0] === dateStr);
+                  const maxVisible = 3;
+
+                  return (
+                    <div
+                      key={idx}
+                      className={`min-h-[110px] p-1.5 border-b border-r border-gray-100 ${
+                        !isCurrentMonth ? 'bg-gray-50' : 'bg-white'
+                      } ${isToday ? 'bg-blue-50/50' : ''}`}
+                    >
+                      <div className={`text-sm font-medium mb-1 px-1 ${
+                        isToday
+                          ? 'text-white bg-blue-600 rounded-full w-7 h-7 flex items-center justify-center'
+                          : !isCurrentMonth
+                          ? 'text-gray-300'
+                          : 'text-gray-900'
+                      }`}>
+                        {day.getDate()}
+                      </div>
+                      <div className="space-y-0.5">
+                        {dayBookings.slice(0, maxVisible).map(booking => {
+                          const employee = employees?.find(emp => emp.id === booking.employee_id);
+                          const employeeColor = employee?.color || '#3b82f6';
+                          const isCompleted = booking.status === 'completed' || booking.status === 'cancelled';
+                          return (
+                            <button
+                              key={booking.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedBooking(booking);
+                                setBookingNotes(booking.job_notes || '');
+                                setShowBookingModal(true);
+                                setEditingNotes(false);
+                              }}
+                              className={`w-full text-left px-1.5 py-0.5 rounded text-[11px] font-medium truncate transition hover:brightness-110 ${
+                                isCompleted ? 'opacity-50' : ''
+                              }`}
+                              style={{
+                                backgroundColor: employeeColor + '20',
+                                color: employeeColor,
+                                borderLeft: `3px solid ${employeeColor}`
+                              }}
+                              title={`${booking.customer_name} — ${formatTime(booking.start_time)}`}
+                            >
+                              {formatTime(booking.start_time)} {booking.customer_name}
+                            </button>
+                          );
+                        })}
+                        {dayBookings.length > maxVisible && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrentDate(new Date(day));
+                              setCalendarView('week');
+                            }}
+                            className="w-full text-left px-1.5 py-0.5 text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition"
+                          >
+                            +{dayBookings.length - maxVisible} more
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}

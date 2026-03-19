@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OnboardingWizard from '../components/dashboard/OnboardingWizard';
 import OnboardingWidget from '../components/dashboard/OnboardingWidget';
@@ -112,6 +112,12 @@ export default function Dashboard() {
   const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
   const [savedFlash, setSavedFlash] = useState(false);
 
+  // Unsaved changes tracking
+  const isDirtyRef = useRef(false);
+  const saveRef = useRef(null);
+  const [pendingView, setPendingView] = useState(null);
+  const [showUnsavedModal, setShowUnsavedModal] = useState(false);
+
   // DEFINE user AND apiUrl FIRST
 const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
   const [widgetMinimized, setWidgetMinimized] = useState(false);
@@ -189,7 +195,7 @@ const handleOnboardingSkip = async () => {
 // Listen for navigation events from onboarding
 useEffect(() => {
   const handleNavigate = (event) => {
-    setCurrentView(event.detail.view);
+    requestViewChange(event.detail.view);
   };
   
   window.addEventListener('navigate-to-view', handleNavigate);
@@ -407,6 +413,41 @@ useEffect(() => {
     navigate('/');
   };
 
+  const handleDirtyChange = useCallback((dirty) => {
+    isDirtyRef.current = dirty;
+  }, []);
+
+  const requestViewChange = useCallback((view) => {
+    if (isDirtyRef.current) {
+      setPendingView(view);
+      setShowUnsavedModal(true);
+    } else {
+      setCurrentView(view);
+    }
+  }, []);
+
+  const handleUnsavedLeave = () => {
+    isDirtyRef.current = false;
+    setShowUnsavedModal(false);
+    setCurrentView(pendingView);
+    setPendingView(null);
+  };
+
+  const handleUnsavedSave = async () => {
+    if (saveRef.current) {
+      await saveRef.current();
+    }
+    isDirtyRef.current = false;
+    setShowUnsavedModal(false);
+    setCurrentView(pendingView);
+    setPendingView(null);
+  };
+
+  const handleUnsavedCancel = () => {
+    setShowUnsavedModal(false);
+    setPendingView(null);
+  };
+
   const topMenuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'My Website' },
@@ -492,7 +533,7 @@ useEffect(() => {
             return (
               <button
                 key={item.id}
-                onClick={() => setCurrentView(item.id)}
+                onClick={() => requestViewChange(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
@@ -528,7 +569,7 @@ useEffect(() => {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => setCurrentView(item.id)}
+                      onClick={() => requestViewChange(item.id)}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                         isActive
                           ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-lg'
@@ -550,7 +591,7 @@ useEffect(() => {
             return (
               <button
                 key={item.id}
-                onClick={() => setCurrentView(item.id)}
+                onClick={() => requestViewChange(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
@@ -579,12 +620,45 @@ useEffect(() => {
       {/* Main Content */}
      <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? (widgetMinimized ? 'mr-16' : 'mr-72') : ''}`}>
         <div className="p-8">
+          {/* Top bar with plan badge */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {user?.businessName || 'My Business'}
+              </h1>
+              {(() => {
+                const plan = user?.plan;
+                const planConfig = {
+                  basic: { label: 'Basic', bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
+                  pro: { label: 'Pro', bg: 'bg-gradient-to-r from-amber-100 to-yellow-100', text: 'text-amber-800', border: 'border-amber-300', icon: true },
+                  scale: { label: 'Scale', bg: 'bg-gradient-to-r from-purple-100 to-indigo-100', text: 'text-purple-800', border: 'border-purple-300', icon: true },
+                };
+                const cfg = planConfig[plan] || { label: 'Free', bg: 'bg-gray-50', text: 'text-gray-500', border: 'border-gray-200' };
+                return (
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
+                    {cfg.icon && <Zap className="w-3 h-3" />}
+                    {cfg.label}
+                  </span>
+                );
+              })()}
+            </div>
+            {!user?.plan && (
+              <button
+                onClick={() => requestViewChange('billing')}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
+              >
+                <Zap className="w-4 h-4" />
+                Upgrade Plan
+              </button>
+            )}
+          </div>
+
          {currentView === 'overview' && (
             <Overview
               bookings={bookings}
               services={services}
               employees={employees}
-              setCurrentView={setCurrentView}
+              setCurrentView={requestViewChange}
               user={user}
               apiUrl={apiUrl}
               authFetch={authFetch}
@@ -604,7 +678,7 @@ useEffect(() => {
           {currentView === 'customers-leads' && (
             <CustomersLeads
               user={user}
-              setCurrentView={setCurrentView}
+              setCurrentView={requestViewChange}
               apiUrl={apiUrl}
               authFetch={authFetch}
             />
@@ -613,14 +687,14 @@ useEffect(() => {
           {currentView === 'ai-agents' && (
             <AIAgentBuilder
               user={user}
-              setCurrentView={setCurrentView}
+              setCurrentView={requestViewChange}
               apiUrl={apiUrl}
               authFetch={authFetch}
             />
           )}
 
           {currentView === 'email-campaigns' && (
-            <FeatureGate user={user} requiredPlan="pro" feature="email-campaigns" onUpgradeClick={() => setCurrentView('billing')}>
+            <FeatureGate user={user} requiredPlan="pro" feature="email-campaigns" onUpgradeClick={() => requestViewChange('billing')}>
               <EmailCampaigns
                 user={user}
                 apiUrl={apiUrl}
@@ -644,7 +718,7 @@ useEffect(() => {
                 navigate={navigate}
                 websiteData={websiteData}
                 authFetch={authFetch}
-                setCurrentView={setCurrentView}
+                setCurrentView={requestViewChange}
                 refreshWebsiteData={refreshWebsiteData}
                 onUserPlanUpdate={(plan) => {
                   const updatedUser = { ...user, plan };
@@ -677,6 +751,8 @@ useEffect(() => {
               apiUrl={apiUrl}
               user={user}
               authFetch={authFetch}
+              onDirtyChange={handleDirtyChange}
+              saveRef={saveRef}
             />
           )}
 
@@ -685,7 +761,7 @@ useEffect(() => {
     user={user} 
     requiredPlan="expert"
     feature="market-research"
-    onUpgradeClick={() => setCurrentView('billing')}
+    onUpgradeClick={() => requestViewChange('billing')}
   >
     <MarketResearch
       apiUrl={apiUrl}
@@ -721,6 +797,8 @@ useEffect(() => {
                 localStorage.setItem('user', JSON.stringify(merged));
                 setUser(merged);
               }}
+              onDirtyChange={handleDirtyChange}
+              saveRef={saveRef}
             />
           )}
         </div>
@@ -744,6 +822,47 @@ useEffect(() => {
       </main>
 
       {showDomainPolicy && <DomainPolicyModal onClose={() => setShowDomainPolicy(false)} />}
+
+      {/* Unsaved Changes Modal */}
+      {showUnsavedModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={handleUnsavedCancel}>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Unsaved Changes</h3>
+                  <p className="text-sm text-gray-500">You have changes that haven't been saved yet.</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 pb-6">
+              <button
+                onClick={handleUnsavedCancel}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                Stay
+              </button>
+              <button
+                onClick={handleUnsavedLeave}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg transition-colors"
+              >
+                Leave Without Saving
+              </button>
+              <button
+                onClick={handleUnsavedSave}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-amber-600 to-blue-600 hover:shadow-lg rounded-lg transition-all"
+              >
+                Save & Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

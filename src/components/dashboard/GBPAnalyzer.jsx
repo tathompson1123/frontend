@@ -3,7 +3,7 @@ import {
   Search, RefreshCw, Loader2, CheckCircle2, AlertCircle, XCircle,
   TrendingUp, TrendingDown, BarChart3, Target, MapPin, Clock,
   Star, Camera, MessageSquare, FileText, ChevronDown, ChevronUp,
-  Activity, Shield, AlertTriangle, ExternalLink, Info
+  Activity, Shield, AlertTriangle, ExternalLink, Info, ArrowLeftRight
 } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin } from '@vis.gl/react-google-maps';
 
@@ -421,14 +421,32 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
             <p className="text-sm text-gray-500">{profile.primary_category} &middot; {profile.address}</p>
           </div>
         </div>
-        <button
-          onClick={handleReAnalyze}
-          disabled={analyzing}
-          className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 flex items-center gap-2"
-        >
-          {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-          Re-analyze
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              setProfile(null);
+              setAudit(null);
+              setActionItems([]);
+              setScans([]);
+              setMonitoring(null);
+              setSearchQuery('');
+              setGoogleUrl('');
+              setError(null);
+            }}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
+          >
+            <ArrowLeftRight className="w-4 h-4" />
+            Select Different Business
+          </button>
+          <button
+            onClick={handleReAnalyze}
+            disabled={analyzing}
+            className="px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-lg hover:bg-amber-100 flex items-center gap-2"
+          >
+            {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+            Re-analyze
+          </button>
+        </div>
       </div>
 
       {error && (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, Lock, Bell, Check, AlertCircle, Eye, EyeOff, Save, Trash2 } from 'lucide-react';
 
-export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
+export default function Settings({ user, apiUrl, authFetch, onUserUpdate, onDirtyChange, saveRef }) {
   const [activeTab, setActiveTab] = useState('account');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
@@ -63,6 +63,7 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
       const data = await response.json();
       if (response.ok && data.success) {
         showMessage('success', 'Profile updated successfully');
+        if (onDirtyChange) onDirtyChange(false);
         if (onUserUpdate) onUserUpdate({ ...user, ...accountForm });
       } else {
         showMessage('error', data.error || 'Failed to update profile');
@@ -74,6 +75,17 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
       setSaving(false);
     }
   };
+
+  // Wire up saveRef for parent "Save & Leave" and cleanup
+  useEffect(() => {
+    if (saveRef) saveRef.current = () => handleSaveAccount({ preventDefault: () => {} });
+    return () => { if (saveRef) saveRef.current = null; };
+  });
+  useEffect(() => {
+    return () => { if (onDirtyChange) onDirtyChange(false); };
+  }, []);
+
+  const markDirty = () => { if (onDirtyChange) onDirtyChange(true); };
 
   const handleChangePassword = async (e) => {
     e.preventDefault();
@@ -185,7 +197,7 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate }) {
 
         <div className="p-8">
           {activeTab === 'account' && (
-            <form onSubmit={handleSaveAccount} className="max-w-xl space-y-6">
+            <form onSubmit={handleSaveAccount} className="max-w-xl space-y-6" onInput={markDirty} onChange={markDirty}>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Business Name</label>

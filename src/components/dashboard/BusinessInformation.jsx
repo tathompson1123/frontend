@@ -51,18 +51,20 @@ function TimeInput({ value, onChange, className }) {
   );
 }
 
-export default function BusinessInformation({ 
-  businessHours, 
-  setBusinessHours, 
-  services, 
-  setServices, 
+export default function BusinessInformation({
+  businessHours,
+  setBusinessHours,
+  services,
+  setServices,
   fetchServices,
-  employees, 
-  setEmployees, 
+  employees,
+  setEmployees,
   fetchEmployees,
-  apiUrl, 
-  user, 
-  authFetch 
+  apiUrl,
+  user,
+  authFetch,
+  onDirtyChange,
+  saveRef
 }) {
   const [activeTab, setActiveTab] = useState('info');
   
@@ -432,8 +434,9 @@ export default function BusinessInformation({
     if (leafletMapRef.current) return; // already initialized
 
     const L = window.L;
+    const center = [mapCenter.lat, mapCenter.lng];
     const map = L.map(mapContainerRef.current, {
-      center: [mapCenter.lat, mapCenter.lng],
+      center,
       zoom: 10,
     });
 
@@ -442,7 +445,7 @@ export default function BusinessInformation({
       maxZoom: 18,
     }).addTo(map);
 
-    const circle = L.circle([mapCenter.lat, mapCenter.lng], {
+    const circle = L.circle(center, {
       radius: businessInfo.serviceRadius * 1609.34,
       color: '#9333ea',
       fillColor: '#9333ea',
@@ -451,7 +454,7 @@ export default function BusinessInformation({
       dashArray: '10, 5',
     }).addTo(map);
 
-    const marker = L.circleMarker([mapCenter.lat, mapCenter.lng], {
+    const marker = L.circleMarker(center, {
       radius: 7,
       color: 'white',
       fillColor: '#9333ea',
@@ -471,20 +474,29 @@ export default function BusinessInformation({
       leafletCircleRef.current = null;
       centerMarkerRef.current = null;
     };
-  }, [leafletReady, businessInfo.serviceAreaType]);
+  }, [leafletReady, businessInfo.serviceAreaType, mapCenter]);
 
   // Update circle radius when slider changes
   useEffect(() => {
-    if (!leafletCircleRef.current) return;
+    if (!leafletCircleRef.current || !leafletMapRef.current) return;
     leafletCircleRef.current.setRadius(businessInfo.serviceRadius * 1609.34);
+    leafletMapRef.current.fitBounds(leafletCircleRef.current.getBounds(), { padding: [30, 30] });
   }, [businessInfo.serviceRadius]);
 
   // Fly to new center when zip code geocodes
   useEffect(() => {
     if (!leafletMapRef.current || !leafletCircleRef.current) return;
-    leafletCircleRef.current.setLatLng([mapCenter.lat, mapCenter.lng]);
-    if (centerMarkerRef.current) centerMarkerRef.current.setLatLng([mapCenter.lat, mapCenter.lng]);
-    leafletMapRef.current.fitBounds(leafletCircleRef.current.getBounds(), { padding: [30, 30] });
+    const latlng = [mapCenter.lat, mapCenter.lng];
+    leafletCircleRef.current.setLatLng(latlng);
+    if (centerMarkerRef.current) centerMarkerRef.current.setLatLng(latlng);
+    // Use setView for reliable panning, then fit to circle bounds
+    leafletMapRef.current.setView(latlng, leafletMapRef.current.getZoom(), { animate: true });
+    // Defer fitBounds to next tick so Leaflet recalculates the circle bounds after setLatLng
+    setTimeout(() => {
+      if (leafletMapRef.current && leafletCircleRef.current) {
+        leafletMapRef.current.fitBounds(leafletCircleRef.current.getBounds(), { padding: [30, 30] });
+      }
+    }, 50);
   }, [mapCenter]);
 
   const geocodeZipCode = async (zipCode) => {
@@ -629,6 +641,7 @@ export default function BusinessInformation({
       }
 
       setSaveStatus({ type: 'success', message: 'Business information saved!' });
+      if (onDirtyChange) onDirtyChange(false);
       window.dispatchEvent(new CustomEvent('business-info-updated'));
       setTimeout(() => setSaveStatus(null), 4000);
     } catch (error) {
@@ -639,12 +652,26 @@ export default function BusinessInformation({
     }
   };
 
+  // Keep saveRef pointing to current handleSaveAll for parent "Save & Leave"
+  useEffect(() => {
+    if (saveRef) saveRef.current = handleSaveAll;
+    return () => { if (saveRef) saveRef.current = null; };
+  });
+
+  // Clean up dirty state on unmount
+  useEffect(() => {
+    return () => { if (onDirtyChange) onDirtyChange(false); };
+  }, []);
+
+  const markDirty = () => { if (onDirtyChange) onDirtyChange(true); };
+
   const addZipCode = () => {
     const zipCode = newZipCode.trim();
     if (zipCode && zipCode.length === 5 && !isNaN(zipCode)) {
       if (!businessInfo.serviceZipCodes.includes(zipCode)) {
         setBusinessInfo({ ...businessInfo, serviceZipCodes: [...businessInfo.serviceZipCodes, zipCode] });
         setNewZipCode('');
+        markDirty();
       } else {
         alert('This zip code is already added');
       }
@@ -655,6 +682,7 @@ export default function BusinessInformation({
 
   const removeZipCode = (zipCode) => {
     setBusinessInfo({ ...businessInfo, serviceZipCodes: businessInfo.serviceZipCodes.filter(z => z !== zipCode) });
+    markDirty();
   };
 
 
@@ -951,7 +979,7 @@ export default function BusinessInformation({
 
       {/* Business Info Tab */}
       {activeTab === 'info' && (
-        <div className="space-y-6">
+        <div className="space-y-6" onInput={markDirty} onChange={markDirty}>
           <div className="flex items-center justify-between gap-4">
             {saveStatus ? (
               <div className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium ${saveStatus.type === 'success' ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>

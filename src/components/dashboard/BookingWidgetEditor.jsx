@@ -3,7 +3,7 @@ import {
   X, Save, Loader, Palette, Eye, Clock, CreditCard, CheckCircle,
   ChevronLeft, ChevronRight, Plus, Trash2, GripVertical,
   User, Mail, Phone, MapPin, FileText, DollarSign, Shield, Percent,
-  Calendar, ArrowRight, Check
+  Calendar, ArrowRight, Check, AlertCircle, CheckCircle2
 } from 'lucide-react';
 
 const DEFAULT_CONFIG = {
@@ -861,6 +861,22 @@ export default function BookingWidgetEditor({ apiUrl, user, authFetch, onClose }
 
             {/* Right — Settings */}
             <div className="w-1/2 flex flex-col bg-white">
+              {/* Service setup status */}
+              {liveCategories.length > 0 ? (
+                <div className="mx-4 mt-3 mb-1 flex items-center gap-2 px-3 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                  <span className="text-[11px] text-green-700">
+                    {liveCategories.length} categor{liveCategories.length === 1 ? 'y' : 'ies'} and {liveServices.filter(s => !s.is_addon).length} service{liveServices.filter(s => !s.is_addon).length !== 1 ? 's' : ''} found — preview uses your real data
+                  </span>
+                </div>
+              ) : !loading && (
+                <div className="mx-4 mt-3 mb-1 flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg">
+                  <AlertCircle className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+                  <span className="text-[11px] text-amber-700">
+                    No service categories added yet — add categories in <strong>Services</strong> to see real data in the preview
+                  </span>
+                </div>
+              )}
               {/* Settings tabs */}
               <div className="flex border-b border-gray-200 px-4 shrink-0">
                 {SETTINGS_TABS.map(tab => (

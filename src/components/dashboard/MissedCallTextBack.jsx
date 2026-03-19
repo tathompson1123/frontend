@@ -142,8 +142,12 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
 
       if (response.ok) {
         const data = await response.json();
-        alert(`Missed Call Text-Back is now active!\n\nCalls to ${data.phoneNumber} will forward to ${config.forwardingNumber}.\nIf you don't answer, the caller gets a text automatically.`);
-        setConfig({ ...config, enabled: true });
+        if (data.callForwarding) {
+          alert(`Missed Call Text-Back is now active!\n\nCalls to ${data.phoneNumber} will forward to ${config.forwardingNumber}.\nIf you don't answer, the caller gets a text automatically.`);
+        } else {
+          alert(`Missed Call Text-Back deployed (SMS text-back mode)!\n\nYour number: ${data.phoneNumber}\nAuto text-back is enabled for missed calls.\n\nNote: Call forwarding requires a Twilio number. Your Telnyx number supports SMS text-back.`);
+        }
+        setConfig({ ...config, enabled: true, callForwardingActive: data.callForwarding });
         onDeploymentChange();
       } else {
         const error = await response.json();

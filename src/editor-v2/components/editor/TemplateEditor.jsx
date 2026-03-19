@@ -277,10 +277,9 @@ const CONTENT_FIELDS = {
     { key: 'title', label: 'Section Title', type: TEXT },
     { key: 'subtitle', label: 'Section Subtitle', type: TEXTAREA },
     { key: 'services', label: 'Services', type: ARRAY, itemFields: [
-      { key: 'name', label: 'Service Name', type: TEXT },
-      { key: 'description', label: 'Description', type: TEXTAREA },
-      { key: 'price', label: 'Price (optional)', type: TEXT },
-      { key: 'icon', label: 'Icon (emoji)', type: TEXT },
+      { key: 'title', label: 'Service Name', type: TEXT },
+      { key: 'category', label: 'Category', type: TEXT },
+      { key: 'price', label: 'Price', type: TEXT },
       { key: 'image', label: 'Service Image', type: IMAGE },
     ]},
   ],
@@ -477,7 +476,7 @@ const SECTION_DEFAULTS = {
   'before-after-cards': { title: 'Before & After', subtitle: 'See the difference we make.', cards: [{ title: 'Project 1', before: '', after: '', description: '' }] },
   // Services
   'services-cards-3col': { title: 'Our Services', subtitle: '', ctaText: 'Get a Quote', ctaLink: '#contact', services: [{ name: 'Service 1', description: 'Description of this service.', price: '', icon: '🔧' }, { name: 'Service 2', description: 'Description of this service.', price: '', icon: '⚡' }, { name: 'Service 3', description: 'Description of this service.', price: '', icon: '✅' }] },
-  'services-carousel': { title: 'Our Services', subtitle: 'Swipe to explore what we offer.', services: [{ name: 'Service 1', description: 'Description of this service.', price: '', image: '' }, { name: 'Service 2', description: 'Description of this service.', price: '', image: '' }] },
+  'services-carousel': { title: 'Our Services', subtitle: 'Swipe to explore what we offer.', services: [{ title: 'Service 1', category: 'General', price: '$199', image: '' }, { title: 'Service 2', category: 'General', price: '$299', image: '' }] },
   // Benefits
   'benefits-numbered': { title: 'Why Choose Us', subtitle: '', benefits: [{ title: 'Benefit 1', description: 'Why this matters to your customers.' }, { title: 'Benefit 2', description: 'Why this matters to your customers.' }] },
   'benefits-cards': { title: 'Why Choose Us', subtitle: '', benefits: [{ title: 'Benefit 1', description: 'Why this matters.', icon: '✅' }, { title: 'Benefit 2', description: 'Why this matters.', icon: '⭐' }] },
@@ -1660,6 +1659,7 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
   const iframeRef = useRef(null);
   const [selectedIdx, setSelectedIdx] = useState(null);
   const [openCard, setOpenCard] = useState('sections');
+  const openCardRef = useRef('sections');
   const [isSaving, setIsSaving] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showAddSection, setShowAddSection] = useState(false);
@@ -2213,6 +2213,17 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedIdx, previewHtml]);
 
+  // Scroll to footer/nav when their sidebar card opens
+  useEffect(() => {
+    openCardRef.current = openCard;
+    if (openCard === 'footer' && footerSection?.id) {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-highlight', id: footerSection.id, scroll: true }, '*');
+    } else if (openCard === 'nav' && navSection?.id) {
+      iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-highlight', id: navSection.id, scroll: true }, '*');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openCard]);
+
   const handleSave = async () => {
     setIsSaving(true);
     try {
@@ -2555,8 +2566,19 @@ export default function TemplateEditor({ initialSchema, initialHtml, onSave, onS
                 title="Website Preview"
                 sandbox="allow-scripts allow-forms"
                 onLoad={() => {
-                  // Restore scroll position via postMessage (no allow-same-origin needed)
-                  if (scrollRestoreRef.current !== null) {
+                  // If footer/nav card is open, scroll to that section instead of restoring position
+                  if (openCardRef.current === 'footer' && footerSection?.id) {
+                    scrollRestoreRef.current = null;
+                    setTimeout(() => {
+                      iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-highlight', id: footerSection.id, scroll: true }, '*');
+                    }, 80);
+                  } else if (openCardRef.current === 'nav' && navSection?.id) {
+                    scrollRestoreRef.current = null;
+                    setTimeout(() => {
+                      iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-highlight', id: navSection.id, scroll: true }, '*');
+                    }, 80);
+                  } else if (scrollRestoreRef.current !== null) {
+                    // Restore scroll position via postMessage (no allow-same-origin needed)
                     const y = scrollRestoreRef.current;
                     scrollRestoreRef.current = null;
                     iframeRef.current?.contentWindow?.postMessage({ type: 'sorce-scroll-to', y }, '*');
