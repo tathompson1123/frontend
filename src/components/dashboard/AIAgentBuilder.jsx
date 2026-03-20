@@ -6,7 +6,7 @@ import {
 } from 'lucide-react';
 import MissedCallTextBack from './MissedCallTextBack';
 
-export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch }) {
+export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch, onDirtyChange }) {
   const [activeAgent, setActiveAgent] = useState('chat'); // 'chat', 'leadform', or 'missedcall'
   const [setupMode, setSetupMode] = useState('ai'); // 'manual' or 'ai'
   const [chatAgentDeployed, setChatAgentDeployed] = useState(false);
@@ -94,6 +94,19 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     faqs: []
   });
 
+  const [chatConfigSnapshot, setChatConfigSnapshot] = useState(null);
+  const [leadConfigSnapshot, setLeadConfigSnapshot] = useState(null);
+
+  const isAgentDirty = () => {
+    if (activeAgent === 'chat' && chatConfigSnapshot) return JSON.stringify(chatConfig) !== chatConfigSnapshot;
+    if (activeAgent === 'leadform' && leadConfigSnapshot) return JSON.stringify(leadConfig) !== leadConfigSnapshot;
+    return false;
+  };
+
+  useEffect(() => {
+    if (onDirtyChange) onDirtyChange(isAgentDirty());
+  }, [chatConfig, leadConfig, activeAgent, chatConfigSnapshot, leadConfigSnapshot]);
+
   useEffect(() => {
     loadDeploymentStatus();
     loadConfigs();
@@ -179,15 +192,27 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         const data = await chatRes.json();
         if (data.config) {
           chatLoaded = data.config;
-          setChatConfig(prev => ({ ...prev, ...data.config }));
+          const merged = { ...chatConfig, ...data.config };
+          setChatConfig(merged);
+          setChatConfigSnapshot(JSON.stringify(merged));
+        } else {
+          setChatConfigSnapshot(JSON.stringify(chatConfig));
         }
+      } else {
+        setChatConfigSnapshot(JSON.stringify(chatConfig));
       }
       if (leadRes.ok) {
         const data = await leadRes.json();
         if (data.config) {
           leadLoaded = data.config;
-          setLeadConfig(prev => ({ ...prev, ...data.config }));
+          const merged = { ...leadConfig, ...data.config };
+          setLeadConfig(merged);
+          setLeadConfigSnapshot(JSON.stringify(merged));
+        } else {
+          setLeadConfigSnapshot(JSON.stringify(leadConfig));
         }
+      } else {
+        setLeadConfigSnapshot(JSON.stringify(leadConfig));
       }
       if (bizRes.ok) {
         const data = await bizRes.json();
@@ -205,11 +230,19 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
       const businessName = user?.business_name || user?.businessName || '';
       if (!leadLoaded?.businessContext && (businessName || bizInfo)) {
         const ctx = [businessName, bizInfo?.city, bizInfo?.state].filter(Boolean).join(', ');
-        if (ctx) setLeadConfig(prev => prev.businessContext ? prev : { ...prev, businessContext: ctx });
+        if (ctx) setLeadConfig(prev => {
+          const updated = prev.businessContext ? prev : { ...prev, businessContext: ctx };
+          setLeadConfigSnapshot(JSON.stringify(updated));
+          return updated;
+        });
       }
       if (!leadLoaded?.servicesInfo && services.length > 0) {
         const svcText = services.filter(s => !s.is_addon).map(s => `${s.name}${s.price ? ` - $${s.price}` : ''}`).join('\n');
-        if (svcText) setLeadConfig(prev => prev.servicesInfo ? prev : { ...prev, servicesInfo: svcText });
+        if (svcText) setLeadConfig(prev => {
+          const updated = prev.servicesInfo ? prev : { ...prev, servicesInfo: svcText };
+          setLeadConfigSnapshot(JSON.stringify(updated));
+          return updated;
+        });
       }
 
       // Update initial AI message — prioritize "already configured" over "has business info"
@@ -267,6 +300,9 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           const verifyData = await verifyRes.json();
           console.log('✅ VERIFY: Config in DB:', JSON.stringify(verifyData.config).substring(0, 500));
         }
+        // Update snapshot so dirty state clears
+        if (activeAgent === 'chat') setChatConfigSnapshot(JSON.stringify(chatConfig));
+        else setLeadConfigSnapshot(JSON.stringify(leadConfig));
         alert('Configuration saved successfully!');
       } else {
         console.error('❌ SAVE FAILED:', response.status, responseData);
@@ -412,8 +448,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           console.log('🤖 ASSISTANT: mergedConfig:', JSON.stringify(mergedConfig).substring(0, 500));
           if (activeAgent === 'chat') {
             setChatConfig(mergedConfig);
+            setChatConfigSnapshot(JSON.stringify(mergedConfig));
           } else {
             setLeadConfig(mergedConfig);
+            setLeadConfigSnapshot(JSON.stringify(mergedConfig));
           }
           // Auto-save immediately so user doesn't have to hit Save
           let saveSuccess = false;
@@ -807,7 +845,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           {/* Agent Toggle */}
           <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
             <button
-              onClick={() => setActiveAgent('chat')}
+              onClick={() => {
+                if (isAgentDirty() && !confirm('You have unsaved changes. Switch agent tab anyway? Your changes will be lost.')) return;
+                setActiveAgent('chat');
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                 activeAgent === 'chat'
                   ? 'bg-white text-amber-600 shadow-sm'
@@ -819,7 +860,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               {chatAgentDeployed && <span className="w-2 h-2 bg-green-500 rounded-full" />}
             </button>
             <button
-              onClick={() => setActiveAgent('leadform')}
+              onClick={() => {
+                if (isAgentDirty() && !confirm('You have unsaved changes. Switch agent tab anyway? Your changes will be lost.')) return;
+                setActiveAgent('leadform');
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                 activeAgent === 'leadform'
                   ? 'bg-white text-amber-600 shadow-sm'
@@ -831,7 +875,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               {leadAgentDeployed && <span className="w-2 h-2 bg-green-500 rounded-full" />}
             </button>
             <button
-              onClick={() => setActiveAgent('missedcall')}
+              onClick={() => {
+                if (isAgentDirty() && !confirm('You have unsaved changes. Switch agent tab anyway? Your changes will be lost.')) return;
+                setActiveAgent('missedcall');
+              }}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
                 activeAgent === 'missedcall'
                   ? 'bg-white text-amber-600 shadow-sm'
@@ -855,6 +902,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           setCurrentView={setCurrentView}
           isDeployed={missedCallDeployed}
           onDeploymentChange={loadDeploymentStatus}
+          onDirtyChange={onDirtyChange}
         />
       )}
 

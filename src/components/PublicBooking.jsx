@@ -211,51 +211,88 @@ export default function PublicBooking({ businessId, apiUrl }) {
 
   // Success Screen
   if (success) {
+    const formatTime12 = (t) => {
+      if (!t) return '';
+      const [h, m] = t.split(':').map(Number);
+      const p = h >= 12 ? 'PM' : 'AM';
+      return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${p}`;
+    };
+
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-12 h-12 text-green-600" />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-amber-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden">
+          {/* Success Header */}
+          <div className="bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-10 text-center">
+            <div className="w-20 h-20 bg-white/20 backdrop-blur rounded-full flex items-center justify-center mx-auto mb-4">
+              <CheckCircle className="w-12 h-12 text-white" />
+            </div>
+            <h2 className="text-3xl font-bold text-white mb-1">You're All Set!</h2>
+            <p className="text-green-100">Your booking has been confirmed</p>
           </div>
-          
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            Booking Confirmed!
-          </h2>
-          
-          <div className="bg-gray-50 rounded-lg p-6 mb-6">
-            <p className="text-sm text-gray-600 mb-2">Booking Number</p>
-            <p className="text-2xl font-bold text-gray-900">{bookingNumber}</p>
+
+          <div className="px-8 py-8">
+            {/* Booking Number */}
+            <div className="bg-gray-50 rounded-xl p-5 mb-6 text-center border border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Booking Number</p>
+              <p className="text-2xl font-bold text-gray-900 tracking-wide">{bookingNumber}</p>
+            </div>
+
+            {/* Booking Details */}
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-blue-600" />
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Date & Time</p>
+                  <p className="font-semibold text-gray-900">
+                    {new Date(selectedDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+                    {' at '}{formatTime12(selectedTime)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-xl">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Clock className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-xs text-gray-500">Service</p>
+                  <p className="font-semibold text-gray-900">{selectedService?.name}</p>
+                </div>
+                <p className="text-lg font-bold text-green-600">${calculateTotalPrice().toFixed(2)}</p>
+              </div>
+            </div>
+
+            {/* Confirmation message */}
+            <p className="text-sm text-gray-500 text-center mb-6">
+              A confirmation has been sent to <span className="font-semibold text-gray-700">{customerInfo.email}</span>
+            </p>
+
+            {/* Action Buttons */}
+            <div className="space-y-3">
+              {businessInfo?.website_url && (
+                <a
+                  href={businessInfo.website_url}
+                  className="w-full bg-gradient-to-r from-blue-600 to-amber-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:shadow-lg transition flex items-center justify-center gap-2"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Browse Our Website
+                </a>
+              )}
+              <button
+                onClick={() => window.location.reload()}
+                className={`w-full px-6 py-3.5 rounded-xl font-semibold transition flex items-center justify-center gap-2 ${
+                  businessInfo?.website_url
+                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gradient-to-r from-blue-600 to-amber-600 text-white hover:shadow-lg'
+                }`}
+              >
+                <Calendar className="w-4 h-4" />
+                Book Another Service
+              </button>
+            </div>
           </div>
-          
-          <div className="text-left space-y-3 mb-6">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Service:</span>
-              <span className="font-semibold">{selectedService?.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Date:</span>
-              <span className="font-semibold">{new Date(selectedDate).toLocaleDateString()}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Time:</span>
-              <span className="font-semibold">{selectedTime}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total:</span>
-              <span className="font-semibold text-green-600">${calculateTotalPrice().toFixed(2)}</span>
-            </div>
-          </div>
-          
-          <p className="text-gray-600 mb-6">
-            A confirmation email has been sent to {customerInfo.email}
-          </p>
-          
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full bg-gradient-to-r from-blue-600 to-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition"
-          >
-            Book Another Service
-          </button>
         </div>
       </div>
     );

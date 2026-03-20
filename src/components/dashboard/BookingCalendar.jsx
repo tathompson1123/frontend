@@ -82,6 +82,27 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     notes: ''
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
+  const [bookingFormSnapshot, setBookingFormSnapshot] = useState(null);
+
+  const isBookingDirty = () => bookingFormSnapshot && JSON.stringify(newBooking) !== bookingFormSnapshot;
+
+  const closeBookingModal = (force = false) => {
+    if (!force && isBookingDirty()) {
+      if (!confirm('You have unsaved changes. Are you sure you want to close? Your changes will be lost.')) return;
+    }
+    setShowCreateBookingModal(false);
+    setIsEditingBooking(false);
+    setEditingBookingId(null);
+    setServiceTab('main');
+    setShowCustomerPicker(false);
+    setCustomerPickerSearch('');
+    setNewBooking({
+      customerId: '', customerName: '', customerEmail: '', customerPhone: '',
+      customerAddress: '', serviceId: '', additionalServices: [],
+      employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
+    });
+    setBookingFormSnapshot(null);
+  };
   const [groups, setGroups] = useState([]);
 
   useEffect(() => {
@@ -283,14 +304,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         const data = await response.json();
         if (data.success) {
           showToast('Booking updated successfully!');
-          setNewBooking({
-            customerId: '', customerName: '', customerEmail: '', customerPhone: '',
-            customerAddress: '', serviceId: '', additionalServices: [],
-            employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
-          });
-          setShowCreateBookingModal(false);
-          setIsEditingBooking(false);
-          setEditingBookingId(null);
+          closeBookingModal(true);
           fetchAllBookings();
         } else {
           showToast(data.error || 'Failed to update booking', 'error');
@@ -316,12 +330,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         const data = await response.json();
         if (data.success) {
           showToast('Booking created successfully!');
-          setNewBooking({
-            customerId: '', customerName: '', customerEmail: '', customerPhone: '',
-            customerAddress: '', serviceId: '', additionalServices: [],
-            employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
-          });
-          setShowCreateBookingModal(false);
+          closeBookingModal(true);
           fetchAllBookings();
         } else {
           showToast(data.error || 'Failed to create booking', 'error');
@@ -517,7 +526,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 onClick={() => {
                   setIsEditingBooking(true);
                   setEditingBookingId(booking.id);
-                  setNewBooking({
+                  const editForm = {
                     customerId: booking.customer_id,
                     customerName: booking.customer_name,
                     customerEmail: booking.customer_email || '',
@@ -530,7 +539,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     bookingDate: booking.booking_date.split('T')[0],
                     startTime: booking.start_time,
                     notes: booking.job_notes || booking.customer_notes || ''
-                  });
+                  };
+                  setNewBooking(editForm);
+                  setBookingFormSnapshot(JSON.stringify(editForm));
                   setShowCreateBookingModal(true);
                 }}
                 className="px-2 py-1.5 bg-amber-600 text-white text-xs font-medium rounded hover:bg-amber-700 transition"
@@ -809,7 +820,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
           <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={() => setShowCreateBookingModal(true)}
+              onClick={() => {
+                setBookingFormSnapshot(JSON.stringify(newBooking));
+                setShowCreateBookingModal(true);
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-amber-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all"
             >
               <Plus className="w-5 h-5" />
@@ -1059,7 +1073,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   onClick={() => {
                     setIsEditingBooking(true);
                     setEditingBookingId(selectedBooking.id);
-                    setNewBooking({
+                    const editForm = {
                       customerId: selectedBooking.customer_id,
                       customerName: selectedBooking.customer_name,
                       customerEmail: selectedBooking.customer_email || '',
@@ -1072,7 +1086,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                       bookingDate: selectedBooking.booking_date.split('T')[0],
                       startTime: selectedBooking.start_time,
                       notes: selectedBooking.job_notes || selectedBooking.customer_notes || ''
-                    });
+                    };
+                    setNewBooking(editForm);
+                    setBookingFormSnapshot(JSON.stringify(editForm));
                     setShowBookingModal(false);
                     setShowCreateBookingModal(true);
                   }}
@@ -1377,19 +1393,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  setShowCreateBookingModal(false);
-                  setIsEditingBooking(false);
-                  setEditingBookingId(null);
-                  setServiceTab('main');
-                  setShowCustomerPicker(false);
-                  setCustomerPickerSearch('');
-                  setNewBooking({
-                    customerId: '', customerName: '', customerEmail: '', customerPhone: '',
-                    customerAddress: '', serviceId: '', additionalServices: [],
-                    employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
-                  });
-                }}
+                onClick={() => closeBookingModal()}
                 className="p-2 hover:bg-gray-100 rounded-lg transition"
               >
                 <X className="w-6 h-6 text-gray-600" />
@@ -1849,16 +1853,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowCreateBookingModal(false);
-                    setIsEditingBooking(false);
-                    setEditingBookingId(null);
-                    setNewBooking({
-                      customerId: '', customerName: '', customerEmail: '', customerPhone: '',
-                      customerAddress: '', serviceId: '', additionalServices: [],
-                      employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
-                    });
-                  }}
+                  onClick={() => closeBookingModal()}
                   className="flex-1 px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition"
                 >
                   Cancel

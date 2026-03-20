@@ -121,6 +121,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   const [showModal, setShowModal] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [editingInvoice, setEditingInvoice] = useState(null);
+  const [formSnapshot, setFormSnapshot] = useState(null);
   const [customers, setCustomers] = useState([]);
   const [services, setServices] = useState([]);
   const [catalog, setCatalog] = useState([]); // saved fees/supplies
@@ -264,13 +265,15 @@ export default function Invoices({ apiUrl, user, authFetch }) {
     const feeItems = catalog
       .filter(c => c.amount_type === 'fixed')
       .map(c => ({ description: c.name, quantity: 1, unitPrice: parseFloat(c.amount) || 0, taxable: !!c.taxable }));
-    setForm({ ...emptyForm, taxRate: defaultTaxRate, items: [...baseItems, ...feeItems] });
+    const newForm = { ...emptyForm, taxRate: defaultTaxRate, items: [...baseItems, ...feeItems] };
+    setForm(newForm);
+    setFormSnapshot(JSON.stringify(newForm));
     setShowModal(true);
   };
 
   const openEditModal = (invoice) => {
     setEditingInvoice(invoice);
-    setForm({
+    const editForm = {
       customerName: invoice.customer_name || '',
       customerEmail: invoice.customer_email || '',
       customerPhone: invoice.customer_phone || '',
@@ -287,14 +290,22 @@ export default function Invoices({ apiUrl, user, authFetch }) {
       terms: invoice.terms || 'Payment due within 30 days.',
       dueDate: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
       taxRate: parseFloat(invoice.tax_rate || 0) * 100,
-    });
+    };
+    setForm(editForm);
+    setFormSnapshot(JSON.stringify(editForm));
     setShowModal(true);
   };
 
-  const closeModal = () => {
+  const isFormDirty = () => formSnapshot && JSON.stringify(form) !== formSnapshot;
+
+  const closeModal = (force = false) => {
+    if (!force && isFormDirty()) {
+      if (!confirm('You have unsaved changes. Are you sure you want to close? Your changes will be lost.')) return;
+    }
     setShowModal(false);
     setEditingInvoice(null);
     setForm(emptyForm);
+    setFormSnapshot(null);
   };
 
   const handleSaveInvoice = async () => {
@@ -307,7 +318,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
         body: JSON.stringify({ ...form, dueDate, taxRate: form.taxRate / 100 })
       });
       if (res.ok) {
-        closeModal();
+        closeModal(true);
         fetchInvoices();
       } else {
         const data = await res.json();

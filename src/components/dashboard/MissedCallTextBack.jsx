@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Phone, PhoneOff, Clock, MessageCircle, TrendingUp, Save, Rocket, Crown, Settings, ChevronDown, ChevronUp, Brain } from 'lucide-react';
 
-export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
+export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange, onDirtyChange }) {
   const [config, setConfig] = useState({
     enabled: false,
     smsEnabled: true,
@@ -16,6 +16,8 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
       servicesInfo: ''
     }
   });
+  const [configSnapshot, setConfigSnapshot] = useState(null);
+  const [templateSnapshot, setTemplateSnapshot] = useState(null);
   const [smsTemplate, setSmsTemplate] = useState(getDefaultTemplate());
   const [stats, setStats] = useState({
     totalCalls: 0,
@@ -44,6 +46,13 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
     setPhoneNumber(user?.telnyx_phone_number || user?.twilio_phone_number || null);
   }, [apiUrl, user]);
 
+  useEffect(() => {
+    if (configSnapshot && onDirtyChange) {
+      const dirty = JSON.stringify(config) !== configSnapshot || smsTemplate !== templateSnapshot;
+      onDirtyChange(dirty);
+    }
+  }, [config, smsTemplate, configSnapshot, templateSnapshot]);
+
   const loadConfig = async () => {
     try {
       const [voiceRes, bizRes, svcRes] = await Promise.all([
@@ -63,10 +72,12 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
       };
 
       let savedConfig = defaults;
+      let loadedTemplate = getDefaultTemplate();
       if (voiceRes.ok) {
         const data = await voiceRes.json();
         savedConfig = data.config || defaults;
-        setSmsTemplate(data.smsTemplate || getDefaultTemplate());
+        loadedTemplate = data.smsTemplate || getDefaultTemplate();
+        setSmsTemplate(loadedTemplate);
       }
 
       // Pre-fill training fields from business settings when empty
@@ -85,7 +96,10 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
         }
       }
 
-      setConfig({ ...savedConfig, training });
+      const finalConfig = { ...savedConfig, training };
+      setConfig(finalConfig);
+      setConfigSnapshot(JSON.stringify(finalConfig));
+      setTemplateSnapshot(loadedTemplate);
     } catch (error) {
       console.error('Error loading voice config:', error);
     }
@@ -127,6 +141,8 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
       });
 
       if (response.ok) {
+        setConfigSnapshot(JSON.stringify(config));
+        setTemplateSnapshot(smsTemplate);
         alert('Configuration saved successfully!');
       } else {
         const error = await response.json();

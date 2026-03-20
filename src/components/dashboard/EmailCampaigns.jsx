@@ -123,7 +123,7 @@ function CampaignPresets({ presets, onLoad, onDelete, onSave, currentConfig, cur
   );
 }
 
-export default function EmailCampaigns({ apiUrl, authFetch, user }) {
+export default function EmailCampaigns({ apiUrl, authFetch, user, onDirtyChange }) {
   const [config, setConfig] = useState({
     enabled: false,
     send_day: 'monday',
@@ -133,6 +133,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     tone: 'friendly',
     focus: 'seasonal',
   });
+  const [configSnapshot, setConfigSnapshot] = useState(null);
   const [offerDetails, setOfferDetails] = useState({ offer: '', message: '', emotion: '', ctaLink: '' });
   const [presets, setPresets] = useState([]);
   const [drafts, setDrafts] = useState([]);
@@ -168,17 +169,25 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
       const bizEmail = bizInfo.email || user?.email || '';
 
       // Pre-fill from_name and from_email from business settings when not already saved
-      setConfig(prev => ({
-        ...prev,
+      const mergedConfig = {
+        enabled: false, send_day: 'monday', send_hour: 9, from_name: '', from_email: '', tone: 'friendly', focus: 'seasonal',
         ...savedConfig,
-        from_name: savedConfig.from_name || prev.from_name || businessName,
-        from_email: savedConfig.from_email || prev.from_email || bizEmail,
-      }));
+        from_name: savedConfig.from_name || businessName,
+        from_email: savedConfig.from_email || bizEmail,
+      };
+      setConfig(mergedConfig);
+      setConfigSnapshot(JSON.stringify(mergedConfig));
       if (histData.campaigns) setHistory(histData.campaigns);
       if (presetsData.presets) setPresets(presetsData.presets);
       if (draftsData.drafts) setDrafts(draftsData.drafts);
     }).finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (configSnapshot && onDirtyChange) {
+      onDirtyChange(JSON.stringify(config) !== configSnapshot);
+    }
+  }, [config, configSnapshot]);
 
   const savePreset = async (name) => {
     const settings = { config, offerDetails };
@@ -217,8 +226,10 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(config),
       });
-      if (r.ok) showToast('Campaign settings saved!');
-      else showToast('Failed to save settings', 'error');
+      if (r.ok) {
+        setConfigSnapshot(JSON.stringify(config));
+        showToast('Campaign settings saved!');
+      } else showToast('Failed to save settings', 'error');
     } finally {
       setSaving(false);
     }

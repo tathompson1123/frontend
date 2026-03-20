@@ -739,6 +739,7 @@ useEffect(() => {
               setCurrentView={requestViewChange}
               apiUrl={apiUrl}
               authFetch={authFetch}
+              onDirtyChange={handleDirtyChange}
             />
           )}
 
@@ -748,6 +749,7 @@ useEffect(() => {
                 user={user}
                 apiUrl={apiUrl}
                 authFetch={authFetch}
+                onDirtyChange={handleDirtyChange}
               />
             </FeatureGate>
           )}

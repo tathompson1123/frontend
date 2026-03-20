@@ -217,6 +217,7 @@ export default function Estimates({ apiUrl, user, authFetch }) {
     attachments: [],
   };
   const [form, setForm] = useState(emptyForm);
+  const [formSnapshot, setFormSnapshot] = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -399,13 +400,15 @@ export default function Estimates({ apiUrl, user, authFetch }) {
 
   const openCreate = () => {
     setEditingEstimate(null);
-    setForm({ ...emptyForm, taxRate: defaultTaxRate });
+    const newForm = { ...emptyForm, taxRate: defaultTaxRate };
+    setForm(newForm);
+    setFormSnapshot(JSON.stringify(newForm));
     setShowEditor(true);
   };
 
   const openEdit = (est) => {
     setEditingEstimate(est);
-    setForm({
+    const editForm = {
       customerName: est.customer_name || '',
       customerEmail: est.customer_email || '',
       customerPhone: est.customer_phone || '',
@@ -421,8 +424,22 @@ export default function Estimates({ apiUrl, user, authFetch }) {
       discountAmount: parseFloat(est.discount_amount) || 0,
       links: est.links || [],
       attachments: est.attachments || [],
-    });
+    };
+    setForm(editForm);
+    setFormSnapshot(JSON.stringify(editForm));
     setShowEditor(true);
+  };
+
+  const isFormDirty = () => formSnapshot && JSON.stringify(form) !== formSnapshot;
+
+  const closeEditor = (force = false) => {
+    if (!force && isFormDirty()) {
+      if (!confirm('You have unsaved changes. Are you sure you want to close? Your changes will be lost.')) return;
+    }
+    setShowEditor(false);
+    setEditingEstimate(null);
+    setForm(emptyForm);
+    setFormSnapshot(null);
   };
 
   // ── CRUD ────────────────────────────────────────────────────────────────────
@@ -451,7 +468,7 @@ export default function Estimates({ apiUrl, user, authFetch }) {
       const data = await res.json();
       if (!res.ok) return showToast(data.error || 'Failed to save estimate', 'error');
       showToast(editingEstimate ? 'Estimate updated.' : 'Estimate created.');
-      setShowEditor(false);
+      closeEditor(true);
       fetchEstimates();
     } catch {
       showToast('Failed to save estimate', 'error');
@@ -512,7 +529,7 @@ export default function Estimates({ apiUrl, user, authFetch }) {
         {/* Editor toolbar */}
         <div className="flex items-center justify-between mb-5">
           <button
-            onClick={() => setShowEditor(false)}
+            onClick={() => closeEditor()}
             className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-800 transition"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -522,7 +539,7 @@ export default function Estimates({ apiUrl, user, authFetch }) {
             <span className="text-sm font-semibold text-gray-700">
               {editingEstimate ? `Editing ${editingEstimate.estimate_number}` : 'New Estimate'}
             </span>
-            <button onClick={() => setShowEditor(false)} className={`${btnBase} bg-gray-100 text-gray-600 hover:bg-gray-200`}>
+            <button onClick={() => closeEditor()} className={`${btnBase} bg-gray-100 text-gray-600 hover:bg-gray-200`}>
               Cancel
             </button>
             <button onClick={handleSave} className={`${btnBase} bg-amber-500 text-white hover:bg-amber-600 px-5`}>
@@ -825,7 +842,7 @@ export default function Estimates({ apiUrl, user, authFetch }) {
 
             {/* Save button (bottom) */}
             <div className="flex justify-end gap-2 pb-4">
-              <button onClick={() => setShowEditor(false)} className={`${btnBase} bg-gray-100 text-gray-600 hover:bg-gray-200`}>
+              <button onClick={() => closeEditor()} className={`${btnBase} bg-gray-100 text-gray-600 hover:bg-gray-200`}>
                 Cancel
               </button>
               <button onClick={handleSave} className={`${btnBase} bg-amber-500 text-white hover:bg-amber-600 px-6 py-2.5`}>
