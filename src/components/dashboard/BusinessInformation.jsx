@@ -100,46 +100,6 @@ export default function BusinessInformation({
   const centerMarkerRef = useRef(null);
   const [leafletReady, setLeafletReady] = useState(!!window.L);
 
-  // SendGrid verification state
-  const [sgStatus, setSgStatus] = useState('loading'); // loading, not_setup, pending, verified, unconfigured
-  const [sgLoading, setSgLoading] = useState(false);
-
-  useEffect(() => {
-    authFetch(`${apiUrl}/api/user/sendgrid/status`).then(r => r.json()).then(d => setSgStatus(d.status)).catch(() => setSgStatus('unknown'));
-  }, [apiUrl, authFetch]);
-
-  const handleSendGridVerify = async () => {
-    if (!businessInfo.email) return alert('Enter a business email first');
-    setSgLoading(true);
-    try {
-      const res = await authFetch(`${apiUrl}/api/user/sendgrid/verify`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: businessInfo.email, businessName: businessInfo.businessName || user?.business_name })
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setSgStatus(data.status);
-        alert(data.message);
-      } else {
-        alert(data.error || 'Verification failed');
-      }
-    } catch { alert('Failed to send verification'); }
-    setSgLoading(false);
-  };
-
-  const handleCheckSgStatus = async () => {
-    setSgLoading(true);
-    try {
-      const res = await authFetch(`${apiUrl}/api/user/sendgrid/status`);
-      const data = await res.json();
-      setSgStatus(data.status);
-      if (data.status === 'verified') alert('Email verified!');
-      else if (data.status === 'pending') alert('Still pending — check your email for the verification link');
-    } catch {}
-    setSgLoading(false);
-  };
-
   // Services State
   const [showAddService, setShowAddService] = useState(false);
   const [editingService, setEditingService] = useState(null);
@@ -1029,30 +989,12 @@ export default function BusinessInformation({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Email Confirmations</label>
-                {sgStatus === 'verified' ? (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
-                    <Shield className="w-4 h-4 text-green-600" />
-                    <span className="text-green-700 text-sm font-semibold">Verified</span>
-                    <span className="text-xs text-green-500 ml-auto">Booking emails sent from your address</span>
-                  </div>
-                ) : sgStatus === 'pending' ? (
-                  <button onClick={handleCheckSgStatus} disabled={sgLoading} className="w-full flex items-center gap-2 px-4 py-2 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm font-semibold hover:bg-amber-100 transition disabled:opacity-50">
-                    <Mail className="w-4 h-4" />
-                    <span>{sgLoading ? 'Checking...' : 'Verification pending'}</span>
-                    <span className="text-xs text-amber-500 ml-auto">Click to re-check</span>
-                  </button>
-                ) : sgStatus !== 'unconfigured' && sgStatus !== 'loading' ? (
-                  <button onClick={handleSendGridVerify} disabled={sgLoading} className="w-full flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg text-blue-700 text-sm font-semibold hover:bg-blue-100 transition disabled:opacity-50">
-                    <Mail className="w-4 h-4" />
-                    <span>{sgLoading ? 'Sending...' : 'Setup Email Confirmations'}</span>
-                  </button>
-                ) : (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">
-                    <Mail className="w-4 h-4 text-gray-400" />
-                    <span className="text-gray-400 text-sm">{sgStatus === 'loading' ? 'Loading...' : 'Not available'}</span>
-                  </div>
-                )}
-                <p className="text-xs text-gray-400 mt-1.5">Verify your email so booking confirmations are sent directly from your business email address instead of a generic sender. This builds trust with your customers.</p>
+                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+                  <Shield className="w-4 h-4 text-green-600" />
+                  <span className="text-green-700 text-sm font-semibold">Active</span>
+                  <span className="text-xs text-green-500 ml-auto">Booking emails sent on your behalf</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-1.5">Booking confirmations are sent from SORCE on behalf of your business. Customer replies go directly to your business email.</p>
               </div>
             </div>
           </div>
