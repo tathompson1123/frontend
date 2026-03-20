@@ -627,7 +627,7 @@ useEffect(() => {
           <div className="flex items-center justify-between mb-6">
             {(() => {
               const plan = user?.plan;
-              const name = user?.businessName || 'My Business';
+              const name = (user?.businessName || 'My Business').toUpperCase();
 
               if (plan === 'scale') {
                 return (
