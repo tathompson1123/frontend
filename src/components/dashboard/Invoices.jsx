@@ -67,7 +67,10 @@ function InvoicePreview({ form, editingInvoice, subtotal, taxAmount }) {
               <tr><td colSpan={4} className="py-4 text-center text-gray-300 text-xs">No line items yet</td></tr>
             ) : lineItems.map((item, idx) => (
               <tr key={idx} className="border-b border-gray-50">
-                <td className="py-2 text-gray-700 pr-2">{item.description || '—'}</td>
+                <td className="py-2 text-gray-700 pr-2">
+                  {item.description || '—'}
+                  {item.taxable === false && <span className="ml-1 text-[10px] text-gray-400">(no tax)</span>}
+                </td>
                 <td className="py-2 text-center text-gray-500">{item.quantity}</td>
                 <td className="py-2 text-right text-gray-500">${parseFloat(item.unitPrice || 0).toFixed(2)}</td>
                 <td className="py-2 text-right font-semibold text-gray-800">${(item.quantity * parseFloat(item.unitPrice || 0)).toFixed(2)}</td>
@@ -129,11 +132,11 @@ export default function Invoices({ apiUrl, user, authFetch }) {
 
   // Settings modal state
   const [settingsTaxRate, setSettingsTaxRate] = useState('');
-  const [newCatalogItem, setNewCatalogItem] = useState({ name: '', category: 'fee', amountType: 'fixed', amount: '' });
+  const [newCatalogItem, setNewCatalogItem] = useState({ name: '', category: 'fee', amountType: 'fixed', amount: '', taxable: false });
 
   const emptyForm = {
     customerName: '', customerEmail: '', customerPhone: '',
-    customerId: null, items: [{ description: '', quantity: 1, unitPrice: 0 }],
+    customerId: null, items: [{ description: '', quantity: 1, unitPrice: 0, taxable: true }],
     notes: '', terms: 'Payment due within 30 days.', dueDate: '', taxRate: 0
   };
   const [form, setForm] = useState(emptyForm);
@@ -240,7 +243,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
       const data = await res.json();
       if (res.ok) {
         setCatalog(prev => [...prev, data.item]);
-        setNewCatalogItem({ name: '', category: 'fee', amountType: 'fixed', amount: '' });
+        setNewCatalogItem({ name: '', category: 'fee', amountType: 'fixed', amount: '', taxable: false });
       }
     } catch (e) { console.error(e); }
   };
@@ -256,7 +259,12 @@ export default function Invoices({ apiUrl, user, authFetch }) {
 
   const openCreateModal = () => {
     setEditingInvoice(null);
-    setForm({ ...emptyForm, taxRate: defaultTaxRate });
+    // Start with one blank line item + auto-add saved catalog fees/supplies
+    const baseItems = [{ description: '', quantity: 1, unitPrice: 0, taxable: true }];
+    const feeItems = catalog
+      .filter(c => c.amount_type === 'fixed')
+      .map(c => ({ description: c.name, quantity: 1, unitPrice: parseFloat(c.amount) || 0, taxable: !!c.taxable }));
+    setForm({ ...emptyForm, taxRate: defaultTaxRate, items: [...baseItems, ...feeItems] });
     setShowModal(true);
   };
 
@@ -272,8 +280,9 @@ export default function Invoices({ apiUrl, user, authFetch }) {
             description: i.description || '',
             quantity: parseFloat(i.quantity) || 1,
             unitPrice: parseFloat(i.unit_price) || 0,
+            taxable: i.taxable !== false,
           }))
-        : [{ description: '', quantity: 1, unitPrice: 0 }],
+        : [{ description: '', quantity: 1, unitPrice: 0, taxable: true }],
       notes: invoice.notes || '',
       terms: invoice.terms || 'Payment due within 30 days.',
       dueDate: invoice.due_date ? new Date(invoice.due_date).toISOString().split('T')[0] : '',
@@ -344,7 +353,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   };
 
   const addLineItem = () => {
-    setForm(prev => ({ ...prev, items: [...prev.items, { description: '', quantity: 1, unitPrice: 0 }] }));
+    setForm(prev => ({ ...prev, items: [...prev.items, { description: '', quantity: 1, unitPrice: 0, taxable: true }] }));
   };
 
   const updateLineItem = (index, field, value) => {
@@ -364,7 +373,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
     if (service) {
       setForm(prev => {
         const items = prev.items.map((item, i) => i === index
-          ? { ...item, description: service.name, unitPrice: parseFloat(service.price), serviceId: service.id }
+          ? { ...item, description: service.name, unitPrice: parseFloat(service.price), serviceId: service.id, taxable: true }
           : item);
         return { ...prev, items };
       });
@@ -374,19 +383,21 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   const selectCatalogItem = (index, itemId) => {
     const item = catalog.find(c => c.id === parseInt(itemId));
     if (!item) return;
+    const isTaxable = !!item.taxable;
     if (item.amount_type === 'percentage') {
-      const subtotalOthers = form.items.reduce((s, it, idx) => idx !== index ? s + (it.quantity * it.unitPrice) : s, 0);
-      const calculated = Math.round(subtotalOthers * (parseFloat(item.amount) / 100) * 100) / 100;
+      const taxableItems = form.items.filter((it, idx) => idx !== index && it.taxable !== false);
+      const subtotalTaxable = taxableItems.reduce((s, it) => s + (it.quantity * it.unitPrice), 0);
+      const calculated = Math.round(subtotalTaxable * (parseFloat(item.amount) / 100) * 100) / 100;
       setForm(prev => {
         const items = prev.items.map((it, i) => i === index
-          ? { ...it, description: `${item.name} (${item.amount}%)`, unitPrice: calculated, quantity: 1 }
+          ? { ...it, description: `${item.name} (${item.amount}%)`, unitPrice: calculated, quantity: 1, taxable: isTaxable }
           : it);
         return { ...prev, items };
       });
     } else {
       setForm(prev => {
         const items = prev.items.map((it, i) => i === index
-          ? { ...it, description: item.name, unitPrice: parseFloat(item.amount), quantity: 1 }
+          ? { ...it, description: item.name, unitPrice: parseFloat(item.amount), quantity: 1, taxable: isTaxable }
           : it);
         return { ...prev, items };
       });
@@ -407,8 +418,9 @@ export default function Invoices({ apiUrl, user, authFetch }) {
   };
 
   const subtotal = form.items.reduce((s, i) => s + (i.quantity * i.unitPrice), 0);
-  const taxAmount = subtotal * (form.taxRate / 100);
-  const canEdit = !editingInvoice || editingInvoice.status === 'draft';
+  const taxableSubtotal = form.items.reduce((s, i) => i.taxable !== false ? s + (i.quantity * i.unitPrice) : s, 0);
+  const taxAmount = taxableSubtotal * (form.taxRate / 100);
+  const canEdit = !editingInvoice || ['draft', 'sent', 'viewed', 'overdue'].includes(editingInvoice.status);
 
   const filtered = filter === 'all' ? invoices : invoices.filter(i => i.status === filter);
 
@@ -531,6 +543,14 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                       <div className="flex items-center justify-end gap-1.5">
                         {/* Edit — draft only */}
                         {isDraft && (
+                          <button onClick={() => openEditModal(invoice)}
+                            className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Edit">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {/* Edit — non-draft (next to Remind) */}
+                        {isRemind && (
                           <button onClick={() => openEditModal(invoice)}
                             className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition" title="Edit">
                             <Edit2 className="w-4 h-4" />
@@ -685,6 +705,26 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                           className="w-28 pl-6 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none disabled:bg-white bg-white" placeholder="0.00" />
                       </div>
                       <span className="py-2 text-sm font-bold text-gray-700 w-20 text-right">${(item.quantity * item.unitPrice).toFixed(2)}</span>
+                      {canEdit && (
+                        <button
+                          onClick={() => updateLineItem(i, 'taxable', !item.taxable)}
+                          title={item.taxable !== false ? 'Taxed — click to exclude from tax' : 'Not taxed — click to include in tax'}
+                          className={`px-2 py-1 text-xs font-semibold rounded-lg border transition ${
+                            item.taxable !== false
+                              ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                              : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
+                          }`}
+                        >
+                          {item.taxable !== false ? 'TAX' : 'NO TAX'}
+                        </button>
+                      )}
+                      {!canEdit && (
+                        <span className={`px-2 py-1 text-xs font-semibold rounded-lg ${
+                          item.taxable !== false ? 'text-green-600' : 'text-gray-400'
+                        }`}>
+                          {item.taxable !== false ? 'TAX' : 'NO TAX'}
+                        </span>
+                      )}
                       {canEdit && form.items.length > 1 && (
                         <button onClick={() => removeLineItem(i)} className="p-2 text-red-400 hover:text-red-600">
                           <X className="w-4 h-4" />
@@ -805,16 +845,21 @@ export default function Invoices({ apiUrl, user, authFetch }) {
             {/* Saved Fees & Supplies */}
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Saved Fees & Supplies</label>
-              <p className="text-xs text-gray-400 mb-3">These appear as quick-fill options when building invoices. Percentage items are calculated against the invoice subtotal when applied.</p>
+              <p className="text-xs text-gray-400 mb-3">These auto-fill when creating invoices. Toggle "Taxed" to include a fee in the tax calculation, or "No Tax" to exclude it (e.g. processing fees).</p>
 
               {/* Existing items */}
               {catalog.length > 0 && (
                 <div className="mb-4 divide-y divide-gray-100 border border-gray-200 rounded-lg overflow-hidden">
                   {catalog.map(item => (
                     <div key={item.id} className="flex items-center justify-between px-4 py-3 bg-white">
-                      <div>
+                      <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-900">{item.name}</span>
-                        <span className="ml-2 text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize">{item.category}</span>
+                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full capitalize">{item.category}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                          item.taxable ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-400'
+                        }`}>
+                          {item.taxable ? 'Taxed' : 'No Tax'}
+                        </span>
                       </div>
                       <div className="flex items-center gap-3">
                         <span className="text-sm font-bold text-gray-700 flex items-center gap-0.5">
@@ -855,7 +900,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                     <option value="percentage">Percentage (%)</option>
                   </select>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
                   <div className="relative flex-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">
                       {newCatalogItem.amountType === 'percentage' ? '%' : '$'}
@@ -866,6 +911,17 @@ export default function Invoices({ apiUrl, user, authFetch }) {
                       className="w-full pl-7 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none bg-white"
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setNewCatalogItem(p => ({ ...p, taxable: !p.taxable }))}
+                    className={`px-3 py-2 text-xs font-semibold rounded-lg border transition whitespace-nowrap ${
+                      newCatalogItem.taxable
+                        ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
+                        : 'bg-gray-50 text-gray-400 border-gray-200 hover:bg-gray-100'
+                    }`}
+                  >
+                    {newCatalogItem.taxable ? 'Taxed' : 'No Tax'}
+                  </button>
                   <button onClick={addCatalogItem}
                     className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition text-sm font-semibold">
                     + Add

@@ -23,16 +23,16 @@ export default function Transactions({ apiUrl, user, authFetch }) {
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null); // { ok, message }
   const [filter, setFilter] = useState('all');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3);
+    return d.toISOString().split('T')[0];
+  });
+  const [endDate, setEndDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     fetchPayments();
-  }, []);
-
-  useEffect(() => {
-    fetchPayments();
-  }, [filter]);
+  }, [filter, startDate, endDate]);
 
   const fetchPayments = async () => {
     try {

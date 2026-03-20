@@ -1212,12 +1212,32 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         <p className="font-bold text-gray-900">${parseFloat(item.price).toFixed(2)}</p>
                       </div>
                     ))}
-                    <div className="pt-3 border-t border-amber-200 flex justify-between items-center">
-                      <span className="font-bold text-gray-900">Total</span>
-                      <span className="text-xl font-bold text-gray-900">
-                        ${parseFloat(selectedBooking.total_amount).toFixed(2)}
-                      </span>
-                    </div>
+                    {(() => {
+                      const subtotal = parseFloat(selectedBooking.total_amount) || 0;
+                      const taxRate = parseFloat(user?.default_tax_rate) || 0;
+                      const taxAmount = subtotal * taxRate;
+                      const total = subtotal + taxAmount;
+                      return (
+                        <div className="pt-3 border-t border-amber-200 space-y-1">
+                          {taxRate > 0 && (
+                            <>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">Subtotal</span>
+                                <span className="text-gray-700">${subtotal.toFixed(2)}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-gray-600">Tax ({(taxRate * 100).toFixed(1)}%)</span>
+                                <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
+                              </div>
+                            </>
+                          )}
+                          <div className="flex justify-between items-center">
+                            <span className="font-bold text-gray-900">Total</span>
+                            <span className="text-xl font-bold text-gray-900">${total.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 ) : (
                   <p className="text-gray-600">No service details available</p>
@@ -1687,20 +1707,36 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         })()}h
                       </span>
                     </div>
-                    <div className="flex justify-between items-center text-sm pt-2 border-t border-green-200">
-                      <span className="font-bold text-gray-700">Total Price:</span>
-                      <span className="font-bold text-green-700 text-lg">
-                        ${(() => {
-                          const mainService = services.find(s => s.id == newBooking.serviceId);
-                          const mainPrice = parseFloat(mainService?.price) || 0;
-                          const additionalPrice = newBooking.additionalServices.reduce((total, id) => {
-                            const service = services.find(s => s.id == id);
-                            return total + (parseFloat(service?.price) || 0);
-                          }, 0);
-                          return (mainPrice + additionalPrice).toFixed(2);
-                        })()}
-                      </span>
-                    </div>
+                    {(() => {
+                      const mainService = services.find(s => s.id == newBooking.serviceId);
+                      const mainPrice = parseFloat(mainService?.price) || 0;
+                      const additionalPrice = newBooking.additionalServices.reduce((total, id) => {
+                        const service = services.find(s => s.id == id);
+                        return total + (parseFloat(service?.price) || 0);
+                      }, 0);
+                      const subtotal = mainPrice + additionalPrice;
+                      const taxRate = parseFloat(user?.default_tax_rate) || 0;
+                      const taxAmount = subtotal * taxRate;
+                      const total = subtotal + taxAmount;
+                      return (
+                        <div className="pt-2 border-t border-green-200 space-y-1">
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Subtotal:</span>
+                            <span className="text-gray-700">${subtotal.toFixed(2)}</span>
+                          </div>
+                          {taxRate > 0 && (
+                            <div className="flex justify-between items-center text-sm">
+                              <span className="text-gray-500">Tax ({(taxRate * 100).toFixed(1)}%):</span>
+                              <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="font-bold text-gray-700">Total:</span>
+                            <span className="font-bold text-green-700 text-lg">${total.toFixed(2)}</span>
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
               </div>

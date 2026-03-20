@@ -20,7 +20,10 @@ import {
   Wallet,
   Mail,
   ChevronDown,
-  Zap
+  Zap,
+  Crown,
+  Flame,
+  Sparkles
 } from 'lucide-react';
 
 // Component imports
@@ -620,29 +623,68 @@ useEffect(() => {
       {/* Main Content */}
      <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? (widgetMinimized ? 'mr-16' : 'mr-72') : ''}`}>
         <div className="p-8">
-          {/* Top bar with plan badge */}
+          {/* Top bar with plan-styled business name */}
           <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-gray-900">
-                {user?.businessName || 'My Business'}
-              </h1>
-              {(() => {
-                const plan = user?.plan;
-                const planConfig = {
-                  basic: { label: 'Basic', bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
-                  pro: { label: 'Pro', bg: 'bg-gradient-to-r from-amber-100 to-yellow-100', text: 'text-amber-800', border: 'border-amber-300', icon: true },
-                  scale: { label: 'Scale', bg: 'bg-gradient-to-r from-purple-100 to-indigo-100', text: 'text-purple-800', border: 'border-purple-300', icon: true },
-                  expert: { label: 'Expert', bg: 'bg-gradient-to-r from-emerald-100 to-teal-100', text: 'text-emerald-800', border: 'border-emerald-300', icon: true },
-                };
-                const cfg = planConfig[plan] || { label: 'Free', bg: 'bg-gray-50', text: 'text-gray-500', border: 'border-gray-200' };
+            {(() => {
+              const plan = user?.plan;
+              const name = user?.businessName || 'My Business';
+
+              if (plan === 'scale') {
                 return (
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                    {cfg.icon && <Zap className="w-3 h-3" />}
-                    {cfg.label}
-                  </span>
+                  <div className="flex items-center gap-3 relative">
+                    <Flame className="w-6 h-6 text-red-500 animate-pulse" />
+                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-red-600 bg-clip-text text-transparent drop-shadow-sm" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
+                      {name}
+                    </h1>
+                    <Sparkles className="w-5 h-5 text-red-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-red-100 to-orange-100 text-red-800 border-red-300 shadow-sm shadow-red-200">
+                      <Crown className="w-3 h-3" />
+                      Scale
+                    </span>
+                  </div>
                 );
-              })()}
-            </div>
+              }
+
+              if (plan === 'pro' || plan === 'expert') {
+                return (
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
+                      {name}
+                    </h1>
+                    <Zap className="w-5 h-5 text-amber-500" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 shadow-sm shadow-amber-200">
+                      <Crown className="w-3 h-3" />
+                      {plan === 'expert' ? 'Expert' : 'Pro'}
+                    </span>
+                  </div>
+                );
+              }
+
+              if (plan === 'basic') {
+                return (
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-bold text-gray-500">
+                      {name}
+                    </h1>
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gray-100 text-gray-500 border-gray-200">
+                      Basic
+                    </span>
+                  </div>
+                );
+              }
+
+              // Free / no plan
+              return (
+                <div className="flex items-center gap-3">
+                  <h1 className="text-2xl font-bold text-gray-400">
+                    {name}
+                  </h1>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gray-50 text-gray-400 border-gray-200">
+                    Free
+                  </span>
+                </div>
+              );
+            })()}
             {!user?.plan && (
               <button
                 onClick={() => requestViewChange('billing')}
@@ -653,6 +695,12 @@ useEffect(() => {
               </button>
             )}
           </div>
+          <style>{`
+            @keyframes shimmer {
+              0% { background-position: 200% center; }
+              100% { background-position: -200% center; }
+            }
+          `}</style>
 
          {currentView === 'overview' && (
             <Overview

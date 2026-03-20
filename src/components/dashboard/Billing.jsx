@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle } from 'lucide-react';
 
+const PLAN_LEVEL = { basic: 1, pro: 2, scale: 3 };
+
 export default function Billing({ user, apiUrl, authFetch }) {
   const [currentPlan, setCurrentPlan] = useState(null);
+  const [basePlan, setBasePlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showCancel, setShowCancel] = useState(false);
   const [cancelStep, setCancelStep] = useState(0);
@@ -10,13 +13,15 @@ export default function Billing({ user, apiUrl, authFetch }) {
 
   useEffect(() => {
     setCurrentPlan(user?.plan || null);
+    setBasePlan(user?.base_plan || user?.plan || null);
     if (user?.plan && user.plan !== 'free') {
       window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 5 } }));
     }
   }, [user]);
 
   const handleUpgrade = async (planId) => {
-    if (planId === currentPlan) return;
+    const bp = basePlan || currentPlan;
+    if (planId === bp) return;
     setLoading(true);
     try {
       const response = await authFetch(`${apiUrl}/api/billing/create-checkout-session`, {
@@ -24,11 +29,14 @@ export default function Billing({ user, apiUrl, authFetch }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: planId })
       });
-      if (response.ok) {
-        const { url } = await response.json();
-        window.location.href = url;
+      const data = await response.json();
+      if (data.upgraded || data.downgraded) {
+        // Plan changed in-place via Stripe — reload to sync all UI
+        window.location.reload();
+      } else if (data.url) {
+        window.location.href = data.url;
       } else {
-        alert('Failed to start checkout. Please try again.');
+        alert(data.error || 'Failed to start checkout. Please try again.');
       }
     } catch (error) {
       console.error('Checkout error:', error);
@@ -156,7 +164,10 @@ export default function Billing({ user, apiUrl, authFetch }) {
       {/* Plans grid */}
       <div className="grid md:grid-cols-3 gap-6">
         {plans.map((plan) => {
-          const isActive = currentPlan === plan.id;
+          const bp = basePlan || currentPlan;
+          const isActive = bp === plan.id;
+          const isUpgrade = bp && PLAN_LEVEL[plan.id] > (PLAN_LEVEL[bp] || 0);
+          const isDowngrade = bp && PLAN_LEVEL[plan.id] < (PLAN_LEVEL[bp] || 0);
           const Icon = plan.icon;
           return (
             <div
@@ -219,7 +230,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
                       : `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`
                   }`}
                 >
-                  {isActive ? '✓ Current Plan' : loading ? 'Processing...' : plan.cta}
+                  {isActive ? '✓ Current Plan' : loading ? 'Processing...' : isUpgrade ? `Upgrade to ${plan.name}` : isDowngrade ? `Switch to ${plan.name}` : plan.cta}
                 </button>
               </div>
             </div>
