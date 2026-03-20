@@ -7,7 +7,7 @@ const processorInfo = {
   clover: { name: 'Clover', color: 'bg-emerald-50 border-emerald-200', icon: '🍀', description: 'Accept payments with Clover POS and online checkout', signupUrl: 'https://www.clover.com/signup', signupNote: "Don't have a Clover account?" },
 };
 
-export default function PaymentSettings({ apiUrl, user, authFetch, justConnected }) {
+export default function PaymentSettings({ apiUrl, user, authFetch, justConnected, onConnectionChange }) {
   const [connections, setConnections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [verifying, setVerifying] = useState(null);
@@ -66,6 +66,7 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
     try {
       await authFetch(`${apiUrl}/api/payment-connections/${connectionId}`, { method: 'DELETE' });
       fetchConnections();
+      if (onConnectionChange) onConnectionChange();
     } catch (err) { console.error(err); }
   };
 

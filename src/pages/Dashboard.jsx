@@ -48,6 +48,7 @@ import DomainPolicyModal from '../components/dashboard/DomainPolicyModal';
 // Combined Payment Settings page with sub-tabs
 function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConnected }) {
   const [subTab, setSubTab] = useState(initialSubTab || 'processors');
+  const [refreshKey, setRefreshKey] = useState(0);
   const tabs = [
     { key: 'processors', label: 'Payment Processors' },
     { key: 'invoices', label: 'Invoices' },
@@ -75,10 +76,10 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
           </button>
         ))}
       </div>
-      {subTab === 'processors' && <PaymentProcessors key="processors" apiUrl={apiUrl} user={user} authFetch={authFetch} justConnected={justConnected} />}
-      {subTab === 'invoices' && <Invoices key="invoices" apiUrl={apiUrl} user={user} authFetch={authFetch} />}
-      {subTab === 'estimates' && <Estimates key="estimates" apiUrl={apiUrl} user={user} authFetch={authFetch} />}
-      {subTab === 'transactions' && <Transactions key="transactions" apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'processors' && <PaymentProcessors key={`processors-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} justConnected={justConnected} onConnectionChange={() => setRefreshKey(k => k + 1)} />}
+      {subTab === 'invoices' && <Invoices key={`invoices-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'estimates' && <Estimates key={`estimates-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'transactions' && <Transactions key={`transactions-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} />}
     </div>
   );
 }
