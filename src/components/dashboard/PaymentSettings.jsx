@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, ExternalLink, Star, Trash2, RefreshCw } from 'lucide-react';
 
 const processorInfo = {
-  stripe: { name: 'Stripe', color: 'bg-indigo-50 border-indigo-200', icon: '💳', description: 'Accept credit cards, debit cards, and ACH bank transfers', signupNote: 'No account needed — Stripe will walk you through setup' },
+  stripe: { name: 'Stripe', color: 'bg-indigo-50 border-indigo-200', icon: '💳', description: 'Accept credit cards, debit cards, and ACH bank transfers', signupUrl: 'https://dashboard.stripe.com/register', signupNote: "Don't have a Stripe account?" },
   square: { name: 'Square', color: 'bg-green-50 border-green-200', icon: '🟩', description: 'In-person and online payments with Square', signupUrl: 'https://squareup.com/signup', signupNote: "Don't have a Square account?" },
   clover: { name: 'Clover', color: 'bg-emerald-50 border-emerald-200', icon: '🍀', description: 'Accept payments with Clover POS and online checkout', signupUrl: 'https://www.clover.com/signup', signupNote: "Don't have a Clover account?" },
 };
