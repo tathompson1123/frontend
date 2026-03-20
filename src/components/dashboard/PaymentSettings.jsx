@@ -62,7 +62,7 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
   };
 
   const handleDisconnect = async (connectionId, processorName) => {
-    if (!confirm(`Disconnect ${processorName}? You won't be able to accept payments through this processor until reconnected.`)) return;
+    if (!confirm(`Disconnect ${processorName}? This will remove all synced transactions and invoices from ${processorName}. You won't be able to accept payments through this processor until reconnected.`)) return;
     try {
       await authFetch(`${apiUrl}/api/payment-connections/${connectionId}`, { method: 'DELETE' });
       fetchConnections();

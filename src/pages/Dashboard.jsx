@@ -75,10 +75,10 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
           </button>
         ))}
       </div>
-      {subTab === 'processors' && <PaymentProcessors apiUrl={apiUrl} user={user} authFetch={authFetch} justConnected={justConnected} />}
-      {subTab === 'invoices' && <Invoices apiUrl={apiUrl} user={user} authFetch={authFetch} />}
-      {subTab === 'estimates' && <Estimates apiUrl={apiUrl} user={user} authFetch={authFetch} />}
-      {subTab === 'transactions' && <Transactions apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'processors' && <PaymentProcessors key="processors" apiUrl={apiUrl} user={user} authFetch={authFetch} justConnected={justConnected} />}
+      {subTab === 'invoices' && <Invoices key="invoices" apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'estimates' && <Estimates key="estimates" apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'transactions' && <Transactions key="transactions" apiUrl={apiUrl} user={user} authFetch={authFetch} />}
     </div>
   );
 }
