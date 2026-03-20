@@ -513,8 +513,8 @@ useEffect(() => {
         {/* Logo & Toggle */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           {sidebarOpen && (
-            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-              Dashboard
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent uppercase tracking-wider">
+              SORCE
             </h1>
           )}
           <button
@@ -632,6 +632,7 @@ useEffect(() => {
                   basic: { label: 'Basic', bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-200' },
                   pro: { label: 'Pro', bg: 'bg-gradient-to-r from-amber-100 to-yellow-100', text: 'text-amber-800', border: 'border-amber-300', icon: true },
                   scale: { label: 'Scale', bg: 'bg-gradient-to-r from-purple-100 to-indigo-100', text: 'text-purple-800', border: 'border-purple-300', icon: true },
+                  expert: { label: 'Expert', bg: 'bg-gradient-to-r from-emerald-100 to-teal-100', text: 'text-emerald-800', border: 'border-emerald-300', icon: true },
                 };
                 const cfg = planConfig[plan] || { label: 'Free', bg: 'bg-gray-50', text: 'text-gray-500', border: 'border-gray-200' };
                 return (
