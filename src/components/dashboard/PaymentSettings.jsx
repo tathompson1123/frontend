@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, ExternalLink, Star, Trash2, RefreshCw } from 'lucide-react';
 
 const processorInfo = {
-  stripe: { name: 'Stripe', color: 'bg-indigo-50 border-indigo-200', icon: '💳', description: 'Accept credit cards, debit cards, and ACH bank transfers' },
-  square: { name: 'Square', color: 'bg-green-50 border-green-200', icon: '🟩', description: 'In-person and online payments with Square' },
-  clover: { name: 'Clover', color: 'bg-emerald-50 border-emerald-200', icon: '🍀', description: 'Accept payments with Clover POS and online checkout' },
+  stripe: { name: 'Stripe', color: 'bg-indigo-50 border-indigo-200', icon: '💳', description: 'Accept credit cards, debit cards, and ACH bank transfers', signupNote: 'No account needed — Stripe will walk you through setup' },
+  square: { name: 'Square', color: 'bg-green-50 border-green-200', icon: '🟩', description: 'In-person and online payments with Square', signupUrl: 'https://squareup.com/signup', signupNote: "Don't have a Square account?" },
+  clover: { name: 'Clover', color: 'bg-emerald-50 border-emerald-200', icon: '🍀', description: 'Accept payments with Clover POS and online checkout', signupUrl: 'https://www.clover.com/signup', signupNote: "Don't have a Clover account?" },
 };
 
 export default function PaymentSettings({ apiUrl, user, authFetch, justConnected }) {
@@ -179,12 +179,28 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
                     <CheckCircle className="w-4 h-4" /> Connected
                   </div>
                 ) : (
-                  <button onClick={() => handleConnect(key)} disabled={connecting === key}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold text-sm disabled:opacity-60">
-                    {connecting === key
-                      ? <><RefreshCw className="w-4 h-4 animate-spin" /> Connecting...</>
-                      : <><ExternalLink className="w-4 h-4" /> Connect {info.name}</>}
-                  </button>
+                  <>
+                    <button onClick={() => handleConnect(key)} disabled={connecting === key}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold text-sm disabled:opacity-60">
+                      {connecting === key
+                        ? <><RefreshCw className="w-4 h-4 animate-spin" /> Connecting...</>
+                        : <><ExternalLink className="w-4 h-4" /> Connect {info.name}</>}
+                    </button>
+                    {info.signupNote && (
+                      <p className="text-xs text-gray-400 text-center mt-2">
+                        {info.signupUrl ? (
+                          <>{info.signupNote}{' '}
+                            <a href={info.signupUrl} target="_blank" rel="noopener noreferrer"
+                              className="text-amber-600 hover:text-amber-700 font-semibold underline">
+                              Create one free
+                            </a>
+                          </>
+                        ) : (
+                          info.signupNote
+                        )}
+                      </p>
+                    )}
+                  </>
                 )}
               </div>
             );
