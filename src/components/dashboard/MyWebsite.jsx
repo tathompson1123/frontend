@@ -250,7 +250,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       {/* Sub-tabs */}
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
         {[
-          { key: 'website', label: 'My Website', icon: Globe },
+          { key: 'website', label: 'Sorce Website', icon: Globe },
           { key: 'integrate', label: 'Integrate Website', icon: Code }
         ].map(t => {
           const TabIcon = t.icon;
@@ -274,7 +274,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       {/* Header with action buttons */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{subTab === 'integrate' ? 'Integrate Website' : 'My Website'}</h2>
+          <h2 className="text-2xl font-bold text-gray-900">{subTab === 'integrate' ? 'Integrate Website' : 'Sorce Website'}</h2>
           <p className="text-gray-600 mt-1">{subTab === 'integrate' ? 'Add SORCE to any website with one line of code' : 'Manage your website and domain'}</p>
         </div>
         {subTab === 'website' && (
