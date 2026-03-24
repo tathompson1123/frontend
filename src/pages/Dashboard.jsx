@@ -23,7 +23,7 @@ import {
   Zap,
   Crown,
   Flame,
-  Sparkles
+  Sparkles,
 } from 'lucide-react';
 
 // Component imports
@@ -733,6 +733,7 @@ useEffect(() => {
               authFetch={authFetch}
             />
           )}
+
 
           {currentView === 'ai-agents' && (
             <AIAgentBuilder

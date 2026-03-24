@@ -247,11 +247,35 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         </div>
       )}
 
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+        {[
+          { key: 'website', label: 'My Website', icon: Globe },
+          { key: 'integrate', label: 'Integrate Website', icon: Code }
+        ].map(t => {
+          const TabIcon = t.icon;
+          return (
+            <button
+              key={t.key}
+              onClick={() => setSubTab(t.key)}
+              className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition flex items-center gap-2 ${
+                subTab === t.key
+                  ? 'bg-white text-gray-900 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <TabIcon className="w-4 h-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
       {/* Header with action buttons */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">My Website</h2>
-          <p className="text-gray-600 mt-1">Manage your website and domain</p>
+          <h2 className="text-2xl font-bold text-gray-900">{subTab === 'integrate' ? 'Integrate Website' : 'My Website'}</h2>
+          <p className="text-gray-600 mt-1">{subTab === 'integrate' ? 'Add SORCE to any website with one line of code' : 'Manage your website and domain'}</p>
         </div>
         {subTab === 'website' && (
           <div className="flex gap-3">
@@ -371,6 +395,8 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
             </div>
           </div>
         </div>
+      ) : subTab === 'integrate' ? (
+        <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
       ) : subTab === 'website' ? (
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
