@@ -965,11 +965,11 @@ export default function BusinessInformation({
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Assigned SMS Number</label>
-                {(user?.telnyx_phone_number || user?.twilio_phone_number) ? (
+                {(user?.twilio_phone_number) ? (
                   <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
                     <Smartphone className="w-4 h-4 text-blue-500" />
-                    <span className="text-blue-800 font-mono text-sm font-medium">{user?.telnyx_phone_number || user?.twilio_phone_number}</span>
-                    <span className="text-xs text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full ml-auto">{user?.telnyx_phone_number ? 'Telnyx' : 'Twilio'}</span>
+                    <span className="text-blue-800 font-mono text-sm font-medium">{user?.twilio_phone_number}</span>
+                    <span className="text-xs text-blue-500 bg-blue-100 px-2 py-0.5 rounded-full ml-auto">Twilio</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg">

@@ -362,7 +362,7 @@ useEffect(() => {
 
         // Sync user plan and profile from backend (catches plan upgrades)
         if (userProfileData.user) {
-          const updatedUser = { ...user, plan: userProfileData.user.plan, businessName: userProfileData.user.businessName, telnyx_phone_number: userProfileData.user.telnyx_phone_number || null, twilio_phone_number: userProfileData.user.twilio_phone_number || null };
+          const updatedUser = { ...user, plan: userProfileData.user.plan, businessName: userProfileData.user.businessName, twilio_phone_number: userProfileData.user.twilio_phone_number || null };
           localStorage.setItem('user', JSON.stringify(updatedUser));
           setUser(updatedUser);
         }

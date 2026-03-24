@@ -43,7 +43,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
     loadConfig();
     loadStats();
     // Phone number comes from user prop (loaded by Dashboard from /api/user/profile)
-    setPhoneNumber(user?.telnyx_phone_number || user?.twilio_phone_number || null);
+    setPhoneNumber(user?.twilio_phone_number || null);
   }, [apiUrl, user]);
 
   useEffect(() => {

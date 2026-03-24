@@ -54,8 +54,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
       if (data.user?.google_review_link) {
         setReviewLink(data.user.google_review_link);
       }
-      // Prefer Telnyx number, fall back to Twilio
-      setAssignedPhone(data.user?.telnyx_phone_number || data.user?.twilio_phone_number || null);
+      setAssignedPhone(data.user?.twilio_phone_number || null);
     } catch (error) {
       console.error('Error fetching review link:', error);
     }

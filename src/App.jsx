@@ -9,6 +9,7 @@ import WebsiteEditorNew from './pages/WebsiteEditorNew';
 import PaymentPage from './pages/PaymentPage';
 import LeadMagnetPage from './pages/LeadMagnetPage';
 import EmployeeInvitePage from './pages/EmployeeInvitePage';
+import WebsitePreview from './pages/WebsitePreview';
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
         <Route path="/book/:businessId" element={<PublicBookingPage />} />
         <Route path="/pay/:token" element={<PaymentPage />} />
         <Route path="/lead/:userId/:type" element={<LeadMagnetPage />} />
+        <Route path="/preview" element={<WebsitePreview />} />
         <Route path="/employee-invite" element={<EmployeeInvitePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -155,8 +155,7 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
       const response = await authFetch(`${apiUrl}/api/auth/user`);
       if (response.ok) {
         const userData = await response.json();
-        // Prefer Telnyx number, fall back to Twilio
-        setPhoneNumber(userData.user?.telnyx_phone_number || userData.user?.twilio_phone_number || null);
+        setPhoneNumber(userData.user?.twilio_phone_number || null);
       }
     } catch (error) {
       console.error('Error loading phone number:', error);

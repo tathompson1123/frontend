@@ -63,10 +63,7 @@ export default function GenerateModal({ isOpen, onClose, defaultValues = {}, isR
   const handleSubmit = async (e) => {
     e.preventDefault();
     const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
+    const isLoggedIn = !!token;
 
     flushSync(() => {
       setIsGenerating(true);
@@ -75,28 +72,31 @@ export default function GenerateModal({ isOpen, onClose, defaultValues = {}, isR
     });
     simulateProgress();
 
+    const bodyPayload = {
+      businessName: formData.businessName,
+      businessType: formData.businessType,
+      tagline: formData.tagline,
+      services: formData.services,
+      yearsInBusiness: formData.yearsInBusiness,
+      certifications: formData.certifications,
+      description: formData.description,
+      uniqueSellingPoints: formData.uniqueSellingPoints,
+      targetCustomer: formData.targetCustomer,
+      phone: formData.phone,
+      email: formData.email,
+      city: formData.city,
+      state: formData.state,
+    };
+
     try {
-      const response = await fetch(`${API_URL}/api/generate-v2`, {
+      const headers = { 'Content-Type': 'application/json' };
+      const endpoint = isLoggedIn ? '/api/generate-v2' : '/api/generate-preview';
+      if (isLoggedIn) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          businessName: formData.businessName,
-          businessType: formData.businessType,
-          tagline: formData.tagline,
-          services: formData.services,
-          yearsInBusiness: formData.yearsInBusiness,
-          certifications: formData.certifications,
-          description: formData.description,
-          uniqueSellingPoints: formData.uniqueSellingPoints,
-          targetCustomer: formData.targetCustomer,
-          phone: formData.phone,
-          email: formData.email,
-          city: formData.city,
-          state: formData.state,
-        }),
+        headers,
+        body: JSON.stringify(bodyPayload),
       });
 
       const data = await response.json();
@@ -106,10 +106,22 @@ export default function GenerateModal({ isOpen, onClose, defaultValues = {}, isR
         setProgress(100);
         setTimeout(() => {
           setIsGenerating(false);
-          if (onSuccess) {
-            onSuccess();
+          if (isLoggedIn) {
+            if (onSuccess) {
+              onSuccess();
+            } else {
+              navigate('/dashboard?tab=website', { state: { showSuccess: true } });
+            }
           } else {
-            navigate('/dashboard?tab=website', { state: { showSuccess: true } });
+            // Store preview data and navigate to preview page
+            sessionStorage.setItem('previewWebsite', JSON.stringify({
+              html: data.html,
+              pages: data.pages,
+              schema: data.schema,
+              theme: data.theme,
+              formData: data.formData || bodyPayload,
+            }));
+            navigate('/preview');
           }
         }, 600);
       } else {
