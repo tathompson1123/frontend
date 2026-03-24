@@ -78,7 +78,9 @@ export default function EmbedCode({ apiUrl, authFetch }) {
     }
   };
 
-  const embedCode = `<script src="${apiUrl}/embed.js" data-site-key="${siteKey}" async></script>`;
+  // Always use production URL for the embed snippet so users don't accidentally paste a localhost URL
+  const embedBaseUrl = import.meta.env.VITE_EMBED_URL || import.meta.env.VITE_PRODUCTION_BACKEND_URL || 'https://backend-production-ab50.up.railway.app';
+  const embedCode = `<script src="${embedBaseUrl}/embed.js" data-site-key="${siteKey}" async></script>`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(embedCode);
