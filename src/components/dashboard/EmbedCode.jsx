@@ -159,22 +159,156 @@ export default function EmbedCode({ apiUrl, authFetch }) {
         </div>
       </div>
 
-      {/* Embed Code Block */}
-      <div className="bg-gray-900 rounded-xl p-5 relative">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs text-gray-400 font-mono">Your Embed Code</span>
+      {/* Embed Code Block + Platform Guide */}
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <div className="bg-gray-900 rounded-t-xl px-4 py-3 flex items-center gap-3">
+          <code className="text-green-400 text-xs font-mono break-all flex-1 leading-snug">
+            {embedCode}
+          </code>
           <button
             onClick={copyToClipboard}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-medium hover:bg-amber-700 transition whitespace-nowrap flex-shrink-0"
           >
-            {copied ? <><Check className="w-4 h-4" /> Copied!</> : <><Copy className="w-4 h-4" /> Copy Code</>}
+            {copied ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy</>}
           </button>
         </div>
-        <code className="text-green-400 text-sm font-mono break-all leading-relaxed">
-          {embedCode}
-        </code>
         {enabledCount === 0 && (
-          <p className="text-yellow-400 text-xs mt-3">Enable at least one widget below, then save to activate the embed.</p>
+          <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-2">
+            <p className="text-yellow-700 text-xs">Enable at least one widget below, then save to activate the embed.</p>
+          </div>
+        )}
+
+        <button
+          onClick={() => setShowGuide(!showGuide)}
+          className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-gray-50 transition border-t border-gray-200"
+        >
+          <div className="flex items-center gap-3">
+            <ExternalLink className="w-5 h-5 text-amber-600" />
+            <div>
+              <span className="text-base font-bold text-gray-900">How to install on your website</span>
+              <p className="text-sm text-gray-500">Step-by-step guides for Wix, WordPress, Squarespace, Shopify & more</p>
+            </div>
+          </div>
+          {showGuide ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+        </button>
+
+        {showGuide && (
+          <div className="px-5 pb-5 space-y-5 border-t border-gray-100 pt-4">
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-blue-600 text-white rounded text-xs flex items-center justify-center font-bold">W</span>
+                Wix
+              </h5>
+              <p className="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 mb-2 ml-1">Use Settings, not the Editor — this ensures it loads on every page.</p>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Go to your <strong>Wix Dashboard</strong> (not the Editor)</li>
+                <li>Click <strong>Settings</strong> in the left sidebar</li>
+                <li>Click <strong>Custom Code</strong> under Advanced</li>
+                <li>Click <strong>"+ Add Code"</strong> in the <strong>Body - end</strong> section</li>
+                <li>Paste your embed code in the code box</li>
+                <li>Name it <strong>"SORCE Embed"</strong></li>
+                <li>Set <strong>Code Type:</strong> "Essential"</li>
+                <li>Set <strong>Pages:</strong> "All pages"</li>
+                <li>Click <strong>Apply</strong></li>
+              </ol>
+              <p className="text-xs text-gray-400 mt-1.5 ml-1">Requires a Wix Premium plan. On free plans, use the Editor: Add (+) &rarr; Embed Code &rarr; Embed HTML &rarr; set mode to "Code" — but this only works on one page at a time.</p>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-black text-white rounded text-xs flex items-center justify-center font-bold">S</span>
+                Squarespace
+              </h5>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Go to <strong>Settings</strong> &rarr; <strong>Developer Tools</strong> &rarr; <strong>Code Injection</strong></li>
+                <li>Scroll to the <strong>Footer</strong> section</li>
+                <li>Paste your embed code</li>
+                <li>Click <strong>Save</strong></li>
+              </ol>
+              <p className="text-xs text-gray-400 mt-1.5 ml-1">Note: Code Injection requires a Business plan or higher.</p>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-blue-800 text-white rounded text-xs flex items-center justify-center font-bold">WP</span>
+                WordPress
+              </h5>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Install the <strong>"WPCode"</strong> plugin (free) from Plugins &rarr; Add New</li>
+                <li>Go to <strong>Code Snippets</strong> &rarr; <strong>Header & Footer</strong></li>
+                <li>Paste your embed code in the <strong>Footer</strong> section</li>
+                <li>Click <strong>Save Changes</strong></li>
+              </ol>
+              <p className="text-xs text-gray-400 mt-1.5 ml-1">Alternative: Appearance &rarr; Theme File Editor &rarr; footer.php &rarr; paste before &lt;/body&gt;.</p>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-green-700 text-white rounded text-xs flex items-center justify-center font-bold">S</span>
+                Shopify
+              </h5>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Go to <strong>Online Store</strong> &rarr; <strong>Themes</strong></li>
+                <li>Click <strong>Actions</strong> &rarr; <strong>Edit Code</strong></li>
+                <li>Open <strong>theme.liquid</strong> in the Layout folder</li>
+                <li>Paste your embed code just before the <code className="bg-gray-100 px-1 rounded text-xs">&lt;/body&gt;</code> tag</li>
+                <li>Click <strong>Save</strong></li>
+              </ol>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-blue-500 text-white rounded text-xs flex items-center justify-center font-bold">Wf</span>
+                Webflow
+              </h5>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Open your project in the Webflow Designer</li>
+                <li>Go to <strong>Project Settings</strong> &rarr; <strong>Custom Code</strong></li>
+                <li>Paste your embed code in the <strong>Footer Code</strong> section</li>
+                <li>Click <strong>Save Changes</strong> &rarr; <strong>Publish</strong></li>
+              </ol>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-orange-500 text-white rounded text-xs flex items-center justify-center font-bold">G</span>
+                GoDaddy Website Builder
+              </h5>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Open your site in the GoDaddy Editor</li>
+                <li>Click <strong>Add Section</strong> &rarr; <strong>HTML</strong></li>
+                <li>Paste your embed code in the HTML block</li>
+                <li>Move the block to the bottom of your page</li>
+                <li>Click <strong>Publish</strong></li>
+              </ol>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-indigo-600 text-white rounded text-xs flex items-center justify-center font-bold">W</span>
+                Weebly
+              </h5>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Go to <strong>Settings</strong> &rarr; <strong>SEO</strong></li>
+                <li>Scroll to <strong>Footer Code</strong></li>
+                <li>Paste your embed code</li>
+                <li>Click <strong>Save</strong> &rarr; <strong>Publish</strong></li>
+              </ol>
+            </div>
+
+            <div>
+              <h5 className="font-semibold text-gray-800 mb-2 flex items-center gap-2">
+                <span className="w-6 h-6 bg-gray-800 text-white rounded text-xs flex items-center justify-center font-bold">&lt;/&gt;</span>
+                Any HTML Site
+              </h5>
+              <ol className="text-sm text-gray-600 space-y-1 list-decimal list-inside ml-1">
+                <li>Open your HTML file in a code editor</li>
+                <li>Find the closing <code className="bg-gray-100 px-1 rounded text-xs">&lt;/body&gt;</code> tag</li>
+                <li>Paste your embed code on the line directly above it</li>
+                <li>Save and upload to your hosting</li>
+              </ol>
+            </div>
+          </div>
         )}
       </div>
 
@@ -216,7 +350,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900">Book Online</h4>
-                <p className="text-sm text-gray-500">Let customers book appointments directly from your website</p>
+                <p className="text-sm text-gray-500">Hijacks "Book Now" buttons on the site and opens SORCE booking</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -273,7 +407,7 @@ export default function EmbedCode({ apiUrl, authFetch }) {
               </div>
               <div>
                 <h4 className="font-semibold text-gray-900">Lead Capture Form</h4>
-                <p className="text-sm text-gray-500">Replaces existing contact forms on your website</p>
+                <p className="text-sm text-gray-500">Replaces existing contact forms and captures leads into your dashboard</p>
               </div>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
@@ -295,10 +429,11 @@ export default function EmbedCode({ apiUrl, authFetch }) {
                   <div className="text-sm">
                     <p className="font-medium text-amber-800 mb-1">How this works</p>
                     <ul className="text-amber-700 space-y-1">
-                      <li>Your existing contact forms stay <strong>exactly as they are</strong> — we just listen for submissions in the background.</li>
-                      <li>When a visitor submits your form, their info is automatically forwarded to your SORCE dashboard as a new lead.</li>
-                      <li>If no forms are detected on your page, a floating lead capture button will appear instead.</li>
-                      <li>All captured leads trigger <strong>SMS follow-up</strong> automatically if your Lead Form Agent is enabled.</li>
+                      <li>Existing contact forms on the website are <strong>automatically replaced</strong> with SORCE lead capture forms.</li>
+                      <li>All submissions go straight into your SORCE dashboard as new leads.</li>
+                      <li>"Book Now" and "Book Online" buttons are <strong>automatically rewired</strong> to open SORCE's booking system.</li>
+                      <li>If no forms are detected, a floating lead capture button appears as a fallback.</li>
+                      <li>All captured leads trigger <strong>AI SMS follow-up</strong> automatically if your Lead Form Agent is enabled.</li>
                     </ul>
                   </div>
                 </div>
@@ -597,43 +732,6 @@ export default function EmbedCode({ apiUrl, authFetch }) {
         )}
       </div>
 
-      {/* Setup Guide */}
-      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
-        <button
-          onClick={() => setShowGuide(!showGuide)}
-          className="w-full p-5 flex items-center justify-between text-left hover:bg-gray-50 transition"
-        >
-          <div>
-            <h4 className="font-semibold text-gray-900">Platform Setup Guide</h4>
-            <p className="text-sm text-gray-500">How to add the embed code to your website platform</p>
-          </div>
-          {showGuide ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
-        </button>
-        {showGuide && (
-          <div className="px-5 pb-5 space-y-4 border-t border-gray-100 pt-4">
-            <div>
-              <h5 className="font-semibold text-gray-800 mb-1">Wix</h5>
-              <p className="text-sm text-gray-600">Settings &rarr; Custom Code &rarr; Add Code &rarr; Paste the embed code &rarr; Set to load on all pages in the Body (end) section.</p>
-            </div>
-            <div>
-              <h5 className="font-semibold text-gray-800 mb-1">Squarespace</h5>
-              <p className="text-sm text-gray-600">Settings &rarr; Developer Tools &rarr; Code Injection &rarr; Paste in the Footer section.</p>
-            </div>
-            <div>
-              <h5 className="font-semibold text-gray-800 mb-1">WordPress</h5>
-              <p className="text-sm text-gray-600">Install the "Insert Headers and Footers" plugin &rarr; Settings &rarr; Paste in the Footer Scripts section. Or add directly to your theme's footer.php.</p>
-            </div>
-            <div>
-              <h5 className="font-semibold text-gray-800 mb-1">Shopify</h5>
-              <p className="text-sm text-gray-600">Online Store &rarr; Themes &rarr; Edit Code &rarr; Open theme.liquid &rarr; Paste before the closing &lt;/body&gt; tag.</p>
-            </div>
-            <div>
-              <h5 className="font-semibold text-gray-800 mb-1">Any HTML Site</h5>
-              <p className="text-sm text-gray-600">Paste the embed code just before the closing &lt;/body&gt; tag in your HTML file.</p>
-            </div>
-          </div>
-        )}
-      </div>
     </div>
   );
 }
