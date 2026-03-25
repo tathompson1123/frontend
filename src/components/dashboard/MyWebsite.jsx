@@ -272,10 +272,10 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       </div>
 
       {/* Header with action buttons */}
-      <div className="flex justify-between items-center">
+      <div className={`flex justify-between items-center ${subTab === 'integrate' ? 'hidden' : ''}`}>
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">{subTab === 'integrate' ? 'Integrate Website' : 'Sorce Website'}</h2>
-          <p className="text-gray-600 mt-1">{subTab === 'integrate' ? 'Add SORCE to any website with one line of code' : 'Manage your website and domain'}</p>
+          <h2 className="text-2xl font-bold text-gray-900">Sorce Website</h2>
+          <p className="text-gray-600 mt-1">Manage your website and domain</p>
         </div>
         {subTab === 'website' && (
           <div className="flex gap-3">
@@ -396,7 +396,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           </div>
         </div>
       ) : subTab === 'integrate' ? (
-        <EmbedCode apiUrl={apiUrl} authFetch={authFetch} />
+        <EmbedCode apiUrl={apiUrl} authFetch={authFetch} setCurrentView={setCurrentView} />
       ) : subTab === 'website' ? (
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />

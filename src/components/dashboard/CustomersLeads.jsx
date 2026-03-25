@@ -609,6 +609,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
   const leadColumns = [
     { key: 'name', label: 'Name', width: '200px', editable: true },
+    { key: 'created_at', label: 'Date & Time', width: '170px', editable: false, type: 'datetime' },
     { key: 'status', label: 'Stage', width: '180px', editable: true, type: 'select', options: ['new', 'contacted_email', 'contacted_sms', 'qualified', 'converted', 'not_interested'] },
     { key: 'phone', label: 'Phone', width: '150px', editable: true },
     { key: 'email', label: 'Email', width: '250px', editable: true },
@@ -1303,6 +1304,8 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
                     ) : col.key === 'source' ? (
                       <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+                    ) : col.type === 'datetime' ? (
+                      lead[col.key] ? <span className="text-gray-600">{new Date(lead[col.key]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(lead[col.key]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span> : <span className="text-gray-400">-</span>
                     ) : col.key === 'email' ? (
                       <a href={`mailto:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
                     ) : col.key === 'phone' ? (
