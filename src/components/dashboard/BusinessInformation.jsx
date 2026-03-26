@@ -64,9 +64,10 @@ export default function BusinessInformation({
   user,
   authFetch,
   onDirtyChange,
-  saveRef
+  saveRef,
+  initialTab
 }) {
-  const [activeTab, setActiveTab] = useState('info');
+  const [activeTab, setActiveTab] = useState(initialTab || 'info');
   
   // Business Info State
   const [hours, setHours] = useState({

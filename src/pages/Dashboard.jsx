@@ -111,7 +111,18 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [proOpen, setProOpen] = useState(false);
-  const [currentView, setCurrentView] = useState('overview');
+  const [currentView, setCurrentViewRaw] = useState('overview');
+  const [viewSubTab, setViewSubTab] = useState(null);
+  const setCurrentView = (v) => {
+    if (v && v.includes(':')) {
+      const [view, sub] = v.split(':');
+      setCurrentViewRaw(view);
+      setViewSubTab(sub);
+    } else {
+      setCurrentViewRaw(v);
+      setViewSubTab(null);
+    }
+  };
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
   const [savedFlash, setSavedFlash] = useState(false);
@@ -806,6 +817,7 @@ useEffect(() => {
               authFetch={authFetch}
               onDirtyChange={handleDirtyChange}
               saveRef={saveRef}
+              initialTab={viewSubTab}
             />
           )}
 
