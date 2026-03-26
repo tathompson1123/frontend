@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   Users, 
   Mail, 
@@ -17,7 +17,14 @@ import {
   Upload,
   FolderOpen,
   Edit2,
-  MoreVertical
+  MoreVertical,
+  Gift,
+  Trophy,
+  Star,
+  Settings,
+  Clock,
+  ChevronDown,
+  ChevronUp
 } from 'lucide-react';
 
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
@@ -45,6 +52,31 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [convertingLead, setConvertingLead] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [conversations, setConversations] = useState([]);
+  const [loadingConversations, setLoadingConversations] = useState(false);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [conversationMessages, setConversationMessages] = useState([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [conversationSearch, setConversationSearch] = useState('');
+  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
+
+  // Rewards state
+  const [rewardsConfig, setRewardsConfig] = useState({
+    enabled: false,
+    bookingsRequired: 5,
+    rewardDescription: '',
+    couponAfterBooking: false,
+    couponDescription: '',
+    couponFrequency: 'every',
+    smsTiming: 'after_completed',
+    smsDelayHours: 1,
+    smsTemplate: ''
+  });
+  const [rewardsCustomers, setRewardsCustomers] = useState([]);
+  const [loadingRewards, setLoadingRewards] = useState(false);
+  const [savingRewards, setSavingRewards] = useState(false);
+  const [showRewardsConfig, setShowRewardsConfig] = useState(false);
 
   // Get current leads from active table
   const getCurrentLeads = () => {
@@ -330,6 +362,90 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           notes: 'Great customer, always on time'
         }
       ]);
+    }
+  };
+
+  const fetchConversations = async () => {
+    try {
+      setLoadingConversations(true);
+      const response = await authFetch(`${apiUrl}/api/chat/conversations`);
+      if (response.ok) {
+        const data = await response.json();
+        setConversations(data.conversations || []);
+      }
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setLoadingConversations(false);
+    }
+  };
+
+  const fetchConversationMessages = async (convId) => {
+    try {
+      setLoadingMessages(true);
+      const response = await authFetch(`${apiUrl}/api/chat/conversations/${convId}/messages`);
+      if (response.ok) {
+        const data = await response.json();
+        setConversationMessages(data.messages || []);
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    } finally {
+      setLoadingMessages(false);
+    }
+  };
+
+  const fetchRewardsData = async () => {
+    try {
+      setLoadingRewards(true);
+      const [configRes, custRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/rewards/config`),
+        authFetch(`${apiUrl}/api/rewards/customers`)
+      ]);
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        if (configData.config) {
+          setRewardsConfig({
+            enabled: configData.config.enabled,
+            bookingsRequired: configData.config.bookings_required,
+            rewardDescription: configData.config.reward_description || '',
+            couponAfterBooking: configData.config.coupon_after_booking,
+            couponDescription: configData.config.coupon_description || '',
+            couponFrequency: configData.config.coupon_frequency || 'every',
+            smsTiming: configData.config.sms_timing || 'after_completed',
+            smsDelayHours: configData.config.sms_delay_hours || 1,
+            smsTemplate: configData.config.sms_template || ''
+          });
+        }
+      }
+      if (custRes.ok) {
+        const custData = await custRes.json();
+        setRewardsCustomers(custData.customers || []);
+      }
+    } catch (error) {
+      console.error('Error fetching rewards:', error);
+    } finally {
+      setLoadingRewards(false);
+    }
+  };
+
+  const saveRewardsConfig = async () => {
+    try {
+      setSavingRewards(true);
+      const response = await authFetch(`${apiUrl}/api/rewards/config`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(rewardsConfig)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        alert('Rewards settings saved!');
+      }
+    } catch (error) {
+      console.error('Error saving rewards config:', error);
+      alert('Failed to save rewards settings');
+    } finally {
+      setSavingRewards(false);
     }
   };
 
@@ -661,6 +777,26 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               </div>
               {activeTab === 'customers' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
+            <button
+              onClick={() => { setActiveTab('conversations'); setSearchTerm(''); setEditingCell(null); fetchConversations(); }}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'conversations' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                Conversations
+              </div>
+              {activeTab === 'conversations' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => { setActiveTab('rewards'); setSearchTerm(''); setEditingCell(null); fetchRewardsData(); }}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'rewards' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Gift className="w-4 h-4" />
+                Rewards
+              </div>
+              {activeTab === 'rewards' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
           </div>
         </div>
 
@@ -754,7 +890,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         )}
       </div>
 
-      {/* Table */}
+      {/* Table (leads/customers) */}
+      {(activeTab === 'leads' || activeTab === 'customers') && (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {/* Toolbar */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
@@ -775,14 +912,14 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             </button>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={exportToCSV}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
             >
               <Download className="w-4 h-4" />
               Export CSV
             </button>
-            
+
             <label className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 cursor-pointer">
               <Upload className="w-4 h-4" />
               Import CSV
@@ -794,7 +931,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               />
             </label>
 
-            <button 
+            <button
               onClick={() => {
                 setShowAddModal(true);
                 setNewRecord({});
@@ -851,6 +988,407 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           {activeTab === 'leads' ? filteredLeads.length : filteredCustomers.length} records
         </div>
       </div>
+      )}
+
+      {/* Conversations Tab */}
+      {activeTab === 'conversations' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex" style={{ height: '700px' }}>
+          {/* Conversation List */}
+          <div className="w-96 border-r border-gray-200 flex flex-col">
+            <div className="p-4 border-b border-gray-200">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search conversations..."
+                  value={conversationSearch}
+                  onChange={(e) => setConversationSearch(e.target.value)}
+                  className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
+                />
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto">
+              {loadingConversations ? (
+                <div className="text-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  <p className="text-gray-500 mt-3 text-sm">Loading...</p>
+                </div>
+              ) : conversations.length === 0 ? (
+                <div className="text-center py-12 px-4">
+                  <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 text-sm">No conversations yet</p>
+                  <p className="text-gray-400 text-xs mt-1">Chat conversations from your website will appear here</p>
+                </div>
+              ) : (
+                conversations
+                  .filter(c => !conversationSearch || (c.first_message || '').toLowerCase().includes(conversationSearch.toLowerCase()))
+                  .map(conv => (
+                  <button
+                    key={conv.id}
+                    onClick={() => {
+                      setSelectedConversation(conv);
+                      fetchConversationMessages(conv.id);
+                      setTimeout(() => {
+                        if (messagesContainerRef.current) messagesContainerRef.current.scrollTop = 0;
+                      }, 50);
+                    }}
+                    className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
+                      selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-sm font-semibold text-gray-900 truncate">
+                        Conversation #{conv.id}
+                      </span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        conv.source === 'embed' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {conv.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 truncate">
+                      {conv.first_message || 'No messages'}
+                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="text-xs text-gray-400">
+                        {new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {new Date(conv.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          conv.outcome === 'booked' ? 'bg-green-100 text-green-700' :
+                          conv.outcome === 'no_response' ? 'bg-gray-100 text-gray-500' :
+                          'bg-red-50 text-red-600'
+                        }`}>
+                          {conv.outcome === 'booked' ? 'Booked' :
+                           conv.outcome === 'no_response' ? "Didn't respond" :
+                           "Didn't book"}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Message Thread */}
+          <div className="flex-1 flex flex-col">
+            {!selectedConversation ? (
+              <div className="flex-1 flex items-center justify-center">
+                <div className="text-center">
+                  <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                  <p className="text-gray-500 font-medium">Select a conversation</p>
+                  <p className="text-gray-400 text-sm mt-1">Choose a conversation from the list to view messages</p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* Thread Header */}
+                <div className="p-4 border-b border-gray-200 bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-semibold text-gray-900">Conversation #{selectedConversation.id}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {new Date(selectedConversation.created_at).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                        {' '} &middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => { setSelectedConversation(null); setConversationMessages([]); }}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Messages */}
+                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
+                  {loadingMessages ? (
+                    <div className="text-center py-12">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    </div>
+                  ) : conversationMessages.length === 0 ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-400 text-sm">No messages in this conversation</p>
+                    </div>
+                  ) : (
+                    conversationMessages.map((msg, idx) => (
+                      <div
+                        key={idx}
+                        className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}
+                      >
+                        <div
+                          className={`max-w-[75%] rounded-2xl px-4 py-3 ${
+                            msg.role === 'user'
+                              ? 'bg-white border border-gray-200 text-gray-900'
+                              : 'bg-blue-600 text-white'
+                          }`}
+                        >
+                          <div className={`text-xs font-medium mb-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>
+                            {msg.role === 'user' ? 'Customer' : 'AI Agent'}
+                          </div>
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>
+                            {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Rewards Tab */}
+      {activeTab === 'rewards' && (
+        <div className="space-y-6">
+          {/* Rewards Configuration */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <button
+              onClick={() => setShowRewardsConfig(!showRewardsConfig)}
+              className="w-full flex items-center justify-between p-6"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-amber-600" />
+                </div>
+                <div className="text-left">
+                  <h3 className="text-lg font-semibold text-gray-900">Rewards Program Settings</h3>
+                  <p className="text-sm text-gray-500">Configure your loyalty rewards program</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${rewardsConfig.enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                  {rewardsConfig.enabled ? 'Active' : 'Inactive'}
+                </span>
+                {showRewardsConfig ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+              </div>
+            </button>
+
+            {showRewardsConfig && (
+              <div className="px-6 pb-6 space-y-6 border-t border-gray-100 pt-6">
+                {/* Enable toggle */}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="font-medium text-gray-900">Enable Rewards Program</label>
+                    <p className="text-sm text-gray-500">Automatically reward loyal customers</p>
+                  </div>
+                  <button
+                    onClick={() => setRewardsConfig({ ...rewardsConfig, enabled: !rewardsConfig.enabled })}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${rewardsConfig.enabled ? 'bg-green-600' : 'bg-gray-300'}`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${rewardsConfig.enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                  </button>
+                </div>
+
+                {/* Milestone Reward */}
+                <div className="bg-amber-50 rounded-xl p-5 space-y-4">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Trophy className="w-5 h-5 text-amber-600" />
+                    Milestone Reward
+                  </h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Bookings required to earn reward</label>
+                      <input
+                        type="number"
+                        min="2"
+                        max="50"
+                        value={rewardsConfig.bookingsRequired}
+                        onChange={(e) => setRewardsConfig({ ...rewardsConfig, bookingsRequired: e.target.value === '' ? '' : parseInt(e.target.value) || '' })}
+                        onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 2) setRewardsConfig(c => ({ ...c, bookingsRequired: 5 })); }}
+                        onDoubleClick={(e) => e.target.select()}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Reward description</label>
+                      <input
+                        type="text"
+                        value={rewardsConfig.rewardDescription}
+                        onChange={(e) => setRewardsConfig({ ...rewardsConfig, rewardDescription: e.target.value })}
+                        placeholder="e.g., Free interior detail, 50% off next service"
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Coupon After Booking */}
+                <div className="bg-green-50 rounded-xl p-5 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                      <Star className="w-5 h-5 text-green-600" />
+                      Return Coupon
+                    </h4>
+                    <button
+                      onClick={() => setRewardsConfig({ ...rewardsConfig, couponAfterBooking: !rewardsConfig.couponAfterBooking })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${rewardsConfig.couponAfterBooking ? 'bg-green-600' : 'bg-gray-300'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${rewardsConfig.couponAfterBooking ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
+                  </div>
+                  {rewardsConfig.couponAfterBooking && (
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Coupon offer</label>
+                        <input
+                          type="text"
+                          value={rewardsConfig.couponDescription}
+                          onChange={(e) => setRewardsConfig({ ...rewardsConfig, couponDescription: e.target.value })}
+                          placeholder="e.g., 10% off your next booking"
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Frequency</label>
+                        <select
+                          value={rewardsConfig.couponFrequency}
+                          onChange={(e) => setRewardsConfig({ ...rewardsConfig, couponFrequency: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                        >
+                          <option value="every">After every booking</option>
+                          <option value="every_other">Every other booking</option>
+                          <option value="every_third">Every 3rd booking</option>
+                          <option value="first_only">First booking only</option>
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* SMS Timing */}
+                <div className="bg-blue-50 rounded-xl p-5 space-y-4">
+                  <h4 className="font-semibold text-gray-900 flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-blue-600" />
+                    SMS Delivery Timing
+                  </h4>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">When to send reward/coupon text</label>
+                      <select
+                        value={rewardsConfig.smsTiming}
+                        onChange={(e) => setRewardsConfig({ ...rewardsConfig, smsTiming: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="after_completed">After job is completed</option>
+                        <option value="after_booking">Right after booking</option>
+                        <option value="delay_after_booking">Delayed after booking</option>
+                        <option value="delay_after_completed">Delayed after completion</option>
+                      </select>
+                    </div>
+                    {(rewardsConfig.smsTiming === 'delay_after_booking' || rewardsConfig.smsTiming === 'delay_after_completed') && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Delay (hours)</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="168"
+                          value={rewardsConfig.smsDelayHours}
+                          onChange={(e) => setRewardsConfig({ ...rewardsConfig, smsDelayHours: parseInt(e.target.value) || 1 })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">SMS template (optional)</label>
+                    <textarea
+                      value={rewardsConfig.smsTemplate}
+                      onChange={(e) => setRewardsConfig({ ...rewardsConfig, smsTemplate: e.target.value })}
+                      placeholder="e.g., Hey {name}! Thanks for being a loyal customer. Here's your reward: {reward}. Book your next appointment today!"
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Use {'{name}'} for customer name, {'{reward}'} for reward description, {'{bookings}'} for booking count</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={saveRewardsConfig}
+                  disabled={savingRewards}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-lg font-semibold hover:from-amber-700 hover:to-orange-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Save className="w-5 h-5" />
+                  {savingRewards ? 'Saving...' : 'Save Rewards Settings'}
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Customer Rewards Tracker */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-600" />
+                Customer Progress
+              </h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Track how close each customer is to earning their reward ({rewardsConfig.bookingsRequired} bookings needed)
+              </p>
+            </div>
+
+            {loadingRewards ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600 mx-auto"></div>
+                <p className="text-gray-500 mt-3 text-sm">Loading...</p>
+              </div>
+            ) : rewardsCustomers.length === 0 ? (
+              <div className="text-center py-12 px-4">
+                <Gift className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">No customers with bookings yet</p>
+                <p className="text-gray-400 text-xs mt-1">Customers will appear here after their first booking</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {rewardsCustomers.map(customer => {
+                  const progress = Math.min((customer.booking_count / rewardsConfig.bookingsRequired) * 100, 100);
+                  const earned = customer.booking_count >= rewardsConfig.bookingsRequired;
+                  return (
+                    <div key={customer.id} className={`p-4 flex items-center gap-4 ${earned ? 'bg-amber-50' : ''}`}>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${earned ? 'bg-amber-200' : 'bg-gray-100'}`}>
+                        {earned ? <Trophy className="w-5 h-5 text-amber-700" /> : <Users className="w-5 h-5 text-gray-500" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900 truncate">{customer.name}</span>
+                          {earned && (
+                            <span className="px-2 py-0.5 bg-amber-200 text-amber-800 text-xs font-semibold rounded-full">Reward Earned!</span>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-4 mt-1 text-xs text-gray-500">
+                          {customer.email && <span>{customer.email}</span>}
+                          {customer.phone && <span>{customer.phone}</span>}
+                          {customer.last_service && <span>Last: {customer.last_service}</span>}
+                        </div>
+                        <div className="mt-2 flex items-center gap-3">
+                          <div className="flex-1 bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${earned ? 'bg-amber-500' : 'bg-blue-500'}`}
+                              style={{ width: `${progress}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+                            {customer.booking_count} / {rewardsConfig.bookingsRequired}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-sm font-semibold text-gray-900">${Number(customer.lifetime_value || 0).toFixed(0)}</p>
+                        <p className="text-xs text-gray-400">lifetime</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add Table Modal */}
       {showAddTableModal && (

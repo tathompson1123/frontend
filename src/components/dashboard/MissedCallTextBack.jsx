@@ -491,25 +491,34 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
                 </div>
               </div>
 
-              <button
-                onClick={deployAgent}
-                disabled={isDeploying || !phoneNumber}
-                className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg"
-              >
-                <Rocket className="w-5 h-5" />
-                {isDeploying ? 'Deploying...' : isDeployed ? 'Redeploy' : 'Deploy Now'}
-              </button>
+              {isDeployed ? (
+                <div className="w-full px-6 py-3 bg-green-100 text-green-700 rounded-lg font-semibold flex items-center justify-center gap-2 shadow-sm">
+                  <Phone className="w-5 h-5" />
+                  Deployed
+                </div>
+              ) : (
+                <button
+                  onClick={deployAgent}
+                  disabled={isDeploying || !phoneNumber}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all font-semibold flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg"
+                >
+                  <Rocket className="w-5 h-5" />
+                  {isDeploying ? 'Deploying...' : 'Deploy Now'}
+                </button>
+              )}
 
-              {!phoneNumber && (
+              {!phoneNumber && !isDeployed && (
                 <p className="text-xs text-red-600 mt-2 text-center">
                   Deploy the Lead Form Agent first to get a phone number
                 </p>
               )}
 
-              <div className="flex items-center gap-1 justify-center mt-3">
-                <Crown className="w-4 h-4 text-amber-500" />
-                <span className="text-xs text-gray-500">Requires Pro plan or higher</span>
-              </div>
+              {!['pro', 'expert'].includes(user?.plan?.toLowerCase()) && (
+                <div className="flex items-center gap-1 justify-center mt-3">
+                  <Crown className="w-4 h-4 text-amber-500" />
+                  <span className="text-xs text-gray-500">Requires Pro plan or higher</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

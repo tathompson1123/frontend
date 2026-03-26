@@ -23,7 +23,8 @@ import {
   DollarSign,
   Lightbulb,
   LayoutGrid,
-  List
+  List,
+  Trash2
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
@@ -272,6 +273,25 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     } catch (error) {
       console.error('Error saving notes:', error);
       showToast('Failed to save notes: ' + error.message, 'error');
+    }
+  };
+
+  const deleteBooking = async (bookingId) => {
+    if (!confirm('Are you sure you want to delete this booking? This cannot be undone.')) return;
+    try {
+      const response = await authFetch(`${apiUrl}/api/bookings/${bookingId}`, { method: 'DELETE' });
+      if (response.ok) {
+        showToast('Booking deleted', 'success');
+        setShowBookingModal(false);
+        setSelectedBooking(null);
+        fetchAllBookings();
+      } else {
+        const data = await response.json();
+        showToast(data.error || 'Failed to delete booking', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting booking:', error);
+      showToast('Failed to delete booking', 'error');
     }
   };
 
@@ -532,12 +552,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     customerEmail: booking.customer_email || '',
                     customerPhone: booking.customer_phone || '',
                     customerAddress: booking.customer_address || '',
-                    serviceId: booking.items?.[0]?.service_id || '',
-                    additionalServices: [],
-                    employeeId: booking.employee_id || '',
-                    groupId: booking.group_id || '',
+                    serviceId: booking.items?.[0]?.service_id ? Number(booking.items[0].service_id) : '',
+                    additionalServices: (booking.items || []).slice(1).map(i => Number(i.service_id)),
+                    employeeId: booking.employee_id ? String(booking.employee_id) : '',
+                    groupId: booking.group_id ? String(booking.group_id) : '',
                     bookingDate: booking.booking_date.split('T')[0],
-                    startTime: booking.start_time,
+                    startTime: (booking.start_time || '').slice(0, 5),
                     notes: booking.job_notes || booking.customer_notes || ''
                   };
                   setNewBooking(editForm);
@@ -1079,12 +1099,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                       customerEmail: selectedBooking.customer_email || '',
                       customerPhone: selectedBooking.customer_phone || '',
                       customerAddress: selectedBooking.customer_address || '',
-                      serviceId: selectedBooking.items?.[0]?.service_id || '',
-                      additionalServices: [],
-                      employeeId: selectedBooking.employee_id || '',
-                      groupId: selectedBooking.group_id || '',
+                      serviceId: selectedBooking.items?.[0]?.service_id ? Number(selectedBooking.items[0].service_id) : '',
+                      additionalServices: (selectedBooking.items || []).slice(1).map(i => Number(i.service_id)),
+                      employeeId: selectedBooking.employee_id ? String(selectedBooking.employee_id) : '',
+                      groupId: selectedBooking.group_id ? String(selectedBooking.group_id) : '',
                       bookingDate: selectedBooking.booking_date.split('T')[0],
-                      startTime: selectedBooking.start_time,
+                      startTime: (selectedBooking.start_time || '').slice(0, 5),
                       notes: selectedBooking.job_notes || selectedBooking.customer_notes || ''
                     };
                     setNewBooking(editForm);
@@ -1096,6 +1116,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteBooking(selectedBooking.id)}
+                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
                 </button>
                 <button
                   type="button"
