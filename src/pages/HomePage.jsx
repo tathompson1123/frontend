@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart, Calendar, Globe, Brain, LineChart } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
 import GenerateModal from '../components/GenerateModal';
@@ -587,8 +587,9 @@ export default function HomePage() {
               </button>
             </div>
             
-            <div className="text-gray-400 text-sm">
-              © 2025 SORCE. Built for service businesses.
+            <div className="flex items-center gap-4 text-gray-400 text-sm">
+              <Link to="/privacy" className="hover:text-white transition">Privacy Policy</Link>
+              <span>© 2026 SORCE. Built for service businesses.</span>
             </div>
           </div>
         </div>

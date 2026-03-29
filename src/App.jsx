@@ -10,6 +10,7 @@ import PaymentPage from './pages/PaymentPage';
 import LeadMagnetPage from './pages/LeadMagnetPage';
 import EmployeeInvitePage from './pages/EmployeeInvitePage';
 import WebsitePreview from './pages/WebsitePreview';
+import PrivacyPolicy from './pages/PrivacyPolicy';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
         <Route path="/lead/:userId/:type" element={<LeadMagnetPage />} />
         <Route path="/preview" element={<WebsitePreview />} />
         <Route path="/employee-invite" element={<EmployeeInvitePage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
