@@ -158,7 +158,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
 
   const deployAgent = async () => {
     if (!config.forwardingNumber) {
-      alert('Please enter your forwarding phone number (the number where calls will ring).');
+      alert('Please enter your answering phone number — the phone that should ring when customers call.');
       return;
     }
 
@@ -184,11 +184,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
 
       if (response.ok) {
         const data = await response.json();
-        if (data.callForwarding) {
-          alert(`Missed Call Text-Back is now active!\n\nCalls to ${data.phoneNumber} will forward to ${config.forwardingNumber}.\nIf you don't answer, the caller gets a text automatically.`);
-        } else {
-          alert(`Missed Call Text-Back deployed (SMS text-back mode)!\n\nYour number: ${data.phoneNumber}\nAuto text-back is enabled for missed calls.\n\nNote: Call forwarding requires a Twilio number. Your Telnyx number supports SMS text-back.`);
-        }
+        alert(`Missed Call Text-Back is now active!\n\nYour SMS Agent Number: ${data.phoneNumber}\n\nNext step: Update your business phone number to ${data.phoneNumber} everywhere customers find you — Google Business, your website, business cards, etc. When they call it, it rings your phone (${config.forwardingNumber}). If you don't answer, they get an automatic text.`);
         setConfig({ ...config, enabled: true, callForwardingActive: data.callForwarding });
         onDeploymentChange();
       } else {
@@ -241,8 +237,8 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
           </div>
           <p className="text-gray-600">
             {isDeployed
-              ? 'Forwarding calls and auto-texting missed callers'
-              : 'Set up call forwarding and automatic text-back for missed calls'}
+              ? 'Auto-texting missed callers from your SMS Agent Number'
+              : 'Set up automatic text-back for missed calls on your business line'}
           </p>
         </div>
 
@@ -289,51 +285,85 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
           </div>
         )}
 
-        {/* Business Phone Number */}
-        <div className={`rounded-xl border-2 p-5 flex items-start gap-4 mb-6 ${phoneNumber ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-          <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${phoneNumber ? 'bg-green-600' : 'bg-gray-300'}`}>
-            <Phone className="w-5 h-5 text-white" />
+        {/* SMS Agent Number + Setup Instructions */}
+        <div className={`rounded-xl border-2 p-5 mb-6 ${phoneNumber ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className="flex items-start gap-4 mb-4">
+            <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${phoneNumber ? 'bg-green-600' : 'bg-gray-300'}`}>
+              <Phone className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-gray-900 text-sm">SMS Agent Number</p>
+              {phoneNumber ? (
+                <div className="flex items-center gap-3 mt-1">
+                  <p className="text-lg font-bold text-green-700 tracking-wide">{phoneNumber}</p>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(phoneNumber)}
+                    className="text-xs text-green-700 bg-green-100 hover:bg-green-200 px-2 py-1 rounded font-medium transition-colors"
+                  >
+                    Copy
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <p className="text-sm text-gray-500 mt-0.5">No SMS Agent Number assigned yet.</p>
+                  <p className="text-xs text-gray-400 mt-1">Deploy the Lead Form Agent first to provision your SMS Agent Number.</p>
+                </>
+              )}
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 text-sm">Business Phone Number</p>
-            {phoneNumber ? (
-              <>
-                <p className="text-lg font-bold text-green-700 tracking-wide mt-0.5">{phoneNumber}</p>
-                <p className="text-xs text-gray-500 mt-1">Incoming calls to this number will be forwarded to your personal phone. If you don't answer, the caller gets an automatic text.</p>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-gray-500 mt-0.5">No number assigned yet.</p>
-                <p className="text-xs text-gray-400 mt-1">Deploy the Lead Form Agent first to provision a business phone number.</p>
-              </>
-            )}
-          </div>
+
+          {phoneNumber && (
+            <div className="border-t border-green-200 pt-4 space-y-3">
+              <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide">How to set this up</p>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">1</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Use your SMS Agent Number as your business phone number</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Update it on Google Business, your website, business cards — anywhere customers call you from. This is the number they'll call.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">2</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">Enter your actual phone number below</p>
+                  <p className="text-xs text-gray-500 mt-0.5">When someone calls your SMS Agent Number, it rings your phone first. If you answer, it's a normal call.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <span className="w-5 h-5 bg-green-600 text-white rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 mt-0.5">3</span>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">If you don't answer, the caller gets an automatic text</p>
+                  <p className="text-xs text-gray-500 mt-0.5">No carrier setup needed. Everything is handled automatically.</p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Configuration */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Call Forwarding Settings</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Configuration</h3>
 
-            {/* Forwarding Number */}
+            {/* Local Business Phone Number */}
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
                   <Phone className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">Your Personal Phone Number</p>
-                  <p className="text-sm text-gray-600">Calls will ring this number first</p>
+                  <p className="font-medium text-gray-900">Your Answering Phone</p>
+                  <p className="text-sm text-gray-600">Rings when a customer calls your SMS Agent Number</p>
                 </div>
               </div>
               <input
                 type="tel"
                 value={config.forwardingNumber || ''}
                 onChange={(e) => setConfig({ ...config, forwardingNumber: e.target.value })}
-                placeholder="+15551234567"
+                placeholder="(555) 123-4567"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
-              <p className="text-xs text-gray-500 mt-2">Enter in E.164 format: +1 followed by 10 digits (e.g., +15551234567)</p>
+              <p className="text-xs text-gray-500 mt-2">If you answer, it's a normal call. If you don't answer within the ring timeout, the caller gets an automatic text.</p>
             </div>
 
             {/* Ring Timeout */}
@@ -402,8 +432,9 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
                     type="number"
                     min="10"
                     max="120"
-                    value={config.delayMin || 30}
-                    onChange={(e) => setConfig({ ...config, delayMin: parseInt(e.target.value) || 30 })}
+                    value={config.delayMin ?? 30}
+                    onChange={(e) => setConfig({ ...config, delayMin: e.target.value })}
+                    onBlur={(e) => { const v = parseInt(e.target.value); setConfig(c => ({ ...c, delayMin: (isNaN(v) || v < 10) ? 30 : v })); }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm mt-1"
                   />
                 </div>
@@ -413,8 +444,9 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
                     type="number"
                     min="10"
                     max="180"
-                    value={config.delayMax || 60}
-                    onChange={(e) => setConfig({ ...config, delayMax: parseInt(e.target.value) || 60 })}
+                    value={config.delayMax ?? 60}
+                    onChange={(e) => setConfig({ ...config, delayMax: e.target.value })}
+                    onBlur={(e) => { const v = parseInt(e.target.value); setConfig(c => ({ ...c, delayMax: (isNaN(v) || v < 10) ? 60 : v })); }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm mt-1"
                   />
                 </div>
@@ -475,7 +507,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-sm text-gray-700">
                   <Phone className="w-4 h-4 text-purple-600" />
-                  <span>Forwards calls to your phone</span>
+                  <span>Rings your phone like a normal call</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-700">
                   <MessageCircle className="w-4 h-4 text-purple-600" />
