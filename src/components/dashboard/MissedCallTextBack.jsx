@@ -1,192 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Phone, PhoneOff, Clock, MessageCircle, TrendingUp, Save, Rocket, Crown, ChevronDown, ChevronUp, Brain, Copy, Check } from 'lucide-react';
-
-const CARRIERS = [
-  { id: '',             name: 'Select your carrier...',    type: null           },
-  // ── AT&T network ──
-  { id: 'att',          name: 'AT&T',                      type: 'att'          },
-  { id: 'cricket',      name: 'Cricket Wireless',          type: 'att'          },
-  { id: 'consumer',     name: 'Consumer Cellular',         type: 'att'          },
-  { id: 'boost',        name: 'Boost Mobile',              type: 'att'          },
-  { id: 'firstnet',     name: 'FirstNet',                  type: 'att'          },
-  { id: 'h2o',          name: 'H2O Wireless',              type: 'att'          },
-  { id: 'simplemobile', name: 'Simple Mobile',             type: 'att'          },
-  // ── Verizon network ──
-  { id: 'verizon',      name: 'Verizon',                   type: 'verizon'      },
-  { id: 'visible',      name: 'Visible',                   type: 'verizon'      },
-  { id: 'totalvzw',     name: 'Total by Verizon',          type: 'verizon'      },
-  { id: 'tracfone_vzw', name: 'TracFone (Verizon SIM)',    type: 'verizon'      },
-  { id: 'xfinity',      name: 'Xfinity Mobile',            type: 'xfinity'      },
-  { id: 'spectrum',     name: 'Spectrum Mobile',           type: 'spectrum'     },
-  { id: 'cox',          name: 'Cox Mobile',                type: 'cox'          },
-  // ── T-Mobile network ──
-  { id: 'tmobile',      name: 'T-Mobile',                  type: 'tmobile'      },
-  { id: 'metro',        name: 'Metro by T-Mobile',         type: 'tmobile'      },
-  { id: 'mint',         name: 'Mint Mobile',               type: 'tmobile'      },
-  { id: 'googlefi',     name: 'Google Fi',                 type: 'tmobile'      },
-  { id: 'sprint',       name: 'Sprint (legacy)',           type: 'tmobile'      },
-  { id: 'republic',     name: 'Republic Wireless',         type: 'tmobile'      },
-  { id: 'tello',        name: 'Tello',                     type: 'tmobile'      },
-  { id: 'ting',         name: 'Ting',                      type: 'tmobile'      },
-  { id: 'tracfone_tmo', name: 'TracFone (T-Mobile SIM)',   type: 'tmobile'      },
-  // ── Other ──
-  { id: 'uscellular',   name: 'US Cellular',               type: 'uscellular'   },
-  { id: 'straighttalk', name: 'Straight Talk',             type: 'straighttalk' },
-  { id: 'landline',     name: 'Landline / VoIP',           type: 'landline'     },
-  { id: 'other',        name: 'Other / Not Listed',        type: 'other'        },
-];
-
-// '__CODE__' is replaced with the forwarding code block inline
-function getCarrierSteps(carrierId, smsAgentNumber) {
-  const carrier = CARRIERS.find(c => c.id === carrierId);
-  const type = carrier?.type;
-  const num = (smsAgentNumber || '').replace(/\D/g, '');
-  const e164 = num.length === 10 ? `+1${num}` : `+${num}`;
-  const attCode    = { activate: `*61*${e164}#`,  cancel: `#61#`   };
-  const tmoCode    = { activate: `**61*${e164}#`, cancel: `##61#`  };
-
-  const dialSteps = (code, carrierName) => ({
-    note: `Your phone still rings first as normal. Only unanswered calls get forwarded to your SMS Agent Number.`,
-    steps: [
-      'Open your <strong>phone</strong> and go to the dial pad',
-      '__CODE__',
-      'Press the <strong>call button</strong> — you\'ll hear a short confirmation tone or a voice saying forwarding is active',
-      '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering. You should receive an automatic text within about a minute.',
-    ],
-    code: code.activate,
-    cancelNote: `Open your phone dial pad, enter <strong>${code.cancel}</strong> and press call. You\'ll hear a confirmation that forwarding has been turned off.`,
-  });
-
-  const androidSteps = (supportNumber, websiteNote) => ({
-    steps: [
-      '<strong>Android:</strong> Open your phone, tap the <strong>⋮ menu</strong> (top right) or go to <strong>Settings</strong> inside the phone app > <strong>Calls</strong> > <strong>Call forwarding</strong> > <strong>Forward when unanswered</strong> > enter your SMS Agent Number > tap <strong>Enable</strong>',
-      `<strong>iPhone:</strong> ${websiteNote || 'Call your carrier\'s support line and ask them to set up "no answer call forwarding" to your SMS Agent Number'}${supportNumber ? ` — <strong>${supportNumber}</strong>` : ''}`,
-      '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering. You should receive an automatic text within about a minute.',
-    ],
-    code: null,
-    cancelNote: `Android: Go back to <strong>Call forwarding</strong> in your phone settings and tap <strong>Disable</strong> next to "Forward when unanswered." iPhone: Call support${supportNumber ? ` at ${supportNumber}` : ''} to remove it.`,
-  });
-
-  switch (type) {
-    case 'att':
-      return {
-        note: 'Your phone still rings first as normal. Only unanswered calls get forwarded.',
-        steps: [
-          'Open your <strong>phone</strong> and go to the dial pad',
-          '__CODE__',
-          'Press the <strong>call button</strong> — you\'ll hear "Call forwarding is active" or a confirmation tone',
-          'If the code doesn\'t work, go to <strong>Settings</strong> in your phone app > <strong>Calls</strong> > <strong>Call forwarding</strong> > <strong>Forward when unanswered</strong> > enter your SMS Agent Number',
-          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
-        ],
-        code: attCode.activate,
-        cancelNote: `Dial <strong>${attCode.cancel}</strong> and press call, or go to <strong>Call forwarding</strong> in your phone settings and disable "Forward when unanswered."`,
-      };
-    case 'verizon':
-      return {
-        note: 'Verizon manages call forwarding through the My Verizon app — there are no dial codes.',
-        steps: [
-          'Open the <strong>My Verizon</strong> app (download it from the App Store or Google Play if needed)',
-          'Tap the <strong>Menu</strong> (☰) or <strong>Account</strong> tab',
-          'Tap <strong>Devices</strong> and select your phone line',
-          'Tap <strong>Manage device</strong> > <strong>Call settings</strong>',
-          'Tap <strong>Call forwarding</strong> > <strong>When unanswered</strong>',
-          'Enter your SMS Agent Number and tap <strong>Save</strong>',
-          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
-        ],
-        code: null,
-        cancelNote: 'Go back to <strong>Call forwarding > When unanswered</strong> in My Verizon and remove the forwarding number. You can also call Verizon support at <strong>1-800-922-0204</strong>.',
-      };
-    case 'tmobile':
-      return {
-        note: 'Your phone still rings first as normal. Only unanswered calls get forwarded.',
-        steps: [
-          'Open your <strong>phone</strong> and go to the dial pad',
-          '__CODE__',
-          'Press the <strong>call button</strong> — you\'ll hear "Call forwarding is active" or a confirmation tone',
-          'If the code doesn\'t work, open the <strong>T-Mobile</strong> app > <strong>Account</strong> > select your line > <strong>Manage line features</strong> > <strong>Call forwarding</strong> > enable <strong>"When unanswered"</strong> and enter your SMS Agent Number',
-          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
-        ],
-        code: tmoCode.activate,
-        cancelNote: `Dial <strong>${tmoCode.cancel}</strong> and press call, or go to the T-Mobile app > Account > your line > Call forwarding and turn off "When unanswered."`,
-      };
-    case 'xfinity':
-      return {
-        note: 'Xfinity Mobile runs on Verizon\'s network. Call forwarding is managed through your phone settings (Android) or Xfinity Mobile support (iPhone).',
-        ...androidSteps('1-888-936-4968', 'Visit <strong>xfinity.com/mobile</strong> > sign in > <strong>Account</strong> > <strong>Lines</strong> > select your line > <strong>Line features</strong> > <strong>Call forwarding</strong> > enable "When unanswered" and enter your SMS Agent Number. If you don\'t see it there, call Xfinity Mobile support at <strong>1-888-936-4968</strong>'),
-      };
-    case 'spectrum':
-      return {
-        note: 'Spectrum Mobile runs on Verizon\'s network. Call forwarding is managed through your phone settings (Android) or Spectrum Mobile support (iPhone).',
-        ...androidSteps('1-833-224-6603', 'Visit <strong>spectrummobile.com</strong> > sign in > <strong>My Account</strong> > select your line > <strong>Manage features</strong> > <strong>Call forwarding</strong> and enable "When unanswered." Or call Spectrum Mobile support at <strong>1-833-224-6603</strong>'),
-      };
-    case 'cox':
-      return {
-        note: 'Cox Mobile runs on Verizon\'s network. Call forwarding is managed through your phone settings (Android) or Cox Mobile support (iPhone).',
-        ...androidSteps('1-800-234-3993', 'Visit <strong>coxmobile.com</strong> > sign in > <strong>My Account</strong> > select your line > <strong>Call settings</strong> > <strong>Call forwarding</strong> and enable "When unanswered." Or call Cox Mobile support at <strong>1-800-234-3993</strong>'),
-      };
-    case 'uscellular':
-      return {
-        note: 'US Cellular supports standard GSM forwarding codes. Your phone still rings first as normal.',
-        steps: [
-          'Open your <strong>phone</strong> and go to the dial pad',
-          '__CODE__',
-          'Press the <strong>call button</strong> — you\'ll hear a confirmation tone',
-          'If the code doesn\'t work, open the <strong>My Account</strong> app or call US Cellular support at <strong>1-888-944-9400</strong> to set up no-answer call forwarding',
-          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
-        ],
-        code: attCode.activate,
-        cancelNote: `Dial <strong>${attCode.cancel}</strong> and press call, or call US Cellular support at <strong>1-888-944-9400</strong> to remove it.`,
-      };
-    case 'straighttalk':
-      return {
-        note: 'Straight Talk SIMs run on different networks depending on your phone. Try the AT&T code first — if it doesn\'t work, try the T-Mobile code.',
-        steps: [
-          'Open your <strong>phone</strong> and go to the dial pad',
-          '__CODE__',
-          'Press the <strong>call button</strong>. If you hear an error, try the T-Mobile code instead: tap the dial pad and enter <strong>' + tmoCode.activate + '</strong> then press call',
-          'You\'ll hear a confirmation tone or message when it activates',
-          'If neither code works, call Straight Talk support at <strong>1-877-430-2355</strong> and ask them to set up no-answer call forwarding',
-          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
-        ],
-        code: attCode.activate,
-        cancelNote: `Try dialing <strong>${attCode.cancel}</strong> or <strong>${tmoCode.cancel}</strong> and pressing call. If neither works, call Straight Talk support at <strong>1-877-430-2355</strong>.`,
-      };
-    case 'landline':
-      return {
-        note: 'Steps vary by provider. Look for "No Answer Forwarding" or "When Unanswered" — not "Forward All Calls."',
-        steps: [
-          'Log in to your <strong>phone system admin portal</strong> in a browser',
-          '<strong>RingCentral:</strong> Settings > Call Handling & Forwarding > When not answered',
-          '<strong>Google Voice:</strong> Settings (gear icon) > Calls > Call Forwarding — note: Google Voice forwards all calls, not just missed ones',
-          '<strong>Grasshopper:</strong> Settings > Extensions > select extension > Call Forwarding > Forward when no answer',
-          '<strong>8x8 / Nextiva / Vonage / OpenPhone:</strong> Settings > Call Routing or Call Handling > No Answer > enter your SMS Agent Number',
-          'If you don\'t see the option, search "[your provider] no answer call forwarding" or contact their support',
-          '<strong>Test it:</strong> Call your business number and let it ring without answering',
-        ],
-        code: null,
-        cancelNote: 'Go back to the same call handling setting in your admin portal and remove the forwarding number or disable "When unanswered" forwarding.',
-      };
-    default:
-      return {
-        note: 'Look for "No answer forwarding" or "Forward when unanswered" — not "Forward all calls."',
-        steps: [
-          '<strong>Try your phone settings first (Android):</strong> Open your phone > tap ⋮ or Settings > Calls > Call forwarding > Forward when unanswered > enter your SMS Agent Number > Enable',
-          '<strong>Or check your carrier\'s app:</strong> Look under Account > your line > Call settings or Line features',
-          '<strong>Or search:</strong> "[your carrier name] no answer call forwarding" for specific steps',
-          '<strong>Last resort:</strong> Call your carrier\'s support line and ask them to set up "no answer call forwarding" to your SMS Agent Number',
-          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
-        ],
-        code: null,
-        cancelNote: 'Go back to Call forwarding in your phone settings or carrier app and disable "Forward when unanswered." Or call your carrier\'s support line.',
-      };
-  }
-}
+import { Phone, PhoneOff, Clock, MessageCircle, TrendingUp, Save, Rocket, Crown, ChevronDown, ChevronUp, Brain, Copy, Check, ExternalLink } from 'lucide-react';
 
 export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange, onDirtyChange }) {
   const [config, setConfig] = useState({
     enabled: false,
     smsEnabled: true,
-    forwardingNumber: '',
     delayMin: 30,
     delayMax: 60,
     training: {
@@ -208,8 +26,6 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
   const [isDeploying, setIsDeploying] = useState(false);
   const [showTraining, setShowTraining] = useState(false);
   const [showCallLog, setShowCallLog] = useState(false);
-  const [selectedCarrier, setSelectedCarrier] = useState(null);
-  const [codeCopied, setCodeCopied] = useState(false);
   const [agentNumCopied, setAgentNumCopied] = useState(false);
 
   function getDefaultTemplate() {
@@ -239,7 +55,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
       ]);
 
       const defaults = {
-        enabled: false, smsEnabled: true, forwardingNumber: '', delayMin: 30, delayMax: 60,
+        enabled: false, smsEnabled: true, delayMin: 30, delayMax: 60,
         training: { responseTone: 'friendly', agentName: '', businessContext: '', servicesInfo: '' }
       };
 
@@ -319,10 +135,6 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
   };
 
   const deployAgent = async () => {
-    if (!config.forwardingNumber) {
-      alert('Please enter your business phone number first.');
-      return;
-    }
     if (!phoneNumber) {
       alert('You need a provisioned SMS Agent Number first. Deploy the Lead Form Agent to get one.');
       return;
@@ -333,7 +145,6 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          forwardingNumber: config.forwardingNumber,
           delayMin: config.delayMin,
           delayMax: config.delayMax,
           smsTemplate,
@@ -343,7 +154,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
       if (response.ok) {
         setConfig({ ...config, enabled: true });
         onDeploymentChange();
-        alert(`Missed Call Text-Back is now active!\n\nSMS Agent Number: ${phoneNumber}\n\nNext step: Set up no-answer call forwarding on your business line (${config.forwardingNumber}) to forward to ${phoneNumber}. Use the setup instructions on this page for your carrier.`);
+        alert(`Missed Call Text-Back is now active!\n\nYour SMS Agent Number is: ${phoneNumber}\n\nAdd this number to your Google Business Profile and website so customers call it directly.`);
       } else {
         const error = await response.json();
         alert('Failed to deploy: ' + (error.error || 'Unknown error'));
@@ -353,12 +164,6 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
     } finally {
       setIsDeploying(false);
     }
-  };
-
-  const copyCode = (text) => {
-    navigator.clipboard.writeText(text);
-    setCodeCopied(true);
-    setTimeout(() => setCodeCopied(false), 2000);
   };
 
   const copyAgentNumber = () => {
@@ -378,8 +183,6 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
            d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   };
-
-  const carrierSteps = selectedCarrier ? getCarrierSteps(selectedCarrier, phoneNumber) : null;
 
   return (
     <div className="space-y-6">
@@ -442,7 +245,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
                     {agentNumCopied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
                   </button>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Missed callers receive an automatic text from this number. Set up call forwarding below so your business line sends missed calls here.</p>
+                <p className="text-xs text-gray-500 mt-1">Add this number to your Google Business Profile and website. When a call to this number goes unanswered, an automatic text goes out.</p>
               </>
             ) : (
               <>
@@ -453,74 +256,49 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
           </div>
         </div>
 
-        {/* Call Forwarding Setup */}
+        {/* Where to add the number */}
         {phoneNumber && (
-          <div className="mb-6 border border-gray-200 rounded-xl overflow-hidden">
-            <div className="bg-gray-50 px-5 py-4 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900">Call Forwarding Setup</h3>
-              <p className="text-sm text-gray-500 mt-0.5">
-                Keep your existing business number. Set it to forward unanswered calls to your SMS Agent Number — no number changes needed.
-              </p>
+          <div className="mb-6 border border-blue-200 rounded-xl overflow-hidden">
+            <div className="bg-blue-50 px-5 py-4 border-b border-blue-200">
+              <h3 className="font-semibold text-gray-900">Where to list your SMS Agent Number</h3>
+              <p className="text-sm text-gray-500 mt-0.5">Replace your current business number in these places so calls route through the text-back system.</p>
             </div>
-
-            <div className="p-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select your phone carrier:</label>
-              <select
-                value={selectedCarrier || ''}
-                onChange={(e) => { setSelectedCarrier(e.target.value || null); setCodeCopied(false); }}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm bg-white"
-              >
-                {CARRIERS.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-
-              {selectedCarrier && (() => {
-                const steps = getCarrierSteps(selectedCarrier, phoneNumber);
-                return (
-              <div className="mt-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="font-semibold text-gray-900 text-sm">{CARRIERS.find(c => c.id === selectedCarrier)?.name} instructions</span>
+            <div className="p-5 space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-blue-700 font-bold text-sm">1</span>
                 </div>
-
-                {steps?.note && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm text-amber-800 font-medium">
-                    {steps.note}
-                  </div>
-                )}
-
-                <ol className="space-y-3">
-                  {steps?.steps.map((s, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <span className="flex-shrink-0 w-7 h-7 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
-                        {i + 1}
-                      </span>
-                      {s === '__CODE__' ? (
-                        <div className="flex-1 pt-0.5">
-                          <span className="text-gray-700 text-sm font-medium">Open your dial pad and enter this code, then press call:</span>
-                          <div className="bg-gray-900 rounded-lg px-3 py-2 mt-2 flex items-center gap-2">
-                            <code className="text-green-400 text-sm font-mono flex-1 tracking-widest">{steps.code}</code>
-                            <button
-                              onClick={() => copyCode(steps.code)}
-                              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition whitespace-nowrap flex-shrink-0 ${codeCopied ? 'bg-green-500 text-white' : 'bg-amber-600 text-white hover:bg-amber-700'}`}
-                            >
-                              {codeCopied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-gray-700 text-sm leading-relaxed pt-1" dangerouslySetInnerHTML={{ __html: s }} />
-                      )}
-                    </li>
-                  ))}
-                </ol>
-
-                {steps?.cancelNote && (
-                  <p className="text-xs text-gray-500 mt-4 bg-gray-50 rounded-lg p-3" dangerouslySetInnerHTML={{ __html: `<strong>To disable:</strong> ${steps.cancelNote}` }} />
-                )}
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">Google Business Profile</p>
+                  <p className="text-sm text-gray-600 mt-0.5">Go to your Google Business Profile and update the primary phone number to your SMS Agent Number. This covers Google Search, Maps, and the "Call" button.</p>
+                  <a
+                    href="https://business.google.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 font-medium mt-2"
+                  >
+                    Open Google Business Profile <ExternalLink className="w-3 h-3" />
+                  </a>
+                </div>
               </div>
-                );
-              })()}
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-blue-700 font-bold text-sm">2</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">Your Website</p>
+                  <p className="text-sm text-gray-600 mt-0.5">Update the phone number shown on your website — header, footer, contact page, and any click-to-call buttons.</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4">
+                <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-amber-700 font-bold text-sm">!</span>
+                </div>
+                <div>
+                  <p className="font-medium text-gray-900 text-sm">Note on other numbers</p>
+                  <p className="text-sm text-gray-600 mt-0.5">Calls to your personal phone, business cards, or other listed numbers won't trigger the text-back — only calls to your SMS Agent Number above.</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
@@ -529,27 +307,6 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-4">
             <h3 className="text-lg font-semibold text-gray-900">Configuration</h3>
-
-            {/* Business Phone Number */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Phone className="w-5 h-5 text-blue-600" />
-                </div>
-                <div>
-                  <p className="font-medium text-gray-900">Your Business Phone Number</p>
-                  <p className="text-sm text-gray-600">The number on your cards, van, website — what customers call</p>
-                </div>
-              </div>
-              <input
-                type="tel"
-                value={config.forwardingNumber || ''}
-                onChange={(e) => setConfig({ ...config, forwardingNumber: e.target.value })}
-                placeholder="(555) 123-4567"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              />
-              <p className="text-xs text-gray-500 mt-2">We use this to recognize when a missed call comes from your line.</p>
-            </div>
 
             {/* SMS Enabled Toggle */}
             <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -655,7 +412,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
               <div className="space-y-2 mb-4">
                 <div className="flex items-center gap-2 text-sm text-gray-700">
                   <Phone className="w-4 h-4 text-purple-600" />
-                  <span>Keep your existing business number</span>
+                  <span>List your SMS Agent Number on Google & your site</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-gray-700">
                   <MessageCircle className="w-4 h-4 text-purple-600" />
@@ -797,53 +554,45 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
           {showCallLog && (
             <div className="px-6 pb-6">
               {missedCalls.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-8">No calls recorded yet.</p>
+                <p className="text-gray-500 text-sm text-center py-4">No calls recorded yet.</p>
               ) : (
                 <>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-3 px-2 font-medium text-gray-600">Date/Time</th>
-                          <th className="text-left py-3 px-2 font-medium text-gray-600">Caller</th>
-                          <th className="text-left py-3 px-2 font-medium text-gray-600">Status</th>
-                          <th className="text-left py-3 px-2 font-medium text-gray-600">Text Sent</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {missedCalls.map((call) => (
-                          <tr key={call.id} className="border-b border-gray-100 hover:bg-gray-50">
-                            <td className="py-3 px-2 text-gray-900">{formatDate(call.created_at)}</td>
-                            <td className="py-3 px-2">
-                              <span className="text-gray-900">{formatPhone(call.caller_phone)}</span>
-                              {call.lead_name && <span className="text-xs text-gray-500 ml-2">{call.lead_name}</span>}
-                            </td>
-                            <td className="py-3 px-2">
-                              <span className={`px-2 py-1 rounded-full text-xs font-medium ${call.call_status === 'answered' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                                {call.call_status === 'answered' ? 'Answered' : 'Missed'}
-                              </span>
-                            </td>
-                            <td className="py-3 px-2">
-                              {call.textback_sent ? (
-                                <span className="text-green-600 text-xs font-medium">Sent</span>
-                              ) : call.call_status === 'answered' ? (
-                                <span className="text-gray-400 text-xs">N/A</span>
-                              ) : (
-                                <span className="text-amber-600 text-xs font-medium">Pending</span>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="space-y-2">
+                    {missedCalls.map((call, i) => (
+                      <div key={i} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${call.call_status === 'answered' ? 'bg-green-100' : 'bg-red-100'}`}>
+                            {call.call_status === 'answered'
+                              ? <Phone className="w-4 h-4 text-green-600" />
+                              : <PhoneOff className="w-4 h-4 text-red-600" />}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{formatPhone(call.caller_phone)}</p>
+                            <p className="text-xs text-gray-500">{call.lead_name || 'Unknown caller'}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">{formatDate(call.created_at)}</p>
+                          <span className={`text-xs font-medium ${call.call_status === 'answered' ? 'text-green-600' : 'text-red-600'}`}>
+                            {call.call_status === 'answered' ? 'Answered' : 'Missed'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                   {missedCallsTotal > 10 && (
-                    <div className="flex items-center justify-between mt-4">
-                      <span className="text-xs text-gray-500">Page {missedCallsPage} of {Math.ceil(missedCallsTotal / 10)}</span>
-                      <div className="flex gap-2">
-                        <button onClick={() => loadMissedCalls(missedCallsPage - 1)} disabled={missedCallsPage <= 1} className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Previous</button>
-                        <button onClick={() => loadMissedCalls(missedCallsPage + 1)} disabled={missedCallsPage >= Math.ceil(missedCallsTotal / 10)} className="px-3 py-1 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">Next</button>
-                      </div>
+                    <div className="flex justify-center gap-2 mt-4">
+                      <button
+                        onClick={() => loadMissedCalls(missedCallsPage - 1)}
+                        disabled={missedCallsPage === 1}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40"
+                      >← Prev</button>
+                      <span className="px-3 py-1 text-sm text-gray-600">Page {missedCallsPage}</span>
+                      <button
+                        onClick={() => loadMissedCalls(missedCallsPage + 1)}
+                        disabled={missedCallsPage * 10 >= missedCallsTotal}
+                        className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-40"
+                      >Next →</button>
                     </div>
                   )}
                 </>
