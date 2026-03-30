@@ -1,86 +1,117 @@
 import { useState, useEffect } from 'react';
-import { Phone, PhoneOff, Clock, MessageCircle, TrendingUp, Save, Rocket, Crown, ChevronDown, ChevronUp, Brain, Copy, Check, ChevronLeft } from 'lucide-react';
+import { Phone, PhoneOff, Clock, MessageCircle, TrendingUp, Save, Rocket, Crown, ChevronDown, ChevronUp, Brain, Copy, Check } from 'lucide-react';
 
 const CARRIERS = [
-  { id: 'att',      name: 'AT&T',           color: 'bg-blue-600',  letter: 'AT&T' },
-  { id: 'verizon',  name: 'Verizon',         color: 'bg-red-600',   letter: 'VZ'   },
-  { id: 'tmobile',  name: 'T-Mobile',        color: 'bg-pink-600',  letter: 'TM'   },
-  { id: 'landline', name: 'Landline / VoIP', color: 'bg-gray-600',  letter: '#'    },
-  { id: 'other',    name: 'Other',           color: 'bg-gray-400',  letter: '?'    },
+  { id: '',             name: 'Select your carrier...',    type: null           },
+  // ── AT&T network ──
+  { id: 'att',          name: 'AT&T',                      type: 'att'          },
+  { id: 'cricket',      name: 'Cricket Wireless',          type: 'att'          },
+  { id: 'consumer',     name: 'Consumer Cellular',         type: 'att'          },
+  { id: 'boost',        name: 'Boost Mobile',              type: 'att'          },
+  { id: 'firstnet',     name: 'FirstNet',                  type: 'att'          },
+  // ── Verizon network ──
+  { id: 'verizon',      name: 'Verizon',                   type: 'verizon'      },
+  { id: 'visible',      name: 'Visible',                   type: 'verizon'      },
+  { id: 'tracfone_vzw', name: 'TracFone (Verizon SIM)',    type: 'verizon'      },
+  // ── T-Mobile network ──
+  { id: 'tmobile',      name: 'T-Mobile',                  type: 'tmobile'      },
+  { id: 'metro',        name: 'Metro by T-Mobile',         type: 'tmobile'      },
+  { id: 'mint',         name: 'Mint Mobile',               type: 'tmobile'      },
+  { id: 'googlefi',     name: 'Google Fi',                 type: 'tmobile'      },
+  { id: 'sprint',       name: 'Sprint (legacy)',           type: 'tmobile'      },
+  { id: 'tracfone_tmo', name: 'TracFone (T-Mobile SIM)',   type: 'tmobile'      },
+  // ── Other ──
+  { id: 'uscellular',   name: 'US Cellular',               type: 'uscellular'   },
+  { id: 'straighttalk', name: 'Straight Talk',             type: 'straighttalk' },
+  { id: 'landline',     name: 'Landline / VoIP',           type: 'landline'     },
+  { id: 'other',        name: 'Other / Not Listed',        type: 'other'        },
 ];
 
 // '__CODE__' is replaced with the forwarding code block inline
-function getCarrierSteps(carrier, smsAgentNumber) {
+function getCarrierSteps(carrierId, smsAgentNumber) {
+  const carrier = CARRIERS.find(c => c.id === carrierId);
+  const type = carrier?.type;
   const num = (smsAgentNumber || '').replace(/\D/g, '');
   const e164 = num.length === 10 ? `+1${num}` : `+${num}`;
-  const codes = {
-    att:     { activate: `*61*${e164}#`,   cancel: `#61#`   },
-    tmobile: { activate: `**61*${e164}#`,  cancel: `##61#`  },
-  };
+  const attCode    = { activate: `*61*${e164}#`,  cancel: `#61#`   };
+  const tmoCode    = { activate: `**61*${e164}#`, cancel: `##61#`  };
 
-  switch (carrier) {
+  const dialSteps = (code) => ({
+    steps: [
+      'Open your <strong>phone</strong> and go to the dial pad',
+      '__CODE__',
+      'Tap the <strong>call button</strong> — you\'ll hear a confirmation tone',
+      'That\'s it! Unanswered calls will now forward to your SMS Agent Number',
+    ],
+    code: code.activate,
+    cancelNote: `To turn off forwarding, dial <strong>${code.cancel}</strong> and press call.`,
+  });
+
+  switch (type) {
     case 'att':
       return {
-        note: 'This sets no-answer forwarding only — your phone still rings first normally.',
-        steps: [
-          'Open your <strong>phone app</strong> and go to the dial pad',
-          '__CODE__',
-          'Tap the <strong>call button</strong> — you\'ll hear a confirmation tone',
-          'That\'s it! Unanswered calls will now forward to your SMS Agent Number',
-        ],
-        code: codes.att.activate,
-        cancelCode: codes.att.cancel,
-        cancelNote: `To turn off forwarding, dial <strong>${codes.att.cancel}</strong> and press call.`,
+        note: 'This sets no-answer forwarding only — your phone still rings first as normal.',
+        ...dialSteps(attCode),
       };
     case 'verizon':
       return {
-        note: 'Verizon does not support USSD forwarding codes — use the My Verizon app instead.',
+        note: 'Verizon does not support dial-code forwarding. Use the My Verizon app instead.',
         steps: [
           'Open the <strong>My Verizon</strong> app on your phone',
-          'Tap <strong>Account</strong> at the bottom, then select your device',
+          'Tap <strong>Account</strong> at the bottom, then select your line',
           'Tap <strong>Manage device</strong> > <strong>Call forwarding</strong>',
           'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
           'Tap <strong>Save</strong>',
         ],
         code: null,
-        cancelNote: 'To turn off forwarding, go back to the same screen in My Verizon and remove the number.',
+        cancelNote: 'To turn off forwarding, go back to Call Forwarding in My Verizon and remove the number.',
       };
     case 'tmobile':
       return {
-        note: 'This sets no-answer forwarding only — your phone still rings first normally.',
+        note: 'This sets no-answer forwarding only — your phone still rings first as normal.',
+        ...dialSteps(tmoCode),
+      };
+    case 'uscellular':
+      return {
+        note: 'US Cellular uses standard GSM forwarding codes.',
+        ...dialSteps(attCode),
+      };
+    case 'straighttalk':
+      return {
+        note: 'Straight Talk SIMs run on different networks. Try the AT&T code first — if it doesn\'t work, try the T-Mobile code.',
         steps: [
-          'Open your <strong>phone app</strong> and go to the dial pad',
+          'Open your <strong>phone</strong> and go to the dial pad',
           '__CODE__',
-          'Tap the <strong>call button</strong> — you\'ll hear a confirmation tone',
-          'That\'s it! Unanswered calls will now forward to your SMS Agent Number',
+          'Tap the <strong>call button</strong>. If you hear an error tone, try the T-Mobile code instead: <strong>' + tmoCode.activate + '</strong>',
+          'You\'ll hear a confirmation tone when it activates successfully',
         ],
-        code: codes.tmobile.activate,
-        cancelCode: codes.tmobile.cancel,
-        cancelNote: `To turn off forwarding, dial <strong>${codes.tmobile.cancel}</strong> and press call.`,
+        code: attCode.activate,
+        cancelNote: `To turn off forwarding, try <strong>${attCode.cancel}</strong> or <strong>${tmoCode.cancel}</strong> and press call.`,
       };
     case 'landline':
       return {
-        note: 'Steps vary by provider — look for "No Answer Forwarding" or "Call Forwarding" in your admin portal.',
+        note: 'Steps vary by provider. Look for "No Answer Forwarding" or "Unanswered Call Forwarding" in your admin portal.',
         steps: [
-          'Log in to your <strong>phone system admin portal</strong> (RingCentral, Google Voice, Grasshopper, 8x8, etc.)',
+          'Log in to your <strong>phone system admin portal</strong>',
+          'Common providers: RingCentral, Google Voice, Grasshopper, 8x8, Nextiva, Vonage, OpenPhone',
           'Go to <strong>Settings</strong> > <strong>Call Handling</strong> or <strong>Call Forwarding</strong>',
           'Set the condition to <strong>"No Answer"</strong> or <strong>"Unanswered"</strong>',
           'Enter your SMS Agent Number as the forwarding destination',
-          'Save and test by calling your business number without answering',
+          'Save and test by calling your number without answering',
         ],
         code: null,
-        cancelNote: 'To turn off forwarding, go back to the same setting and remove the forwarding number.',
+        cancelNote: 'To turn off forwarding, return to the same setting in your admin portal and remove the forwarding number.',
       };
     default:
       return {
         steps: [
-          'Search <strong>"[your carrier] no answer call forwarding"</strong> for specific steps',
-          'When prompted for a forwarding number, enter your SMS Agent Number',
-          'Make sure to choose <strong>"No answer" or "Unanswered"</strong> forwarding — not "All calls"',
-          'Test by calling your business number without answering',
+          'Search <strong>"[your carrier name] no answer call forwarding"</strong> for specific steps',
+          'When asked for a forwarding number, enter your SMS Agent Number',
+          'Choose <strong>"No answer"</strong> or <strong>"Unanswered"</strong> forwarding — not "All calls"',
+          'Test it by calling your business number and letting it ring without answering',
         ],
         code: null,
-        cancelNote: 'To turn off forwarding, search "[your carrier] cancel no answer forwarding".',
+        cancelNote: 'To turn off forwarding, search "[your carrier] cancel no answer call forwarding".',
       };
   }
 }
@@ -366,47 +397,34 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
               </p>
             </div>
 
-            {!selectedCarrier ? (
-              <div className="p-5">
-                <p className="text-sm text-gray-600 mb-4 font-medium">Select your phone carrier to get forwarding instructions:</p>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {CARRIERS.map(c => (
-                    <button
-                      key={c.id}
-                      onClick={() => setSelectedCarrier(c.id)}
-                      className="flex flex-col items-center gap-2 p-4 rounded-xl border-2 border-gray-200 hover:border-amber-400 hover:shadow-md transition-all bg-white"
-                    >
-                      <span className={`w-10 h-10 ${c.color} text-white rounded-lg flex items-center justify-center text-xs font-bold`}>
-                        {c.letter}
-                      </span>
-                      <span className="text-xs font-medium text-gray-800 text-center">{c.name}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <div className="p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <button
-                    onClick={() => { setSelectedCarrier(null); setCodeCopied(false); }}
-                    className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1 font-medium"
-                  >
-                    <ChevronLeft className="w-4 h-4" /> All carriers
-                  </button>
-                  <span className={`w-8 h-8 ${CARRIERS.find(c => c.id === selectedCarrier)?.color} text-white rounded-lg flex items-center justify-center text-xs font-bold`}>
-                    {CARRIERS.find(c => c.id === selectedCarrier)?.letter}
-                  </span>
-                  <span className="font-semibold text-gray-900">{CARRIERS.find(c => c.id === selectedCarrier)?.name}</span>
+            <div className="p-5">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select your phone carrier:</label>
+              <select
+                value={selectedCarrier || ''}
+                onChange={(e) => { setSelectedCarrier(e.target.value || null); setCodeCopied(false); }}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent text-sm bg-white"
+              >
+                {CARRIERS.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              {selectedCarrier && (() => {
+                const steps = getCarrierSteps(selectedCarrier, phoneNumber);
+                return (
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="font-semibold text-gray-900 text-sm">{CARRIERS.find(c => c.id === selectedCarrier)?.name} instructions</span>
                 </div>
 
-                {carrierSteps?.note && (
+                {steps?.note && (
                   <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4 text-sm text-amber-800 font-medium">
-                    {carrierSteps.note}
+                    {steps.note}
                   </div>
                 )}
 
                 <ol className="space-y-3">
-                  {carrierSteps?.steps.map((s, i) => (
+                  {steps?.steps.map((s, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <span className="flex-shrink-0 w-7 h-7 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
                         {i + 1}
@@ -415,9 +433,9 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
                         <div className="flex-1 pt-0.5">
                           <span className="text-gray-700 text-sm font-medium">Open your dial pad and enter this code, then press call:</span>
                           <div className="bg-gray-900 rounded-lg px-3 py-2 mt-2 flex items-center gap-2">
-                            <code className="text-green-400 text-sm font-mono flex-1 tracking-widest">{carrierSteps.code}</code>
+                            <code className="text-green-400 text-sm font-mono flex-1 tracking-widest">{steps.code}</code>
                             <button
-                              onClick={() => copyCode(carrierSteps.code)}
+                              onClick={() => copyCode(steps.code)}
                               className={`flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition whitespace-nowrap flex-shrink-0 ${codeCopied ? 'bg-green-500 text-white' : 'bg-amber-600 text-white hover:bg-amber-700'}`}
                             >
                               {codeCopied ? <><Check className="w-3 h-3" /> Copied!</> : <><Copy className="w-3 h-3" /> Copy</>}
@@ -431,11 +449,13 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
                   ))}
                 </ol>
 
-                {carrierSteps?.cancelNote && (
-                  <p className="text-xs text-gray-500 mt-4 bg-gray-50 rounded-lg p-3" dangerouslySetInnerHTML={{ __html: `<strong>To disable:</strong> ${carrierSteps.cancelNote}` }} />
+                {steps?.cancelNote && (
+                  <p className="text-xs text-gray-500 mt-4 bg-gray-50 rounded-lg p-3" dangerouslySetInnerHTML={{ __html: `<strong>To disable:</strong> ${steps.cancelNote}` }} />
                 )}
               </div>
-            )}
+                );
+              })()}
+            </div>
           </div>
         )}
 
