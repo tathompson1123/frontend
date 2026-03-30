@@ -965,7 +965,7 @@ export default function BusinessInformation({
                 <input type="tel" value={businessInfo.phone} onChange={(e) => setBusinessInfo({ ...businessInfo, phone: e.target.value })} placeholder="(555) 123-4567" className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Assigned SMS Number</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">SMS Agent Number</label>
                 {(user?.twilio_phone_number) ? (
                   <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
                     <Smartphone className="w-4 h-4 text-blue-500" />

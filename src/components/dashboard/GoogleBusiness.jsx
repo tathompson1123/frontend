@@ -519,7 +519,7 @@ const saveReviewConfig = async () => {
                   <Phone className="w-5 h-5 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 text-sm">Assigned Business Phone Number</p>
+                  <p className="font-semibold text-gray-900 text-sm">SMS Agent Number</p>
                   {assignedPhone ? (
                     <>
                       <p className="text-lg font-bold text-green-700 tracking-wide mt-0.5">{assignedPhone}</p>

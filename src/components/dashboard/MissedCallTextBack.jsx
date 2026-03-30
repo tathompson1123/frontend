@@ -45,124 +45,139 @@ function getCarrierSteps(carrierId, smsAgentNumber) {
   const attCode    = { activate: `*61*${e164}#`,  cancel: `#61#`   };
   const tmoCode    = { activate: `**61*${e164}#`, cancel: `##61#`  };
 
-  const dialSteps = (code) => ({
+  const dialSteps = (code, carrierName) => ({
+    note: `Your phone still rings first as normal. Only unanswered calls get forwarded to your SMS Agent Number.`,
     steps: [
       'Open your <strong>phone</strong> and go to the dial pad',
       '__CODE__',
-      'Tap the <strong>call button</strong> — you\'ll hear a confirmation tone',
-      'That\'s it! Unanswered calls will now forward to your SMS Agent Number',
+      'Press the <strong>call button</strong> — you\'ll hear a short confirmation tone or a voice saying forwarding is active',
+      '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering. You should receive an automatic text within about a minute.',
     ],
     code: code.activate,
-    cancelNote: `To turn off forwarding, dial <strong>${code.cancel}</strong> and press call.`,
+    cancelNote: `Open your phone dial pad, enter <strong>${code.cancel}</strong> and press call. You\'ll hear a confirmation that forwarding has been turned off.`,
+  });
+
+  const androidSteps = (supportNumber, websiteNote) => ({
+    steps: [
+      '<strong>Android:</strong> Open your phone, tap the <strong>⋮ menu</strong> (top right) or go to <strong>Settings</strong> inside the phone app > <strong>Calls</strong> > <strong>Call forwarding</strong> > <strong>Forward when unanswered</strong> > enter your SMS Agent Number > tap <strong>Enable</strong>',
+      `<strong>iPhone:</strong> ${websiteNote || 'Call your carrier\'s support line and ask them to set up "no answer call forwarding" to your SMS Agent Number'}${supportNumber ? ` — <strong>${supportNumber}</strong>` : ''}`,
+      '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering. You should receive an automatic text within about a minute.',
+    ],
+    code: null,
+    cancelNote: `Android: Go back to <strong>Call forwarding</strong> in your phone settings and tap <strong>Disable</strong> next to "Forward when unanswered." iPhone: Call support${supportNumber ? ` at ${supportNumber}` : ''} to remove it.`,
   });
 
   switch (type) {
     case 'att':
       return {
-        note: 'This sets no-answer forwarding only — your phone still rings first as normal.',
-        ...dialSteps(attCode),
-      };
-    case 'verizon':
-      return {
-        note: 'Verizon does not support dial-code forwarding. Use the My Verizon app instead.',
-        steps: [
-          'Open the <strong>My Verizon</strong> app on your phone',
-          'Tap <strong>Account</strong> at the bottom, then select your line',
-          'Tap <strong>Manage device</strong> > <strong>Call forwarding</strong>',
-          'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
-          'Tap <strong>Save</strong>',
-        ],
-        code: null,
-        cancelNote: 'To turn off forwarding, go back to Call Forwarding in My Verizon and remove the number.',
-      };
-    case 'tmobile':
-      return {
-        note: 'This sets no-answer forwarding only — your phone still rings first as normal.',
-        ...dialSteps(tmoCode),
-      };
-    case 'xfinity':
-      return {
-        note: 'Xfinity Mobile runs on Verizon\'s network. Use the Xfinity app to set up call forwarding.',
-        steps: [
-          'Open the <strong>Xfinity</strong> app on your phone',
-          'Tap <strong>Account</strong> at the bottom',
-          'Select your mobile line',
-          'Tap <strong>Call forwarding</strong>',
-          'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
-          'Tap <strong>Save</strong>',
-        ],
-        code: null,
-        cancelNote: 'To turn off forwarding, go back to Call Forwarding in the Xfinity app and remove the number.',
-      };
-    case 'spectrum':
-      return {
-        note: 'Spectrum Mobile runs on Verizon\'s network. Use the My Spectrum app to set up call forwarding.',
-        steps: [
-          'Open the <strong>My Spectrum</strong> app on your phone',
-          'Tap <strong>Services</strong> then select <strong>Mobile</strong>',
-          'Select your line, then tap <strong>Manage</strong>',
-          'Tap <strong>Call forwarding</strong>',
-          'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
-          'Tap <strong>Save</strong>',
-        ],
-        code: null,
-        cancelNote: 'To turn off forwarding, go back to Call Forwarding in the My Spectrum app and remove the number.',
-      };
-    case 'cox':
-      return {
-        note: 'Cox Mobile runs on Verizon\'s network. Use the Cox app to set up call forwarding.',
-        steps: [
-          'Open the <strong>Cox</strong> app on your phone',
-          'Tap <strong>My Account</strong>',
-          'Select your mobile line',
-          'Tap <strong>Call settings</strong> > <strong>Call forwarding</strong>',
-          'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
-          'Tap <strong>Save</strong>',
-        ],
-        code: null,
-        cancelNote: 'To turn off forwarding, go back to Call Forwarding in the Cox app and remove the number.',
-      };
-    case 'uscellular':
-      return {
-        note: 'US Cellular uses standard GSM forwarding codes.',
-        ...dialSteps(attCode),
-      };
-    case 'straighttalk':
-      return {
-        note: 'Straight Talk SIMs run on different networks. Try the AT&T code first — if it doesn\'t work, try the T-Mobile code.',
+        note: 'Your phone still rings first as normal. Only unanswered calls get forwarded.',
         steps: [
           'Open your <strong>phone</strong> and go to the dial pad',
           '__CODE__',
-          'Tap the <strong>call button</strong>. If you hear an error tone, try the T-Mobile code instead: <strong>' + tmoCode.activate + '</strong>',
-          'You\'ll hear a confirmation tone when it activates successfully',
+          'Press the <strong>call button</strong> — you\'ll hear "Call forwarding is active" or a confirmation tone',
+          'If the code doesn\'t work, go to <strong>Settings</strong> in your phone app > <strong>Calls</strong> > <strong>Call forwarding</strong> > <strong>Forward when unanswered</strong> > enter your SMS Agent Number',
+          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
         ],
         code: attCode.activate,
-        cancelNote: `To turn off forwarding, try <strong>${attCode.cancel}</strong> or <strong>${tmoCode.cancel}</strong> and press call.`,
+        cancelNote: `Dial <strong>${attCode.cancel}</strong> and press call, or go to <strong>Call forwarding</strong> in your phone settings and disable "Forward when unanswered."`,
+      };
+    case 'verizon':
+      return {
+        note: 'Verizon manages call forwarding through the My Verizon app — there are no dial codes.',
+        steps: [
+          'Open the <strong>My Verizon</strong> app (download it from the App Store or Google Play if needed)',
+          'Tap the <strong>Menu</strong> (☰) or <strong>Account</strong> tab',
+          'Tap <strong>Devices</strong> and select your phone line',
+          'Tap <strong>Manage device</strong> > <strong>Call settings</strong>',
+          'Tap <strong>Call forwarding</strong> > <strong>When unanswered</strong>',
+          'Enter your SMS Agent Number and tap <strong>Save</strong>',
+          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
+        ],
+        code: null,
+        cancelNote: 'Go back to <strong>Call forwarding > When unanswered</strong> in My Verizon and remove the forwarding number. You can also call Verizon support at <strong>1-800-922-0204</strong>.',
+      };
+    case 'tmobile':
+      return {
+        note: 'Your phone still rings first as normal. Only unanswered calls get forwarded.',
+        steps: [
+          'Open your <strong>phone</strong> and go to the dial pad',
+          '__CODE__',
+          'Press the <strong>call button</strong> — you\'ll hear "Call forwarding is active" or a confirmation tone',
+          'If the code doesn\'t work, open the <strong>T-Mobile</strong> app > <strong>Account</strong> > select your line > <strong>Manage line features</strong> > <strong>Call forwarding</strong> > enable <strong>"When unanswered"</strong> and enter your SMS Agent Number',
+          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
+        ],
+        code: tmoCode.activate,
+        cancelNote: `Dial <strong>${tmoCode.cancel}</strong> and press call, or go to the T-Mobile app > Account > your line > Call forwarding and turn off "When unanswered."`,
+      };
+    case 'xfinity':
+      return {
+        note: 'Xfinity Mobile runs on Verizon\'s network. Call forwarding is managed through your phone settings (Android) or Xfinity Mobile support (iPhone).',
+        ...androidSteps('1-888-936-4968', 'Visit <strong>xfinity.com/mobile</strong> > sign in > <strong>Account</strong> > <strong>Lines</strong> > select your line > <strong>Line features</strong> > <strong>Call forwarding</strong> > enable "When unanswered" and enter your SMS Agent Number. If you don\'t see it there, call Xfinity Mobile support at <strong>1-888-936-4968</strong>'),
+      };
+    case 'spectrum':
+      return {
+        note: 'Spectrum Mobile runs on Verizon\'s network. Call forwarding is managed through your phone settings (Android) or Spectrum Mobile support (iPhone).',
+        ...androidSteps('1-833-224-6603', 'Visit <strong>spectrummobile.com</strong> > sign in > <strong>My Account</strong> > select your line > <strong>Manage features</strong> > <strong>Call forwarding</strong> and enable "When unanswered." Or call Spectrum Mobile support at <strong>1-833-224-6603</strong>'),
+      };
+    case 'cox':
+      return {
+        note: 'Cox Mobile runs on Verizon\'s network. Call forwarding is managed through your phone settings (Android) or Cox Mobile support (iPhone).',
+        ...androidSteps('1-800-234-3993', 'Visit <strong>coxmobile.com</strong> > sign in > <strong>My Account</strong> > select your line > <strong>Call settings</strong> > <strong>Call forwarding</strong> and enable "When unanswered." Or call Cox Mobile support at <strong>1-800-234-3993</strong>'),
+      };
+    case 'uscellular':
+      return {
+        note: 'US Cellular supports standard GSM forwarding codes. Your phone still rings first as normal.',
+        steps: [
+          'Open your <strong>phone</strong> and go to the dial pad',
+          '__CODE__',
+          'Press the <strong>call button</strong> — you\'ll hear a confirmation tone',
+          'If the code doesn\'t work, open the <strong>My Account</strong> app or call US Cellular support at <strong>1-888-944-9400</strong> to set up no-answer call forwarding',
+          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
+        ],
+        code: attCode.activate,
+        cancelNote: `Dial <strong>${attCode.cancel}</strong> and press call, or call US Cellular support at <strong>1-888-944-9400</strong> to remove it.`,
+      };
+    case 'straighttalk':
+      return {
+        note: 'Straight Talk SIMs run on different networks depending on your phone. Try the AT&T code first — if it doesn\'t work, try the T-Mobile code.',
+        steps: [
+          'Open your <strong>phone</strong> and go to the dial pad',
+          '__CODE__',
+          'Press the <strong>call button</strong>. If you hear an error, try the T-Mobile code instead: tap the dial pad and enter <strong>' + tmoCode.activate + '</strong> then press call',
+          'You\'ll hear a confirmation tone or message when it activates',
+          'If neither code works, call Straight Talk support at <strong>1-877-430-2355</strong> and ask them to set up no-answer call forwarding',
+          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
+        ],
+        code: attCode.activate,
+        cancelNote: `Try dialing <strong>${attCode.cancel}</strong> or <strong>${tmoCode.cancel}</strong> and pressing call. If neither works, call Straight Talk support at <strong>1-877-430-2355</strong>.`,
       };
     case 'landline':
       return {
-        note: 'Steps vary by provider. Look for "No Answer Forwarding" or "Unanswered Call Forwarding" in your admin portal.',
+        note: 'Steps vary by provider. Look for "No Answer Forwarding" or "When Unanswered" — not "Forward All Calls."',
         steps: [
-          'Log in to your <strong>phone system admin portal</strong>',
-          'Common providers: RingCentral, Google Voice, Grasshopper, 8x8, Nextiva, Vonage, OpenPhone',
-          'Go to <strong>Settings</strong> > <strong>Call Handling</strong> or <strong>Call Forwarding</strong>',
-          'Set the condition to <strong>"No Answer"</strong> or <strong>"Unanswered"</strong>',
-          'Enter your SMS Agent Number as the forwarding destination',
-          'Save and test by calling your number without answering',
+          'Log in to your <strong>phone system admin portal</strong> in a browser',
+          '<strong>RingCentral:</strong> Settings > Call Handling & Forwarding > When not answered',
+          '<strong>Google Voice:</strong> Settings (gear icon) > Calls > Call Forwarding — note: Google Voice forwards all calls, not just missed ones',
+          '<strong>Grasshopper:</strong> Settings > Extensions > select extension > Call Forwarding > Forward when no answer',
+          '<strong>8x8 / Nextiva / Vonage / OpenPhone:</strong> Settings > Call Routing or Call Handling > No Answer > enter your SMS Agent Number',
+          'If you don\'t see the option, search "[your provider] no answer call forwarding" or contact their support',
+          '<strong>Test it:</strong> Call your business number and let it ring without answering',
         ],
         code: null,
-        cancelNote: 'To turn off forwarding, return to the same setting in your admin portal and remove the forwarding number.',
+        cancelNote: 'Go back to the same call handling setting in your admin portal and remove the forwarding number or disable "When unanswered" forwarding.',
       };
     default:
       return {
+        note: 'Look for "No answer forwarding" or "Forward when unanswered" — not "Forward all calls."',
         steps: [
-          'Search <strong>"[your carrier name] no answer call forwarding"</strong> for specific steps',
-          'When asked for a forwarding number, enter your SMS Agent Number',
-          'Choose <strong>"No answer"</strong> or <strong>"Unanswered"</strong> forwarding — not "All calls"',
-          'Test it by calling your business number and letting it ring without answering',
+          '<strong>Try your phone settings first (Android):</strong> Open your phone > tap ⋮ or Settings > Calls > Call forwarding > Forward when unanswered > enter your SMS Agent Number > Enable',
+          '<strong>Or check your carrier\'s app:</strong> Look under Account > your line > Call settings or Line features',
+          '<strong>Or search:</strong> "[your carrier name] no answer call forwarding" for specific steps',
+          '<strong>Last resort:</strong> Call your carrier\'s support line and ask them to set up "no answer call forwarding" to your SMS Agent Number',
+          '<strong>Test it:</strong> Call your business number from a different phone and let it ring without answering',
         ],
         code: null,
-        cancelNote: 'To turn off forwarding, search "[your carrier] cancel no answer call forwarding".',
+        cancelNote: 'Go back to Call forwarding in your phone settings or carrier app and disable "Forward when unanswered." Or call your carrier\'s support line.',
       };
   }
 }
