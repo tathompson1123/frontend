@@ -9,19 +9,27 @@ const CARRIERS = [
   { id: 'consumer',     name: 'Consumer Cellular',         type: 'att'          },
   { id: 'boost',        name: 'Boost Mobile',              type: 'att'          },
   { id: 'firstnet',     name: 'FirstNet',                  type: 'att'          },
+  { id: 'h2o',          name: 'H2O Wireless',              type: 'att'          },
+  { id: 'simplemobile', name: 'Simple Mobile',             type: 'att'          },
   // ── Verizon network ──
   { id: 'verizon',      name: 'Verizon',                   type: 'verizon'      },
   { id: 'visible',      name: 'Visible',                   type: 'verizon'      },
+  { id: 'totalvzw',     name: 'Total by Verizon',          type: 'verizon'      },
   { id: 'tracfone_vzw', name: 'TracFone (Verizon SIM)',    type: 'verizon'      },
+  { id: 'xfinity',      name: 'Xfinity Mobile',            type: 'xfinity'      },
+  { id: 'spectrum',     name: 'Spectrum Mobile',           type: 'spectrum'     },
+  { id: 'cox',          name: 'Cox Mobile',                type: 'cox'          },
   // ── T-Mobile network ──
   { id: 'tmobile',      name: 'T-Mobile',                  type: 'tmobile'      },
   { id: 'metro',        name: 'Metro by T-Mobile',         type: 'tmobile'      },
   { id: 'mint',         name: 'Mint Mobile',               type: 'tmobile'      },
   { id: 'googlefi',     name: 'Google Fi',                 type: 'tmobile'      },
   { id: 'sprint',       name: 'Sprint (legacy)',           type: 'tmobile'      },
+  { id: 'republic',     name: 'Republic Wireless',         type: 'tmobile'      },
+  { id: 'tello',        name: 'Tello',                     type: 'tmobile'      },
+  { id: 'ting',         name: 'Ting',                      type: 'tmobile'      },
   { id: 'tracfone_tmo', name: 'TracFone (T-Mobile SIM)',   type: 'tmobile'      },
   // ── Other ──
-  { id: 'xfinity',      name: 'Xfinity Mobile',            type: 'xfinity'      },
   { id: 'uscellular',   name: 'US Cellular',               type: 'uscellular'   },
   { id: 'straighttalk', name: 'Straight Talk',             type: 'straighttalk' },
   { id: 'landline',     name: 'Landline / VoIP',           type: 'landline'     },
@@ -85,6 +93,34 @@ function getCarrierSteps(carrierId, smsAgentNumber) {
         ],
         code: null,
         cancelNote: 'To turn off forwarding, go back to Call Forwarding in the Xfinity app and remove the number.',
+      };
+    case 'spectrum':
+      return {
+        note: 'Spectrum Mobile runs on Verizon\'s network. Use the My Spectrum app to set up call forwarding.',
+        steps: [
+          'Open the <strong>My Spectrum</strong> app on your phone',
+          'Tap <strong>Services</strong> then select <strong>Mobile</strong>',
+          'Select your line, then tap <strong>Manage</strong>',
+          'Tap <strong>Call forwarding</strong>',
+          'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
+          'Tap <strong>Save</strong>',
+        ],
+        code: null,
+        cancelNote: 'To turn off forwarding, go back to Call Forwarding in the My Spectrum app and remove the number.',
+      };
+    case 'cox':
+      return {
+        note: 'Cox Mobile runs on Verizon\'s network. Use the Cox app to set up call forwarding.',
+        steps: [
+          'Open the <strong>Cox</strong> app on your phone',
+          'Tap <strong>My Account</strong>',
+          'Select your mobile line',
+          'Tap <strong>Call settings</strong> > <strong>Call forwarding</strong>',
+          'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
+          'Tap <strong>Save</strong>',
+        ],
+        code: null,
+        cancelNote: 'To turn off forwarding, go back to Call Forwarding in the Cox app and remove the number.',
       };
     case 'uscellular':
       return {
