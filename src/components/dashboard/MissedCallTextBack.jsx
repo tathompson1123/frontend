@@ -21,6 +21,7 @@ const CARRIERS = [
   { id: 'sprint',       name: 'Sprint (legacy)',           type: 'tmobile'      },
   { id: 'tracfone_tmo', name: 'TracFone (T-Mobile SIM)',   type: 'tmobile'      },
   // ── Other ──
+  { id: 'xfinity',      name: 'Xfinity Mobile',            type: 'xfinity'      },
   { id: 'uscellular',   name: 'US Cellular',               type: 'uscellular'   },
   { id: 'straighttalk', name: 'Straight Talk',             type: 'straighttalk' },
   { id: 'landline',     name: 'Landline / VoIP',           type: 'landline'     },
@@ -70,6 +71,20 @@ function getCarrierSteps(carrierId, smsAgentNumber) {
       return {
         note: 'This sets no-answer forwarding only — your phone still rings first as normal.',
         ...dialSteps(tmoCode),
+      };
+    case 'xfinity':
+      return {
+        note: 'Xfinity Mobile runs on Verizon\'s network. Use the Xfinity app to set up call forwarding.',
+        steps: [
+          'Open the <strong>Xfinity</strong> app on your phone',
+          'Tap <strong>Account</strong> at the bottom',
+          'Select your mobile line',
+          'Tap <strong>Call forwarding</strong>',
+          'Under <strong>"When unanswered"</strong>, enter your SMS Agent Number',
+          'Tap <strong>Save</strong>',
+        ],
+        code: null,
+        cancelNote: 'To turn off forwarding, go back to Call Forwarding in the Xfinity app and remove the number.',
       };
     case 'uscellular':
       return {
