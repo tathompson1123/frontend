@@ -23,7 +23,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
   });
   const [smsTemplate, setSmsTemplate] = useState("Hey {{name}}, sorry we missed your call! How can we help you? Reply here and we'll get right back to you.");
   const [useLeadTraining, setUseLeadTraining] = useState(false);
-  const [leadTrainingPreview, setLeadTrainingPreview] = useState(null);
+  const [leadTrainingPreview, setLeadTrainingPreview] = useState(null); // null = not fetched, false = fetching, object = loaded
 
   const [stats, setStats]           = useState({ totalCalls: 0, missedCalls: 0, textsSent: 0, replies: 0 });
   const [missedCalls, setMissedCalls]         = useState([]);
@@ -95,13 +95,18 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
   };
 
   const loadLeadTrainingPreview = async () => {
+    setLeadTrainingPreview(false); // fetching
     try {
-      const res = await authFetch(`${apiUrl}/api/ai-agents/config?type=lead_form`);
+      const res = await authFetch(`${apiUrl}/api/ai-agents/lead-form/training`);
       if (res.ok) {
         const data = await res.json();
-        setLeadTrainingPreview(data.config?.training || null);
+        setLeadTrainingPreview(data && Object.keys(data).length ? data : null);
+      } else {
+        setLeadTrainingPreview(null);
       }
-    } catch {}
+    } catch {
+      setLeadTrainingPreview(null);
+    }
   };
 
   const loadStats = async () => {
@@ -432,7 +437,9 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
 
             {useLeadTraining ? (
               <div className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-1.5">
-                {leadTrainingPreview ? (
+                {leadTrainingPreview === false ? (
+                  <p className="text-xs text-gray-400 text-center py-2">Loading...</p>
+                ) : leadTrainingPreview ? (
                   <>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Lead Agent Preview</p>
                     {leadTrainingPreview.agentName && <p className="text-xs text-gray-700"><span className="font-medium">Name:</span> {leadTrainingPreview.agentName}</p>}
@@ -441,7 +448,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
                     {leadTrainingPreview.servicesInfo && <p className="text-xs text-gray-700"><span className="font-medium">Services:</span> {leadTrainingPreview.servicesInfo}</p>}
                   </>
                 ) : (
-                  <p className="text-xs text-gray-400 text-center py-2">Loading...</p>
+                  <p className="text-xs text-gray-400 text-center py-2">No Lead Agent training found. Set it up in the Lead Form Agent tab first.</p>
                 )}
               </div>
             ) : (

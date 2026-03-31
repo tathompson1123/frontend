@@ -10,6 +10,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
   const [businessInfo, setBusinessInfo] = useState(null);
   
   const [selectedService, setSelectedService] = useState(null);
+  const [selectedVariant, setSelectedVariant] = useState(null);
   const [additionalServices, setAdditionalServices] = useState([]);
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedTime, setSelectedTime] = useState('');
@@ -78,15 +79,16 @@ export default function PublicBooking({ businessId, apiUrl }) {
     if (selectedDate && selectedService) {
       fetchAvailableSlots();
     }
-  }, [selectedDate, selectedService, additionalServices]);
+  }, [selectedDate, selectedService, selectedVariant, additionalServices]);
 
   const fetchAvailableSlots = async () => {
     try {
       setLoading(true);
       const allServiceIds = [selectedService.id, ...additionalServices].join(',');
-      
+      const variantParam = selectedVariant ? `&variantId=${selectedVariant.id}` : '';
+
       const response = await fetch(
-        `${apiUrl}/api/public/availability?businessId=${businessId}&serviceIds=${allServiceIds}&date=${selectedDate}`
+        `${apiUrl}/api/public/availability?businessId=${businessId}&serviceIds=${allServiceIds}&date=${selectedDate}${variantParam}`
       );
       
       const data = await response.json();
@@ -101,33 +103,41 @@ export default function PublicBooking({ businessId, apiUrl }) {
 
   const calculateTotalDuration = () => {
     if (!selectedService) return 0;
-    
-    let total = parseFloat(selectedService.duration_hours) || 0;
+    const baseDuration = selectedVariant && selectedVariant.duration_hours
+      ? parseFloat(selectedVariant.duration_hours)
+      : parseFloat(selectedService.duration_hours) || 0;
+    let total = baseDuration;
     additionalServices.forEach(serviceId => {
       const service = services.find(s => s.id == serviceId);
-      if (service) {
-        total += parseFloat(service.duration_hours) || 0;
-      }
+      if (service) total += parseFloat(service.duration_hours) || 0;
     });
     return total;
   };
 
   const calculateTotalPrice = () => {
     if (!selectedService) return 0;
-    
-    let total = parseFloat(selectedService.price) || 0;
+    const basePrice = selectedVariant
+      ? parseFloat(selectedVariant.price)
+      : parseFloat(selectedService.price) || 0;
+    let total = basePrice;
     additionalServices.forEach(serviceId => {
       const service = services.find(s => s.id == serviceId);
-      if (service) {
-        total += parseFloat(service.price) || 0;
-      }
+      if (service) total += parseFloat(service.price) || 0;
     });
     return total;
   };
 
   const handleServiceSelect = (service) => {
     setSelectedService(service);
-    setStep(2);
+    setSelectedVariant(null);
+    setAdditionalServices([]);
+    // If service has variants, go to variant selection step (step 1.5 = step 2)
+    // Otherwise skip to date/time (step 3)
+    if (service.variants && service.variants.length > 0) {
+      setStep(2);
+    } else {
+      setStep(3);
+    }
   };
 
   const toggleAdditionalService = (serviceId) => {
@@ -152,6 +162,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
       const bookingData = {
         businessId,
         serviceId: selectedService.id,
+        variantId: selectedVariant ? selectedVariant.id : null,
         additionalServiceIds: additionalServices,
         bookingDate: selectedDate,
         startTime: selectedTime,
@@ -323,41 +334,31 @@ export default function PublicBooking({ businessId, apiUrl }) {
         </div>
 
         {/* Progress Steps */}
-        <div className="flex items-center justify-center mb-12">
-          <div className={`flex items-center ${step >= 1 ? 'text-blue-600' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-              1
+        {(() => {
+          const hasVariants = selectedService?.variants?.length > 0;
+          const stepLabels = hasVariants
+            ? ['Service', 'Type', 'Date & Time', 'Team', 'Contact']
+            : ['Service', 'Date & Time', 'Team', 'Contact'];
+          // Map display step numbers to actual step state values
+          const stepValues = hasVariants ? [1, 2, 3, 4, 5] : [1, 3, 4, 5];
+          return (
+            <div className="flex items-center justify-center mb-12 flex-wrap gap-y-2">
+              {stepLabels.map((label, i) => (
+                <div key={label} className="flex items-center">
+                  <div className={`flex items-center ${step >= stepValues[i] ? 'text-blue-600' : 'text-gray-400'}`}>
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm ${step >= stepValues[i] ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
+                      {i + 1}
+                    </div>
+                    <span className="ml-2 font-semibold hidden sm:inline text-sm">{label}</span>
+                  </div>
+                  {i < stepLabels.length - 1 && (
+                    <div className={`w-12 h-1 mx-2 ${step > stepValues[i] ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
+                  )}
+                </div>
+              ))}
             </div>
-            <span className="ml-2 font-semibold hidden sm:inline">Service</span>
-          </div>
-          
-          <div className={`w-16 h-1 mx-2 ${step >= 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-          
-          <div className={`flex items-center ${step >= 2 ? 'text-blue-600' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-              2
-            </div>
-            <span className="ml-2 font-semibold hidden sm:inline">Date & Time</span>
-          </div>
-          
-          <div className={`w-16 h-1 mx-2 ${step >= 3 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-          
-          <div className={`flex items-center ${step >= 3 ? 'text-blue-600' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-              3
-            </div>
-            <span className="ml-2 font-semibold hidden sm:inline">Team</span>
-          </div>
-          
-          <div className={`w-16 h-1 mx-2 ${step >= 4 ? 'bg-blue-600' : 'bg-gray-300'}`}></div>
-          
-          <div className={`flex items-center ${step >= 4 ? 'text-blue-600' : 'text-gray-400'}`}>
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${step >= 4 ? 'bg-blue-600 text-white' : 'bg-gray-300'}`}>
-              4
-            </div>
-            <span className="ml-2 font-semibold hidden sm:inline">Contact</span>
-          </div>
-        </div>
+          );
+        })()}
 
         {error && (
           <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 mb-6 text-red-700">
@@ -369,9 +370,9 @@ export default function PublicBooking({ businessId, apiUrl }) {
         {step === 1 && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Your Service</h2>
-            
+
             <div className="grid md:grid-cols-2 gap-6">
-              {services.map(service => (
+              {services.filter(s => !s.is_addon).map(service => (
                 <div
                   key={service.id}
                   onClick={() => handleServiceSelect(service)}
@@ -380,7 +381,16 @@ export default function PublicBooking({ businessId, apiUrl }) {
                   <h3 className="text-xl font-bold text-gray-900 mb-2">{service.name}</h3>
                   <p className="text-gray-600 mb-4">{service.description}</p>
                   <div className="flex items-center justify-between">
-                    <span className="text-2xl font-bold text-blue-600">${parseFloat(service.price).toFixed(2)}</span>
+                    {service.variants && service.variants.length > 0 ? (
+                      <div>
+                        <span className="text-2xl font-bold text-blue-600">
+                          from ${Math.min(...service.variants.map(v => parseFloat(v.price))).toFixed(2)}
+                        </span>
+                        <span className="text-xs text-gray-500 ml-1">· {service.variants.length} options</span>
+                      </div>
+                    ) : (
+                      <span className="text-2xl font-bold text-blue-600">${parseFloat(service.price).toFixed(2)}</span>
+                    )}
                     <span className="text-gray-500">{service.duration_hours}h</span>
                   </div>
                 </div>
@@ -389,15 +399,42 @@ export default function PublicBooking({ businessId, apiUrl }) {
           </div>
         )}
 
-        {/* Step 2: Date, Time & Additional Services */}
-        {step === 2 && (
+        {/* Step 2: Variant / Service Type Selection (only when service has variants) */}
+        {step === 2 && selectedService?.variants?.length > 0 && (
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <button onClick={() => { setStep(1); setSelectedService(null); setSelectedVariant(null); }} className="flex items-center text-gray-600 hover:text-gray-900 mb-6">
+              <ArrowLeft className="w-5 h-5 mr-2" />
+              Back to Services
+            </button>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{selectedService.name}</h2>
+            <p className="text-gray-600 mb-6">Choose your option to continue</p>
+            <div className="grid sm:grid-cols-2 gap-4">
+              {selectedService.variants.map(variant => (
+                <button
+                  key={variant.id}
+                  onClick={() => { setSelectedVariant(variant); setStep(3); }}
+                  className="border-2 border-gray-200 rounded-xl p-5 text-left hover:border-blue-600 hover:shadow-lg transition"
+                >
+                  <h3 className="text-lg font-bold text-gray-900 mb-1">{variant.name}</h3>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-2xl font-bold text-blue-600">${parseFloat(variant.price).toFixed(2)}</span>
+                    {variant.duration_hours && <span className="text-gray-500 text-sm">{variant.duration_hours}h</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Step 3: Date, Time & Add-ons */}
+        {step === 3 && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <button
-              onClick={() => setStep(1)}
+              onClick={() => selectedService?.variants?.length > 0 ? setStep(2) : setStep(1)}
               className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              Back to Services
+              {selectedService?.variants?.length > 0 ? 'Back to Service Type' : 'Back to Services'}
             </button>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Date & Time</h2>
@@ -406,33 +443,26 @@ export default function PublicBooking({ businessId, apiUrl }) {
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-bold text-gray-900">{selectedService?.name}</h3>
-                  <p className="text-sm text-gray-600">{selectedService?.duration_hours}h • ${parseFloat(selectedService?.price).toFixed(2)}</p>
+                  <h3 className="font-bold text-gray-900">{selectedService?.name}{selectedVariant ? ` — ${selectedVariant.name}` : ''}</h3>
+                  <p className="text-sm text-gray-600">
+                    {calculateTotalDuration().toFixed(1)}h · ${calculateTotalPrice().toFixed(2)}
+                  </p>
                 </div>
-                <button
-                  onClick={() => {
-                    setSelectedService(null);
-                    setStep(1);
-                  }}
-                  className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
-                >
+                <button onClick={() => { setSelectedService(null); setSelectedVariant(null); setStep(1); }} className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
                   Change
                 </button>
               </div>
             </div>
 
-            {/* Additional Services */}
-            {services.filter(s => s.id !== selectedService?.id).length > 0 && (
+            {/* Add-ons */}
+            {services.filter(s => s.is_addon && s.id !== selectedService?.id).length > 0 && (
               <div className="mb-6">
-                <h3 className="font-bold text-gray-900 mb-3">Add Additional Services (Optional)</h3>
+                <h3 className="font-bold text-gray-900 mb-3">Add-ons (Optional)</h3>
                 <div className="space-y-2">
                   {services
-                    .filter(s => s.id !== selectedService?.id)
+                    .filter(s => s.is_addon && s.id !== selectedService?.id)
                     .map(service => (
-                      <label
-                        key={service.id}
-                        className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-400 transition"
-                      >
+                      <label key={service.id} className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-400 transition">
                         <input
                           type="checkbox"
                           checked={additionalServices.includes(service.id)}
@@ -524,7 +554,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
 
             {selectedDate && selectedTime && (
               <button
-                onClick={() => setStep(3)}
+                onClick={() => setStep(4)}
                 className="w-full bg-gradient-to-r from-blue-600 to-amber-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition flex items-center justify-center"
               >
                 Continue to Team Selection
@@ -534,11 +564,11 @@ export default function PublicBooking({ businessId, apiUrl }) {
           </div>
         )}
 
-        {/* Step 3: Team Selection */}
-        {step === 3 && (
+        {/* Step 4: Team Selection */}
+        {step === 4 && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <button
-              onClick={() => setStep(2)}
+              onClick={() => setStep(3)}
               className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
@@ -655,7 +685,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
             )}
 
             <button
-              onClick={() => setStep(4)}
+              onClick={() => setStep(5)}
               disabled={assignmentType === 'employee' && !selectedEmployee || assignmentType === 'group' && !selectedGroup}
               className="w-full bg-gradient-to-r from-blue-600 to-amber-600 text-white px-6 py-4 rounded-lg font-bold text-lg hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
@@ -665,11 +695,11 @@ export default function PublicBooking({ businessId, apiUrl }) {
           </div>
         )}
 
-        {/* Step 4: Contact Information */}
-        {step === 4 && (
+        {/* Step 5: Contact Information */}
+        {step === 5 && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <button
-              onClick={() => setStep(3)}
+              onClick={() => setStep(4)}
               className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
@@ -684,7 +714,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Service:</span>
-                  <span className="font-semibold">{selectedService?.name}</span>
+                  <span className="font-semibold">{selectedService?.name}{selectedVariant ? ` — ${selectedVariant.name}` : ''}</span>
                 </div>
                 {additionalServices.length > 0 && (
                   <div className="flex justify-between">

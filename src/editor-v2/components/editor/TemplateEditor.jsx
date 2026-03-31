@@ -391,50 +391,51 @@ const CONTENT_FIELDS = {
       { key: 'caption', label: 'Caption (optional)', type: TEXT },
     ]},
   ],
-  'lead-magnet-slider-auto': [
-    { key: 'headline', label: 'Headline', type: TEXT },
-    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Analyze Button Text', type: TEXT },
-    { key: 'submitText', label: 'Submit Button Text', type: TEXT },
-    { key: 'services', label: 'Services (comma-separated)', type: TEXT },
-    { key: 'image', label: 'Vehicle Image', type: IMAGE },
-  ],
-  'lead-magnet-slider-cleaning': [
-    { key: 'headline', label: 'Headline', type: TEXT },
-    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Analyze Button Text', type: TEXT },
-    { key: 'submitText', label: 'Submit Button Text', type: TEXT },
-    { key: 'services', label: 'Services (comma-separated)', type: TEXT },
-    { key: 'image', label: 'Carpet Image', type: IMAGE },
-  ],
-  'lead-magnet-auto-wrap': [
-    { key: 'headline', label: 'Headline', type: TEXT },
-    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
-    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
-    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
-  ],
-  'lead-magnet-cleaning': [
-    { key: 'headline', label: 'Headline', type: TEXT },
-    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
-    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
-    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
-  ],
-  'lead-magnet-landscaping': [
-    { key: 'headline', label: 'Headline', type: TEXT },
-    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
-    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
-    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
-  ],
-  'lead-magnet-renovation': [
-    { key: 'headline', label: 'Headline', type: TEXT },
-    { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
-    { key: 'ctaText', label: 'Start Button Text', type: TEXT },
-    { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
-    { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
-  ],
+  // Lead Magnet field schemas — DISABLED
+  // 'lead-magnet-slider-auto': [
+  //   { key: 'headline', label: 'Headline', type: TEXT },
+  //   { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+  //   { key: 'ctaText', label: 'Analyze Button Text', type: TEXT },
+  //   { key: 'submitText', label: 'Submit Button Text', type: TEXT },
+  //   { key: 'services', label: 'Services (comma-separated)', type: TEXT },
+  //   { key: 'image', label: 'Vehicle Image', type: IMAGE },
+  // ],
+  // 'lead-magnet-slider-cleaning': [
+  //   { key: 'headline', label: 'Headline', type: TEXT },
+  //   { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+  //   { key: 'ctaText', label: 'Analyze Button Text', type: TEXT },
+  //   { key: 'submitText', label: 'Submit Button Text', type: TEXT },
+  //   { key: 'services', label: 'Services (comma-separated)', type: TEXT },
+  //   { key: 'image', label: 'Carpet Image', type: IMAGE },
+  // ],
+  // 'lead-magnet-auto-wrap': [
+  //   { key: 'headline', label: 'Headline', type: TEXT },
+  //   { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+  //   { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+  //   { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+  //   { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  // ],
+  // 'lead-magnet-cleaning': [
+  //   { key: 'headline', label: 'Headline', type: TEXT },
+  //   { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+  //   { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+  //   { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+  //   { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  // ],
+  // 'lead-magnet-landscaping': [
+  //   { key: 'headline', label: 'Headline', type: TEXT },
+  //   { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+  //   { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+  //   { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+  //   { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  // ],
+  // 'lead-magnet-renovation': [
+  //   { key: 'headline', label: 'Headline', type: TEXT },
+  //   { key: 'subheadline', label: 'Subheadline', type: TEXTAREA },
+  //   { key: 'ctaText', label: 'Start Button Text', type: TEXT },
+  //   { key: 'contactTitle', label: 'Contact Step Title', type: TEXT },
+  //   { key: 'contactSubtitle', label: 'Contact Step Subtitle', type: TEXT },
+  // ],
   'footer-4col-dark': [
     { key: 'logo',            label: 'Business Name',         type: TEXT },
     { key: 'tagline',         label: 'Tagline',               type: TEXTAREA },
@@ -499,19 +500,20 @@ const SECTION_DEFAULTS = {
   'contact-split': { formTitle: 'Get in Touch', formSubtitle: 'We\'d love to hear from you.', phone: '', email: '', hours: 'Mon–Fri: 8am–6pm', submitText: 'Send Message' },
   // Footer
   'footer-4col-dark': { logo: '', tagline: 'Your business tagline.', services: [], hours: '', phone: '', email: '' },
-  // Lead Magnets — Full interactive
-  'lead-magnet-slider-auto': { headline: "What's Happening to Your Paint?", subheadline: 'Pollen, grime, and UV rays attack your clear coat every day. Move the slider to see the damage.', ctaText: 'Analyze My Paint', submitText: 'Get My Free Assessment', services: 'Full Detail, Paint Correction, Ceramic Coating, Interior Detail, Engine Bay Clean', image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80' },
-  'lead-magnet-slider-cleaning': { headline: "What's Hiding in Your Carpet?", subheadline: 'Dust mites, bacteria, and allergens multiply every day. Move the slider to see the contamination.', ctaText: 'Check My Carpet', submitText: 'Get My Free Assessment', services: 'Deep Carpet Clean, Stain Removal, Pet Odor Treatment, Upholstery Cleaning, Move-Out Clean', image: 'https://images.unsplash.com/photo-1558618047-f18c8def4765?w=800&q=80' },
-  'lead-magnet-auto-wrap': { headline: 'Design Your Custom Vehicle Wrap', subheadline: 'Answer 4 quick questions to get a personalized wrap estimate.', ctaText: 'Start My Design', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your personalized estimate?' },
-  'lead-magnet-cleaning': { headline: 'Get an Instant Cleaning Quote', subheadline: 'Answer 4 quick questions and see your price range in seconds.', ctaText: 'Get My Free Quote', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your quote?' },
-  'lead-magnet-landscaping': { headline: 'Get Your Free Landscape Estimate', subheadline: 'Answer 4 quick questions and we\'ll send you a personalized estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
-  'lead-magnet-renovation': { headline: 'What Will Your Project Cost?', subheadline: 'Answer 4 quick questions and get a free project estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
-  'lead-magnet-photography': { headline: 'Find Your Perfect Package', subheadline: 'Answer a few questions and we\'ll match you with the right photography package.', ctaText: 'Find My Package', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your recommendation?' },
-  // Lead Magnets — Teasers
-  'lead-magnet-teaser-auto': { badge: 'Free Assessment', headline: 'How healthy is your paint?', subheadline: 'Get a free paint health report in 30 seconds.', ctaText: 'Check My Paint', features: [] },
-  'lead-magnet-teaser-landscaping': { badge: 'Free Estimate', headline: 'What will your project cost?', subheadline: 'Get a personalized landscape estimate in minutes.', ctaText: 'Get My Estimate', features: [] },
-  'lead-magnet-teaser-cleaning': { badge: 'Free Quote', headline: 'How clean is your home really?', subheadline: 'Get an instant cleaning quote in 30 seconds.', ctaText: 'Get My Quote', features: [] },
-  'lead-magnet-teaser-renovation': { badge: 'Free Estimate', headline: 'What will your renovation cost?', subheadline: 'Get a free project estimate in minutes.', ctaText: 'Get My Estimate', features: [] },
+  // Lead Magnets — DISABLED
+  // Full interactive
+  // 'lead-magnet-slider-auto': { headline: "What's Happening to Your Paint?", subheadline: 'Pollen, grime, and UV rays attack your clear coat every day. Move the slider to see the damage.', ctaText: 'Analyze My Paint', submitText: 'Get My Free Assessment', services: 'Full Detail, Paint Correction, Ceramic Coating, Interior Detail, Engine Bay Clean', image: 'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?w=1200&auto=format&fit=crop&q=80' },
+  // 'lead-magnet-slider-cleaning': { headline: "What's Hiding in Your Carpet?", subheadline: 'Dust mites, bacteria, and allergens multiply every day. Move the slider to see the contamination.', ctaText: 'Check My Carpet', submitText: 'Get My Free Assessment', services: 'Deep Carpet Clean, Stain Removal, Pet Odor Treatment, Upholstery Cleaning, Move-Out Clean', image: 'https://images.unsplash.com/photo-1558618047-f18c8def4765?w=800&q=80' },
+  // 'lead-magnet-auto-wrap': { headline: 'Design Your Custom Vehicle Wrap', subheadline: 'Answer 4 quick questions to get a personalized wrap estimate.', ctaText: 'Start My Design', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your personalized estimate?' },
+  // 'lead-magnet-cleaning': { headline: 'Get an Instant Cleaning Quote', subheadline: 'Answer 4 quick questions and see your price range in seconds.', ctaText: 'Get My Free Quote', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your quote?' },
+  // 'lead-magnet-landscaping': { headline: 'Get Your Free Landscape Estimate', subheadline: 'Answer 4 quick questions and we\'ll send you a personalized estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
+  // 'lead-magnet-renovation': { headline: 'What Will Your Project Cost?', subheadline: 'Answer 4 quick questions and get a free project estimate.', ctaText: 'Get My Free Estimate', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your estimate?' },
+  // 'lead-magnet-photography': { headline: 'Find Your Perfect Package', subheadline: 'Answer a few questions and we\'ll match you with the right photography package.', ctaText: 'Find My Package', contactTitle: 'Almost done!', contactSubtitle: 'Where should we send your recommendation?' },
+  // Teasers
+  // 'lead-magnet-teaser-auto': { badge: 'Free Assessment', headline: 'How healthy is your paint?', subheadline: 'Get a free paint health report in 30 seconds.', ctaText: 'Check My Paint', features: [] },
+  // 'lead-magnet-teaser-landscaping': { badge: 'Free Estimate', headline: 'What will your project cost?', subheadline: 'Get a personalized landscape estimate in minutes.', ctaText: 'Get My Estimate', features: [] },
+  // 'lead-magnet-teaser-cleaning': { badge: 'Free Quote', headline: 'How clean is your home really?', subheadline: 'Get an instant cleaning quote in 30 seconds.', ctaText: 'Get My Quote', features: [] },
+  // 'lead-magnet-teaser-renovation': { badge: 'Free Estimate', headline: 'What will your renovation cost?', subheadline: 'Get a free project estimate in minutes.', ctaText: 'Get My Estimate', features: [] },
 };
 
 // Section template picker — organized by category
@@ -598,22 +600,23 @@ const SECTION_CATEGORIES = [
       { id: 'footer-4col-dark', name: '4-Column Dark', desc: 'Full footer with links & info' },
     ],
   },
-  {
-    id: 'lead-magnet', name: 'Lead Magnets', icon: '🧲',
-    templates: [
-      { id: 'lead-magnet-teaser-auto', name: 'Auto Detailing Teaser', desc: 'CTA block that opens quiz modal' },
-      { id: 'lead-magnet-teaser-landscaping', name: 'Landscaping Teaser', desc: 'CTA block that opens quiz modal' },
-      { id: 'lead-magnet-teaser-cleaning', name: 'Cleaning Teaser', desc: 'CTA block that opens quiz modal' },
-      { id: 'lead-magnet-teaser-renovation', name: 'Renovation Teaser', desc: 'CTA block that opens quiz modal' },
-      { id: 'lead-magnet-slider-auto', name: 'Paint Health Analyzer', desc: 'Interactive slider lead capture' },
-      { id: 'lead-magnet-slider-cleaning', name: 'Carpet Health Analyzer', desc: 'Interactive slider lead capture' },
-      { id: 'lead-magnet-auto-wrap', name: 'Auto Wrap Estimator', desc: 'Multi-step quiz estimator' },
-      { id: 'lead-magnet-cleaning', name: 'Cleaning Estimator', desc: 'Multi-step quiz estimator' },
-      { id: 'lead-magnet-landscaping', name: 'Landscaping Estimator', desc: 'Multi-step quiz estimator' },
-      { id: 'lead-magnet-renovation', name: 'Renovation Estimator', desc: 'Multi-step quiz estimator' },
-      { id: 'lead-magnet-photography', name: 'Photography Finder', desc: 'Multi-step package matcher' },
-    ],
-  },
+  // Lead Magnets category — DISABLED
+  // {
+  //   id: 'lead-magnet', name: 'Lead Magnets', icon: '🧲',
+  //   templates: [
+  //     { id: 'lead-magnet-teaser-auto', name: 'Auto Detailing Teaser', desc: 'CTA block that opens quiz modal' },
+  //     { id: 'lead-magnet-teaser-landscaping', name: 'Landscaping Teaser', desc: 'CTA block that opens quiz modal' },
+  //     { id: 'lead-magnet-teaser-cleaning', name: 'Cleaning Teaser', desc: 'CTA block that opens quiz modal' },
+  //     { id: 'lead-magnet-teaser-renovation', name: 'Renovation Teaser', desc: 'CTA block that opens quiz modal' },
+  //     { id: 'lead-magnet-slider-auto', name: 'Paint Health Analyzer', desc: 'Interactive slider lead capture' },
+  //     { id: 'lead-magnet-slider-cleaning', name: 'Carpet Health Analyzer', desc: 'Interactive slider lead capture' },
+  //     { id: 'lead-magnet-auto-wrap', name: 'Auto Wrap Estimator', desc: 'Multi-step quiz estimator' },
+  //     { id: 'lead-magnet-cleaning', name: 'Cleaning Estimator', desc: 'Multi-step quiz estimator' },
+  //     { id: 'lead-magnet-landscaping', name: 'Landscaping Estimator', desc: 'Multi-step quiz estimator' },
+  //     { id: 'lead-magnet-renovation', name: 'Renovation Estimator', desc: 'Multi-step quiz estimator' },
+  //     { id: 'lead-magnet-photography', name: 'Photography Finder', desc: 'Multi-step package matcher' },
+  //   ],
+  // },
 ];
 
 // Flat list for lookups
