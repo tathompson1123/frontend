@@ -24,6 +24,7 @@ import {
   Crown,
   Flame,
   Sparkles,
+  Search,
 } from 'lucide-react';
 
 // Component imports
@@ -35,6 +36,7 @@ import AIAgentBuilder from '../components/dashboard/AIAgentBuilder';
 import GoogleBusiness from '../components/dashboard/GoogleBusiness';
 import BusinessInformation from '../components/dashboard/BusinessInformation';
 import MarketResearch from '../components/dashboard/MarketResearch';
+import SEOAudit from '../components/dashboard/SEOAudit';
 import Billing from '../components/dashboard/Billing';
 import EmailCampaigns from '../components/dashboard/EmailCampaigns';
 import SettingsPage from '../components/dashboard/Settings';
@@ -137,6 +139,13 @@ export default function Dashboard() {
 const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
   const [widgetMinimized, setWidgetMinimized] = useState(false);
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  // Guard: redirect to home if not authenticated
+  useEffect(() => {
+    if (!localStorage.getItem('token')) {
+      navigate('/', { replace: true });
+    }
+  }, []);
 
   useEffect(() => {
   const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
@@ -352,7 +361,7 @@ useEffect(() => {
           authFetch(`${apiUrl}/api/employees`),
           authFetch(`${apiUrl}/api/business-hours`),
           authFetch(`${apiUrl}/api/website`),
-          authFetch(`${apiUrl}/api/google-business/profile`),
+          authFetch(`${apiUrl}/api/gbp-analyzer/profile`),
           authFetch(`${apiUrl}/api/user/profile`)
         ]);
 
@@ -481,13 +490,14 @@ useEffect(() => {
     { id: 'ai-agents', icon: Bot, label: 'AI Agents' },
     { id: 'email-campaigns', icon: Mail, label: 'Email Marketing' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
+    { id: 'seo-audit', icon: Search, label: 'SEO Audit' },
     { id: 'market-research', icon: TrendingUp, label: 'Upsell Potential' },
   ];
 
   // Auto-open Pro section when navigating to a Pro view
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (['ai-agents', 'email-campaigns', 'google-business', 'market-research'].includes(currentView)) {
+    if (['ai-agents', 'email-campaigns', 'google-business', 'seo-audit', 'market-research'].includes(currentView)) {
       setProOpen(true);
     }
   }, [currentView]);
@@ -822,8 +832,8 @@ useEffect(() => {
           )}
 
         {currentView === 'market-research' && (
-  <FeatureGate 
-    user={user} 
+  <FeatureGate
+    user={user}
     requiredPlan="expert"
     feature="market-research"
     onUpgradeClick={() => requestViewChange('billing')}
@@ -835,6 +845,12 @@ useEffect(() => {
     />
   </FeatureGate>
 )}
+
+        {currentView === 'seo-audit' && (
+          <FeatureGate user={user} requiredPlan="pro" feature="ai-agents" onUpgradeClick={() => requestViewChange('billing')}>
+            <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} />
+          </FeatureGate>
+        )}
           {currentView === 'payment-settings' && (
             <PaymentSettingsPage
               apiUrl={apiUrl}

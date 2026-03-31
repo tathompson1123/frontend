@@ -4,8 +4,7 @@ import { useState, useEffect } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-// TODO: Replace with actual App Store / Play Store URLs once published
-const APP_STORE_URL = '#';
+const APP_STORE_URL = 'https://apps.apple.com/us/app/sorce-employee/id6761320786';
 const PLAY_STORE_URL = '#';
 
 export default function EmployeeInvitePage() {
@@ -45,11 +44,17 @@ export default function EmployeeInvitePage() {
   }
 
   if (error) {
+    const alreadyAccepted = error.toLowerCase().includes('already been accepted');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md w-full text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Invite Expired</h1>
-          <p className="text-gray-500">{error}</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {alreadyAccepted ? 'Already Accepted' : 'Invite Invalid or Expired'}
+          </h1>
+          <p className="text-gray-500 mb-4">{error}</p>
+          {!alreadyAccepted && (
+            <p className="text-sm text-gray-400">Ask your employer to resend the invite from their team settings.</p>
+          )}
         </div>
       </div>
     );
@@ -122,17 +127,14 @@ export default function EmployeeInvitePage() {
             <Download className="w-5 h-5" />
             Download for iPhone
           </a>
-          <a
-            href={PLAY_STORE_URL}
-            className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-900 rounded-xl font-semibold border border-gray-200 transition-colors"
-          >
+          <div className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 text-gray-400 rounded-xl font-semibold border border-gray-200 cursor-not-allowed">
             <Download className="w-5 h-5" />
-            Download for Android
-          </a>
+            Android — Coming Soon
+          </div>
         </div>
 
         <p className="text-xs text-gray-400 text-center mt-6">
-          This invite expires in 72 hours. Contact your employer if you need a new one.
+          This invite expires in 7 days. Contact your employer if you need a new one.
         </p>
       </div>
     </div>

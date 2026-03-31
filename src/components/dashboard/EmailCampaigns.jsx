@@ -170,7 +170,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, onDirtyChange 
 
       // Pre-fill from_name and from_email from business settings when not already saved
       const mergedConfig = {
-        enabled: false, send_day: 'monday', send_hour: 9, from_name: '', from_email: '', tone: 'friendly', focus: 'seasonal',
+        enabled: false, send_day: 'monday', send_hour: 9, tone: 'friendly', focus: 'seasonal',
         ...savedConfig,
         from_name: savedConfig.from_name || businessName,
         from_email: savedConfig.from_email || bizEmail,

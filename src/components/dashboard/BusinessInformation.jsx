@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical } from 'lucide-react';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 function TimeInput({ value, onChange, className }) {
   const toDisplay = (hhmm) => {
@@ -51,6 +54,94 @@ function TimeInput({ value, onChange, className }) {
   );
 }
 
+function SortableServiceCard({ service, isAddon, categories, allServices, onEdit, onDelete, onOpenAddons }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: service.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: 'relative',
+    zIndex: isDragging ? 999 : 'auto',
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`bg-white rounded-xl p-6 shadow-sm border border-gray-200 ${isAddon ? 'border-l-4 border-l-violet-400' : ''} hover:shadow-md transition-shadow`}
+    >
+      <div className="flex gap-6">
+        {service.media_url && (
+          <div className="flex-shrink-0">
+            {service.media_type === 'image' ? (
+              <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
+            ) : (
+              <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
+            )}
+          </div>
+        )}
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
+            <button type="button" onClick={() => onEdit(service)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
+              <Edit className="w-4 h-4" />
+            </button>
+            {isAddon ? (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">Add-on</span>
+            ) : (
+              service.category_id && categories.find(c => c.id === service.category_id) && (
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
+                  {categories.find(c => c.id === service.category_id).name}
+                </span>
+              )
+            )}
+          </div>
+          {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
+          <div className="flex gap-6 text-sm flex-wrap">
+            <div className="flex items-center gap-2 text-gray-700">
+              <Clock className="w-4 h-4" />
+              <span>{service.duration_hours} {service.duration_hours === 1 ? 'hour' : 'hours'}</span>
+            </div>
+            <div className="flex items-center gap-2 text-gray-700 font-semibold">
+              <span className="text-green-600">${service.price}</span>
+            </div>
+            {service.buffer_minutes > 0 && (
+              <div className="flex items-center gap-2 text-gray-500">
+                <Timer className="w-4 h-4" />
+                <span>{service.buffer_minutes}min buffer</span>
+              </div>
+            )}
+          </div>
+          {!isAddon && allServices.filter(s => s.is_addon).length > 0 && (
+            <button type="button" onClick={() => onOpenAddons(service)} className="mt-3 text-sm text-violet-600 hover:text-violet-800 font-medium flex items-center gap-1.5">
+              <Link className="w-3.5 h-3.5" />
+              Configure add-ons for this service
+            </button>
+          )}
+        </div>
+        <div className="flex flex-col gap-2 items-center">
+          <button
+            type="button"
+            {...attributes}
+            {...listeners}
+            className="p-1.5 text-gray-400 hover:bg-gray-100 rounded cursor-grab active:cursor-grabbing touch-none"
+            title="Drag to reorder"
+          >
+            <GripVertical className="w-4 h-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => onDelete(service.id)}
+            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function BusinessInformation({
   businessHours,
   setBusinessHours,
@@ -68,7 +159,10 @@ export default function BusinessInformation({
   initialTab
 }) {
   const [activeTab, setActiveTab] = useState(initialTab || 'info');
-  
+
+  // Drag-and-drop sensors
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
   // Business Info State
   const [hours, setHours] = useState({
     monday: { open: true, start: '09:00', end: '17:00' },
@@ -109,6 +203,11 @@ export default function BusinessInformation({
     categoryId: '', bufferMinutes: '', isAddon: false
   });
   const [isSavingService, setIsSavingService] = useState(false);
+  const [serviceVariants, setServiceVariants] = useState([]);
+  const [variantForm, setVariantForm] = useState({ name: '', price: '', durationHours: '' });
+  const [editingVariant, setEditingVariant] = useState(null);
+  const [isSavingVariant, setIsSavingVariant] = useState(false);
+  const [showVariantForm, setShowVariantForm] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [serviceSubTab, setServiceSubTab] = useState('categories');
 
@@ -250,6 +349,13 @@ export default function BusinessInformation({
   const [statusTemplates, setStatusTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(null);
+  const [appSettingsSubTab, setAppSettingsSubTab] = useState('messages');
+  // Email Reminders
+  const [reminders, setReminders] = useState([]);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+  const [savingReminder, setSavingReminder] = useState(null);
+  const [showAddReminder, setShowAddReminder] = useState(false);
+  const [newReminderHours, setNewReminderHours] = useState('');
 
   const statusLabels = {
     in_progress: 'Job Started',
@@ -261,6 +367,7 @@ export default function BusinessInformation({
   useEffect(() => {
     if (activeTab === 'app-settings') {
       fetchStatusTemplates();
+      fetchReminders();
     }
     if (activeTab === 'services') {
       fetchCategories();
@@ -289,6 +396,56 @@ export default function BusinessInformation({
       }
     } catch (err) { console.error(err); }
     finally { setSavingTemplate(null); }
+  };
+
+  const fetchReminders = async () => {
+    setLoadingReminders(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/booking-reminders`);
+      const data = await res.json();
+      setReminders(data.reminders || []);
+    } catch (err) { console.error(err); }
+    finally { setLoadingReminders(false); }
+  };
+
+  const handleUpdateReminder = async (id, updates) => {
+    setSavingReminder(id);
+    try {
+      const res = await authFetch(`${apiUrl}/api/booking-reminders/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(updates)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReminders(prev => prev.map(r => r.id === id ? data.reminder : r));
+      }
+    } catch (err) { console.error(err); }
+    finally { setSavingReminder(null); }
+  };
+
+  const handleAddReminder = async () => {
+    const hours = parseInt(newReminderHours);
+    if (!hours || hours < 1) return;
+    try {
+      const res = await authFetch(`${apiUrl}/api/booking-reminders`, {
+        method: 'POST',
+        body: JSON.stringify({ hours_before: hours })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setReminders(prev => [...prev, data.reminder].sort((a, b) => b.hours_before - a.hours_before));
+        setNewReminderHours('');
+        setShowAddReminder(false);
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const handleDeleteReminder = async (id) => {
+    if (!confirm('Delete this reminder?')) return;
+    try {
+      await authFetch(`${apiUrl}/api/booking-reminders/${id}`, { method: 'DELETE' });
+      setReminders(prev => prev.filter(r => r.id !== id));
+    } catch (err) { console.error(err); }
   };
 
   const handleSendInvite = async (employeeId) => {
@@ -767,6 +924,9 @@ export default function BusinessInformation({
       setShowAddService(false);
       setEditingService(null);
       setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
+      setServiceVariants([]);
+      setShowVariantForm(false);
+      setEditingVariant(null);
       fetchServices();
     } catch (error) {
       setSaveError(error.message);
@@ -789,7 +949,65 @@ export default function BusinessInformation({
       isAddon: service.is_addon || false
     });
     setServiceSubTab(service.is_addon ? 'addons' : 'main');
+    // Fetch variants for this service
+    if (!service.is_addon) {
+      fetchServiceVariants(service.id);
+    } else {
+      setServiceVariants([]);
+    }
+    setShowVariantForm(false);
+    setEditingVariant(null);
+    setVariantForm({ name: '', price: '', durationHours: '' });
     setShowAddService(true);
+  };
+
+  const fetchServiceVariants = async (serviceId) => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/services/${serviceId}/variants`);
+      const data = await res.json();
+      setServiceVariants(data.variants || []);
+    } catch (e) {
+      setServiceVariants([]);
+    }
+  };
+
+  const handleSaveVariant = async (e) => {
+    e.preventDefault();
+    if (!editingService) return;
+    setIsSavingVariant(true);
+    try {
+      const url = editingVariant
+        ? `${apiUrl}/api/services/variants/${editingVariant.id}`
+        : `${apiUrl}/api/services/${editingService.id}/variants`;
+      const method = editingVariant ? 'PUT' : 'POST';
+      const res = await authFetch(url, {
+        method,
+        body: JSON.stringify({
+          name: variantForm.name,
+          price: parseFloat(variantForm.price),
+          durationHours: variantForm.durationHours ? parseFloat(variantForm.durationHours) : null
+        })
+      });
+      if (!res.ok) throw new Error('Failed to save variant');
+      setVariantForm({ name: '', price: '', durationHours: '' });
+      setEditingVariant(null);
+      setShowVariantForm(false);
+      fetchServiceVariants(editingService.id);
+    } catch (e) {
+      // silent
+    } finally {
+      setIsSavingVariant(false);
+    }
+  };
+
+  const handleDeleteVariant = async (variantId) => {
+    if (!confirm('Delete this service type?')) return;
+    try {
+      await authFetch(`${apiUrl}/api/services/variants/${variantId}`, { method: 'DELETE' });
+      fetchServiceVariants(editingService.id);
+    } catch (e) {
+      // silent
+    }
   };
 
   const handleDeleteService = async (id) => {
@@ -802,6 +1020,32 @@ export default function BusinessInformation({
       fetchServices();
     } catch (error) {
       console.error('Error deleting service:', error);
+    }
+  };
+
+  const handleDragEnd = async (event, isAddon) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const sorted = [...services]
+      .filter(s => s.is_addon === isAddon)
+      .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id);
+    const oldIndex = sorted.findIndex(s => s.id === active.id);
+    const newIndex = sorted.findIndex(s => s.id === over.id);
+    const reordered = arrayMove(sorted, oldIndex, newIndex);
+    // Optimistic update
+    setServices(prev => prev.map(s => {
+      const idx = reordered.findIndex(r => r.id === s.id);
+      return idx !== -1 ? { ...s, sort_order: idx } : s;
+    }));
+    try {
+      await Promise.all(
+        reordered.map((s, idx) =>
+          authFetch(`${apiUrl}/api/services/${s.id}`, { method: 'PUT', body: JSON.stringify({ sortOrder: idx }) })
+        )
+      );
+    } catch (e) {
+      console.error('Reorder error:', e);
+      fetchServices();
     }
   };
 
@@ -1311,6 +1555,10 @@ export default function BusinessInformation({
                 onClick={() => {
                   setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: serviceSubTab === 'addons' });
                   setEditingService(null);
+                  setServiceVariants([]);
+                  setVariantForm({ name: '', price: '', durationHours: '' });
+                  setEditingVariant(null);
+                  setShowVariantForm(false);
                   setShowAddService(true);
                 }}
                 className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
@@ -1492,78 +1740,27 @@ export default function BusinessInformation({
                   </button>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {services.filter(s => !s.is_addon).map((service) => (
-                    <div key={service.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-                      <div className="flex gap-6">
-                        {service.media_url && (
-                          <div className="flex-shrink-0">
-                            {service.media_type === 'image' ? (
-                              <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
-                            ) : (
-                              <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
-                            )}
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
-                            <button
-                              type="button"
-                              onClick={() => handleEditService(service)}
-                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            {service.category_id && categories.find(c => c.id === service.category_id) && (
-                              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700">
-                                {categories.find(c => c.id === service.category_id).name}
-                              </span>
-                            )}
-                          </div>
-                          {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
-                          <div className="flex gap-6 text-sm flex-wrap">
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <Clock className="w-4 h-4" />
-                              <span>{service.duration_hours} {service.duration_hours === 1 ? 'hour' : 'hours'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-700 font-semibold">
-                              <span className="text-green-600">${service.price}</span>
-                            </div>
-                            {service.buffer_minutes > 0 && (
-                              <div className="flex items-center gap-2 text-gray-500">
-                                <Timer className="w-4 h-4" />
-                                <span>{service.buffer_minutes}min buffer</span>
-                              </div>
-                            )}
-                          </div>
-                          {/* Linked add-ons preview */}
-                          {services.filter(s => s.is_addon).length > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => openAddonsModal(service)}
-                              className="mt-3 text-sm text-violet-600 hover:text-violet-800 font-medium flex items-center gap-1.5"
-                            >
-                              <Link className="w-3.5 h-3.5" />
-                              Configure add-ons for this service
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteService(service.id)}
-                            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete Service
-                          </button>
-                        </div>
-                      </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, false)}>
+                  <SortableContext
+                    items={[...services].filter(s => !s.is_addon).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id).map(s => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="grid gap-4">
+                      {[...services].filter(s => !s.is_addon).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id).map((service) => (
+                        <SortableServiceCard
+                          key={service.id}
+                          service={service}
+                          isAddon={false}
+                          categories={categories}
+                          allServices={services}
+                          onEdit={handleEditService}
+                          onDelete={handleDeleteService}
+                          onOpenAddons={openAddonsModal}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </>
           )}
@@ -1596,63 +1793,27 @@ export default function BusinessInformation({
                   </button>
                 </div>
               ) : (
-                <div className="grid gap-4">
-                  {services.filter(s => s.is_addon).map((service) => (
-                    <div key={service.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 border-l-4 border-l-violet-400 hover:shadow-md transition-shadow">
-                      <div className="flex gap-6">
-                        {service.media_url && (
-                          <div className="flex-shrink-0">
-                            {service.media_type === 'image' ? (
-                              <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
-                            ) : (
-                              <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
-                            )}
-                          </div>
-                        )}
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2 flex-wrap">
-                            <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
-                            <button
-                              type="button"
-                              onClick={() => handleEditService(service)}
-                              className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                              title="Edit"
-                            >
-                              <Edit className="w-4 h-4" />
-                            </button>
-                            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">Add-on</span>
-                          </div>
-                          {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
-                          <div className="flex gap-6 text-sm flex-wrap">
-                            <div className="flex items-center gap-2 text-gray-700">
-                              <Clock className="w-4 h-4" />
-                              <span>{service.duration_hours} {service.duration_hours === 1 ? 'hour' : 'hours'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-700 font-semibold">
-                              <span className="text-green-600">${service.price}</span>
-                            </div>
-                            {service.buffer_minutes > 0 && (
-                              <div className="flex items-center gap-2 text-gray-500">
-                                <Timer className="w-4 h-4" />
-                                <span>{service.buffer_minutes}min buffer</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteService(service.id)}
-                            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors text-xs font-medium flex items-center gap-1"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete Service
-                          </button>
-                        </div>
-                      </div>
+                <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={(e) => handleDragEnd(e, true)}>
+                  <SortableContext
+                    items={[...services].filter(s => s.is_addon).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id).map(s => s.id)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="grid gap-4">
+                      {[...services].filter(s => s.is_addon).sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id).map((service) => (
+                        <SortableServiceCard
+                          key={service.id}
+                          service={service}
+                          isAddon={true}
+                          categories={categories}
+                          allServices={services}
+                          onEdit={handleEditService}
+                          onDelete={handleDeleteService}
+                          onOpenAddons={openAddonsModal}
+                        />
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </SortableContext>
+                </DndContext>
               )}
             </>
           )}
@@ -1715,9 +1876,14 @@ export default function BusinessInformation({
           {showAddService && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
               <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-8 max-h-[90vh] overflow-y-auto">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">
-                  {editingService ? 'Edit Service' : 'Add New Service'}
-                </h2>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {editingService ? 'Edit Service' : 'Add New Service'}
+                  </h2>
+                  <button type="button" onClick={() => { setShowAddService(false); setEditingService(null); setServiceVariants([]); setShowVariantForm(false); setEditingVariant(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+                    <X className="w-5 h-5 text-gray-500" />
+                  </button>
+                </div>
                 <form onSubmit={handleSaveService} className="space-y-6">
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Service Name *</label>
@@ -1814,6 +1980,130 @@ export default function BusinessInformation({
                     </p>
                   </div>
 
+                  {/* Service Types / Variants — only for main services */}
+                  {!serviceForm.isAddon && (
+                    <div className="border-2 border-blue-100 rounded-xl p-4 bg-blue-50">
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <h3 className="text-sm font-bold text-gray-800">Service Types (Optional)</h3>
+                          <p className="text-xs text-gray-500 mt-0.5">e.g. Sedan, SUV, Minivan — each with its own price</p>
+                        </div>
+                        {editingService && (
+                          <button
+                            type="button"
+                            onClick={() => { setShowVariantForm(true); setEditingVariant(null); setVariantForm({ name: '', price: '', durationHours: '' }); }}
+                            className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-100 px-3 py-1.5 rounded-lg"
+                          >
+                            <Plus className="w-3.5 h-3.5" /> Add Type
+                          </button>
+                        )}
+                      </div>
+
+                      {!editingService && (
+                        <p className="text-xs text-gray-500 italic">Save this service first, then edit it to add service types.</p>
+                      )}
+
+                      {editingService && serviceVariants.length === 0 && !showVariantForm && (
+                        <p className="text-xs text-gray-500 italic">No types added yet. Click "Add Type" to create options like Sedan, SUV, etc.</p>
+                      )}
+
+                      {editingService && serviceVariants.length > 0 && (
+                        <div className="space-y-2 mb-3">
+                          {serviceVariants.map(v => (
+                            <div key={v.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-blue-200">
+                              {editingVariant?.id === v.id ? (
+                                <form onSubmit={handleSaveVariant} className="flex items-center gap-2 flex-1">
+                                  <input
+                                    type="text"
+                                    value={variantForm.name}
+                                    onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
+                                    placeholder="Name"
+                                    required
+                                    className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded"
+                                  />
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={variantForm.price}
+                                    onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
+                                    placeholder="Price"
+                                    required
+                                    className="w-20 text-xs px-2 py-1 border border-gray-300 rounded"
+                                  />
+                                  <input
+                                    type="number"
+                                    step="0.5"
+                                    min="0.5"
+                                    value={variantForm.durationHours}
+                                    onChange={e => setVariantForm({ ...variantForm, durationHours: e.target.value })}
+                                    placeholder="Hrs"
+                                    className="w-14 text-xs px-2 py-1 border border-gray-300 rounded"
+                                  />
+                                  <button type="submit" disabled={isSavingVariant} className="text-xs font-semibold text-green-600 hover:text-green-800">Save</button>
+                                  <button type="button" onClick={() => { setEditingVariant(null); setVariantForm({ name: '', price: '', durationHours: '' }); }} className="text-xs text-gray-500">Cancel</button>
+                                </form>
+                              ) : (
+                                <>
+                                  <div className="flex-1">
+                                    <span className="text-sm font-semibold text-gray-900">{v.name}</span>
+                                    <span className="text-xs text-gray-500 ml-2">${parseFloat(v.price).toFixed(2)}{v.duration_hours ? ` · ${v.duration_hours}h` : ''}</span>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button type="button" onClick={() => { setEditingVariant(v); setVariantForm({ name: v.name, price: v.price, durationHours: v.duration_hours || '' }); setShowVariantForm(false); }} className="p-1 text-blue-500 hover:bg-blue-100 rounded">
+                                      <Edit className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button type="button" onClick={() => handleDeleteVariant(v.id)} className="p-1 text-red-400 hover:bg-red-50 rounded">
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {editingService && showVariantForm && (
+                        <form onSubmit={handleSaveVariant} className="flex items-center gap-2 mt-2">
+                          <input
+                            type="text"
+                            value={variantForm.name}
+                            onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
+                            placeholder="Type name (e.g. Sedan)"
+                            required
+                            className="flex-1 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                          />
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={variantForm.price}
+                            onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
+                            placeholder="Price"
+                            required
+                            className="w-20 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                          />
+                          <input
+                            type="number"
+                            step="0.5"
+                            min="0.5"
+                            value={variantForm.durationHours}
+                            onChange={e => setVariantForm({ ...variantForm, durationHours: e.target.value })}
+                            placeholder="Hrs"
+                            className="w-14 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                          />
+                          <button type="submit" disabled={isSavingVariant} className="text-xs font-semibold text-green-600 hover:text-green-800 whitespace-nowrap">
+                            {isSavingVariant ? '...' : 'Add'}
+                          </button>
+                          <button type="button" onClick={() => setShowVariantForm(false)} className="text-xs text-gray-500">
+                            Cancel
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Service Image/Video (Optional)</label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
@@ -1854,6 +2144,9 @@ export default function BusinessInformation({
                         setShowAddService(false);
                         setEditingService(null);
                         setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
+                        setServiceVariants([]);
+                        setShowVariantForm(false);
+                        setEditingVariant(null);
                         setSaveError('');
                       }}
                       className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
@@ -2384,7 +2677,25 @@ export default function BusinessInformation({
 
       {/* App Settings Tab */}
       {activeTab === 'app-settings' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          {/* Sub-tab nav */}
+          <div className="flex border-b border-gray-200 px-6 pt-2">
+            <button
+              onClick={() => setAppSettingsSubTab('messages')}
+              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors mr-4 ${appSettingsSubTab === 'messages' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            >
+              Customer Update Messages
+            </button>
+            <button
+              onClick={() => setAppSettingsSubTab('reminders')}
+              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${appSettingsSubTab === 'reminders' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            >
+              Email Reminders
+            </button>
+          </div>
+
+          <div className="p-6">
+          {appSettingsSubTab === 'messages' && (
           <div className="max-w-2xl space-y-6">
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-1">Customer Update Messages</h3>
@@ -2454,6 +2765,109 @@ export default function BusinessInformation({
                 ))}
               </div>
             )}
+          </div>
+          )}
+
+          {/* Email Reminders Sub-tab */}
+          {appSettingsSubTab === 'reminders' && (
+            <div className="max-w-2xl space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Booking Email Reminders</h3>
+                <p className="text-sm text-gray-600">
+                  Automatically send reminder emails to customers before their appointment. Defaults are 5 days, 3 days, and 24 hours before.
+                </p>
+              </div>
+
+              {loadingReminders ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reminders.map(reminder => (
+                    <div key={reminder.id} className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={reminder.enabled}
+                              onChange={(e) => handleUpdateReminder(reminder.id, { enabled: e.target.checked })}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                          </label>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">
+                              {reminder.hours_before >= 48
+                                ? `${reminder.hours_before / 24} days before`
+                                : `${reminder.hours_before} hours before`}
+                            </p>
+                            <p className="text-xs text-gray-500">{reminder.label}</p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteReminder(reminder.id)}
+                          className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Custom Message (Optional)</label>
+                        <textarea
+                          value={reminder.custom_message || ''}
+                          onChange={(e) => setReminders(prev => prev.map(r => r.id === reminder.id ? { ...r, custom_message: e.target.value } : r))}
+                          placeholder="Leave blank for default reminder message. Use {{customerName}}, {{serviceName}}, {{date}}, {{time}}, {{businessName}}"
+                          rows={2}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm resize-none"
+                        />
+                        <div className="flex justify-end mt-2">
+                          <button
+                            onClick={() => handleUpdateReminder(reminder.id, { custom_message: reminder.custom_message })}
+                            disabled={savingReminder === reminder.id}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          >
+                            <Save className="w-3 h-3" />
+                            {savingReminder === reminder.id ? 'Saving...' : 'Save'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Add custom reminder */}
+                  {showAddReminder ? (
+                    <div className="flex items-center gap-3 p-4 border-2 border-dashed border-blue-200 rounded-xl">
+                      <div className="flex-1">
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Hours before appointment</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newReminderHours}
+                          onChange={(e) => setNewReminderHours(e.target.value)}
+                          placeholder="e.g. 48 = 2 days before"
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm"
+                        />
+                      </div>
+                      <div className="flex gap-2 mt-5">
+                        <button onClick={handleAddReminder} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700">Add</button>
+                        <button onClick={() => { setShowAddReminder(false); setNewReminderHours(''); }} className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200">Cancel</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowAddReminder(true)}
+                      className="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Custom Reminder
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           </div>
         </div>
       )}

@@ -44,7 +44,8 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   incentive: "$10 off your next service",
   incentiveEnabled: true,
   autoSendEnabled: true,
-  sendDelay: 24
+  sendDelay: 24,
+  sendTrigger: 'booking_completed'
 });
 
   const fetchUserReviewLink = async () => {
@@ -180,7 +181,8 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
           incentive: data.config.incentive,
           incentiveEnabled: data.config.incentive_enabled,
           autoSendEnabled: data.config.auto_send_enabled,
-          sendDelay: data.config.send_delay
+          sendDelay: data.config.send_delay,
+          sendTrigger: data.config.send_trigger || 'booking_completed'
         });
       }
     }
@@ -836,7 +838,7 @@ const saveReviewConfig = async () => {
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <p className="font-medium text-gray-900">Auto-Send Requests</p>
-              <p className="text-sm text-gray-600">Automatically send after service completion</p>
+              <p className="text-sm text-gray-600">Automatically send review requests to customers</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" checked={reviewConfig.autoSendEnabled} onChange={(e) => setReviewConfig({ ...reviewConfig, autoSendEnabled: e.target.checked })} className="sr-only peer" />
@@ -844,18 +846,67 @@ const saveReviewConfig = async () => {
             </label>
           </div>
           {reviewConfig.autoSendEnabled && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">First Email Timing</label>
-              <select value={reviewConfig.sendDelay} onChange={(e) => setReviewConfig({ ...reviewConfig, sendDelay: parseInt(e.target.value) })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                <option value="0">Immediately after service</option>
-                <option value="1">1 hour later</option>
-                <option value="6">6 hours later</option>
-                <option value="24">24 hours later (recommended)</option>
-                <option value="48">48 hours later</option>
-                <option value="72">3 days later</option>
-              </select>
-              <p className="text-xs text-gray-500 mt-2">📱 SMS is always sent 2 hours after service for immediate impact. This setting controls when the first email is sent.</p>
-            </div>
+            <>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">When to Send</label>
+                <div className="space-y-2">
+                  <button
+                    onClick={() => setReviewConfig({ ...reviewConfig, sendTrigger: 'booking_completed' })}
+                    className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+                      reviewConfig.sendTrigger === 'booking_completed'
+                        ? 'border-blue-400 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                      reviewConfig.sendTrigger === 'booking_completed' ? 'border-blue-500' : 'border-gray-300'
+                    }`}>
+                      {reviewConfig.sendTrigger === 'booking_completed' && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                    </span>
+                    <div>
+                      <p className={`text-sm font-medium ${reviewConfig.sendTrigger === 'booking_completed' ? 'text-blue-800' : 'text-gray-800'}`}>
+                        After booking is marked completed
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">Sends when you manually mark a booking as completed in the calendar</p>
+                    </div>
+                  </button>
+                  <button
+                    onClick={() => setReviewConfig({ ...reviewConfig, sendTrigger: 'service_duration' })}
+                    className={`w-full flex items-start gap-3 px-4 py-3 rounded-xl border text-left transition-all ${
+                      reviewConfig.sendTrigger === 'service_duration'
+                        ? 'border-blue-400 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <span className={`mt-0.5 w-4 h-4 rounded-full border-2 flex-shrink-0 flex items-center justify-center ${
+                      reviewConfig.sendTrigger === 'service_duration' ? 'border-blue-500' : 'border-gray-300'
+                    }`}>
+                      {reviewConfig.sendTrigger === 'service_duration' && <span className="w-2 h-2 rounded-full bg-blue-500" />}
+                    </span>
+                    <div>
+                      <p className={`text-sm font-medium ${reviewConfig.sendTrigger === 'service_duration' ? 'text-blue-800' : 'text-gray-800'}`}>
+                        As soon as service duration ends
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">Automatically sends when the scheduled service end time passes — no manual action needed</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {reviewConfig.sendTrigger === 'service_duration' ? 'Additional Delay After Service Ends' : 'Send Delay After Completion'}
+                </label>
+                <select value={reviewConfig.sendDelay} onChange={(e) => setReviewConfig({ ...reviewConfig, sendDelay: parseInt(e.target.value) })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <option value="0">Immediately</option>
+                  <option value="1">1 hour later</option>
+                  <option value="6">6 hours later</option>
+                  <option value="24">24 hours later (recommended)</option>
+                  <option value="48">48 hours later</option>
+                  <option value="72">3 days later</option>
+                </select>
+                <p className="text-xs text-gray-500 mt-2">📱 SMS is always sent based on this delay. First email follows the same timing.</p>
+              </div>
+            </>
           )}
           <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-lg p-4 border border-blue-200">
             <p className="text-sm font-medium text-gray-900 mb-3">💡 Pro Tips:</p>

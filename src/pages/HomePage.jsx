@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart, Calendar, Globe, Brain, LineChart } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
@@ -7,6 +7,14 @@ import GenerateModal from '../components/GenerateModal';
 export default function HomePage() {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Auto-redirect if already signed in
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [navigate]);
   const [authMode, setAuthMode] = useState('signup');
   const [showGenerateModal, setShowGenerateModal] = useState(false);
 
