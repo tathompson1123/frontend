@@ -322,6 +322,7 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
   const [loadingPlan, setLoadingPlan] = useState(false);
   const [planError, setPlanError] = useState('');
   const [savedAt, setSavedAt] = useState(null);
+  const [platform, setPlatform] = useState('');
 
   // Load last saved audit + pre-fill URL
   useEffect(() => {
@@ -387,7 +388,7 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
     }
   };
 
-  const createPlan = async () => {
+  const createPlan = async (selectedPlatform) => {
     setLoadingPlan(true);
     setPlanError('');
     setPlan(null);
@@ -395,7 +396,7 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
       const res = await authFetch(`${apiUrl}/api/seo-audit/plan`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ audit }),
+        body: JSON.stringify({ audit, platform: selectedPlatform || platform }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate plan');
@@ -500,6 +501,8 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
             loadingPlan={loadingPlan}
             planError={planError}
             onCreatePlan={createPlan}
+            platform={platform}
+            onPlatformChange={setPlatform}
             onRerun={runAudit}
             overallColor={overallColor}
             steps={STEPS}
@@ -510,7 +513,22 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
   );
 }
 
-function AuditSteps({ audit, plan, loadingPlan, planError, onCreatePlan, onRerun, overallColor, steps }) {
+const PLATFORMS = [
+  { id: 'wordpress',   label: 'WordPress',    emoji: '🔵' },
+  { id: 'wix',         label: 'Wix',          emoji: '🟣' },
+  { id: 'squarespace', label: 'Squarespace',  emoji: '⬛' },
+  { id: 'shopify',     label: 'Shopify',      emoji: '🟢' },
+  { id: 'webflow',     label: 'Webflow',      emoji: '🔷' },
+  { id: 'godaddy',     label: 'GoDaddy',      emoji: '🟠' },
+  { id: 'weebly',      label: 'Weebly',       emoji: '🔴' },
+  { id: 'framer',      label: 'Framer',       emoji: '⚫' },
+  { id: 'sorce',       label: 'SORCE',        emoji: '✨' },
+  { id: 'custom',      label: 'Custom / Dev', emoji: '💻' },
+  { id: 'bigcommerce', label: 'BigCommerce',  emoji: '🛒' },
+  { id: 'other',       label: 'Other',        emoji: '🌐' },
+];
+
+function AuditSteps({ audit, plan, loadingPlan, planError, onCreatePlan, onRerun, overallColor, steps, platform, onPlatformChange }) {
   const [activeStep, setActiveStep] = useState('score');
 
   return (
@@ -626,21 +644,54 @@ function AuditSteps({ audit, plan, loadingPlan, planError, onCreatePlan, onRerun
           {activeStep === 'plan' && (
             <div>
               {!plan && !loadingPlan && (
-                <div className="text-center py-8">
-                  <ClipboardList className="w-16 h-16 text-amber-400 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">Create Your SEO Optimization Plan</h3>
-                  <p className="text-gray-500 text-sm max-w-md mx-auto mb-6">
-                    SORCE will take everything found in your audit and generate a step-by-step plan with specific instructions for each fix.
-                  </p>
+                <div className="space-y-6">
+                  <div className="text-center">
+                    <ClipboardList className="w-12 h-12 text-amber-400 mx-auto mb-3" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">Create Your SEO Optimization Plan</h3>
+                    <p className="text-gray-500 text-sm max-w-md mx-auto">
+                      Select your website platform so SORCE can tailor every step to your exact editor.
+                    </p>
+                  </div>
+
+                  {/* Platform picker */}
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700 mb-3">What platform is your website on?</p>
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {PLATFORMS.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => onPlatformChange(p.id)}
+                          className={`flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border text-center transition-all ${
+                            platform === p.id
+                              ? 'border-amber-400 bg-amber-50 shadow-sm'
+                              : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <span className="text-xl">{p.emoji}</span>
+                          <span className={`text-xs font-semibold leading-tight ${platform === p.id ? 'text-amber-800' : 'text-gray-700'}`}>
+                            {p.label}
+                          </span>
+                          {platform === p.id && (
+                            <CheckCircle className="w-3.5 h-3.5 text-amber-500" />
+                          )}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                   {planError && (
-                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm mb-4">{planError}</div>
+                    <div className="bg-red-50 border border-red-200 rounded-xl p-3 text-red-700 text-sm">{planError}</div>
                   )}
+
                   <button
-                    onClick={onCreatePlan}
-                    className="px-8 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-lg hover:shadow-xl transition-all flex items-center gap-3 mx-auto"
+                    onClick={() => onCreatePlan(platform)}
+                    disabled={!platform}
+                    className="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold text-base hover:shadow-xl transition-all flex items-center gap-3 justify-center disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    <ClipboardList className="w-6 h-6" />
-                    Create SEO Optimization Plan
+                    <ClipboardList className="w-5 h-5" />
+                    {platform
+                      ? `Create Plan for ${PLATFORMS.find(p => p.id === platform)?.label}`
+                      : 'Select a platform to continue'}
                   </button>
                 </div>
               )}
@@ -790,11 +841,18 @@ function PlanViewer({ plan, onRerun }) {
       <div className="mb-5">
         <h3 className="text-xl font-bold text-gray-900">{plan.title}</h3>
         <p className="text-gray-500 text-sm mt-1">{plan.overview}</p>
-        {plan.estimatedTimeTotal && (
-          <span className="inline-flex items-center gap-1 mt-2 text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">
-            <Clock className="w-3.5 h-3.5" /> Estimated: {plan.estimatedTimeTotal}
-          </span>
-        )}
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          {plan.estimatedTimeTotal && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-100 text-amber-700 px-3 py-1 rounded-full">
+              <Clock className="w-3.5 h-3.5" /> Estimated: {plan.estimatedTimeTotal}
+            </span>
+          )}
+          {plan.platform && (
+            <span className="inline-flex items-center gap-1 text-xs font-semibold bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
+              <Globe className="w-3.5 h-3.5" /> {plan.platform}
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Phase tabs */}
