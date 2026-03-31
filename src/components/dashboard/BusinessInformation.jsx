@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical, Calendar, ToggleLeft, ToggleRight } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -364,6 +364,14 @@ export default function BusinessInformation({
     progress_update: 'Progress Update'
   };
 
+  // Booking Times state
+  const [bookingSlots, setBookingSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [newSlotTime, setNewSlotTime] = useState('');
+  const [newSlotLabel, setNewSlotLabel] = useState('');
+  const [addingSlot, setAddingSlot] = useState(false);
+  const [slotError, setSlotError] = useState('');
+
   useEffect(() => {
     if (activeTab === 'app-settings') {
       fetchStatusTemplates();
@@ -371,6 +379,9 @@ export default function BusinessInformation({
     }
     if (activeTab === 'services') {
       fetchCategories();
+    }
+    if (activeTab === 'booking-times') {
+      fetchBookingSlots();
     }
   }, [activeTab]);
 
@@ -396,6 +407,63 @@ export default function BusinessInformation({
       }
     } catch (err) { console.error(err); }
     finally { setSavingTemplate(null); }
+  };
+
+  // ── Booking time slots ──────────────────────────────────────
+  const fetchBookingSlots = async () => {
+    setLoadingSlots(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/booking-times`);
+      const data = await res.json();
+      setBookingSlots(data.slots || []);
+    } catch { /* ignore */ }
+    finally { setLoadingSlots(false); }
+  };
+
+  const addBookingSlot = async () => {
+    if (!newSlotTime) { setSlotError('Please select a time.'); return; }
+    setAddingSlot(true);
+    setSlotError('');
+    try {
+      const res = await authFetch(`${apiUrl}/api/booking-times`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slotTime: newSlotTime, label: newSlotLabel.trim() || null }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to add slot');
+      setBookingSlots(prev => [...prev, data.slot].sort((a, b) => a.slot_time.localeCompare(b.slot_time)));
+      setNewSlotTime('');
+      setNewSlotLabel('');
+    } catch (err) { setSlotError(err.message); }
+    finally { setAddingSlot(false); }
+  };
+
+  const toggleBookingSlot = async (id, active) => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/booking-times/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ active }),
+      });
+      const data = await res.json();
+      if (res.ok) setBookingSlots(prev => prev.map(s => s.id === id ? data.slot : s));
+    } catch { /* ignore */ }
+  };
+
+  const deleteBookingSlot = async (id) => {
+    try {
+      await authFetch(`${apiUrl}/api/booking-times/${id}`, { method: 'DELETE' });
+      setBookingSlots(prev => prev.filter(s => s.id !== id));
+    } catch { /* ignore */ }
+  };
+
+  const formatSlotTime = (timeStr) => {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.slice(0, 5).split(':').map(Number);
+    const ampm = h < 12 ? 'AM' : 'PM';
+    const h12 = (h % 12) || 12;
+    return `${h12}:${String(m).padStart(2, '0')} ${ampm}`;
   };
 
   const fetchReminders = async () => {
@@ -1177,6 +1245,16 @@ export default function BusinessInformation({
                 App Settings
               </div>
               {activeTab === 'app-settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => setActiveTab('booking-times')}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'booking-times' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Book Online Times
+              </div>
+              {activeTab === 'booking-times' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
           </div>
         </div>
@@ -2979,6 +3057,121 @@ export default function BusinessInformation({
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Book Online Times Tab */}
+      {activeTab === 'booking-times' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Book Online Times</h2>
+            <p className="text-gray-500 text-sm mt-1">
+              Set specific time slots customers can book online. When slots are configured, only these times will appear in the booking widget — no other times will be shown.
+            </p>
+          </div>
+
+          {/* Add new slot */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+            <h3 className="text-sm font-semibold text-blue-900 mb-4 flex items-center gap-2">
+              <Plus className="w-4 h-4" /> Add a Time Slot
+            </h3>
+            <div className="flex flex-col sm:flex-row gap-3 items-start">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Time</label>
+                <input
+                  type="time"
+                  value={newSlotTime}
+                  onChange={e => setNewSlotTime(e.target.value)}
+                  className="px-3 py-2.5 rounded-xl border border-blue-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Label <span className="font-normal text-gray-400">(optional)</span></label>
+                <input
+                  type="text"
+                  value={newSlotLabel}
+                  onChange={e => setNewSlotLabel(e.target.value)}
+                  placeholder="e.g. Morning Slot, Afternoon Detail"
+                  className="w-full px-3 py-2.5 rounded-xl border border-blue-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                />
+              </div>
+              <div className="sm:mt-5">
+                <button
+                  onClick={addBookingSlot}
+                  disabled={addingSlot || !newSlotTime}
+                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  {addingSlot ? 'Adding...' : 'Add Slot'}
+                </button>
+              </div>
+            </div>
+            {slotError && <p className="text-sm text-red-600 mt-3">{slotError}</p>}
+          </div>
+
+          {/* Existing slots */}
+          {loadingSlots ? (
+            <p className="text-sm text-gray-400 py-4 text-center">Loading...</p>
+          ) : bookingSlots.length === 0 ? (
+            <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
+              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium">No time slots configured</p>
+              <p className="text-gray-400 text-sm mt-1">
+                When no slots are set, the booking widget shows all available 30-minute windows during business hours.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                {bookingSlots.filter(s => s.active).length} active slot{bookingSlots.filter(s => s.active).length !== 1 ? 's' : ''} — customers can only book at these times
+              </p>
+              {bookingSlots.map(slot => (
+                <div
+                  key={slot.id}
+                  className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all ${
+                    slot.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200 opacity-60'
+                  }`}
+                >
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${slot.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                    <Clock className={`w-5 h-5 ${slot.active ? 'text-blue-600' : 'text-gray-400'}`} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-lg font-bold ${slot.active ? 'text-gray-900' : 'text-gray-400'}`}>
+                      {formatSlotTime(slot.slot_time)}
+                    </p>
+                    {slot.label && <p className="text-sm text-gray-500">{slot.label}</p>}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => toggleBookingSlot(slot.id, !slot.active)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                        slot.active
+                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      }`}
+                      title={slot.active ? 'Click to disable' : 'Click to enable'}
+                    >
+                      {slot.active
+                        ? <><ToggleRight className="w-4 h-4" /> Active</>
+                        : <><ToggleLeft className="w-4 h-4" /> Inactive</>
+                      }
+                    </button>
+                    <button
+                      onClick={() => deleteBookingSlot(slot.id)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title="Remove slot"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+            <strong>Note:</strong> These times still respect your business hours and existing bookings. A slot won't appear if it conflicts with a booking already on the calendar.
           </div>
         </div>
       )}
