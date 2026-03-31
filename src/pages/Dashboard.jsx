@@ -45,6 +45,7 @@ import Invoices from '../components/dashboard/Invoices';
 import Estimates from '../components/dashboard/Estimates';
 import PaymentProcessors from '../components/dashboard/PaymentSettings';
 import Transactions from '../components/dashboard/Transactions';
+import TaxFees from '../components/dashboard/TaxFees';
 import DomainPolicyModal from '../components/dashboard/DomainPolicyModal';
 
 // Combined Payment Settings page with sub-tabs
@@ -56,6 +57,7 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
     { key: 'invoices', label: 'Invoices' },
     { key: 'estimates', label: 'Estimates' },
     { key: 'transactions', label: 'Transactions' },
+    { key: 'tax-fees', label: 'Taxes & Fees' },
   ];
   return (
     <div>
@@ -82,6 +84,7 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
       {subTab === 'invoices' && <Invoices key={`invoices-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} />}
       {subTab === 'estimates' && <Estimates key={`estimates-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} />}
       {subTab === 'transactions' && <Transactions key={`transactions-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} />}
+      {subTab === 'tax-fees' && <TaxFees apiUrl={apiUrl} authFetch={authFetch} />}
     </div>
   );
 }

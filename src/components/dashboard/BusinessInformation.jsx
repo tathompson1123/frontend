@@ -233,10 +233,11 @@ export default function BusinessInformation({
 
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [employeeForm, setEmployeeForm] = useState({ 
+  const [employeeForm, setEmployeeForm] = useState({
     name: '', email: '', phone: '', color: '#3b82f6',
     workDays: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
-    workHours: { startTime: '09:00', endTime: '17:00' }
+    workHours: { startTime: '09:00', endTime: '17:00' },
+    serviceIds: []
   });
   const [isSavingEmployee, setIsSavingEmployee] = useState(false);
   const [showGroupsModal, setShowGroupsModal] = useState(false);
@@ -379,9 +380,6 @@ export default function BusinessInformation({
     }
     if (activeTab === 'services') {
       fetchCategories();
-    }
-    if (activeTab === 'booking-times') {
-      fetchBookingSlots();
     }
   }, [activeTab]);
 
@@ -1163,10 +1161,11 @@ export default function BusinessInformation({
       if (!response.ok) throw new Error('Failed to save employee');
       setShowAddEmployee(false);
       setEditingEmployee(null);
-      setEmployeeForm({ 
+      setEmployeeForm({
         name: '', email: '', phone: '', color: getNextColor(),
         workDays: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
-        workHours: { startTime: '09:00', endTime: '17:00' }
+        workHours: { startTime: '09:00', endTime: '17:00' },
+        serviceIds: []
       });
       fetchEmployees();
     } catch (error) {
@@ -1184,7 +1183,8 @@ export default function BusinessInformation({
       phone: employee.phone || '',
       color: employee.color || '#3b82f6',
       workDays: employee.work_days || { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
-      workHours: employee.work_hours || { startTime: '09:00', endTime: '17:00' }
+      workHours: employee.work_hours || { startTime: '09:00', endTime: '17:00' },
+      serviceIds: employee.service_ids || []
     });
     setShowAddEmployee(true);
   };
@@ -1245,16 +1245,6 @@ export default function BusinessInformation({
                 App Settings
               </div>
               {activeTab === 'app-settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
-            </button>
-            <button
-              onClick={() => setActiveTab('booking-times')}
-              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'booking-times' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-            >
-              <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                Book Online Times
-              </div>
-              {activeTab === 'booking-times' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
           </div>
         </div>
@@ -1623,10 +1613,22 @@ export default function BusinessInformation({
                 {services.filter(s => s.is_addon).length}
               </span>
             </button>
+            <button
+              type="button"
+              onClick={() => { setServiceSubTab('booking-times'); fetchBookingSlots(); }}
+              className={`px-6 py-3 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+                serviceSubTab === 'booking-times'
+                  ? 'border-blue-500 text-blue-700'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              Book Online Times
+            </button>
           </div>
 
           {/* Add button below tabs */}
-          {serviceSubTab !== 'categories' && (
+          {serviceSubTab !== 'categories' && serviceSubTab !== 'booking-times' && (
             <div className="flex justify-start">
               <button
                 type="button"
@@ -2244,9 +2246,123 @@ export default function BusinessInformation({
             </div>
           )}
 
+          {/* Book Online Times Sub-tab */}
+          {serviceSubTab === 'booking-times' && (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Book Online Times</h2>
+                <p className="text-gray-500 text-sm mt-1">
+                  Set specific time slots customers can book online. When slots are configured, only these times will appear in the booking widget.
+                </p>
+              </div>
+
+              {/* Add new slot */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
+                <h3 className="text-sm font-semibold text-blue-900 mb-4 flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Add a Time Slot
+                </h3>
+                <div className="flex flex-col sm:flex-row gap-3 items-start">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Time</label>
+                    <input
+                      type="time"
+                      value={newSlotTime}
+                      onChange={e => setNewSlotTime(e.target.value)}
+                      className="px-3 py-2.5 rounded-xl border border-blue-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">Label <span className="font-normal text-gray-400">(optional)</span></label>
+                    <input
+                      type="text"
+                      value={newSlotLabel}
+                      onChange={e => setNewSlotLabel(e.target.value)}
+                      placeholder="e.g. Morning Slot, Afternoon Detail"
+                      className="w-full px-3 py-2.5 rounded-xl border border-blue-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  <div className="sm:mt-5">
+                    <button
+                      onClick={addBookingSlot}
+                      disabled={addingSlot || !newSlotTime}
+                      className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
+                    >
+                      <Plus className="w-4 h-4" />
+                      {addingSlot ? 'Adding...' : 'Add Slot'}
+                    </button>
+                  </div>
+                </div>
+                {slotError && <p className="text-sm text-red-600 mt-3">{slotError}</p>}
+              </div>
+
+              {/* Existing slots */}
+              {loadingSlots ? (
+                <p className="text-sm text-gray-400 py-4 text-center">Loading...</p>
+              ) : bookingSlots.length === 0 ? (
+                <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
+                  <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">No time slots configured</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    When no slots are set, the booking widget shows all available 30-minute windows during business hours.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                    {bookingSlots.filter(s => s.active).length} active slot{bookingSlots.filter(s => s.active).length !== 1 ? 's' : ''} — customers can only book at these times
+                  </p>
+                  {bookingSlots.map(slot => (
+                    <div
+                      key={slot.id}
+                      className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all ${
+                        slot.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200 opacity-60'
+                      }`}
+                    >
+                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${slot.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
+                        <Clock className={`w-5 h-5 ${slot.active ? 'text-blue-600' : 'text-gray-400'}`} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-lg font-bold ${slot.active ? 'text-gray-900' : 'text-gray-400'}`}>
+                          {formatSlotTime(slot.slot_time)}
+                        </p>
+                        {slot.label && <p className="text-sm text-gray-500">{slot.label}</p>}
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <button
+                          onClick={() => toggleBookingSlot(slot.id, !slot.active)}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                            slot.active
+                              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                          }`}
+                        >
+                          {slot.active
+                            ? <><ToggleRight className="w-4 h-4" /> Active</>
+                            : <><ToggleLeft className="w-4 h-4" /> Inactive</>
+                          }
+                        </button>
+                        <button
+                          onClick={() => deleteBookingSlot(slot.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+                <strong>Note:</strong> These times still respect your business hours and existing bookings. A slot won't appear if it conflicts with a booking already on the calendar.
+              </div>
+            </div>
+          )}
+
           </div>
 
           {/* Right side — Booking Preview */}
+          {serviceSubTab !== 'booking-times' && (<>
           <div className="w-[380px] flex-shrink-0">
             <div className="sticky top-6">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
@@ -2394,6 +2510,7 @@ export default function BusinessInformation({
               </div>
             </div>
           </div>
+          </>)}
           </div>
 
         </div>
@@ -2610,6 +2727,33 @@ export default function BusinessInformation({
                       <input type="time" value={employeeForm.workHours.endTime} onChange={(e) => setEmployeeForm({ ...employeeForm, workHours: { ...employeeForm.workHours, endTime: e.target.value } })} required className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none" />
                     </div>
                   </div>
+                  {services.filter(s => !s.is_addon).length > 0 && (
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">Assigned Services</label>
+                      <p className="text-xs text-gray-500 mb-3">Select which services this employee can perform. Leave all unchecked to allow any service.</p>
+                      <div className="border-2 border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
+                        {services.filter(s => !s.is_addon).map(s => (
+                          <label key={s.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={employeeForm.serviceIds.includes(s.id)}
+                              onChange={(e) => {
+                                const ids = e.target.checked
+                                  ? [...employeeForm.serviceIds, s.id]
+                                  : employeeForm.serviceIds.filter(id => id !== s.id);
+                                setEmployeeForm({ ...employeeForm, serviceIds: ids });
+                              }}
+                              className="w-4 h-4 accent-amber-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium text-gray-900">{s.name}</span>
+                            </div>
+                            <span className="text-xs text-gray-500">${s.price}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="flex gap-4">
                     <button type="button" onClick={() => { setShowAddEmployee(false); setEditingEmployee(null); }} className="flex-1 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors">Cancel</button>
                     <button type="submit" disabled={isSavingEmployee} className="flex-1 bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all disabled:opacity-50">
@@ -3061,120 +3205,6 @@ export default function BusinessInformation({
         </div>
       )}
 
-      {/* Book Online Times Tab */}
-      {activeTab === 'booking-times' && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Book Online Times</h2>
-            <p className="text-gray-500 text-sm mt-1">
-              Set specific time slots customers can book online. When slots are configured, only these times will appear in the booking widget — no other times will be shown.
-            </p>
-          </div>
-
-          {/* Add new slot */}
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-blue-900 mb-4 flex items-center gap-2">
-              <Plus className="w-4 h-4" /> Add a Time Slot
-            </h3>
-            <div className="flex flex-col sm:flex-row gap-3 items-start">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Time</label>
-                <input
-                  type="time"
-                  value={newSlotTime}
-                  onChange={e => setNewSlotTime(e.target.value)}
-                  className="px-3 py-2.5 rounded-xl border border-blue-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-              <div className="flex-1">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Label <span className="font-normal text-gray-400">(optional)</span></label>
-                <input
-                  type="text"
-                  value={newSlotLabel}
-                  onChange={e => setNewSlotLabel(e.target.value)}
-                  placeholder="e.g. Morning Slot, Afternoon Detail"
-                  className="w-full px-3 py-2.5 rounded-xl border border-blue-200 bg-white text-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                />
-              </div>
-              <div className="sm:mt-5">
-                <button
-                  onClick={addBookingSlot}
-                  disabled={addingSlot || !newSlotTime}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold transition-all disabled:opacity-50 flex items-center gap-2"
-                >
-                  <Plus className="w-4 h-4" />
-                  {addingSlot ? 'Adding...' : 'Add Slot'}
-                </button>
-              </div>
-            </div>
-            {slotError && <p className="text-sm text-red-600 mt-3">{slotError}</p>}
-          </div>
-
-          {/* Existing slots */}
-          {loadingSlots ? (
-            <p className="text-sm text-gray-400 py-4 text-center">Loading...</p>
-          ) : bookingSlots.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-10 text-center">
-              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium">No time slots configured</p>
-              <p className="text-gray-400 text-sm mt-1">
-                When no slots are set, the booking widget shows all available 30-minute windows during business hours.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                {bookingSlots.filter(s => s.active).length} active slot{bookingSlots.filter(s => s.active).length !== 1 ? 's' : ''} — customers can only book at these times
-              </p>
-              {bookingSlots.map(slot => (
-                <div
-                  key={slot.id}
-                  className={`flex items-center gap-4 px-5 py-4 rounded-xl border transition-all ${
-                    slot.active ? 'bg-white border-gray-200' : 'bg-gray-50 border-gray-200 opacity-60'
-                  }`}
-                >
-                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${slot.active ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                    <Clock className={`w-5 h-5 ${slot.active ? 'text-blue-600' : 'text-gray-400'}`} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-lg font-bold ${slot.active ? 'text-gray-900' : 'text-gray-400'}`}>
-                      {formatSlotTime(slot.slot_time)}
-                    </p>
-                    {slot.label && <p className="text-sm text-gray-500">{slot.label}</p>}
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0">
-                    <button
-                      onClick={() => toggleBookingSlot(slot.id, !slot.active)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                        slot.active
-                          ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                          : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                      }`}
-                      title={slot.active ? 'Click to disable' : 'Click to enable'}
-                    >
-                      {slot.active
-                        ? <><ToggleRight className="w-4 h-4" /> Active</>
-                        : <><ToggleLeft className="w-4 h-4" /> Inactive</>
-                      }
-                    </button>
-                    <button
-                      onClick={() => deleteBookingSlot(slot.id)}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                      title="Remove slot"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
-            <strong>Note:</strong> These times still respect your business hours and existing bookings. A slot won't appear if it conflicts with a booking already on the calendar.
-          </div>
-        </div>
-      )}
     </div>
   );
 }

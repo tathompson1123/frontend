@@ -455,10 +455,6 @@ export default function Invoices({ apiUrl, user, authFetch }) {
           <p className="text-gray-600 mt-1">Create and manage invoices for your customers</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={() => { setSettingsTaxRate(String(defaultTaxRate)); setShowSettings(true); }}
-            className="flex items-center gap-2 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-semibold">
-            <Settings className="w-4 h-4" /> Tax & Fees
-          </button>
           <button onClick={openCreateModal} className="flex items-center gap-2 px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition font-semibold">
             <Plus className="w-5 h-5" /> New Invoice
           </button>
@@ -822,8 +818,8 @@ export default function Invoices({ apiUrl, user, authFetch }) {
         </div>
       )}
 
-      {/* Tax & Fees Settings Modal */}
-      {showSettings && (
+      {/* Tax & Fees Settings Modal (moved to Taxes & Fees tab) */}
+      {false && showSettings && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
