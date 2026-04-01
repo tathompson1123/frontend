@@ -474,6 +474,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   // Booking card for sidebar list
   const BookingCard = ({ booking, selectedBooking, setSelectedBooking, setBookingNotes, setShowBookingModal, setEditingNotes, formatTime, handleCompleteBooking, setIsEditingBooking, setEditingBookingId, setNewBooking, setShowCreateBookingModal, compact }) => {
     const isCompleted = booking.status === 'completed' || booking.status === 'cancelled';
+    // Flag bookings that are past their date but still "confirmed" (not yet marked complete)
+    const isPastDue = !isCompleted && booking.status === 'confirmed' && booking.booking_date && (() => {
+      const p = booking.booking_date.toString().slice(0, 10).split('-');
+      return new Date(p[0], p[1] - 1, p[2]) < new Date(new Date().toDateString());
+    })();
     return (
       <div
         className={`w-full rounded-lg border transition-all ${
@@ -481,14 +486,23 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             ? 'bg-blue-50 border-blue-300'
             : isCompleted
             ? 'bg-gray-50 border-gray-100 opacity-60'
+            : isPastDue
+            ? 'bg-orange-50 border-orange-300'
             : 'bg-white border-gray-200 hover:border-gray-300'
         } ${compact ? 'p-2' : 'p-3'}`}
       >
         <div className="flex items-start justify-between mb-1">
           <div className="flex-1 min-w-0">
-            <p className={`font-semibold text-gray-900 truncate ${compact ? 'text-xs' : 'text-sm'}`}>
-              {booking.customer_name}
-            </p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <p className={`font-semibold text-gray-900 truncate ${compact ? 'text-xs' : 'text-sm'}`}>
+                {booking.customer_name}
+              </p>
+              {isPastDue && (
+                <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
+                  Past Due
+                </span>
+              )}
+            </div>
             {!compact && (
               <p className="text-xs text-gray-600 truncate">
                 {booking.items?.[0]?.service_name || 'Service'}

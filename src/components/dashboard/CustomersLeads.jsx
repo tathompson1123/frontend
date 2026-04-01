@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { 
-  Users, 
-  Mail, 
-  Phone, 
+import {
+  Users,
+  Mail,
+  Phone,
   Search,
   Sparkles,
   Save,
@@ -24,7 +24,11 @@ import {
   Settings,
   Clock,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Bell,
+  AlertCircle,
+  Calendar,
+  Flag
 } from 'lucide-react';
 
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
@@ -725,13 +729,33 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
   const leadColumns = [
     { key: 'name', label: 'Name', width: '200px', editable: true },
-    { key: 'created_at', label: 'Date & Time', width: '170px', editable: false, type: 'datetime' },
+    { key: 'created_at', label: 'Date In', width: '140px', editable: false, type: 'datetime' },
     { key: 'status', label: 'Stage', width: '180px', editable: true, type: 'select', options: ['new', 'contacted_email', 'contacted_sms', 'qualified', 'converted', 'not_interested'] },
+    { key: 'priority', label: 'Priority', width: '120px', editable: true, type: 'select', options: ['low', 'normal', 'high', 'urgent'] },
+    { key: 'follow_up_date', label: 'Follow-Up', width: '140px', editable: true, type: 'date' },
     { key: 'phone', label: 'Phone', width: '150px', editable: true },
     { key: 'email', label: 'Email', width: '250px', editable: true },
     { key: 'source', label: 'Source', width: '150px', editable: true, type: 'select', options: ['ai_chat_agent', 'lead_form', 'manual'] },
     { key: 'notes', label: 'Notes', width: '300px', editable: true },
   ];
+
+  // Returns age info for a lead — used for "Needs Check-Up" flagging
+  const getLeadAgeFlag = (lead) => {
+    if (!lead.created_at) return null;
+    const terminalStatuses = ['converted', 'not_interested'];
+    if (terminalStatuses.includes(lead.status)) return null;
+    const ageMs = Date.now() - new Date(lead.created_at).getTime();
+    const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
+    if (ageDays >= 14) return { label: 'Needs Check-Up', days: ageDays, level: 'urgent' };
+    if (ageDays >= 7) return { label: 'Follow Up', days: ageDays, level: 'warn' };
+    return null;
+  };
+
+  // Returns true if a lead's follow_up_date is today or in the past
+  const isFollowUpOverdue = (lead) => {
+    if (!lead.follow_up_date) return false;
+    return new Date(lead.follow_up_date) <= new Date();
+  };
 
   const customerColumns = [
     { key: 'name', label: 'Name', width: '200px', editable: true },
@@ -890,6 +914,24 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         )}
       </div>
 
+      {/* Needs Attention banner — only on Leads tab */}
+      {activeTab === 'leads' && (() => {
+        const allLeads = leadTables.flatMap(t => t.leads);
+        const urgentCount = allLeads.filter(l => getLeadAgeFlag(l)?.level === 'urgent').length;
+        const warnCount = allLeads.filter(l => getLeadAgeFlag(l)?.level === 'warn').length;
+        const overdueCount = allLeads.filter(l => isFollowUpOverdue(l)).length;
+        if (urgentCount === 0 && warnCount === 0 && overdueCount === 0) return null;
+        return (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-5 py-3 flex items-center gap-4 flex-wrap">
+            <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
+            <span className="text-sm font-semibold text-red-800">Leads need attention:</span>
+            {urgentCount > 0 && <span className="text-sm bg-red-100 text-red-700 px-2 py-0.5 rounded-full">{urgentCount} overdue (14+ days)</span>}
+            {warnCount > 0 && <span className="text-sm bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{warnCount} need follow-up (7+ days)</span>}
+            {overdueCount > 0 && <span className="text-sm bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">{overdueCount} follow-up date passed</span>}
+          </div>
+        );
+      })()}
+
       {/* Table (leads/customers) */}
       {(activeTab === 'leads' || activeTab === 'customers') && (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
@@ -967,6 +1009,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               setShowSmsModal={setShowSmsModal}
               setConvertingLead={setConvertingLead}
               setShowConvertModal={setShowConvertModal}
+              updateLeadField={updateLeadField}
+              getLeadAgeFlag={getLeadAgeFlag}
+              isFollowUpOverdue={isFollowUpOverdue}
             />
           ) : (
             <CustomersTable
@@ -1783,7 +1828,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 }
 
 // LeadsTable component
-function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead, setSelectedLead, loadSmsConversation, setShowSmsModal, setConvertingLead, setShowConvertModal }) {
+function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead, setSelectedLead, loadSmsConversation, setShowSmsModal, setConvertingLead, setShowConvertModal, updateLeadField, getLeadAgeFlag, isFollowUpOverdue }) {
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
@@ -1811,8 +1856,11 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200">
-        {leads.map((lead, idx) => (
-          <tr key={lead.id} className="hover:bg-gray-50">
+        {leads.map((lead, idx) => {
+          const ageFlag = getLeadAgeFlag ? getLeadAgeFlag(lead) : null;
+          const followUpOverdue = isFollowUpOverdue ? isFollowUpOverdue(lead) : false;
+          return (
+          <tr key={lead.id} className={`hover:bg-gray-50 ${ageFlag?.level === 'urgent' ? 'bg-red-50' : ageFlag?.level === 'warn' ? 'bg-amber-50' : ''}`}>
             <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
             {columns.map((col) => (
               <td key={col.key} className="px-4 py-3 text-sm">
@@ -1823,6 +1871,15 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
                         <option value="">Select...</option>
                         {col.options.map(opt => <option key={opt} value={opt}>{formatLabel(opt)}</option>)}
                       </select>
+                    ) : col.type === 'date' ? (
+                      <input
+                        type="date"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
+                        autoFocus
+                        onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
+                      />
                     ) : (
                       <input
                         type="text"
@@ -1837,13 +1894,43 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
                     <button onClick={cancelCellEdit} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4" /></button>
                   </div>
                 ) : (
-                  <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key])} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
-                    {col.key === 'status' ? (
+                  <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key] || '')} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
+                    {col.key === 'name' ? (
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>{lead.name || <span className="text-gray-400">-</span>}</span>
+                        {ageFlag && (
+                          <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                            ageFlag.level === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
+                          }`}>
+                            <AlertCircle className="w-3 h-3" />
+                            {ageFlag.label}
+                          </span>
+                        )}
+                      </div>
+                    ) : col.key === 'status' ? (
                       <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+                    ) : col.key === 'priority' ? (
+                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                        lead.priority === 'urgent' ? 'bg-red-100 text-red-700'
+                        : lead.priority === 'high' ? 'bg-orange-100 text-orange-700'
+                        : lead.priority === 'low' ? 'bg-gray-100 text-gray-500'
+                        : 'bg-blue-50 text-blue-600'
+                      }`}>{formatLabel(lead.priority || 'normal')}</span>
+                    ) : col.key === 'follow_up_date' ? (
+                      lead.follow_up_date ? (
+                        <span className={`flex items-center gap-1 text-xs font-medium ${followUpOverdue ? 'text-red-600' : 'text-gray-700'}`}>
+                          {followUpOverdue && <Bell className="w-3 h-3" />}
+                          {new Date(lead.follow_up_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      ) : <span className="text-gray-400 text-xs">Set date</span>
                     ) : col.key === 'source' ? (
                       <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
                     ) : col.type === 'datetime' ? (
-                      lead[col.key] ? <span className="text-gray-600">{new Date(lead[col.key]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(lead[col.key]).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span> : <span className="text-gray-400">-</span>
+                      lead[col.key] ? (
+                        <span className="text-gray-600 text-xs">
+                          {new Date(lead[col.key]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </span>
+                      ) : <span className="text-gray-400">-</span>
                     ) : col.key === 'email' ? (
                       <a href={`mailto:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
                     ) : col.key === 'phone' ? (
@@ -1888,7 +1975,8 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
               </div>
             </td>
           </tr>
-        ))}
+          );
+        })}
       </tbody>
     </table>
   );

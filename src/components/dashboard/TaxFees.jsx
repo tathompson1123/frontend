@@ -36,6 +36,7 @@ export default function TaxFees({ apiUrl, authFetch }) {
     try {
       await authFetch(`${apiUrl}/api/invoices/settings`, {
         method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ defaultTaxRate: parseFloat(taxRate) || 0 }),
       });
       const rate = parseFloat(taxRate) || 0;

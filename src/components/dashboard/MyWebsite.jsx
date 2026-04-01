@@ -17,7 +17,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
   const [showEditWebsite, setShowEditWebsite] = useState(false);
   const [showConnectWebsite, setShowConnectWebsite] = useState(false);
   const [existingWebsiteUrl, setExistingWebsiteUrl] = useState('');
-  const [subTab, setSubTab] = useState('website');
+  const [subTab, setSubTab] = useState('integrate');
 
   // Publish wizard state
   const [showPublishWizard, setShowPublishWizard] = useState(false);
@@ -247,29 +247,8 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         </div>
       )}
 
-      {/* Sub-tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-        {[
-          { key: 'website', label: 'Sorce Website', icon: Globe },
-          { key: 'integrate', label: 'Integrate Website', icon: Code }
-        ].map(t => {
-          const TabIcon = t.icon;
-          return (
-            <button
-              key={t.key}
-              onClick={() => setSubTab(t.key)}
-              className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition flex items-center gap-2 ${
-                subTab === t.key
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <TabIcon className="w-4 h-4" />
-              {t.label}
-            </button>
-          );
-        })}
-      </div>
+      {/* Sub-tabs — Sorce Website hidden; Integrate Website is the active focus */}
+      {/* <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit"> ... </div> */}
 
       {/* Header with action buttons */}
       <div className={`flex justify-between items-center ${subTab === 'integrate' ? 'hidden' : ''}`}>

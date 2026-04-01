@@ -200,7 +200,7 @@ export default function BusinessInformation({
   const [editingService, setEditingService] = useState(null);
   const [serviceForm, setServiceForm] = useState({
     name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '',
-    categoryId: '', bufferMinutes: '', isAddon: false
+    categoryId: '', bufferMinutes: '', isAddon: false, locationType: 'business_address', customAddress: ''
   });
   const [isSavingService, setIsSavingService] = useState(false);
   const [serviceVariants, setServiceVariants] = useState([]);
@@ -982,14 +982,16 @@ export default function BusinessInformation({
           mediaType: serviceForm.mediaType,
           categoryId: serviceForm.categoryId ? parseInt(serviceForm.categoryId) : null,
           bufferMinutes: serviceForm.bufferMinutes ? parseInt(serviceForm.bufferMinutes) : 0,
-          isAddon: serviceForm.isAddon
+          isAddon: serviceForm.isAddon,
+          locationType: serviceForm.locationType,
+          customAddress: serviceForm.customAddress || null
         })
       });
 
       if (!response.ok) throw new Error('Failed to save service');
       setShowAddService(false);
       setEditingService(null);
-      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
+      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false, locationType: 'business_address', customAddress: '' });
       setServiceVariants([]);
       setShowVariantForm(false);
       setEditingVariant(null);
@@ -1012,7 +1014,9 @@ export default function BusinessInformation({
       mediaType: service.media_type || '',
       categoryId: service.category_id || '',
       bufferMinutes: service.buffer_minutes || '',
-      isAddon: service.is_addon || false
+      isAddon: service.is_addon || false,
+      locationType: service.location_type || 'business_address',
+      customAddress: service.custom_address || ''
     });
     setServiceSubTab(service.is_addon ? 'addons' : 'main');
     // Fetch variants for this service
@@ -1633,7 +1637,7 @@ export default function BusinessInformation({
               <button
                 type="button"
                 onClick={() => {
-                  setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: serviceSubTab === 'addons' });
+                  setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: serviceSubTab === 'addons', locationType: 'business_address', customAddress: '' });
                   setEditingService(null);
                   setServiceVariants([]);
                   setVariantForm({ name: '', price: '', durationHours: '' });
@@ -1811,7 +1815,7 @@ export default function BusinessInformation({
                   <button
                     type="button"
                     onClick={() => {
-                      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
+                      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false, locationType: 'business_address', customAddress: '' });
                       setShowAddService(true);
                     }}
                     className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
@@ -1864,7 +1868,7 @@ export default function BusinessInformation({
                   <button
                     type="button"
                     onClick={() => {
-                      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: true });
+                      setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: true, locationType: 'business_address', customAddress: '' });
                       setShowAddService(true);
                     }}
                     className="bg-gradient-to-r from-violet-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
@@ -2214,6 +2218,50 @@ export default function BusinessInformation({
                       )}
                     </div>
                   </div>
+                  {/* Booking Form — Location settings */}
+                  <div className="border-2 border-green-100 rounded-xl p-4 bg-green-50">
+                    <h3 className="text-sm font-bold text-gray-800 mb-1">Booking Form — Location</h3>
+                    <p className="text-xs text-gray-500 mb-3">Where does this service take place? Shown on booking confirmations.</p>
+                    <div className="space-y-2">
+                      {[
+                        { value: 'business_address', label: 'Business address', desc: 'Default location from Business Info' },
+                        { value: 'custom_address', label: 'Custom address', desc: 'A different fixed address for this service' },
+                        { value: 'customer_address', label: "Customer's address", desc: 'Mobile / on-site — customer enters their location' },
+                      ].map(opt => (
+                        <label key={opt.value} className={`flex items-center gap-3 p-3 rounded-lg border-2 cursor-pointer transition ${
+                          serviceForm.locationType === opt.value ? 'border-green-400 bg-white' : 'border-transparent bg-white hover:border-green-200'
+                        }`}>
+                          <input
+                            type="radio"
+                            name="locationType"
+                            value={opt.value}
+                            checked={serviceForm.locationType === opt.value}
+                            onChange={() => setServiceForm({ ...serviceForm, locationType: opt.value })}
+                            className="accent-green-600"
+                          />
+                          <div>
+                            <p className="text-xs font-semibold text-gray-800">{opt.label}</p>
+                            <p className="text-xs text-gray-500">{opt.desc}</p>
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                    {serviceForm.locationType === 'custom_address' && (
+                      <input
+                        type="text"
+                        value={serviceForm.customAddress}
+                        onChange={e => setServiceForm({ ...serviceForm, customAddress: e.target.value })}
+                        placeholder="123 Main St, City, State 12345"
+                        className="mt-3 w-full px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-green-400 focus:outline-none text-sm"
+                      />
+                    )}
+                    {serviceForm.locationType === 'customer_address' && (
+                      <p className="mt-3 text-xs text-green-800 bg-green-100 px-3 py-2 rounded-lg">
+                        The booking chat will ask the customer for their address when booking this service.
+                      </p>
+                    )}
+                  </div>
+
                   {saveError && (
                     <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700">{saveError}</div>
                   )}
@@ -2223,7 +2271,7 @@ export default function BusinessInformation({
                       onClick={() => {
                         setShowAddService(false);
                         setEditingService(null);
-                        setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false });
+                        setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false, locationType: 'business_address', customAddress: '' });
                         setServiceVariants([]);
                         setShowVariantForm(false);
                         setEditingVariant(null);

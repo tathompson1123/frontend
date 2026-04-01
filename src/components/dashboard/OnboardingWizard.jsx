@@ -29,11 +29,11 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
   const steps = [
     {
       number: 1,
-      title: 'Create or Connect Your Website',
-      description: 'Get your business online',
+      title: 'Integrate Your Website',
+      description: 'Connect SORCE to your existing site',
       icon: Globe,
       color: 'purple',
-      component: 'website'
+      component: 'settings'
     },
     {
       number: 2,
@@ -216,20 +216,20 @@ export default function OnboardingWizard({ user, onComplete, onSkip, apiUrl, aut
               {currentStep === 1 && (
                 <div>
                   <p className="text-gray-700 mb-4">
-                    Create a professional website with AI or connect your existing one. Your website is the foundation of your online presence.
+                    Add the SORCE embed code to your existing website — Wix, Squarespace, WordPress, Webflow, and more. This unlocks bookings, lead capture, and the AI chat agent on your site.
                   </p>
                   <ul className="space-y-2 text-sm text-gray-600">
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Generate a website instantly with AI</span>
+                      <span>Works with any website platform</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Or connect your existing website</span>
+                      <span>One-line install — paste and go</span>
                     </li>
                     <li className="flex items-start gap-2">
                       <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span>Customize with our visual editor</span>
+                      <span>Enables booking widget and AI chat agent</span>
                     </li>
                   </ul>
                 </div>
