@@ -477,7 +477,7 @@ useEffect(() => {
 
   const topMenuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
-    { id: 'website', icon: Globe, label: 'My Website' },
+    { id: 'website', icon: Globe, label: 'Embed on my website' },
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
     { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
   ];
