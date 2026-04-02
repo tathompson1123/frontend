@@ -93,13 +93,39 @@ const PLATFORM_STEPS = {
 
 export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
   const [siteKey, setSiteKey] = useState('');
+  const DEFAULT_FIELDS = [
+    { id: 'name',    label: 'Name',                placeholder: 'Your name',                      required: true },
+    { id: 'email',   label: 'Email',               placeholder: 'your@email.com',                 required: true },
+    { id: 'phone',   label: 'Phone',               placeholder: '(555) 123-4567',                 required: false },
+    { id: 'message', label: 'Message',             placeholder: 'Tell us about what you need...', required: false },
+  ];
+  const ALL_FIELD_DEFAULTS = {
+    name:    { label: 'Name',                placeholder: 'Your name',                      required: true },
+    email:   { label: 'Email',               placeholder: 'your@email.com',                 required: true },
+    phone:   { label: 'Phone',               placeholder: '(555) 123-4567',                 required: false },
+    service: { label: 'Service Interested In', placeholder: 'What service are you looking for?', required: false },
+    message: { label: 'Message',             placeholder: 'Tell us about what you need...', required: false },
+  };
+  // Normalize loaded fields: convert string array → object array
+  const normalizeFields = (raw) => {
+    if (!Array.isArray(raw) || raw.length === 0) return DEFAULT_FIELDS;
+    return raw.map(f => {
+      if (typeof f === 'string') {
+        const d = ALL_FIELD_DEFAULTS[f] || { label: f, placeholder: '', required: false };
+        return { id: f, label: d.label, placeholder: d.placeholder, required: d.required };
+      }
+      return f;
+    });
+  };
+
   const [settings, setSettings] = useState({
     chatEnabled: false,
     bookingEnabled: false,
     bookingStyle: 'chat',
     leadFormEnabled: false,
     leadFormTitle: 'Get a Free Quote',
-    leadFormFields: ['name', 'email', 'phone', 'message'],
+    leadFormDescription: "Fill out the form and we'll get back to you shortly.",
+    leadFormFields: DEFAULT_FIELDS,
     bookingButtonText: 'Book Online',
     submitButtonText: 'Submit',
     formRules: [],
@@ -115,7 +141,7 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
   const [previewRuleIdx, setPreviewRuleIdx] = useState(-1);
 
   const addPageRule = () => {
-    const rules = [...settings.formRules, { urlPattern: '/', formTitle: 'Get a Free Quote', formFields: ['name', 'email', 'phone', 'message'], submitButtonText: 'Submit' }];
+    const rules = [...settings.formRules, { urlPattern: '/', formTitle: 'Get a Free Quote', formFields: settings.leadFormFields.map(f => f.id), submitButtonText: 'Submit' }];
     setSettings({ ...settings, formRules: rules });
     setPreviewRuleIdx(rules.length - 1);
   };
@@ -132,14 +158,22 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
   };
   const toggleRuleField = (idx, field) => {
     const rule = settings.formRules[idx];
-    const fields = [...(rule.formFields || ['name', 'email', 'phone', 'message'])];
+    const fields = [...(rule.formFields || settings.leadFormFields.map(f => f.id))];
     const fidx = fields.indexOf(field);
-    if (fidx >= 0) fields.splice(fidx, 1); else fields.push(field);
+    if (fidx >= 0) { if (field !== 'name' && field !== 'email') fields.splice(fidx, 1); }
+    else fields.push(field);
     updatePageRule(idx, 'formFields', fields);
   };
+  // For preview: resolve fields as objects using global settings
+  const resolvePreviewFields = (fieldIds) => {
+    return fieldIds.map(id => {
+      const f = settings.leadFormFields.find(x => x.id === id);
+      return f || { id, label: ALL_FIELD_DEFAULTS[id]?.label || id, placeholder: ALL_FIELD_DEFAULTS[id]?.placeholder || '' };
+    });
+  };
   const previewConfig = previewRuleIdx >= 0 && settings.formRules[previewRuleIdx]
-    ? { title: settings.formRules[previewRuleIdx].formTitle || 'Get a Free Quote', fields: settings.formRules[previewRuleIdx].formFields || ['name', 'email', 'phone', 'message'], submitText: settings.formRules[previewRuleIdx].submitButtonText || 'Submit' }
-    : { title: settings.leadFormTitle || 'Get a Free Quote', fields: settings.leadFormFields || ['name', 'email', 'phone', 'message'], submitText: settings.submitButtonText || 'Submit' };
+    ? { title: settings.formRules[previewRuleIdx].formTitle || 'Get a Free Quote', fields: resolvePreviewFields(settings.formRules[previewRuleIdx].formFields || settings.leadFormFields.map(f => f.id)), submitText: settings.formRules[previewRuleIdx].submitButtonText || 'Submit' }
+    : { title: settings.leadFormTitle || 'Get a Free Quote', fields: settings.leadFormFields, submitText: settings.submitButtonText || 'Submit' };
 
   useEffect(() => {
     loadData();
@@ -163,7 +197,8 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
           bookingStyle: s.booking_style || 'chat',
           leadFormEnabled: s.lead_form_enabled || false,
           leadFormTitle: s.lead_form_title || 'Get a Free Quote',
-          leadFormFields: s.lead_form_fields || ['name', 'email', 'phone', 'message'],
+          leadFormDescription: s.lead_form_description || "Fill out the form and we'll get back to you shortly.",
+          leadFormFields: normalizeFields(s.lead_form_fields),
           bookingButtonText: s.booking_button_text || 'Book Online',
           submitButtonText: s.submit_button_text || 'Submit',
           formRules: s.form_rules || [],
@@ -606,31 +641,77 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Form Fields</label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['name', 'email', 'phone', 'service', 'message'].map(field => (
-                        <button
-                          key={field}
-                          onClick={() => {
-                            if (field === 'name' || field === 'email') return;
-                            const fields = [...settings.leadFormFields];
-                            const idx = fields.indexOf(field);
-                            if (idx >= 0) fields.splice(idx, 1); else fields.push(field);
-                            setSettings({ ...settings, leadFormFields: fields });
-                            setPreviewRuleIdx(-1);
-                          }}
-                          disabled={field === 'name' || field === 'email'}
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium transition ${
-                            settings.leadFormFields.includes(field)
-                              ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                              : 'bg-gray-100 text-gray-500 border border-gray-200'
-                          } ${(field === 'name' || field === 'email') ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-                        >
-                          {field.charAt(0).toUpperCase() + field.slice(1)}{(field === 'name' || field === 'email') && ' *'}
-                        </button>
-                      ))}
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Form Description</label>
+                    <input
+                      type="text"
+                      value={settings.leadFormDescription}
+                      onChange={e => { setSettings({ ...settings, leadFormDescription: e.target.value }); setPreviewRuleIdx(-1); }}
+                      className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none"
+                      placeholder="Fill out the form and we'll get back to you shortly."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-2">Form Fields</label>
+                    <div className="space-y-2">
+                      {['name', 'email', 'phone', 'service', 'message'].map(fid => {
+                        const isRequired = fid === 'name' || fid === 'email';
+                        const existing = settings.leadFormFields.find(f => f.id === fid);
+                        const isEnabled = !!existing;
+                        const def = ALL_FIELD_DEFAULTS[fid];
+                        return (
+                          <div key={fid} className={`border rounded-lg transition ${isEnabled ? 'border-blue-200 bg-blue-50/30' : 'border-gray-200 bg-gray-50/50'}`}>
+                            <div className="flex items-center gap-2 px-3 py-2">
+                              <button
+                                disabled={isRequired}
+                                onClick={() => {
+                                  let fields = [...settings.leadFormFields];
+                                  if (isEnabled) { fields = fields.filter(f => f.id !== fid); }
+                                  else { fields.push({ id: fid, label: def.label, placeholder: def.placeholder, required: def.required }); }
+                                  setSettings({ ...settings, leadFormFields: fields });
+                                  setPreviewRuleIdx(-1);
+                                }}
+                                className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition ${isEnabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'} ${isRequired ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                              >
+                                {isEnabled && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                              </button>
+                              <span className="text-xs font-semibold text-gray-700 flex-1">{def.label}{isRequired && <span className="text-red-400 ml-1">*</span>}</span>
+                            </div>
+                            {isEnabled && (
+                              <div className="px-3 pb-3 grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">Label</label>
+                                  <input
+                                    type="text"
+                                    value={existing.label}
+                                    onChange={e => {
+                                      const fields = settings.leadFormFields.map(f => f.id === fid ? { ...f, label: e.target.value } : f);
+                                      setSettings({ ...settings, leadFormFields: fields });
+                                      setPreviewRuleIdx(-1);
+                                    }}
+                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                    placeholder={def.label}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-500 mb-1">Placeholder</label>
+                                  <input
+                                    type="text"
+                                    value={existing.placeholder}
+                                    onChange={e => {
+                                      const fields = settings.leadFormFields.map(f => f.id === fid ? { ...f, placeholder: e.target.value } : f);
+                                      setSettings({ ...settings, leadFormFields: fields });
+                                      setPreviewRuleIdx(-1);
+                                    }}
+                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                    placeholder={def.placeholder}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">Name and email are always required.</p>
                   </div>
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Submit Button Text</label>
@@ -678,18 +759,23 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">Fields</label>
                         <div className="flex flex-wrap gap-1">
-                          {['name', 'email', 'phone', 'service', 'message'].map(field => (
-                            <button
-                              key={field}
-                              onClick={(e) => { e.stopPropagation(); toggleRuleField(idx, field); }}
-                              disabled={field === 'name' || field === 'email'}
-                              className={`px-2 py-0.5 rounded-full text-xs font-medium transition ${
-                                (rule.formFields || []).includes(field) ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-400 border border-gray-200'
-                              } ${(field === 'name' || field === 'email') ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
-                            >
-                              {field.charAt(0).toUpperCase() + field.slice(1)}{(field === 'name' || field === 'email') && '*'}
-                            </button>
-                          ))}
+                          {['name', 'email', 'phone', 'service', 'message'].map(field => {
+                            const glbl = settings.leadFormFields.find(f => f.id === field);
+                            const lbl = glbl?.label || ALL_FIELD_DEFAULTS[field]?.label || field;
+                            const isReq = field === 'name' || field === 'email';
+                            return (
+                              <button
+                                key={field}
+                                onClick={(e) => { e.stopPropagation(); toggleRuleField(idx, field); }}
+                                disabled={isReq}
+                                className={`px-2 py-0.5 rounded-full text-xs font-medium transition ${
+                                  (rule.formFields || []).includes(field) ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-gray-100 text-gray-400 border border-gray-200'
+                                } ${isReq ? 'opacity-75 cursor-not-allowed' : 'cursor-pointer'}`}
+                              >
+                                {lbl}{isReq && '*'}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                       <div>
@@ -742,38 +828,17 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
                     </div>
                     <div className="p-5 bg-white">
                       <h3 className="text-lg font-bold text-gray-900 mb-1">{previewConfig.title}</h3>
-                      <p className="text-xs text-gray-500 mb-4">Fill out the form and we'll get back to you shortly.</p>
+                      <p className="text-xs text-gray-500 mb-4">{settings.leadFormDescription}</p>
                       <div className="space-y-3">
-                        {previewConfig.fields.includes('name') && (
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
-                            <input type="text" placeholder="Your name" disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400" />
+                        {previewConfig.fields.map(f => (
+                          <div key={f.id}>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">{f.label}{f.required && <span className="text-red-400 ml-0.5">*</span>}</label>
+                            {f.id === 'message'
+                              ? <textarea rows="2" placeholder={f.placeholder} disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400 resize-none" />
+                              : <input type="text" placeholder={f.placeholder} disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400" />
+                            }
                           </div>
-                        )}
-                        {previewConfig.fields.includes('email') && (
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Email</label>
-                            <input type="email" placeholder="your@email.com" disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400" />
-                          </div>
-                        )}
-                        {previewConfig.fields.includes('phone') && (
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Phone</label>
-                            <input type="tel" placeholder="(555) 123-4567" disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400" />
-                          </div>
-                        )}
-                        {previewConfig.fields.includes('service') && (
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Service</label>
-                            <input type="text" placeholder="What service are you looking for?" disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400" />
-                          </div>
-                        )}
-                        {previewConfig.fields.includes('message') && (
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1">Message</label>
-                            <textarea rows="3" placeholder="Tell us about what you need..." disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400 resize-none" />
-                          </div>
-                        )}
+                        ))}
                         <div className="flex items-start gap-2">
                           <input type="checkbox" disabled className="mt-0.5" />
                           <span className="text-xs text-gray-400">I consent to receive text messages from [Business Name] about services I'm interested in. Message & data rates may apply. Message frequency may vary. Reply STOP to unsubscribe.</span>
