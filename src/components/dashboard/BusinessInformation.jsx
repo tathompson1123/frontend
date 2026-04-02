@@ -2343,6 +2343,54 @@ export default function BusinessInformation({
                 {slotError && <p className="text-sm text-red-600 mt-3">{slotError}</p>}
               </div>
 
+              {/* Buffer conflict warnings */}
+              {(() => {
+                const activeSlots = bookingSlots
+                  .filter(s => s.active)
+                  .map(s => ({ ...s, minutes: parseInt(s.slot_time.slice(0, 2)) * 60 + parseInt(s.slot_time.slice(3, 5)) }))
+                  .sort((a, b) => a.minutes - b.minutes);
+
+                const conflicts = [];
+                for (let i = 0; i < activeSlots.length - 1; i++) {
+                  for (let j = i + 1; j < activeSlots.length; j++) {
+                    const gap = activeSlots[j].minutes - activeSlots[i].minutes;
+                    const conflictingServices = (services || []).filter(svc => {
+                      const durationMins = Math.ceil((svc.duration_hours || 1) * 60);
+                      const bufferMins = svc.buffer_minutes || 0;
+                      return bufferMins > 0 && (durationMins + bufferMins) > gap;
+                    });
+                    if (conflictingServices.length > 0) {
+                      conflicts.push({
+                        slotA: activeSlots[i],
+                        slotB: activeSlots[j],
+                        services: conflictingServices,
+                      });
+                    }
+                  }
+                }
+
+                if (conflicts.length === 0) return null;
+                return (
+                  <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 space-y-2">
+                    <p className="text-sm font-semibold text-amber-800 flex items-center gap-1.5">
+                      ⚠️ Buffer conflicts detected
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      The following services have a duration + buffer that blocks the next time slot. Customers won't be able to book the later slot if the earlier one is taken.
+                    </p>
+                    <ul className="space-y-1">
+                      {conflicts.map((c, i) => (
+                        <li key={i} className="text-xs text-amber-800 bg-amber-100 rounded-lg px-3 py-2">
+                          <span className="font-semibold">{formatSlotTime(c.slotA.slot_time)} → {formatSlotTime(c.slotB.slot_time)}:</span>{' '}
+                          {c.services.map(s => `${s.name} (${Math.ceil(s.duration_hours * 60)}min + ${s.buffer_minutes}min buffer)`).join(', ')}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="text-xs text-amber-600">To fix: add more time between slots, reduce the buffer, or add a second employee.</p>
+                  </div>
+                );
+              })()}
+
               {/* Existing slots */}
               {loadingSlots ? (
                 <p className="text-sm text-gray-400 py-4 text-center">Loading...</p>
