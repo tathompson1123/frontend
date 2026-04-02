@@ -654,7 +654,7 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
                     <label className="block text-xs font-medium text-gray-600 mb-2">Form Fields</label>
                     <div className="space-y-2">
                       {['name', 'email', 'phone', 'service', 'message'].map(fid => {
-                        const isRequired = fid === 'name' || fid === 'email';
+                        const isHardRequired = fid === 'name' || fid === 'email';
                         const existing = settings.leadFormFields.find(f => f.id === fid);
                         const isEnabled = !!existing;
                         const def = ALL_FIELD_DEFAULTS[fid];
@@ -662,7 +662,7 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
                           <div key={fid} className={`border rounded-lg transition ${isEnabled ? 'border-blue-200 bg-blue-50/30' : 'border-gray-200 bg-gray-50/50'}`}>
                             <div className="flex items-center gap-2 px-3 py-2">
                               <button
-                                disabled={isRequired}
+                                disabled={isHardRequired}
                                 onClick={() => {
                                   let fields = [...settings.leadFormFields];
                                   if (isEnabled) { fields = fields.filter(f => f.id !== fid); }
@@ -670,42 +670,62 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
                                   setSettings({ ...settings, leadFormFields: fields });
                                   setPreviewRuleIdx(-1);
                                 }}
-                                className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition ${isEnabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'} ${isRequired ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+                                className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition ${isEnabled ? 'bg-blue-600 border-blue-600' : 'border-gray-300'} ${isHardRequired ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
                               >
                                 {isEnabled && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
                               </button>
-                              <span className="text-xs font-semibold text-gray-700 flex-1">{def.label}{isRequired && <span className="text-red-400 ml-1">*</span>}</span>
+                              <span className="text-xs font-semibold text-gray-700 flex-1">
+                                {def.label}
+                                {(isHardRequired || existing?.required) && <span className="text-red-400 ml-1">*</span>}
+                              </span>
                             </div>
                             {isEnabled && (
-                              <div className="px-3 pb-3 grid grid-cols-2 gap-2">
-                                <div>
-                                  <label className="block text-xs text-gray-500 mb-1">Label</label>
-                                  <input
-                                    type="text"
-                                    value={existing.label}
-                                    onChange={e => {
-                                      const fields = settings.leadFormFields.map(f => f.id === fid ? { ...f, label: e.target.value } : f);
-                                      setSettings({ ...settings, leadFormFields: fields });
-                                      setPreviewRuleIdx(-1);
-                                    }}
-                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-blue-500 focus:outline-none"
-                                    placeholder={def.label}
-                                  />
+                              <div className="px-3 pb-3 space-y-2">
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Label</label>
+                                    <input
+                                      type="text"
+                                      value={existing.label}
+                                      onChange={e => {
+                                        const fields = settings.leadFormFields.map(f => f.id === fid ? { ...f, label: e.target.value } : f);
+                                        setSettings({ ...settings, leadFormFields: fields });
+                                        setPreviewRuleIdx(-1);
+                                      }}
+                                      className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                      placeholder={def.label}
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs text-gray-500 mb-1">Placeholder</label>
+                                    <input
+                                      type="text"
+                                      value={existing.placeholder}
+                                      onChange={e => {
+                                        const fields = settings.leadFormFields.map(f => f.id === fid ? { ...f, placeholder: e.target.value } : f);
+                                        setSettings({ ...settings, leadFormFields: fields });
+                                        setPreviewRuleIdx(-1);
+                                      }}
+                                      className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-blue-500 focus:outline-none"
+                                      placeholder={def.placeholder}
+                                    />
+                                  </div>
                                 </div>
-                                <div>
-                                  <label className="block text-xs text-gray-500 mb-1">Placeholder</label>
-                                  <input
-                                    type="text"
-                                    value={existing.placeholder}
-                                    onChange={e => {
-                                      const fields = settings.leadFormFields.map(f => f.id === fid ? { ...f, placeholder: e.target.value } : f);
-                                      setSettings({ ...settings, leadFormFields: fields });
-                                      setPreviewRuleIdx(-1);
-                                    }}
-                                    className="w-full px-2 py-1 border border-gray-200 rounded text-xs focus:border-blue-500 focus:outline-none"
-                                    placeholder={def.placeholder}
-                                  />
-                                </div>
+                                {!isHardRequired && (
+                                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <button
+                                      onClick={() => {
+                                        const fields = settings.leadFormFields.map(f => f.id === fid ? { ...f, required: !f.required } : f);
+                                        setSettings({ ...settings, leadFormFields: fields });
+                                        setPreviewRuleIdx(-1);
+                                      }}
+                                      className={`w-4 h-4 rounded flex-shrink-0 border-2 flex items-center justify-center transition cursor-pointer ${existing.required ? 'bg-red-500 border-red-500' : 'border-gray-300'}`}
+                                    >
+                                      {existing.required && <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" strokeWidth="3" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7"/></svg>}
+                                    </button>
+                                    <span className="text-xs text-gray-600">Required</span>
+                                  </label>
+                                )}
                               </div>
                             )}
                           </div>
