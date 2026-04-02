@@ -44,7 +44,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch }) {
   incentive: "$10 off your next service",
   incentiveEnabled: true,
   autoSendEnabled: true,
-  sendDelay: 24,
+  sendDelay: 2,
   sendTrigger: 'booking_completed'
 });
 
@@ -729,19 +729,17 @@ const saveReviewConfig = async () => {
                 <Phone className="w-4 h-4 text-blue-600" />
                 <span className="font-semibold text-gray-900">SMS (Step 1)</span>
               </div>
-              <p className="text-xs text-gray-600">Strike while the iron is hot - immediate impact after service</p>
+              <p className="text-xs text-gray-600">Sent while the experience is still fresh</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
-            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">
-              {reviewConfig.sendDelay === 0 ? 'Immediately' : reviewConfig.sendDelay === 1 ? '1 hour' : reviewConfig.sendDelay === 6 ? '6 hours' : reviewConfig.sendDelay === 24 ? '24 hours' : reviewConfig.sendDelay === 48 ? '48 hours' : '3 days'}
-            </div>
+            <div className="flex-shrink-0 w-24 text-sm font-medium text-gray-700">1 day</div>
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-1">
                 <Mail className="w-4 h-4 text-amber-600" />
                 <span className="font-semibold text-gray-900">Email (Step 2)</span>
               </div>
-              <p className="text-xs text-gray-600">Professional follow-up with incentive details</p>
+              <p className="text-xs text-gray-600">Professional follow-up with review link and incentive</p>
             </div>
           </div>
           <div className="flex items-start gap-3">
@@ -801,21 +799,103 @@ const saveReviewConfig = async () => {
               Available variables: <code className="bg-gray-100 px-1 rounded">{'{{name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{business}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{service}}'}</code>
             </p>
           </div>
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <p className="text-xs font-medium text-gray-700 mb-2">Preview:</p>
-            <p className="text-sm text-gray-900">
-              {reviewConfig.messageTemplate
-                .replace('{{name}}', 'John')
-                .replace('{{business}}', user.businessName || 'Your Business')
-                .replace('{{service}}', 'HVAC Maintenance')}
-            </p>
-            {reviewConfig.incentiveEnabled && reviewConfig.incentive && (
-              <div className="mt-3 pt-3 border-t border-gray-300">
-                <p className="text-xs font-medium text-gray-700 mb-1">Incentive:</p>
-                <p className="text-sm text-green-700 font-semibold">🎁 {reviewConfig.incentive}</p>
+          {/* Dual iPhone preview */}
+          {(() => {
+            const bizName = user?.businessName || user?.business_name || 'Your Business';
+            const previewMsg = reviewConfig.messageTemplate
+              .replace(/\{\{name\}\}|\{name\}/g, 'John')
+              .replace(/\{\{business\}\}|\{business\}/g, bizName)
+              .replace(/\{\{service\}\}|\{service\}/g, 'Full Detail');
+            const msgEndsWithPunct = /[.!?]$/.test(previewMsg.trimEnd());
+            const msgWithPunct = msgEndsWithPunct ? previewMsg : previewMsg.trimEnd() + '.';
+            return (
+              <div className="flex gap-4">
+                {/* SMS iPhone */}
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">SMS Preview</p>
+                  <div className="mx-auto w-44">
+                    <div className="bg-gray-900 rounded-[2rem] p-2 shadow-xl">
+                      <div className="bg-black rounded-[1.6rem] overflow-hidden">
+                        <div className="bg-black flex justify-center pt-2 pb-1">
+                          <div className="w-16 h-3.5 bg-gray-900 rounded-full" />
+                        </div>
+                        <div className="bg-gray-100 min-h-[280px] px-2 py-3 flex flex-col">
+                          <p className="text-center text-gray-400 text-[8px] mb-2">Today</p>
+                          {/* sender name */}
+                          <p className="text-center text-[8px] font-semibold text-gray-600 mb-2">{bizName}</p>
+                          <div className="flex justify-start">
+                            <div className="bg-white rounded-2xl rounded-tl-sm px-2.5 py-2 max-w-full shadow-sm space-y-1.5">
+                              <p className="text-[9px] text-gray-900 leading-relaxed break-words">
+                                {msgWithPunct}
+                                {reviewConfig.incentiveEnabled && reviewConfig.incentive
+                                  ? ` ${reviewConfig.incentive}${/[.!?]$/.test(reviewConfig.incentive.trimEnd()) ? '' : '.'}`
+                                  : ''}
+                              </p>
+                              {/* Review link as a tappable row, not inline text */}
+                              <div className="border-t border-gray-100 pt-1.5">
+                                <p className="text-[8px] text-gray-500 mb-0.5">Leave your review here:</p>
+                                <p className="text-[8px] text-blue-500 font-medium break-all">
+                                  {reviewLink ? 'g.page/r/your-business ↗' : '[your Google review link]'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email iPhone */}
+                <div className="flex-1">
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">Email Preview</p>
+                  <div className="mx-auto w-44">
+                    <div className="bg-gray-900 rounded-[2rem] p-2 shadow-xl">
+                      <div className="bg-black rounded-[1.6rem] overflow-hidden">
+                        <div className="bg-black flex justify-center pt-2 pb-1">
+                          <div className="w-16 h-3.5 bg-gray-900 rounded-full" />
+                        </div>
+                        <div className="bg-white min-h-[280px] flex flex-col">
+                          {/* Mail app top bar */}
+                          <div className="bg-gray-50 px-2 py-1.5 flex items-center justify-between border-b border-gray-200">
+                            <span className="text-[8px] text-blue-500 font-medium">‹ Inbox</span>
+                            <span className="text-[8px] text-gray-400">⋯</span>
+                          </div>
+                          {/* From / To / Subject */}
+                          <div className="px-2 py-1.5 border-b border-gray-100 space-y-0.5">
+                            <p className="text-[8px] text-gray-500"><span className="font-semibold text-gray-700">From:</span> {bizName}</p>
+                            <p className="text-[8px] text-gray-500"><span className="font-semibold text-gray-700">To:</span> john@example.com</p>
+                            <p className="text-[8px] font-semibold text-gray-800 truncate">How was your experience?</p>
+                          </div>
+                          {/* Body */}
+                          <div className="px-2 py-2 flex-1 space-y-2">
+                            <p className="text-[8px] text-gray-700 leading-relaxed">
+                              Hi John,
+                            </p>
+                            <p className="text-[8px] text-gray-700 leading-relaxed">
+                              {msgWithPunct}
+                            </p>
+                            {reviewConfig.incentiveEnabled && reviewConfig.incentive && (
+                              <p className="text-[8px] text-green-700 font-semibold">
+                                🎁 {reviewConfig.incentive}
+                              </p>
+                            )}
+                            {/* CTA button */}
+                            <div className="bg-blue-600 rounded-md px-2 py-1.5 text-center mt-1">
+                              <p className="text-[8px] text-white font-bold">⭐ Leave a Review</p>
+                            </div>
+                            <p className="text-[7px] text-gray-400 pt-1">
+                              You're receiving this because you recently used {bizName}. Reply STOP to unsubscribe.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+            );
+          })()}
         </div>
         <div className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -832,7 +912,16 @@ const saveReviewConfig = async () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Incentive Offer</label>
               <input type="text" value={reviewConfig.incentive} onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., $10 off your next service" />
-              <p className="text-xs text-gray-500 mt-2">💡 Examples: "$10 off next service", "15% discount on next booking", "Free service upgrade"</p>
+              <div className="mt-2 space-y-1.5">
+                <p className="text-xs text-amber-700 font-semibold">🔥 The more compelling the offer, the more reviews you'll get.</p>
+                <p className="text-xs text-gray-500">Strong examples:</p>
+                <ul className="text-xs text-gray-500 space-y-0.5 ml-2">
+                  <li>• "Enter to win a FREE full car detail — one winner every month!"</li>
+                  <li>• "Leave a review and get your next oil change FREE"</li>
+                  <li>• "Review us this week and we'll upgrade your next visit at no charge"</li>
+                  <li>• "Every review enters you in our monthly $100 gift card raffle"</li>
+                </ul>
+              </div>
             </div>
           )}
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -899,23 +988,24 @@ const saveReviewConfig = async () => {
                 <select value={reviewConfig.sendDelay} onChange={(e) => setReviewConfig({ ...reviewConfig, sendDelay: parseInt(e.target.value) })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
                   <option value="0">Immediately</option>
                   <option value="1">1 hour later</option>
+                  <option value="2">2 hours later (recommended)</option>
                   <option value="6">6 hours later</option>
-                  <option value="24">24 hours later (recommended)</option>
+                  <option value="24">24 hours later</option>
                   <option value="48">48 hours later</option>
                   <option value="72">3 days later</option>
                 </select>
-                <p className="text-xs text-gray-500 mt-2">📱 SMS is always sent based on this delay. First email follows the same timing.</p>
+                <p className="text-xs text-gray-500 mt-2">📱 SMS is sent based on this delay after the trigger. Email follows the same timing.</p>
               </div>
             </>
           )}
           <div className="bg-gradient-to-br from-blue-50 to-amber-50 rounded-lg p-4 border border-blue-200">
             <p className="text-sm font-medium text-gray-900 mb-3">💡 Pro Tips:</p>
             <ul className="space-y-2 text-xs text-gray-700">
-              <li>• SMS sent automatically 2 hours after service (optimal timing)</li>
-              <li>• Personalize with customer names for better response rates</li>
-              <li>• Send first email 24 hours after service for best results</li>
-              <li>• Keep incentives simple and easy to redeem</li>
-              <li>• Test different messages to see what works best</li>
+              <li>• 2 hours after service is the sweet spot — customers still remember the experience</li>
+              <li>• Personalize with customer names — first-name texts get far higher response rates</li>
+              <li>• Always include your Google review link so customers can tap straight to it</li>
+              <li>• Keep incentives short and clear — "10% off your next visit" beats a long offer</li>
+              <li>• Use the "service duration ends" trigger to send hands-free, no manual steps needed</li>
             </ul>
           </div>
         </div>
@@ -959,164 +1049,165 @@ const saveReviewConfig = async () => {
             </p>
           </div>
         </div>
-      </div>
-    )}
-  </div>
-)}
 
-              {/* Filters */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700">Filter:</span>
-                <div className="flex gap-2">
-                  {[
-                    { value: 'all', label: 'All' },
-                    { value: 'sent', label: 'Sent' },
-                    { value: 'completed', label: 'Completed' },
-                    { value: 'failed', label: 'Failed' }
-                  ].map((filter) => (
-                    <button
-                      key={filter.value}
-                      onClick={() => setFilterStatus(filter.value)}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                        filterStatus === filter.value
-                          ? 'bg-amber-600 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {filter.label}
-                    </button>
-                  ))}
+        {/* Filters */}
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-gray-700">Filter:</span>
+          <div className="flex gap-2">
+            {[
+              { value: 'all', label: 'All' },
+              { value: 'sent', label: 'Sent' },
+              { value: 'completed', label: 'Completed' },
+              { value: 'failed', label: 'Failed' }
+            ].map((filter) => (
+              <button
+                key={filter.value}
+                onClick={() => setFilterStatus(filter.value)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  filterStatus === filter.value
+                    ? 'bg-amber-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {filter.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Requests List */}
+        {isLoadingRequests ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
+            <span className="ml-3 text-gray-600">Loading review requests...</span>
+          </div>
+        ) : filteredRequests.length === 0 ? (
+          <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+            <Send className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-600 font-medium">No review requests found</p>
+            <p className="text-sm text-gray-500 mt-1">
+              {reviewLink
+                ? 'Mark bookings as completed to start automated review campaigns'
+                : 'Set up your Google review link above to enable automated review requests'
+              }
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredRequests.map((request) => (
+              <div
+                key={request.id}
+                className="bg-white rounded-lg p-5 border border-gray-200 hover:shadow-md transition"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h4 className="font-bold text-gray-900">{request.customer_name}</h4>
+                      {request.review_completed ? (
+                        <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" />
+                          Review Completed
+                        </span>
+                      ) : request.status === 'sent' ? (
+                        <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <Send className="w-3 h-3" />
+                          Sent
+                        </span>
+                      ) : request.status === 'failed' ? (
+                        <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <XCircle className="w-3 h-3" />
+                          Failed
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          Pending
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
+                      <div>
+                        <p className="text-gray-500">Service</p>
+                        <p className="font-medium text-gray-900">{request.service_name}</p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Scheduled Send</p>
+                        <p className="font-medium text-gray-900">
+                          {formatDate(request.scheduled_send_time)}{' '}
+                          <span className="text-gray-500 text-xs">
+                            {formatTime(request.scheduled_send_time)}
+                          </span>
+                        </p>
+                      </div>
+                      {request.actual_send_time && (
+                        <div>
+                          <p className="text-gray-500">Actually Sent</p>
+                          <p className="font-medium text-gray-900">
+                            {formatDate(request.actual_send_time)}{' '}
+                            <span className="text-gray-500 text-xs">
+                              {formatTime(request.actual_send_time)}
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                      {request.review_completed_at && (
+                        <div>
+                          <p className="text-gray-500">Review Completed</p>
+                          <p className="font-medium text-green-700">
+                            {formatDate(request.review_completed_at)}{' '}
+                            <span className="text-gray-500 text-xs">
+                              {formatTime(request.review_completed_at)}
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-4 mt-3 text-sm">
+                      {request.sms_sent && (
+                        <div className="flex items-center gap-1 text-blue-600">
+                          <Phone className="w-4 h-4" />
+                          <span>SMS Sent</span>
+                        </div>
+                      )}
+                      {request.email_sent && (
+                        <div className="flex items-center gap-1 text-amber-600">
+                          <Mail className="w-4 h-4" />
+                          <span>Email Sent</span>
+                        </div>
+                      )}
+                      {request.link_clicked && (
+                        <div className="flex items-center gap-1 text-green-600">
+                          <ExternalLink className="w-4 h-4" />
+                          <span>Link Clicked</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {request.incentive_code && (
+                    <div className="text-right">
+                      <p className="text-xs text-gray-500 mb-1">Incentive Code</p>
+                      <p className="font-mono font-bold text-amber-600 text-lg">
+                        {request.incentive_code}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
+            ))}
+          </div>
+        )}
+      </div>
+    )}
 
-              {/* Requests List */}
-              {isLoadingRequests ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-amber-600" />
-                  <span className="ml-3 text-gray-600">Loading review requests...</span>
-                </div>
-              ) : filteredRequests.length === 0 ? (
-                <div className="text-center py-12 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
-                  <Send className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">No review requests found</p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {reviewLink 
-                      ? 'Mark bookings as completed to start automated review campaigns'
-                      : 'Set up your Google review link above to enable automated review requests'
-                    }
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredRequests.map((request) => (
-                    <div
-                      key={request.id}
-                      className="bg-white rounded-lg p-5 border border-gray-200 hover:shadow-md transition"
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h4 className="font-bold text-gray-900">{request.customer_name}</h4>
-                            {request.review_completed ? (
-                              <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                                <CheckCircle2 className="w-3 h-3" />
-                                Review Completed
-                              </span>
-                            ) : request.status === 'sent' ? (
-                              <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                                <Send className="w-3 h-3" />
-                                Sent
-                              </span>
-                            ) : request.status === 'failed' ? (
-                              <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                                <XCircle className="w-3 h-3" />
-                                Failed
-                              </span>
-                            ) : (
-                              <span className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-xs font-semibold flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                Pending
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
-                            <div>
-                              <p className="text-gray-500">Service</p>
-                              <p className="font-medium text-gray-900">{request.service_name}</p>
-                            </div>
-                            <div>
-                              <p className="text-gray-500">Scheduled Send</p>
-                              <p className="font-medium text-gray-900">
-                                {formatDate(request.scheduled_send_time)}{' '}
-                                <span className="text-gray-500 text-xs">
-                                  {formatTime(request.scheduled_send_time)}
-                                </span>
-                              </p>
-                            </div>
-                            {request.actual_send_time && (
-                              <div>
-                                <p className="text-gray-500">Actually Sent</p>
-                                <p className="font-medium text-gray-900">
-                                  {formatDate(request.actual_send_time)}{' '}
-                                  <span className="text-gray-500 text-xs">
-                                    {formatTime(request.actual_send_time)}
-                                  </span>
-                                </p>
-                              </div>
-                            )}
-                            {request.review_completed_at && (
-                              <div>
-                                <p className="text-gray-500">Review Completed</p>
-                                <p className="font-medium text-green-700">
-                                  {formatDate(request.review_completed_at)}{' '}
-                                  <span className="text-gray-500 text-xs">
-                                    {formatTime(request.review_completed_at)}
-                                  </span>
-                                </p>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-4 mt-3 text-sm">
-                            {request.sms_sent && (
-                              <div className="flex items-center gap-1 text-blue-600">
-                                <Phone className="w-4 h-4" />
-                                <span>SMS Sent</span>
-                              </div>
-                            )}
-                            {request.email_sent && (
-                              <div className="flex items-center gap-1 text-amber-600">
-                                <Mail className="w-4 h-4" />
-                                <span>Email Sent</span>
-                              </div>
-                            )}
-                            {request.link_clicked && (
-                              <div className="flex items-center gap-1 text-green-600">
-                                <ExternalLink className="w-4 h-4" />
-                                <span>Link Clicked</span>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {request.incentive_code && (
-                          <div className="text-right">
-                            <p className="text-xs text-gray-500 mb-1">Incentive Code</p>
-                            <p className="font-mono font-bold text-amber-600 text-lg">
-                              {request.incentive_code}
-                            </p>
   </div>
 )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
-          )}  
-        </div> 
-      </div>  
+          )}
+        </div>
+      </div>
 
       {/* How It Works - Only show on Reply Generator tab */}
       {activeTab === 'reply-generator' && (

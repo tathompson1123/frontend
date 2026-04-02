@@ -2096,13 +2096,12 @@ export default function BusinessInformation({
                           {serviceVariants.map(v => (
                             <div key={v.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-blue-200">
                               {editingVariant?.id === v.id ? (
-                                <form onSubmit={handleSaveVariant} className="flex items-center gap-2 flex-1">
+                                <div className="flex items-center gap-2 flex-1">
                                   <input
                                     type="text"
                                     value={variantForm.name}
                                     onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
                                     placeholder="Name"
-                                    required
                                     className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded"
                                   />
                                   <input
@@ -2112,7 +2111,6 @@ export default function BusinessInformation({
                                     value={variantForm.price}
                                     onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
                                     placeholder="Price"
-                                    required
                                     className="w-20 text-xs px-2 py-1 border border-gray-300 rounded"
                                   />
                                   <input
@@ -2124,9 +2122,9 @@ export default function BusinessInformation({
                                     placeholder="Hrs"
                                     className="w-14 text-xs px-2 py-1 border border-gray-300 rounded"
                                   />
-                                  <button type="submit" disabled={isSavingVariant} className="text-xs font-semibold text-green-600 hover:text-green-800">Save</button>
+                                  <button type="button" disabled={isSavingVariant} onClick={() => handleSaveVariant({ preventDefault: () => {} })} className="text-xs font-semibold text-green-600 hover:text-green-800">Save</button>
                                   <button type="button" onClick={() => { setEditingVariant(null); setVariantForm({ name: '', price: '', durationHours: '' }); }} className="text-xs text-gray-500">Cancel</button>
-                                </form>
+                                </div>
                               ) : (
                                 <>
                                   <div className="flex-1">
@@ -2149,13 +2147,12 @@ export default function BusinessInformation({
                       )}
 
                       {editingService && showVariantForm && (
-                        <form onSubmit={handleSaveVariant} className="flex items-center gap-2 mt-2">
+                        <div className="flex items-center gap-2 mt-2">
                           <input
                             type="text"
                             value={variantForm.name}
                             onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
                             placeholder="Type name (e.g. Sedan)"
-                            required
                             className="flex-1 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
                           />
                           <input
@@ -2165,7 +2162,6 @@ export default function BusinessInformation({
                             value={variantForm.price}
                             onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
                             placeholder="Price"
-                            required
                             className="w-20 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
                           />
                           <input
@@ -2177,13 +2173,13 @@ export default function BusinessInformation({
                             placeholder="Hrs"
                             className="w-14 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
                           />
-                          <button type="submit" disabled={isSavingVariant} className="text-xs font-semibold text-green-600 hover:text-green-800 whitespace-nowrap">
+                          <button type="button" disabled={isSavingVariant} onClick={() => handleSaveVariant({ preventDefault: () => {} })} className="text-xs font-semibold text-green-600 hover:text-green-800 whitespace-nowrap">
                             {isSavingVariant ? '...' : 'Add'}
                           </button>
                           <button type="button" onClick={() => setShowVariantForm(false)} className="text-xs text-gray-500">
                             Cancel
                           </button>
-                        </form>
+                        </div>
                       )}
                     </div>
                   )}

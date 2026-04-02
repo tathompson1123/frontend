@@ -42,6 +42,11 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           role: 'assistant',
           content: `Hi! I'm the SORCE AI Assistant and I'll help you configure your Website Chat Agent.\n\n${bizDesc} I've pulled your business details from your settings so we can skip the basics.\n\n**What name should the chat agent use when greeting visitors?** (e.g., Kurt, Alex, Sarah)`
         };
+      } else if (agentType === 'missedcall') {
+        return {
+          role: 'assistant',
+          content: `Hi! I'm the SORCE AI Assistant and I'll help you configure your Missed Call Text-Back Agent.\n\n${bizDesc} I've pulled your business details from your settings.\n\n**What phone number should incoming calls ring to first?** (Your cell phone or business line — customers call your SORCE number and it forwards here.)`
+        };
       } else {
         return {
           role: 'assistant',
@@ -54,6 +59,11 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
       return {
         role: 'assistant',
         content: "Hi! I'm the SORCE AI Assistant and I'll help you configure your Website Chat Agent.\n\nI'm going to ask you a few questions so I can set this up exactly how you want it.\n\n**What type of business do you have?** (e.g., auto detailing, plumbing, landscaping, salon, etc.)"
+      };
+    } else if (agentType === 'missedcall') {
+      return {
+        role: 'assistant',
+        content: "Hi! I'm the SORCE AI Assistant and I'll help you configure your Missed Call Text-Back Agent.\n\nI'll walk you through each setting. Use the Manual Setup tab on the left to enter each value as we go.\n\n**What phone number should incoming calls ring to first?** (Your cell phone or business line.)"
       };
     } else {
       return {
@@ -117,6 +127,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     setPreviewMessages([]);
     setPreviewInput('');
     setAiInput('');
+    if (activeAgent === 'missedcall') {
+      setAiMessages([getInitialAiMessage('missedcall', businessInfo, businessServices)]);
+      return;
+    }
     // Show appropriate greeting based on whether agent is already configured
     const config = activeAgent === 'chat' ? chatConfig : leadConfig;
     if (isConfigured(config, activeAgent)) {
@@ -893,21 +907,8 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         </div>
       </div>
 
-      {/* Missed Call Text-Back - separate panel */}
-      {activeAgent === 'missedcall' && (
-        <MissedCallTextBack
-          user={user}
-          apiUrl={apiUrl}
-          authFetch={authFetch}
-          setCurrentView={setCurrentView}
-          isDeployed={missedCallDeployed}
-          onDeploymentChange={loadDeploymentStatus}
-          onDirtyChange={onDirtyChange}
-        />
-      )}
-
-      {/* Main Content - Split Panel (chat & leadform only) */}
-      {activeAgent !== 'missedcall' && <div className="flex-1 flex gap-4 min-h-0">
+      {/* Main Content - Split Panel */}
+      <div className="flex-1 flex gap-4 min-h-0">
         {/* Left Side - Configuration (2/3 width) */}
         <div className="w-2/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
           {/* Setup Mode Toggle + Actions */}
@@ -938,44 +939,57 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               </button>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={saveConfiguration}
-                disabled={isSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                {isSaving ? 'Saving...' : 'Save'}
-              </button>
-              {canDeploy ? (
+            {/* Action Buttons — hidden for missed call (it has its own deploy) */}
+            {activeAgent !== 'missedcall' && (
+              <div className="flex items-center gap-2">
                 <button
-                  onClick={deployAgent}
-                  disabled={isDeploying || isDeployed}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    isDeployed
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-gradient-to-r from-amber-600 to-blue-600 text-white hover:shadow-lg'
-                  }`}
+                  onClick={saveConfiguration}
+                  disabled={isSaving}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors disabled:opacity-50"
                 >
-                  <Rocket className="w-4 h-4" />
-                  {isDeployed ? 'Deployed' : isDeploying ? 'Deploying...' : 'Deploy'}
+                  <Save className="w-4 h-4" />
+                  {isSaving ? 'Saving...' : 'Save'}
                 </button>
-              ) : (
-                <button
-                  onClick={() => setCurrentView('billing')}
-                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:shadow-lg"
-                >
-                  <Crown className="w-4 h-4" />
-                  Upgrade to Deploy
-                </button>
-              )}
-            </div>
+                {canDeploy ? (
+                  <button
+                    onClick={deployAgent}
+                    disabled={isDeploying || isDeployed}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      isDeployed
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gradient-to-r from-amber-600 to-blue-600 text-white hover:shadow-lg'
+                    }`}
+                  >
+                    <Rocket className="w-4 h-4" />
+                    {isDeployed ? 'Deployed' : isDeploying ? 'Deploying...' : 'Deploy'}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => setCurrentView('billing')}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-lg hover:shadow-lg"
+                  >
+                    <Crown className="w-4 h-4" />
+                    Upgrade to Deploy
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto">
-            {setupMode === 'manual' ? (
+            {activeAgent === 'missedcall' && setupMode === 'manual' ? (
+              /* Missed Call Manual Setup */
+              <MissedCallTextBack
+                user={user}
+                apiUrl={apiUrl}
+                authFetch={authFetch}
+                setCurrentView={setCurrentView}
+                isDeployed={missedCallDeployed}
+                onDeploymentChange={loadDeploymentStatus}
+                onDirtyChange={onDirtyChange}
+              />
+            ) : setupMode === 'manual' ? (
               /* Manual Setup - Accordion Sections */
               <div className="p-4 space-y-2">
                 {configSections.map(section => {
@@ -1074,105 +1088,144 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           </div>
         </div>
 
-        {/* Right Side - Widget Preview (1/3 width) */}
+        {/* Right Side */}
         <div className="w-1/3 flex flex-col gap-4 min-h-0 self-start sticky top-4">
-          {/* Widget Preview — matches deployed chat widget */}
-          <div className="h-[520px] bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] flex flex-col min-h-0 overflow-hidden">
-            {/* Widget Header — gradient like deployed widget */}
-            <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-              <div>
-                <h3 className="text-white font-semibold text-base">Chat with {currentConfig.agentName || 'Agent'}</h3>
+          {activeAgent === 'missedcall' ? (
+            /* Missed Call — tips panel instead of chat widget */
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+                  <Phone className="w-5 h-5 text-purple-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">How It Works</h3>
+                  <p className="text-xs text-gray-500">Missed call → instant text-back</p>
+                </div>
               </div>
-              <button
-                onClick={resetPreview}
-                className="text-white/80 hover:text-white transition-colors"
-                title="Reset conversation"
-              >
-                <RefreshCw className="w-4 h-4" />
-              </button>
+              <ol className="space-y-3">
+                {[
+                  'Customer calls your SORCE number',
+                  'Call forwards to your ring-to number',
+                  'If missed, agent texts back within 60s',
+                  'Customer replies → agent handles the conversation',
+                  'Lead captured in your SORCE dashboard',
+                ].map((step, i) => (
+                  <li key={i} className="flex items-start gap-2.5">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-full bg-purple-600 text-white text-xs flex items-center justify-center font-bold">{i + 1}</span>
+                    <span className="text-xs text-gray-700">{step}</span>
+                  </li>
+                ))}
+              </ol>
+              <div className="bg-gradient-to-br from-purple-50 to-blue-50 rounded-lg p-3 border border-purple-200">
+                <p className="text-xs font-semibold text-purple-900 mb-1">💡 Pro Tips</p>
+                <ul className="space-y-1 text-xs text-gray-600">
+                  <li>• Set ring timeout to 20s — long enough to answer, short enough to text fast</li>
+                  <li>• Personalize the SMS with the caller's name</li>
+                  <li>• Use the SORCE AI Setup to configure this step by step</li>
+                </ul>
+              </div>
             </div>
-
-            {/* Messages — gray background like widget */}
-            <div ref={previewRef} className="flex-1 overflow-y-auto p-5 space-y-4" style={{ background: '#f9fafb' }}>
-              {previewMessages.length === 0 ? (
-                <div className="text-center py-10">
-                  <div className="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
-                    <MessageCircle className="w-7 h-7 text-white" />
+          ) : (
+            <>
+              {/* Widget Preview — matches deployed chat widget */}
+              <div className="h-[520px] bg-white rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.2)] flex flex-col min-h-0 overflow-hidden">
+                {/* Widget Header — gradient like deployed widget */}
+                <div className="px-5 py-4 flex items-center justify-between" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                  <div>
+                    <h3 className="text-white font-semibold text-base">Chat with {currentConfig.agentName || 'Agent'}</h3>
                   </div>
-                  <p className="text-sm text-gray-500 mb-2">Preview your chat widget</p>
                   <button
                     onClick={resetPreview}
-                    className="text-sm font-medium px-4 py-1.5 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                    className="text-white/80 hover:text-white transition-colors"
+                    title="Reset conversation"
                   >
-                    Start Preview
+                    <RefreshCw className="w-4 h-4" />
                   </button>
                 </div>
-              ) : (
-                previewMessages.map((msg, i) => (
-                  <div
-                    key={i}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}
-                  >
-                    <div
-                      className={`max-w-[75%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
-                        msg.role === 'user'
-                          ? 'text-white'
-                          : 'bg-white text-gray-800 border border-gray-200'
-                      }`}
-                      style={msg.role === 'user' ? { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' } : undefined}
-                    >
-                      {msg.content}
+
+                {/* Messages — gray background like widget */}
+                <div ref={previewRef} className="flex-1 overflow-y-auto p-5 space-y-4" style={{ background: '#f9fafb' }}>
+                  {previewMessages.length === 0 ? (
+                    <div className="text-center py-10">
+                      <div className="w-14 h-14 mx-auto mb-3 rounded-full flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+                        <MessageCircle className="w-7 h-7 text-white" />
+                      </div>
+                      <p className="text-sm text-gray-500 mb-2">Preview your chat widget</p>
+                      <button
+                        onClick={resetPreview}
+                        className="text-sm font-medium px-4 py-1.5 rounded-lg text-white" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                      >
+                        Start Preview
+                      </button>
                     </div>
-                  </div>
-                ))
-              )}
-              {isPreviewLoading && (
-                <div className="flex justify-start">
-                  <div className="bg-white border border-gray-200 px-4 py-3 rounded-xl flex gap-1.5">
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></span>
-                    <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
-                  </div>
+                  ) : (
+                    previewMessages.map((msg, i) => (
+                      <div
+                        key={i}
+                        className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} gap-3`}
+                      >
+                        <div
+                          className={`max-w-[75%] px-4 py-3 rounded-xl text-sm leading-relaxed ${
+                            msg.role === 'user'
+                              ? 'text-white'
+                              : 'bg-white text-gray-800 border border-gray-200'
+                          }`}
+                          style={msg.role === 'user' ? { background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' } : undefined}
+                        >
+                          {msg.content}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {isPreviewLoading && (
+                    <div className="flex justify-start">
+                      <div className="bg-white border border-gray-200 px-4 py-3 rounded-xl flex gap-1.5">
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '200ms' }}></span>
+                        <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '400ms' }}></span>
+                      </div>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            {/* Input — matches widget input area */}
-            <div className="p-4 border-t border-gray-200 bg-white">
-              <textarea
-                value={previewInput}
-                onChange={(e) => setPreviewInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPreviewMessage(); } }}
-                placeholder="Type your message..."
-                rows={2}
-                className="w-full px-3 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:outline-none resize-none"
-                style={{ borderColor: previewInput.trim() ? '#667eea' : undefined }}
-              />
-              <button
-                onClick={sendPreviewMessage}
-                disabled={!previewInput.trim() || isPreviewLoading}
-                className="mt-2 w-full py-2.5 text-white font-semibold rounded-lg transition-opacity disabled:opacity-50 hover:opacity-90 text-sm"
-                style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
-              >
-                Send Message
-              </button>
-            </div>
-          </div>
+                {/* Input — matches widget input area */}
+                <div className="p-4 border-t border-gray-200 bg-white">
+                  <textarea
+                    value={previewInput}
+                    onChange={(e) => setPreviewInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendPreviewMessage(); } }}
+                    placeholder="Type your message..."
+                    rows={2}
+                    className="w-full px-3 py-2.5 text-sm border-2 border-gray-200 rounded-lg focus:outline-none resize-none"
+                    style={{ borderColor: previewInput.trim() ? '#667eea' : undefined }}
+                  />
+                  <button
+                    onClick={sendPreviewMessage}
+                    disabled={!previewInput.trim() || isPreviewLoading}
+                    className="mt-2 w-full py-2.5 text-white font-semibold rounded-lg transition-opacity disabled:opacity-50 hover:opacity-90 text-sm"
+                    style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}
+                  >
+                    Send Message
+                  </button>
+                </div>
+              </div>
 
-          {/* Quick Tips */}
-          <div className="bg-gradient-to-br from-amber-50 to-blue-50 rounded-xl border border-amber-200 p-4">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-medium text-gray-900">Quick Tips</span>
-            </div>
-            <ul className="space-y-1 text-xs text-gray-600">
-              <li>• Test with common customer questions</li>
-              <li>• Try booking a service in the preview</li>
-              <li>• Use SORCE AI Setup to quickly configure</li>
-            </ul>
-          </div>
+              {/* Quick Tips */}
+              <div className="bg-gradient-to-br from-amber-50 to-blue-50 rounded-xl border border-amber-200 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="w-4 h-4 text-amber-600" />
+                  <span className="text-sm font-medium text-gray-900">Quick Tips</span>
+                </div>
+                <ul className="space-y-1 text-xs text-gray-600">
+                  <li>• Test with common customer questions</li>
+                  <li>• Try booking a service in the preview</li>
+                  <li>• Use SORCE AI Setup to quickly configure</li>
+                </ul>
+              </div>
+            </>
+          )}
         </div>
-      </div>}
+      </div>
     </div>
   );
 }

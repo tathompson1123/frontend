@@ -3,7 +3,7 @@ import {
   Search, RefreshCw, Loader2, CheckCircle2, AlertCircle, XCircle,
   TrendingUp, TrendingDown, BarChart3, Target, MapPin, Clock,
   Star, Camera, MessageSquare, FileText, ChevronDown, ChevronUp,
-  Activity, Shield, AlertTriangle, ExternalLink, Info, ArrowLeftRight
+  AlertTriangle, ExternalLink, Info, ArrowLeftRight, Copy, Check
 } from 'lucide-react';
 import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin } from '@vis.gl/react-google-maps';
 
@@ -55,6 +55,47 @@ function CadenceBadge({ cadence }) {
   );
 }
 
+// ─── Action Description with Copy ────────────────────────
+const DESCRIPTION_TRUNCATE = 200;
+function ActionDescription({ description }) {
+  const [expanded, setExpanded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  if (!description) return null;
+  const isLong = description.length > DESCRIPTION_TRUNCATE;
+  const displayed = isLong && !expanded ? description.slice(0, DESCRIPTION_TRUNCATE) + '…' : description;
+
+  function handleCopy() {
+    navigator.clipboard.writeText(description).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm text-gray-700 flex-1">{displayed}</p>
+        <button
+          onClick={handleCopy}
+          title="Copy full text"
+          className="flex-shrink-0 flex items-center gap-1 px-2 py-1 text-xs rounded-md border border-gray-200 text-gray-500 hover:text-gray-800 hover:border-gray-400 transition"
+        >
+          {copied ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(v => !v)}
+          className="text-xs text-blue-600 hover:text-blue-800 font-medium transition"
+        >
+          {expanded ? 'Show less' : 'Show full text'}
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ─── Main Component ───────────────────────────────────────
 export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
   const [subTab, setSubTab] = useState('audit');
@@ -70,7 +111,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
   const [audit, setAudit] = useState(null);
   const [actionItems, setActionItems] = useState([]);
   const [scans, setScans] = useState([]);
-  const [monitoring, setMonitoring] = useState(null);
   const [error, setError] = useState(null);
   const [scanKeyword, setScanKeyword] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -134,7 +174,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
       setActionItems(data.actionItems || []);
       setSubTab('audit');
       loadScans();
-      loadMonitoring();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -152,8 +191,7 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
         setAudit(data.audit);
         loadActionItems();
         loadScans();
-        loadMonitoring();
-      }
+        }
     } catch (err) {
       console.error('Failed to load GBP profile:', err);
     } finally {
@@ -177,13 +215,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
     } catch {}
   }
 
-  async function loadMonitoring() {
-    try {
-      const res = await authFetch(`${apiUrl}/api/gbp-analyzer/monitoring`);
-      const data = await res.json();
-      setMonitoring(data);
-    } catch {}
-  }
 
   async function handleAnalyze() {
     if (!googleUrl.trim()) return;
@@ -202,7 +233,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
       setActionItems(data.actionItems || []);
       setSubTab('audit');
       loadScans();
-      loadMonitoring();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -220,7 +250,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
       setProfile(data.profile);
       setAudit(data.audit);
       setActionItems(data.actionItems || []);
-      loadMonitoring();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -242,7 +271,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
       if (!res.ok) throw new Error(data.error || 'Scan failed');
       setScans(prev => [data.scan, ...prev]);
       setSelectedScanIdx(0);
-      loadMonitoring();
     } catch (err) {
       setScanError(err.message);
     } finally {
@@ -428,7 +456,6 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
               setAudit(null);
               setActionItems([]);
               setScans([]);
-              setMonitoring(null);
               setSearchQuery('');
               setGoogleUrl('');
               setError(null);
@@ -456,27 +483,31 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
         </div>
       )}
 
-      {/* Sub-tabs */}
-      <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-        {[
-          { id: 'audit', label: 'Audit Results', icon: BarChart3 },
-          { id: 'rankings', label: 'Map Rankings', icon: Target },
-          { id: 'actions', label: 'Action Plan', icon: FileText },
-          { id: 'monitoring', label: 'Monitoring', icon: Activity },
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setSubTab(tab.id)}
-            className={`flex-1 px-4 py-2 rounded-md text-sm font-semibold transition flex items-center justify-center gap-2 ${
-              subTab === tab.id
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <tab.icon className="w-4 h-4" />
-            <span className="hidden sm:inline">{tab.label}</span>
-          </button>
-        ))}
+      {/* Step Navigation */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="flex border-b border-gray-100">
+          {[
+            { id: 'audit', label: 'Audit Results' },
+            { id: 'rankings', label: 'Map Rankings' },
+            { id: 'actions', label: 'Action Plan' },
+          ].map((s, i) => (
+            <button
+              key={s.id}
+              onClick={() => setSubTab(s.id)}
+              className={`flex-1 py-4 text-sm font-semibold transition-all relative ${
+                subTab === s.id
+                  ? 'text-blue-600 bg-blue-50'
+                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
+              }`}
+            >
+              <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs mr-2 ${
+                subTab === s.id ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-600'
+              }`}>{i + 1}</span>
+              {s.label}
+              {subTab === s.id && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600" />}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ═══════════════════════════════════════════════════════
@@ -879,7 +910,7 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
                         </div>
                         {expandedItems.has(item.id) && (
                           <div className="mt-2 space-y-2">
-                            <p className="text-sm text-gray-700">{item.description}</p>
+                            <ActionDescription description={item.description} />
                             {item.why_it_matters && (
                               <div className="flex items-start gap-2 p-2 bg-blue-50 rounded-lg">
                                 <Info className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
@@ -910,154 +941,31 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
         </div>
       )}
 
-      {/* ═══════════════════════════════════════════════════════
-          MONITORING TAB
-          ═══════════════════════════════════════════════════════ */}
-      {subTab === 'monitoring' && (
-        <div className="space-y-6">
-          {/* Health status */}
-          {monitoring && (
-            <>
-              <div className={`rounded-xl border-2 p-6 ${
-                monitoring.health === 'healthy' ? 'bg-green-50 border-green-200'
-                : monitoring.health === 'needs_attention' ? 'bg-yellow-50 border-yellow-200'
-                : 'bg-red-50 border-red-200'
-              }`}>
-                <div className="flex items-center gap-3">
-                  {monitoring.health === 'healthy' ? (
-                    <Shield className="w-8 h-8 text-green-600" />
-                  ) : monitoring.health === 'needs_attention' ? (
-                    <AlertTriangle className="w-8 h-8 text-yellow-600" />
-                  ) : (
-                    <XCircle className="w-8 h-8 text-red-600" />
-                  )}
-                  <div>
-                    <h4 className="font-bold text-lg text-gray-900">
-                      {monitoring.health === 'healthy' ? 'Profile Health: Healthy'
-                        : monitoring.health === 'needs_attention' ? 'Profile Health: Needs Attention'
-                        : 'Profile Health: Critical'}
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      {monitoring.health === 'healthy'
-                        ? 'Your profile is in good shape. Keep up the ongoing tasks.'
-                        : `${monitoring.alerts?.length || 0} issue(s) detected that need your attention.`
-                      }
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Metric cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <span className="text-xs text-gray-500">Last Analysis</span>
-                  </div>
-                  <div className="text-lg font-bold text-gray-900">
-                    {monitoring.profile?.lastAnalyzedAt
-                      ? `${Math.floor((Date.now() - new Date(monitoring.profile.lastAnalyzedAt).getTime()) / (1000 * 60 * 60 * 24))}d ago`
-                      : '-'
-                    }
-                  </div>
-                  <button onClick={handleReAnalyze} className="text-xs text-amber-600 hover:underline mt-1">
-                    Re-analyze now
-                  </button>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span className="text-xs text-gray-500">Reviews</span>
-                  </div>
-                  <div className="text-lg font-bold text-gray-900">
-                    {monitoring.profile?.totalReviews || 0}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {monitoring.profile?.averageRating ? `${monitoring.profile.averageRating} ★ avg` : ''}
-                  </div>
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Target className="w-4 h-4 text-amber-500" />
-                    <span className="text-xs text-gray-500">Avg Map Rank</span>
-                  </div>
-                  <div className="text-lg font-bold text-gray-900">
-                    {monitoring.ranking?.latest?.average_rank || '-'}
-                  </div>
-                  {monitoring.ranking?.trend && (
-                    <div className={`text-xs flex items-center gap-1 ${monitoring.ranking.trend.rankChange > 0 ? 'text-green-600' : monitoring.ranking.trend.rankChange < 0 ? 'text-red-600' : 'text-gray-500'}`}>
-                      {monitoring.ranking.trend.rankChange > 0 ? <TrendingUp className="w-3 h-3" /> : monitoring.ranking.trend.rankChange < 0 ? <TrendingDown className="w-3 h-3" /> : null}
-                      {monitoring.ranking.trend.rankChange > 0 ? `+${monitoring.ranking.trend.rankChange.toFixed(1)} improvement` : monitoring.ranking.trend.rankChange < 0 ? `${monitoring.ranking.trend.rankChange.toFixed(1)} decline` : 'No change'}
-                    </div>
-                  )}
-                </div>
-
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <FileText className="w-4 h-4 text-blue-500" />
-                    <span className="text-xs text-gray-500">Action Items</span>
-                  </div>
-                  <div className="text-lg font-bold text-gray-900">
-                    {monitoring.actionItems?.completionRate || 0}%
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {monitoring.actionItems?.completed || 0}/{monitoring.actionItems?.total || 0} completed
-                  </div>
-                </div>
-              </div>
-
-              {/* Alerts */}
-              {monitoring.alerts && monitoring.alerts.length > 0 && (
-                <div className="bg-white rounded-xl border border-gray-200 p-6">
-                  <h4 className="font-semibold text-gray-900 mb-4">Alerts</h4>
-                  <div className="space-y-3">
-                    {monitoring.alerts.map((alert, i) => (
-                      <div key={i} className={`p-4 rounded-lg border ${
-                        alert.severity === 'critical' ? 'bg-red-50 border-red-200'
-                        : alert.severity === 'warning' ? 'bg-yellow-50 border-yellow-200'
-                        : 'bg-blue-50 border-blue-200'
-                      }`}>
-                        <div className="flex items-start gap-3">
-                          {alert.severity === 'critical' ? (
-                            <XCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
-                          ) : alert.severity === 'warning' ? (
-                            <AlertTriangle className="w-5 h-5 text-yellow-600 mt-0.5 flex-shrink-0" />
-                          ) : (
-                            <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
-                          )}
-                          <div>
-                            <h5 className="text-sm font-semibold text-gray-900">{alert.title}</h5>
-                            <p className="text-xs text-gray-600 mt-0.5">{alert.description}</p>
-                            <p className="text-xs font-medium text-gray-700 mt-1">Action: {alert.action}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* No alerts */}
-              {(!monitoring.alerts || monitoring.alerts.length === 0) && (
-                <div className="bg-green-50 rounded-xl border border-green-200 p-6 text-center">
-                  <Shield className="w-8 h-8 text-green-600 mx-auto mb-2" />
-                  <h4 className="font-semibold text-green-800">No alerts</h4>
-                  <p className="text-sm text-green-600">Everything is looking good. Keep up the great work!</p>
-                </div>
-              )}
-            </>
-          )}
-
-          {!monitoring && (
-            <div className="bg-gray-50 rounded-xl border border-gray-200 p-8 text-center">
-              <Activity className="w-10 h-10 text-gray-400 mx-auto mb-3" />
-              <h4 className="font-semibold text-gray-700">Loading monitoring data...</h4>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Step navigation footer */}
+      <div className="flex justify-between pt-2">
+        <button
+          onClick={() => {
+            const steps = ['audit', 'rankings', 'actions'];
+            const idx = steps.indexOf(subTab);
+            if (idx > 0) setSubTab(steps[idx - 1]);
+          }}
+          disabled={subTab === 'audit'}
+          className="px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 disabled:opacity-30 flex items-center gap-1"
+        >
+          ← Previous
+        </button>
+        <button
+          onClick={() => {
+            const steps = ['audit', 'rankings', 'actions'];
+            const idx = steps.indexOf(subTab);
+            if (idx < steps.length - 1) setSubTab(steps[idx + 1]);
+          }}
+          disabled={subTab === 'actions'}
+          className="px-4 py-2 text-sm font-semibold text-blue-600 hover:text-blue-700 disabled:opacity-30 flex items-center gap-1"
+        >
+          Next →
+        </button>
+      </div>
     </div>
   );
 }

@@ -97,7 +97,7 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
   const loadLeadTrainingPreview = async () => {
     setLeadTrainingPreview(false); // fetching
     try {
-      const res = await authFetch(`${apiUrl}/api/ai-agents/lead-form/training`);
+      const res = await authFetch(`${apiUrl}/api/agents/lead-form/training`);
       if (res.ok) {
         const data = await res.json();
         setLeadTrainingPreview(data && Object.keys(data).length ? data : null);
