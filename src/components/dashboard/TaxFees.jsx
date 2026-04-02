@@ -52,6 +52,7 @@ export default function TaxFees({ apiUrl, authFetch }) {
     try {
       const res = await authFetch(`${apiUrl}/api/invoices/catalog`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newItem),
       });
       const data = await res.json();
@@ -89,6 +90,7 @@ export default function TaxFees({ apiUrl, authFetch }) {
               type="number" step="0.01" min="0" max="100"
               value={taxRate}
               onChange={e => setTaxRate(e.target.value)}
+              onBlur={saveTaxRate}
               placeholder="e.g. 9.8"
               className="w-full px-4 py-3 pr-8 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none text-lg font-semibold"
             />
