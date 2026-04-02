@@ -44,6 +44,57 @@ function ImageUpload({ onUploaded, apiUrl, authFetch }) {
 }
 
 // ============================================================
+// Shared field primitives — defined at module level so React
+// never treats them as new component types on re-render
+// ============================================================
+function Field({ label, children }) {
+  return (
+    <div className="mb-3">
+      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+      {children}
+    </div>
+  );
+}
+
+function TextInput({ value, onChange, placeholder, type = 'text' }) {
+  return (
+    <input
+      type={type}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+    />
+  );
+}
+
+function ColorInput({ value, onChange }) {
+  return (
+    <div className="flex items-center gap-2">
+      <label className="relative w-8 h-8 flex-shrink-0 cursor-pointer">
+        <input
+          type="color"
+          value={value || '#000000'}
+          onChange={onChange}
+          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+        />
+        <div
+          className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm"
+          style={{ backgroundColor: value || '#000000' }}
+        />
+      </label>
+      <input
+        type="text"
+        value={value || ''}
+        onChange={onChange}
+        className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-xs font-mono focus:ring-1 focus:ring-blue-500 outline-none"
+        placeholder="#000000"
+      />
+    </div>
+  );
+}
+
+// ============================================================
 // Block Properties Panel
 // Renders editing controls based on the selected block type
 // ============================================================
@@ -62,55 +113,20 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
     onChange({ ...block, content: { ...c, [key]: value } });
   };
 
-  const Field = ({ label, children }) => (
-    <div className="mb-3">
-      <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-      {children}
-    </div>
-  );
-
-  const TextInput = ({ field, placeholder, type = 'text' }) => (
-    <input
-      type={type}
-      value={c[field] || ''}
-      onChange={e => update(field, e.target.value)}
-      placeholder={placeholder}
-      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-    />
-  );
-
-  const ColorInput = ({ field, label: lbl }) => (
-    <div className="flex items-center gap-2">
-      <label className="relative w-8 h-8 flex-shrink-0 cursor-pointer">
-        <input
-          type="color"
-          value={c[field] || '#000000'}
-          onChange={e => update(field, e.target.value)}
-          className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
-        />
-        <div
-          className="w-8 h-8 rounded-full border-2 border-gray-300 shadow-sm"
-          style={{ backgroundColor: c[field] || '#000000' }}
-        />
-      </label>
-      <input
-        type="text"
-        value={c[field] || ''}
-        onChange={e => update(field, e.target.value)}
-        className="flex-1 border border-gray-200 rounded-lg px-2 py-1 text-xs font-mono focus:ring-1 focus:ring-blue-500 outline-none"
-        placeholder="#000000"
-      />
-    </div>
-  );
-
   const renderFields = () => {
     switch (block.type) {
       case 'header':
         return (
           <>
-            <Field label="Business Name"><TextInput field="title" placeholder="Your Business" /></Field>
-            <Field label="Background Color"><ColorInput field="bgColor" /></Field>
-            <Field label="Text Color"><ColorInput field="textColor" /></Field>
+            <Field label="Business Name">
+              <TextInput value={c.title || ''} onChange={e => update('title', e.target.value)} placeholder="Your Business" />
+            </Field>
+            <Field label="Background Color">
+              <ColorInput value={c.bgColor} onChange={e => update('bgColor', e.target.value)} />
+            </Field>
+            <Field label="Text Color">
+              <ColorInput value={c.textColor} onChange={e => update('textColor', e.target.value)} />
+            </Field>
           </>
         );
 
@@ -118,13 +134,11 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
         return (
           <>
             <Field label="Image">
-              {/* Upload button */}
               <ImageUpload
                 onUploaded={url => update('src', url)}
                 apiUrl={apiUrl}
                 authFetch={authFetch}
               />
-              {/* URL input */}
               <div className="flex gap-1 mt-2">
                 <div className="relative flex-1">
                   <Link className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -141,16 +155,24 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
                 <img src={c.src} alt="Preview" className="mt-2 rounded-lg max-h-24 object-cover w-full" />
               )}
             </Field>
-            <Field label="Alt Text"><TextInput field="alt" placeholder="Describe the image" /></Field>
+            <Field label="Alt Text">
+              <TextInput value={c.alt || ''} onChange={e => update('alt', e.target.value)} placeholder="Describe the image" />
+            </Field>
           </>
         );
 
       case 'urgency_bar':
         return (
           <>
-            <Field label="Bar Text"><TextInput field="text" placeholder="⏰ Offer expires..." /></Field>
-            <Field label="Background Color"><ColorInput field="bgColor" /></Field>
-            <Field label="Text Color"><ColorInput field="textColor" /></Field>
+            <Field label="Bar Text">
+              <TextInput value={c.text || ''} onChange={e => update('text', e.target.value)} placeholder="⏰ Offer expires..." />
+            </Field>
+            <Field label="Background Color">
+              <ColorInput value={c.bgColor} onChange={e => update('bgColor', e.target.value)} />
+            </Field>
+            <Field label="Text Color">
+              <ColorInput value={c.textColor} onChange={e => update('textColor', e.target.value)} />
+            </Field>
           </>
         );
 
@@ -202,7 +224,9 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
       case 'offer_box':
         return (
           <>
-            <Field label="Offer Title"><TextInput field="title" placeholder="Exclusive Offer" /></Field>
+            <Field label="Offer Title">
+              <TextInput value={c.title || ''} onChange={e => update('title', e.target.value)} placeholder="Exclusive Offer" />
+            </Field>
             <Field label="Description">
               <textarea
                 value={c.description || ''}
@@ -212,15 +236,21 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
                 className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </Field>
-            <Field label="Background Color"><ColorInput field="bgColor" /></Field>
-            <Field label="Border Color"><ColorInput field="borderColor" /></Field>
+            <Field label="Background Color">
+              <ColorInput value={c.bgColor} onChange={e => update('bgColor', e.target.value)} />
+            </Field>
+            <Field label="Border Color">
+              <ColorInput value={c.borderColor} onChange={e => update('borderColor', e.target.value)} />
+            </Field>
           </>
         );
 
       case 'cta_button':
         return (
           <>
-            <Field label="Button Text"><TextInput field="text" placeholder="Book Now" /></Field>
+            <Field label="Button Text">
+              <TextInput value={c.text || ''} onChange={e => update('text', e.target.value)} placeholder="Book Now" />
+            </Field>
             <Field label="Link URL">
               <div className="relative">
                 <Link className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -233,23 +263,35 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
                 />
               </div>
             </Field>
-            <Field label="Button Color"><ColorInput field="bgColor" /></Field>
-            <Field label="Text Color"><ColorInput field="textColor" /></Field>
-            <Field label="Border Radius"><TextInput field="borderRadius" placeholder="8px" /></Field>
+            <Field label="Button Color">
+              <ColorInput value={c.bgColor} onChange={e => update('bgColor', e.target.value)} />
+            </Field>
+            <Field label="Text Color">
+              <ColorInput value={c.textColor} onChange={e => update('textColor', e.target.value)} />
+            </Field>
+            <Field label="Border Radius">
+              <TextInput value={c.borderRadius || ''} onChange={e => update('borderRadius', e.target.value)} placeholder="8px" />
+            </Field>
           </>
         );
 
       case 'divider':
         return (
           <>
-            <Field label="Color"><ColorInput field="color" /></Field>
-            <Field label="Thickness"><TextInput field="thickness" placeholder="1px" /></Field>
+            <Field label="Color">
+              <ColorInput value={c.color} onChange={e => update('color', e.target.value)} />
+            </Field>
+            <Field label="Thickness">
+              <TextInput value={c.thickness || ''} onChange={e => update('thickness', e.target.value)} placeholder="1px" />
+            </Field>
           </>
         );
 
       case 'spacer':
         return (
-          <Field label="Height (e.g. 24px)"><TextInput field="height" placeholder="24px" /></Field>
+          <Field label="Height (e.g. 24px)">
+            <TextInput value={c.height || ''} onChange={e => update('height', e.target.value)} placeholder="24px" />
+          </Field>
         );
 
       case 'signoff':
@@ -277,7 +319,9 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
                 className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm resize-none focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </Field>
-            <Field label="Unsubscribe Text"><TextInput field="unsubscribeText" placeholder="Unsubscribe" /></Field>
+            <Field label="Unsubscribe Text">
+              <TextInput value={c.unsubscribeText || ''} onChange={e => update('unsubscribeText', e.target.value)} placeholder="Unsubscribe" />
+            </Field>
           </>
         );
 
