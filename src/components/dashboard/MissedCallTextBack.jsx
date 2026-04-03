@@ -9,7 +9,7 @@ const STEPS = [
   { label: 'Stats'        },
 ];
 
-export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange, onDirtyChange }) {
+export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange, onDirtyChange, saveRef, deployRef }) {
   const [step, setStep] = useState(0);
 
   const [config, setConfig] = useState({
@@ -171,6 +171,12 @@ export default function MissedCallTextBack({ user, apiUrl, authFetch, setCurrent
     } catch (err) { showToast('Failed to deploy: ' + err.message); }
     finally { setIsDeploying(false); }
   };
+
+  // Expose save/deploy to parent via refs
+  useEffect(() => {
+    if (saveRef) saveRef.current = saveConfig;
+    if (deployRef) deployRef.current = deployAgent;
+  });
 
   const undeployAgent = async () => {
     setConfirmDisable(false);

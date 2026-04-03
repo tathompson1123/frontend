@@ -21,6 +21,8 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
   const [previewInput, setPreviewInput] = useState('');
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const previewRef = useRef(null);
+  const missedCallSaveRef = useRef(null);
+  const missedCallDeployRef = useRef(null);
 
   // Business info state — loaded once, used for smarter initial messages
   const [businessInfo, setBusinessInfo] = useState(null);
@@ -73,8 +75,8 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
-  // AI Assistant state - starts with a guided question (updated after business info loads)
-  const [aiMessages, setAiMessages] = useState([getInitialAiMessage('chat', null, [])]);
+  // AI Assistant state - starts neutral; loadConfigs() sets the real first message
+  const [aiMessages, setAiMessages] = useState([{ role: 'assistant', content: 'Loading your agent configuration...' }]);
   const [aiInput, setAiInput] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const aiChatRef = useRef(null);
@@ -260,7 +262,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         });
       }
 
-      // Update initial AI message — prioritize "already configured" over "has business info"
+      // Update initial AI message — always set after config loads
       const currentType = activeAgent;
       const loadedConfig = currentType === 'chat' ? chatLoaded : leadLoaded;
       if (loadedConfig && isConfigured(loadedConfig, currentType)) {
@@ -271,7 +273,6 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             : `Welcome back! Your SMS Lead Agent is already configured (agent name: **${loadedConfig.agentName || 'Kurt'}**). What would you like to change?`
         }]);
       } else {
-        // Not configured yet — use business-info-aware initial message
         setAiMessages([getInitialAiMessage(currentType, bizInfo, services)]);
       }
     } catch (error) {
@@ -288,6 +289,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
   };
 
   const saveConfiguration = async () => {
+    if (activeAgent === 'missedcall') {
+      if (missedCallSaveRef.current) await missedCallSaveRef.current();
+      return;
+    }
     setIsSaving(true);
     try {
       const endpoint = activeAgent === 'chat'
@@ -332,6 +337,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
   };
 
   const deployAgent = async () => {
+    if (activeAgent === 'missedcall') {
+      if (missedCallDeployRef.current) missedCallDeployRef.current();
+      return;
+    }
     setIsDeploying(true);
     try {
       const endpoint = activeAgent === 'chat'
@@ -516,7 +525,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
   };
 
   const currentConfig = activeAgent === 'chat' ? chatConfig : leadConfig;
-  const isDeployed = activeAgent === 'chat' ? chatAgentDeployed : leadAgentDeployed;
+  const isDeployed = activeAgent === 'chat' ? chatAgentDeployed : activeAgent === 'missedcall' ? missedCallDeployed : leadAgentDeployed;
   const canDeploy = user?.plan?.toLowerCase() === 'pro' || user?.plan?.toLowerCase() === 'expert';
 
   // Configuration sections for Manual Mode
@@ -962,8 +971,8 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               </button>
             </div>
 
-            {/* Action Buttons — hidden for missed call (it has its own deploy) */}
-            {activeAgent !== 'missedcall' && (
+            {/* Action Buttons */}
+            {(
               <div className="flex items-center gap-2">
                 <button
                   onClick={saveConfiguration}
@@ -1011,6 +1020,8 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
                 isDeployed={missedCallDeployed}
                 onDeploymentChange={loadDeploymentStatus}
                 onDirtyChange={onDirtyChange}
+                saveRef={missedCallSaveRef}
+                deployRef={missedCallDeployRef}
               />
             ) : setupMode === 'manual' ? (
               /* Manual Setup - Accordion Sections */
