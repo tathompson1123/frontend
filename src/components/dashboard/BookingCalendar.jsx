@@ -1206,15 +1206,39 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
 
             <div className="p-6 space-y-6">
               <div className="flex items-center gap-3">
-                <span className={`px-4 py-2 rounded-full font-medium ${
-                  selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                  selectedBooking.status === 'completed' ? 'bg-gray-100 text-gray-700' :
-                  selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
-                  selectedBooking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
-                  'bg-gray-100 text-gray-700'
-                }`}>
-                  {selectedBooking.status.charAt(0).toUpperCase() + selectedBooking.status.slice(1)}
-                </span>
+                <select
+                  value={selectedBooking.status}
+                  onChange={async (e) => {
+                    const newStatus = e.target.value;
+                    try {
+                      const res = await authFetch(`${apiUrl}/api/bookings/${selectedBooking.id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: newStatus }),
+                      });
+                      const data = await res.json();
+                      if (data.success) {
+                        setSelectedBooking({ ...selectedBooking, status: newStatus });
+                        setAllBookings(allBookings.map(b => b.id === selectedBooking.id ? { ...b, status: newStatus } : b));
+                        setFilteredBookings(filteredBookings.map(b => b.id === selectedBooking.id ? { ...b, status: newStatus } : b));
+                      }
+                    } catch {}
+                  }}
+                  className={`px-3 py-1.5 rounded-full text-sm font-medium border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500 ${
+                    selectedBooking.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                    selectedBooking.status === 'completed' ? 'bg-gray-100 text-gray-700' :
+                    selectedBooking.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                    selectedBooking.status === 'cancelled' ? 'bg-red-100 text-red-700' :
+                    'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="confirmed_card_on_file">Confirmed + Card on File</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="no_show">No Show</option>
+                </select>
               </div>
 
               <div className="bg-gray-50 rounded-xl p-4">
