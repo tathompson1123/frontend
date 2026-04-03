@@ -178,9 +178,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         let errorCount = 0;
 
         for (const row of dataRows) {
-          const values = row.match(/(".*?"|[^,]+)(?=\s*,|\s*$)/g).map(val => 
-            val.replace(/^"|"$/g, '').trim()
-          );
+          const values = row.split(',').map(val => val.replace(/^"|"$/g, '').trim());
 
           if (activeTab === 'leads') {
             const [id, name, status, phone, email, source, notes] = values;
