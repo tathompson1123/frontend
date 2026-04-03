@@ -974,6 +974,22 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             {/* Action Buttons */}
             {(
               <div className="flex items-center gap-2">
+                {activeAgent === 'leadform' && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await authFetch(`${apiUrl}/api/sms/fix-webhook`, { method: 'POST' });
+                        if (res.ok) alert('✅ SMS webhook re-synced. Replies should now work.');
+                        else { const d = await res.json(); alert('Failed: ' + (d.error || 'Unknown error')); }
+                      } catch { alert('Failed to re-sync webhook'); }
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
+                    title="Fix SMS replies not working"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Fix SMS Replies
+                  </button>
+                )}
                 <button
                   onClick={saveConfiguration}
                   disabled={isSaving}

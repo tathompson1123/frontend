@@ -298,6 +298,8 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, onDirtyChange 
       if (data.success) {
         setDrafts(prev => prev.map(d => d.id === currentDraftId ? { ...d, subject: editedSubject } : d));
         showToast('Draft saved!');
+        setCurrentDraftId(null);
+        setEditedBlocks([]);
       } else {
         showToast(data.error || 'Failed to save draft', 'error');
       }
