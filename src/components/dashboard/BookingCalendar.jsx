@@ -832,15 +832,15 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 <span>Default:</span>
                 <button
                   type="button"
-                  onClick={() => { localStorage.setItem('calendarDefaultView', 'week'); }}
-                  className={`px-2 py-0.5 rounded text-xs font-medium transition ${localStorage.getItem('calendarDefaultView') !== 'month' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100 text-gray-500'}`}
+                  onClick={() => { localStorage.setItem('calendarDefaultView', 'week'); setCalendarView('week'); }}
+                  className={`px-2 py-0.5 rounded text-xs font-medium transition ${calendarView !== 'month' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100 text-gray-500'}`}
                 >
                   Week
                 </button>
                 <button
                   type="button"
-                  onClick={() => { localStorage.setItem('calendarDefaultView', 'month'); }}
-                  className={`px-2 py-0.5 rounded text-xs font-medium transition ${localStorage.getItem('calendarDefaultView') === 'month' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100 text-gray-500'}`}
+                  onClick={() => { localStorage.setItem('calendarDefaultView', 'month'); setCalendarView('month'); }}
+                  className={`px-2 py-0.5 rounded text-xs font-medium transition ${calendarView === 'month' ? 'bg-blue-100 text-blue-700' : 'hover:bg-gray-100 text-gray-500'}`}
                 >
                   Month
                 </button>
@@ -1165,7 +1165,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     setShowBookingModal(false);
                     setShowCreateBookingModal(true);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm"
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit
@@ -1173,19 +1173,19 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 <button
                   type="button"
                   onClick={() => deleteBooking(selectedBooking.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4 text-red-500" />
                   Delete
                 </button>
                 {selectedBooking.customer_email && (
                   <button
                     type="button"
                     onClick={() => sendCardOnFileLink(selectedBooking.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 transition"
+                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition text-sm"
                   >
                     <CreditCard className="w-4 h-4" />
-                    Send Card on File Link
+                    Send Card Link
                   </button>
                 )}
                 <button
@@ -1197,9 +1197,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     setBookingUpsells(null);
                     setUpsellForId(null);
                   }}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm"
                 >
-                  <X className="w-6 h-6 text-gray-600" />
+                  <X className="w-4 h-4" />
+                  Close
                 </button>
               </div>
             </div>
@@ -1320,20 +1321,20 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                       </div>
                     ))}
                     {(() => {
-                      const subtotal = parseFloat(selectedBooking.total_amount) || 0;
-                      const taxRate = parseFloat(user?.default_tax_rate) || 0;
-                      const taxAmount = subtotal * taxRate;
-                      const total = subtotal + taxAmount;
+                      const subtotal = parseFloat(selectedBooking.subtotal) || parseFloat(selectedBooking.total_amount) || 0;
+                      const taxRate = parseFloat(selectedBooking.tax_rate) || 0;
+                      const taxAmount = parseFloat(selectedBooking.tax_amount) || (subtotal * taxRate);
+                      const total = taxAmount > 0 ? subtotal + taxAmount : parseFloat(selectedBooking.total_amount) || subtotal;
                       return (
                         <div className="pt-3 border-t border-amber-200 space-y-1">
-                          {taxRate > 0 && (
+                          {taxAmount > 0 && (
                             <>
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-600">Subtotal</span>
                                 <span className="text-gray-700">${subtotal.toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600">Tax ({(taxRate * 100).toFixed(1)}%)</span>
+                                <span className="text-gray-600">Tax ({taxRate > 0 ? (taxRate * 100).toFixed(1) + '%' : ''})</span>
                                 <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
                               </div>
                             </>
