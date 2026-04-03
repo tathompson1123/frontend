@@ -1,4 +1,4 @@
-import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight, Building2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight, Building2, ChevronLeft, ChevronRight, Plus, Trash2, Check } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function Overview({ bookings, services, employees, setCurrentView, user, apiUrl, authFetch }) {
@@ -7,6 +7,23 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const [leads, setLeads] = useState([]);
   const [activeCard, setActiveCard] = useState(0);
   const autoPlayRef = useRef(null);
+  const [todos, setTodos] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sorce_todos') || '[]'); } catch { return []; }
+  });
+  const [todoInput, setTodoInput] = useState('');
+
+  const saveTodos = (updated) => {
+    setTodos(updated);
+    localStorage.setItem('sorce_todos', JSON.stringify(updated));
+  };
+  const addTodo = () => {
+    const text = todoInput.trim();
+    if (!text) return;
+    saveTodos([...todos, { id: Date.now(), text, done: false }]);
+    setTodoInput('');
+  };
+  const toggleTodo = (id) => saveTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const deleteTodo = (id) => saveTodos(todos.filter(t => t.id !== id));
 
   // Fetch customers and leads
   useEffect(() => {
@@ -361,6 +378,57 @@ export default function Overview({ bookings, services, employees, setCurrentView
             ))}
           </div>
         </div>
+      </div>
+
+      {/* To-Do List */}
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-amber-600" />
+          To-Do List
+        </h2>
+        <div className="flex gap-2 mb-4">
+          <input
+            type="text"
+            value={todoInput}
+            onChange={e => setTodoInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && addTodo()}
+            placeholder="Add a task..."
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+          />
+          <button
+            type="button"
+            onClick={addTodo}
+            className="flex items-center gap-1.5 px-3 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition"
+          >
+            <Plus className="w-4 h-4" />
+            Add
+          </button>
+        </div>
+        {todos.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No tasks yet — add one above</p>
+        ) : (
+          <div className="space-y-2">
+            {todos.map(todo => (
+              <div key={todo.id} className={`flex items-center gap-3 p-3 rounded-lg border transition ${todo.done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-200'}`}>
+                <button
+                  type="button"
+                  onClick={() => toggleTodo(todo.id)}
+                  className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${todo.done ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-amber-500'}`}
+                >
+                  {todo.done && <Check className="w-3 h-3 text-white" />}
+                </button>
+                <span className={`flex-1 text-sm ${todo.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{todo.text}</span>
+                <button
+                  type="button"
+                  onClick={() => deleteTodo(todo.id)}
+                  className="p-1 text-gray-300 hover:text-red-500 transition flex-shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Quick Actions */}
