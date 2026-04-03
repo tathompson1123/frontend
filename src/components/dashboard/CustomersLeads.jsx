@@ -166,72 +166,76 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     reader.onload = async (e) => {
       try {
         const text = e.target.result;
-        const rows = text.split('\n').map(row => row.trim()).filter(row => row);
-        
-        if (rows.length < 2) {
-          alert('CSV file is empty or invalid');
-          return;
-        }
 
-        const dataRows = rows.slice(1);
+        // Parse CSV properly — handles quoted fields containing commas
+        const parseRow = (row) => {
+          const vals = [];
+          let cur = '', inQuote = false;
+          for (let i = 0; i < row.length; i++) {
+            const ch = row[i];
+            if (ch === '"') { inQuote = !inQuote; }
+            else if (ch === ',' && !inQuote) { vals.push(cur.trim()); cur = ''; }
+            else { cur += ch; }
+          }
+          vals.push(cur.trim());
+          return vals;
+        };
+
+        const lines = text.split('\n').map(r => r.trim()).filter(r => r);
+        if (lines.length < 2) { alert('CSV file is empty or invalid'); return; }
+
+        // Use header row to map columns by name (case-insensitive)
+        const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
+        const col = (row, ...names) => {
+          for (const n of names) {
+            const idx = headers.indexOf(n);
+            if (idx !== -1 && row[idx]) return row[idx];
+          }
+          return '';
+        };
+
+        const dataRows = lines.slice(1);
         let successCount = 0;
         let errorCount = 0;
 
-        for (const row of dataRows) {
-          const values = row.split(',').map(val => val.replace(/^"|"$/g, '').trim());
+        for (const line of dataRows) {
+          const values = parseRow(line);
 
           if (activeTab === 'leads') {
-            const [id, name, status, phone, email, source, notes] = values;
-            
+            const name = col(values, 'name', 'full_name', 'customer_name');
+            if (!name) { errorCount++; continue; }
             try {
               const response = await authFetch(`${apiUrl}/api/leads`, {
                 method: 'POST',
                 body: JSON.stringify({
-                  name: name || '',
-                  status: status || 'new',
-                  phone: phone || '',
-                  email: email || '',
-                  source: source || 'manual',
-                  notes: notes || '',
+                  name,
+                  status: col(values, 'status') || 'new',
+                  phone: col(values, 'phone', 'phone_number'),
+                  email: col(values, 'email', 'email_address'),
+                  source: col(values, 'source') || 'manual',
+                  notes: col(values, 'notes'),
                   table_id: activeLeadTable
                 })
               });
-
-              if (response.ok) {
-                successCount++;
-              } else {
-                errorCount++;
-              }
-            } catch (error) {
-              console.error('Error importing lead:', error);
-              errorCount++;
-            }
+              if (response.ok) successCount++; else errorCount++;
+            } catch { errorCount++; }
           } else {
-            const [id, name, phone, email, last_service, last_service_date, left_review, notes] = values;
-            
+            const name = col(values, 'name', 'full_name', 'customer_name');
+            if (!name) { errorCount++; continue; }
             try {
               const response = await authFetch(`${apiUrl}/api/customers`, {
                 method: 'POST',
                 body: JSON.stringify({
-                  name: name || '',
-                  phone: phone || '',
-                  email: email || '',
-                  last_service: last_service || '',
-                  last_service_date: last_service_date || null,
-                  left_review: left_review || 'N',
-                  notes: notes || ''
+                  name,
+                  phone: col(values, 'phone', 'phone_number'),
+                  email: col(values, 'email', 'email_address'),
+                  last_service: col(values, 'last_service', 'service'),
+                  last_service_date: col(values, 'last_service_date', 'last_visit') || null,
+                  notes: col(values, 'notes')
                 })
               });
-
-              if (response.ok) {
-                successCount++;
-              } else {
-                errorCount++;
-              }
-            } catch (error) {
-              console.error('Error importing customer:', error);
-              errorCount++;
-            }
+              if (response.ok) successCount++; else errorCount++;
+            } catch { errorCount++; }
           }
         }
 
