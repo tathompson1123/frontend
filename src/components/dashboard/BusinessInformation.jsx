@@ -372,6 +372,8 @@ export default function BusinessInformation({
   const [newSlotLabel, setNewSlotLabel] = useState('');
   const [addingSlot, setAddingSlot] = useState(false);
   const [slotError, setSlotError] = useState('');
+  const [requireCardOnFile, setRequireCardOnFile] = useState(false);
+  const [savingCardToggle, setSavingCardToggle] = useState(false);
 
   useEffect(() => {
     if (activeTab === 'app-settings') {
@@ -411,11 +413,34 @@ export default function BusinessInformation({
   const fetchBookingSlots = async () => {
     setLoadingSlots(true);
     try {
-      const res = await authFetch(`${apiUrl}/api/booking-times`);
-      const data = await res.json();
-      setBookingSlots(data.slots || []);
+      const [slotsRes, configRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/booking-times`),
+        authFetch(`${apiUrl}/api/booking-widget-config`)
+      ]);
+      const slotsData = await slotsRes.json();
+      setBookingSlots(slotsData.slots || []);
+      if (configRes.ok) {
+        const configData = await configRes.json();
+        setRequireCardOnFile(configData.config?.paymentMode === 'card_on_file');
+      }
     } catch { /* ignore */ }
     finally { setLoadingSlots(false); }
+  };
+
+  const toggleCardOnFile = async (value) => {
+    setSavingCardToggle(true);
+    try {
+      const configRes = await authFetch(`${apiUrl}/api/booking-widget-config`);
+      const configData = configRes.ok ? await configRes.json() : { config: {} };
+      const updated = { ...(configData.config || {}), paymentMode: value ? 'card_on_file' : 'none' };
+      await authFetch(`${apiUrl}/api/booking-widget-config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updated)
+      });
+      setRequireCardOnFile(value);
+    } catch { /* ignore */ }
+    finally { setSavingCardToggle(false); }
   };
 
   const addBookingSlot = async () => {
@@ -1226,7 +1251,7 @@ export default function BusinessInformation({
             >
               <div className="flex items-center gap-2">
                 <Briefcase className="w-4 h-4" />
-                Services ({services.length})
+                Services & Book Online ({services.length})
               </div>
               {activeTab === 'services' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
@@ -1559,7 +1584,7 @@ export default function BusinessInformation({
       {activeTab === 'services' && (
         <div className="space-y-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Services</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Services & Book Online</h2>
             <p className="text-gray-600 mt-1">Manage your service offerings</p>
           </div>
 
@@ -1627,7 +1652,7 @@ export default function BusinessInformation({
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              Book Online Times
+              Online Booking
             </button>
           </div>
 
@@ -2290,14 +2315,30 @@ export default function BusinessInformation({
             </div>
           )}
 
-          {/* Book Online Times Sub-tab */}
+          {/* Online Booking Sub-tab */}
           {serviceSubTab === 'booking-times' && (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 space-y-6">
               <div>
-                <h2 className="text-xl font-bold text-gray-900">Book Online Times</h2>
+                <h2 className="text-xl font-bold text-gray-900">Online Booking</h2>
                 <p className="text-gray-500 text-sm mt-1">
                   Set specific time slots customers can book online. When slots are configured, only these times will appear in the booking widget.
                 </p>
+              </div>
+
+              {/* Require Card on File toggle */}
+              <div className="flex items-center justify-between p-4 border border-gray-200 rounded-xl bg-gray-50">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">Require Card on File</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Customers must save a card to confirm their online booking. Card is not charged at booking.</p>
+                </div>
+                <button
+                  type="button"
+                  disabled={savingCardToggle}
+                  onClick={() => toggleCardOnFile(!requireCardOnFile)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${requireCardOnFile ? 'bg-blue-600' : 'bg-gray-200'} disabled:opacity-50`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${requireCardOnFile ? 'translate-x-6' : 'translate-x-1'}`} />
+                </button>
               </div>
 
               {/* Add new slot */}

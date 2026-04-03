@@ -275,6 +275,20 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
               />
             </div>
 
+            <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
+              <div>
+                <p className="text-sm font-medium text-gray-900">Require Card on File</p>
+                <p className="text-xs text-gray-500 mt-0.5">When agent books an appointment, customer must save a card on file to confirm</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAgentConfig({ ...agentConfig, requireCardOnFile: !agentConfig.requireCardOnFile })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${agentConfig.requireCardOnFile ? 'bg-blue-600' : 'bg-gray-200'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${agentConfig.requireCardOnFile ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+
             <div className="bg-blue-50 rounded-lg p-4">
               <h4 className="font-semibold text-gray-900 mb-3">Agent Capabilities</h4>
               <div className="space-y-2 text-sm text-gray-700">

@@ -24,7 +24,8 @@ import {
   Lightbulb,
   LayoutGrid,
   List,
-  Trash2
+  Trash2,
+  CreditCard
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
@@ -293,6 +294,21 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     } catch (error) {
       console.error('Error deleting booking:', error);
       showToast('Failed to delete booking', 'error');
+    }
+  };
+
+  const sendCardOnFileLink = async (bookingId) => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/bookings/${bookingId}/send-card-link`, { method: 'POST' });
+      if (response.ok) {
+        showToast('Card on file link sent to customer', 'success');
+      } else {
+        const data = await response.json();
+        showToast(data.error || 'Failed to send card link', 'error');
+      }
+    } catch (error) {
+      console.error('Error sending card link:', error);
+      showToast('Failed to send card link', 'error');
     }
   };
 
@@ -1143,6 +1159,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   <Trash2 className="w-4 h-4" />
                   Delete
                 </button>
+                {selectedBooking.customer_email && (
+                  <button
+                    type="button"
+                    onClick={() => sendCardOnFileLink(selectedBooking.id)}
+                    className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg font-semibold hover:bg-violet-700 transition"
+                  >
+                    <CreditCard className="w-4 h-4" />
+                    Send Card on File Link
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {

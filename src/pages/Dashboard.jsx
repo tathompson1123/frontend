@@ -483,7 +483,7 @@ useEffect(() => {
   ];
 
   const bottomMenuItems = [
-    { id: 'business-settings', icon: Briefcase, label: 'Business Settings' },
+    { id: 'business-settings', icon: Briefcase, label: 'Business Setup' },
     { id: 'payment-settings', icon: Wallet, label: 'Payment Settings' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
