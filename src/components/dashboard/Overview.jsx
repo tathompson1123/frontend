@@ -220,7 +220,9 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const CardIcon = currentCard.icon;
 
   return (
-    <div className="space-y-6">
+    <div className="flex gap-6 items-start">
+    {/* Left column — main content */}
+    <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Overview Dashboard</h1>
@@ -380,9 +382,57 @@ export default function Overview({ bookings, services, employees, setCurrentView
         </div>
       </div>
 
-      {/* To-Do List */}
+      {/* Quick Actions */}
+      <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <button
+            type="button"
+            onClick={() => setCurrentView('customers-leads')}
+            className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-left group"
+          >
+            <Users className="w-8 h-8 text-amber-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">Customers & Leads</h3>
+            <p className="text-sm text-gray-600">{customers.length} customers, {leads.length} leads</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentView('ai-agents')}
+            className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+          >
+            <Bot className="w-8 h-8 text-blue-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">AI Agents</h3>
+            <p className="text-sm text-gray-600">Deploy automation</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentView('google-business')}
+            className="p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+          >
+            <Globe className="w-8 h-8 text-green-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">Google Business</h3>
+            <p className="text-sm text-gray-600">Manage profile & reviews</p>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCurrentView('business-settings')}
+            className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
+          >
+            <Building2 className="w-8 h-8 text-indigo-600 mb-3 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 mb-1">Business Info</h3>
+            <p className="text-sm text-gray-600">Settings & details</p>
+          </button>
+        </div>
+      </div>
+    </div>{/* end left column */}
+
+    {/* Right column — To-Do List */}
+    <div className="w-80 flex-shrink-0 sticky top-6">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 text-amber-600" />
           To-Do List
         </h2>
@@ -430,52 +480,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
           </div>
         )}
       </div>
-
-      {/* Quick Actions */}
-      <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <button
-            type="button"
-            onClick={() => setCurrentView('customers-leads')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-left group"
-          >
-            <Users className="w-8 h-8 text-amber-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Customers & Leads</h3>
-            <p className="text-sm text-gray-600">{customers.length} customers, {leads.length} leads</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentView('ai-agents')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
-          >
-            <Bot className="w-8 h-8 text-blue-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">AI Agents</h3>
-            <p className="text-sm text-gray-600">Deploy automation</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentView('google-business')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
-          >
-            <Globe className="w-8 h-8 text-green-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Google Business</h3>
-            <p className="text-sm text-gray-600">Manage profile & reviews</p>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setCurrentView('business-settings')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
-          >
-            <Building2 className="w-8 h-8 text-indigo-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Business Info</h3>
-            <p className="text-sm text-gray-600">Settings & details</p>
-          </button>
-        </div>
-      </div>
+    </div>{/* end right column */}
     </div>
   );
 }
