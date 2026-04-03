@@ -1,6 +1,43 @@
 import { useState } from 'react';
 import { Link, Plus, Trash2, Upload } from 'lucide-react';
 
+const FONT_FAMILIES = [
+  { label: 'Arial', value: 'Arial,Helvetica,sans-serif' },
+  { label: 'Georgia', value: 'Georgia,serif' },
+  { label: 'Times New Roman', value: '"Times New Roman",Times,serif' },
+  { label: 'Trebuchet MS', value: '"Trebuchet MS",sans-serif' },
+  { label: 'Verdana', value: 'Verdana,Geneva,sans-serif' },
+  { label: 'Courier New', value: '"Courier New",Courier,monospace' },
+];
+
+const FONT_SIZES = ['10px','12px','13px','14px','15px','16px','18px','20px','22px','24px','26px','28px','32px','36px'];
+
+function FontControls({ fontFamily, fontSize, onFontFamily, onFontSize, fontLabel = 'Font', sizeLabel = 'Font Size' }) {
+  return (
+    <>
+      <Field label={fontLabel}>
+        <select
+          value={fontFamily || 'Arial,Helvetica,sans-serif'}
+          onChange={e => onFontFamily(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          {FONT_FAMILIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
+        </select>
+      </Field>
+      <Field label={sizeLabel}>
+        <select
+          value={fontSize || ''}
+          onChange={e => onFontSize(e.target.value)}
+          className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+        >
+          <option value="">Default</option>
+          {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+      </Field>
+    </>
+  );
+}
+
 // ============================================================
 // Image upload button — uploads to Cloudinary via /api/upload
 // ============================================================
@@ -118,7 +155,18 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
       case 'header':
         return (
           <>
-            <Field label="Business Name">
+            <Field label="Logo">
+              <ImageUpload onUploaded={url => update('logoSrc', url)} apiUrl={apiUrl} authFetch={authFetch} />
+              {c.logoSrc && (
+                <div className="mt-2 relative">
+                  <img src={c.logoSrc} alt="Logo preview" className="max-h-16 rounded border border-gray-200 object-contain" />
+                  <button onClick={() => update('logoSrc', '')} className="absolute top-1 right-1 p-0.5 bg-white rounded-full shadow border border-gray-200 text-gray-400 hover:text-red-500">
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+            </Field>
+            <Field label="Business Name (optional)">
               <TextInput value={c.title || ''} onChange={e => update('title', e.target.value)} placeholder="Your Business" />
             </Field>
             <Field label="Background Color">
@@ -127,6 +175,13 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
             <Field label="Text Color">
               <ColorInput value={c.textColor} onChange={e => update('textColor', e.target.value)} />
             </Field>
+            <FontControls
+              fontFamily={c.fontFamily}
+              fontSize={c.titleFontSize}
+              onFontFamily={v => update('fontFamily', v)}
+              onFontSize={v => update('titleFontSize', v)}
+              sizeLabel="Title Size"
+            />
           </>
         );
 
@@ -173,6 +228,12 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
             <Field label="Text Color">
               <ColorInput value={c.textColor} onChange={e => update('textColor', e.target.value)} />
             </Field>
+            <FontControls
+              fontFamily={c.fontFamily}
+              fontSize={c.fontSize}
+              onFontFamily={v => update('fontFamily', v)}
+              onFontSize={v => update('fontSize', v)}
+            />
           </>
         );
 
@@ -218,6 +279,25 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
             >
               <Plus className="w-3.5 h-3.5" /> Add paragraph
             </button>
+            <div className="border-t border-gray-100 mt-3 pt-3">
+              <FontControls
+                fontFamily={c.fontFamily}
+                fontSize={c.headingFontSize}
+                onFontFamily={v => update('fontFamily', v)}
+                onFontSize={v => update('headingFontSize', v)}
+                sizeLabel="Heading Size"
+              />
+              <Field label="Body Text Size">
+                <select
+                  value={c.bodyFontSize || ''}
+                  onChange={e => update('bodyFontSize', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                >
+                  <option value="">Default</option>
+                  {FONT_SIZES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </Field>
+            </div>
           </>
         );
 

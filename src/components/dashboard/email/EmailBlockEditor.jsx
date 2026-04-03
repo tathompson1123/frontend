@@ -122,14 +122,19 @@ function BlockCanvas({ block, selected, onSelect, onUpdate, onDelete, onDuplicat
     switch (block.type) {
       case 'header':
         return (
-          <div style={{ background: c.bgColor || '#111827', padding: '20px 24px', textAlign: 'center' }}>
-            <InlineText
-              value={c.title || 'Your Business'}
-              onChange={v => updateContent({ title: v })}
-              tag="h1"
-              className="!text-xl !font-bold !tracking-tight !m-0"
-              style={{ color: c.textColor || '#ffffff' }}
-            />
+          <div style={{ background: c.bgColor || '#111827', padding: '20px 24px', textAlign: 'center', fontFamily: c.fontFamily || undefined }}>
+            {c.logoSrc && (
+              <img src={c.logoSrc} alt="Logo" style={{ maxHeight: '60px', maxWidth: '200px', display: 'block', margin: c.title ? '0 auto 12px' : '0 auto' }} />
+            )}
+            {c.title && (
+              <InlineText
+                value={c.title}
+                onChange={v => updateContent({ title: v })}
+                tag="h1"
+                className="!font-bold !tracking-tight !m-0"
+                style={{ color: c.textColor || '#ffffff', fontSize: c.titleFontSize || '20px', fontFamily: c.fontFamily || undefined }}
+              />
+            )}
           </div>
         );
 
