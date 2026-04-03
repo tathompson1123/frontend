@@ -1119,14 +1119,27 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       {showBookingModal && selectedBooking && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900">Booking Details</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Booking #{selectedBooking.booking_number}
-                </p>
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 pt-5 pb-4">
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Booking Details</h2>
+                  <p className="text-sm text-gray-600 mt-1">Booking #{selectedBooking.booking_number}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBookingModal(false);
+                    setSelectedBooking(null);
+                    setEditingNotes(false);
+                    setBookingUpsells(null);
+                    setUpsellForId(null);
+                  }}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition text-gray-400 hover:text-gray-600 flex-shrink-0"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap gap-2">
                 {selectedBooking.status !== 'completed' && (
                   <button
                     type="button"
@@ -1134,7 +1147,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                       await handleCompleteBooking(selectedBooking.id);
                       setShowBookingModal(false);
                     }}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Mark Complete
@@ -1165,24 +1178,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     setShowBookingModal(false);
                     setShowCreateBookingModal(true);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
                 >
                   <Edit2 className="w-4 h-4" />
                   Edit
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteBooking(selectedBooking.id)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm"
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                  Delete
                 </button>
                 {selectedBooking.customer_email && (
                   <button
                     type="button"
                     onClick={() => sendCardOnFileLink(selectedBooking.id)}
-                    className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 transition text-sm"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 transition"
                   >
                     <CreditCard className="w-4 h-4" />
                     Send Card Link
@@ -1190,17 +1195,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 )}
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowBookingModal(false);
-                    setSelectedBooking(null);
-                    setEditingNotes(false);
-                    setBookingUpsells(null);
-                    setUpsellForId(null);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg font-semibold hover:bg-gray-50 transition text-sm"
+                  onClick={() => deleteBooking(selectedBooking.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition"
                 >
-                  <X className="w-4 h-4" />
-                  Close
+                  <Trash2 className="w-4 h-4" />
+                  Delete
                 </button>
               </div>
             </div>
