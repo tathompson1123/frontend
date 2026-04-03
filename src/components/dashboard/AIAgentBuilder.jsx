@@ -89,7 +89,8 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     captureStrategy: 'natural',
     customInstructions: '',
     enableBooking: true,
-    enableLeadCapture: true
+    enableLeadCapture: true,
+    requireCardOnFile: false
   });
 
   // Lead Form Agent config
@@ -531,7 +532,16 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             <input
               type="text"
               value={chatConfig.agentName}
-              onChange={(e) => setChatConfig({ ...chatConfig, agentName: e.target.value })}
+              onChange={(e) => {
+                const newName = e.target.value;
+                const oldName = chatConfig.agentName;
+                const currentGreeting = chatConfig.greetingMessage;
+                // Auto-update greeting if it still contains the old agent name
+                const updatedGreeting = oldName && currentGreeting.includes(oldName)
+                  ? currentGreeting.replaceAll(oldName, newName)
+                  : currentGreeting;
+                setChatConfig({ ...chatConfig, agentName: newName, greetingMessage: updatedGreeting });
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
               placeholder="e.g., Kurt, Alex, Sarah"
             />
@@ -673,6 +683,19 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               className={`w-12 h-6 rounded-full transition-colors ${chatConfig.enableBooking ? 'bg-amber-600' : 'bg-gray-300'}`}
             >
               <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${chatConfig.enableBooking ? 'translate-x-6' : 'translate-x-0.5'}`} />
+            </button>
+          </div>
+
+          <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+            <div>
+              <p className="font-medium text-gray-900">Require Card on File</p>
+              <p className="text-sm text-gray-500">Hold booking until customer saves a card — not charged, cancellation policy only</p>
+            </div>
+            <button
+              onClick={() => setChatConfig({ ...chatConfig, requireCardOnFile: !chatConfig.requireCardOnFile })}
+              className={`w-12 h-6 rounded-full transition-colors ${chatConfig.requireCardOnFile ? 'bg-amber-600' : 'bg-gray-300'}`}
+            >
+              <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform ${chatConfig.requireCardOnFile ? 'translate-x-6' : 'translate-x-0.5'}`} />
             </button>
           </div>
 

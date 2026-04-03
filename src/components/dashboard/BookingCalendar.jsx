@@ -67,6 +67,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
   const [isEditingBooking, setIsEditingBooking] = useState(false);
   const [editingBookingId, setEditingBookingId] = useState(null);
+  const [sendUpdateEmail, setSendUpdateEmail] = useState(false);
   const [serviceTab, setServiceTab] = useState('main');
   const [newBooking, setNewBooking] = useState({
     customerId: '',
@@ -318,7 +319,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               phone: newBooking.customerPhone,
               address: newBooking.customerAddress
             },
-            notes: newBooking.notes
+            notes: newBooking.notes,
+            sendEmail: sendUpdateEmail
           })
         });
         const data = await response.json();
@@ -560,6 +562,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 onClick={() => {
                   setIsEditingBooking(true);
                   setEditingBookingId(booking.id);
+                  setSendUpdateEmail(false);
                   const editForm = {
                     customerId: booking.customer_id,
                     customerName: booking.customer_name,
@@ -1107,6 +1110,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   onClick={() => {
                     setIsEditingBooking(true);
                     setEditingBookingId(selectedBooking.id);
+                    setSendUpdateEmail(false);
                     const editForm = {
                       customerId: selectedBooking.customer_id,
                       customerName: selectedBooking.customer_name,
@@ -1891,6 +1895,18 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 resize-none"
                 />
               </div>
+
+              {isEditingBooking && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={sendUpdateEmail}
+                    onChange={e => setSendUpdateEmail(e.target.checked)}
+                    className="w-4 h-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <span className="text-sm text-gray-700">Send booking updated email to customer</span>
+                </label>
+              )}
 
               <div className="flex gap-3 pt-4 border-t border-gray-200">
                 <button

@@ -722,22 +722,53 @@ export default function PublicBooking({ businessId, apiUrl }) {
                     <span className="font-semibold">{additionalServices.length} service(s)</span>
                   </div>
                 )}
+                {(businessInfo?.address || businessInfo?.city) && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Location:</span>
+                    <span className="font-semibold text-right max-w-[60%]">
+                      {[businessInfo.address, businessInfo.city, businessInfo.state].filter(Boolean).join(', ')}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-gray-600">Date:</span>
                   <span className="font-semibold">{new Date(selectedDate).toLocaleDateString()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Time:</span>
-                  <span className="font-semibold">{selectedTime}</span>
+                  <span className="font-semibold">{(() => { const [h,m] = selectedTime.split(':').map(Number); return `${h%12||12}:${String(m).padStart(2,'0')} ${h>=12?'PM':'AM'}`; })()}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Duration:</span>
                   <span className="font-semibold">{calculateTotalDuration().toFixed(1)} hours</span>
                 </div>
-                <div className="flex justify-between pt-2 border-t border-gray-300">
-                  <span className="text-gray-900 font-bold">Total:</span>
-                  <span className="text-green-600 font-bold text-lg">${calculateTotalPrice().toFixed(2)}</span>
-                </div>
+                {(() => {
+                  const subtotal = calculateTotalPrice();
+                  const taxRate = parseFloat(businessInfo?.tax_rate || 0);
+                  const taxAmount = subtotal * taxRate;
+                  const total = subtotal + taxAmount;
+                  return taxRate > 0 ? (
+                    <>
+                      <div className="flex justify-between pt-2 border-t border-gray-300">
+                        <span className="text-gray-600">Subtotal:</span>
+                        <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Tax ({(taxRate * 100).toFixed(2).replace(/\.?0+$/, '')}%):</span>
+                        <span className="font-semibold">${taxAmount.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between pt-2 border-t border-gray-300">
+                        <span className="text-gray-900 font-bold">Total:</span>
+                        <span className="text-green-600 font-bold text-lg">${total.toFixed(2)}</span>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex justify-between pt-2 border-t border-gray-300">
+                      <span className="text-gray-900 font-bold">Total:</span>
+                      <span className="text-green-600 font-bold text-lg">${subtotal.toFixed(2)}</span>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
