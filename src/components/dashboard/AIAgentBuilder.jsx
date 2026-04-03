@@ -974,22 +974,6 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             {/* Action Buttons */}
             {(
               <div className="flex items-center gap-2">
-                {activeAgent === 'leadform' && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const res = await authFetch(`${apiUrl}/api/sms/fix-webhook`, { method: 'POST' });
-                        if (res.ok) alert('✅ SMS webhook re-synced. Replies should now work.');
-                        else { const d = await res.json(); alert('Failed: ' + (d.error || 'Unknown error')); }
-                      } catch { alert('Failed to re-sync webhook'); }
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm"
-                    title="Fix SMS replies not working"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                    Fix SMS Replies
-                  </button>
-                )}
                 <button
                   onClick={saveConfiguration}
                   disabled={isSaving}
@@ -1024,8 +1008,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             )}
           </div>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-y-auto">
+          {/* Content Area — two-column: main setup | booking integration sidebar */}
+          <div className="flex-1 flex min-h-0">
+            {/* Main setup column */}
+            <div className="flex-1 overflow-y-auto border-r border-gray-100">
             {activeAgent === 'missedcall' && setupMode === 'manual' ? (
               /* Missed Call Manual Setup */
               <MissedCallTextBack
@@ -1131,6 +1117,59 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
                     >
                       <Send className="w-5 h-5" />
                     </button>
+                  </div>
+                </div>
+              </div>
+            )}
+            </div>
+
+            {/* Booking Integration — persistent right sidebar inside the panel */}
+            {activeAgent !== 'missedcall' && (
+              <div className="w-64 flex-shrink-0 overflow-y-auto border-l border-gray-100 bg-gray-50">
+                <div className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Calendar className="w-4 h-4 text-amber-600" />
+                    <span className="text-sm font-semibold text-gray-900">Booking Integration</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                      <div>
+                        <p className="text-xs font-medium text-gray-900">Enable Direct Booking</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Agent books appointments automatically</p>
+                      </div>
+                      <button
+                        onClick={() => setChatConfig({ ...chatConfig, enableBooking: !chatConfig.enableBooking })}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ml-2 ${chatConfig.enableBooking ? 'bg-amber-600' : 'bg-gray-200'}`}
+                      >
+                        <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${chatConfig.enableBooking ? 'translate-x-4.5' : 'translate-x-0.5'}`} style={{ transform: chatConfig.enableBooking ? 'translateX(18px)' : 'translateX(2px)' }} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200">
+                      <div>
+                        <p className="text-xs font-medium text-gray-900">Require Card on File</p>
+                        <p className="text-xs text-gray-500 mt-0.5">Card saved, not charged until appointment</p>
+                      </div>
+                      <button
+                        onClick={() => setChatConfig({ ...chatConfig, requireCardOnFile: !chatConfig.requireCardOnFile })}
+                        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors flex-shrink-0 ml-2 ${chatConfig.requireCardOnFile ? 'bg-amber-600' : 'bg-gray-200'}`}
+                      >
+                        <span className="inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform" style={{ transform: chatConfig.requireCardOnFile ? 'translateX(18px)' : 'translateX(2px)' }} />
+                      </button>
+                    </div>
+
+                    <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-xs text-blue-800 leading-relaxed">
+                        Uses your services and employee availability from Business Setup.
+                      </p>
+                      <button
+                        onClick={() => setCurrentView('business-settings')}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-1.5"
+                      >
+                        Manage Services & Availability →
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>

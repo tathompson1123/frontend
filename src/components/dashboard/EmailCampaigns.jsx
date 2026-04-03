@@ -265,7 +265,9 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, onDirtyChange 
   };
 
   const loadDraft = (draft) => {
-    setEditedBlocks(draft.blocks || []);
+    let blocks = draft.blocks || [];
+    if (typeof blocks === 'string') { try { blocks = JSON.parse(blocks); } catch { blocks = []; } }
+    setEditedBlocks(blocks);
     setEditedSubject(draft.subject || '');
     setEditedPreviewText(draft.preview_text || '');
     setEditedBodyText(draft.body_text || '');
@@ -296,7 +298,12 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, onDirtyChange 
       });
       const data = await r.json();
       if (data.success) {
-        setDrafts(prev => prev.map(d => d.id === currentDraftId ? { ...d, subject: editedSubject } : d));
+        setDrafts(prev => prev.map(d => d.id === currentDraftId ? {
+          ...d,
+          subject: editedSubject,
+          blocks: editedBlocks,
+          body_text: editedBodyText,
+        } : d));
         showToast('Draft saved!');
         setCurrentDraftId(null);
         setEditedBlocks([]);

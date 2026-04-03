@@ -21,6 +21,13 @@ function InlineText({ value, onChange, className = '', tag: Tag = 'p', placehold
   const ref = useRef(null);
   const [editing, setEditing] = useState(false);
 
+  // Sync DOM text when value prop changes and element is not being edited
+  useEffect(() => {
+    if (!editing && ref.current && ref.current.innerText !== (value || placeholder)) {
+      ref.current.innerText = value || placeholder;
+    }
+  }, [value, editing, placeholder]);
+
   useEffect(() => {
     if (editing && ref.current) {
       ref.current.focus();
@@ -124,7 +131,7 @@ function BlockCanvas({ block, selected, onSelect, onUpdate, onDelete, onDuplicat
         return (
           <div style={{ background: c.bgColor || '#111827', padding: '20px 24px', textAlign: 'center', fontFamily: c.fontFamily || undefined }}>
             {c.logoSrc && (
-              <img src={c.logoSrc} alt="Logo" style={{ maxHeight: '60px', maxWidth: '200px', display: 'block', margin: c.title ? '0 auto 12px' : '0 auto' }} />
+              <img src={c.logoSrc} alt="Logo" style={{ width: c.logoWidth ? `${c.logoWidth}px` : '200px', maxWidth: '100%', height: 'auto', display: 'block', margin: c.title ? '0 auto 12px' : '0 auto' }} />
             )}
             {c.title && (
               <InlineText

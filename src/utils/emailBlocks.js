@@ -20,7 +20,7 @@ export const BLOCK_TYPES = [
 export function createBlock(type, overrides = {}) {
   const id = uid();
   const defaults = {
-    header:      { title: 'Your Business', bgColor: '#111827', textColor: '#ffffff', logoSrc: '', titleFontSize: '20px', fontFamily: 'Arial,Helvetica,sans-serif' },
+    header:      { title: 'Your Business', bgColor: '#111827', textColor: '#ffffff', logoSrc: '', logoWidth: '200', titleFontSize: '20px', fontFamily: 'Arial,Helvetica,sans-serif' },
     hero_image:  { src: '', alt: 'Email hero image' },
     urgency_bar: { text: '⏰ Limited time offer — don\'t miss out', bgColor: '#fef3c7', textColor: '#92400e', fontFamily: 'Arial,Helvetica,sans-serif', fontSize: '14px' },
     body:        { heading: 'Here\'s something special for you', paragraphs: ['We wanted to reach out with an exclusive offer just for you.', 'Take advantage of this opportunity before it\'s gone.'], fontFamily: 'Arial,Helvetica,sans-serif', headingFontSize: '22px', bodyFontSize: '15px' },
@@ -48,7 +48,7 @@ function renderBlock(block) {
   switch (block.type) {
     case 'header':
       return `  <div style="background:${c.bgColor || '#111827'};padding:20px 24px;text-align:center;font-family:${c.fontFamily || 'Arial,Helvetica,sans-serif'}">
-    ${c.logoSrc ? `<img src="${esc(c.logoSrc)}" alt="Logo" style="max-height:60px;max-width:200px;display:block;margin:0 auto ${c.title ? '12px' : '0'}" />` : ''}
+    ${c.logoSrc ? `<img src="${esc(c.logoSrc)}" alt="Logo" style="width:${c.logoWidth ? c.logoWidth + 'px' : '200px'};max-width:100%;height:auto;display:block;margin:0 auto ${c.title ? '12px' : '0'}" />` : ''}
     ${c.title ? `<h1 style="color:${c.textColor || '#ffffff'};margin:0;font-size:${c.titleFontSize || '20px'};font-weight:700;letter-spacing:-0.3px;font-family:${c.fontFamily || 'Arial,Helvetica,sans-serif'}">${esc(c.title)}</h1>` : ''}
   </div>`;
 

@@ -159,13 +159,26 @@ export default function BlockProperties({ block, onChange, apiUrl, authFetch }) 
               <ImageUpload onUploaded={url => update('logoSrc', url)} apiUrl={apiUrl} authFetch={authFetch} />
               {c.logoSrc && (
                 <div className="mt-2 relative">
-                  <img src={c.logoSrc} alt="Logo preview" className="max-h-16 rounded border border-gray-200 object-contain" />
+                  <img src={c.logoSrc} alt="Logo preview" style={{ width: c.logoWidth ? `${c.logoWidth}px` : '200px', maxWidth: '100%', height: 'auto' }} className="rounded border border-gray-200 object-contain" />
                   <button onClick={() => update('logoSrc', '')} className="absolute top-1 right-1 p-0.5 bg-white rounded-full shadow border border-gray-200 text-gray-400 hover:text-red-500">
                     <Trash2 className="w-3 h-3" />
                   </button>
                 </div>
               )}
             </Field>
+            {c.logoSrc && (
+              <Field label={`Logo Width: ${c.logoWidth || 200}px`}>
+                <input
+                  type="range"
+                  min="40"
+                  max="600"
+                  step="10"
+                  value={c.logoWidth || 200}
+                  onChange={e => update('logoWidth', Number(e.target.value))}
+                  className="w-full accent-blue-500"
+                />
+              </Field>
+            )}
             <Field label="Business Name (optional)">
               <TextInput value={c.title || ''} onChange={e => update('title', e.target.value)} placeholder="Your Business" />
             </Field>
