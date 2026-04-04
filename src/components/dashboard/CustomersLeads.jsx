@@ -195,55 +195,54 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         };
 
         const dataRows = lines.slice(1);
-        let successCount = 0;
-        let errorCount = 0;
-
-        for (const line of dataRows) {
-          const values = parseRow(line);
-
-          if (activeTab === 'leads') {
-            const name = col(values, 'name', 'full_name', 'customer_name');
-            if (!name) { errorCount++; continue; }
-            try {
-              const response = await authFetch(`${apiUrl}/api/leads`, {
-                method: 'POST',
-                body: JSON.stringify({
-                  name,
-                  status: col(values, 'status') || 'new',
-                  phone: col(values, 'phone', 'phone_number'),
-                  email: col(values, 'email', 'email_address'),
-                  source: col(values, 'source') || 'manual',
-                  notes: col(values, 'notes'),
-                  table_id: activeLeadTable
-                })
-              });
-              if (response.ok) successCount++; else errorCount++;
-            } catch { errorCount++; }
-          } else {
-            const name = col(values, 'name', 'full_name', 'customer_name');
-            if (!name) { errorCount++; continue; }
-            try {
-              const response = await authFetch(`${apiUrl}/api/customers`, {
-                method: 'POST',
-                body: JSON.stringify({
-                  name,
-                  phone: col(values, 'phone', 'phone_number'),
-                  email: col(values, 'email', 'email_address'),
-                  last_service: col(values, 'last_service', 'service'),
-                  last_service_date: col(values, 'last_service_date', 'last_visit') || null,
-                  notes: col(values, 'notes')
-                })
-              });
-              if (response.ok) successCount++; else errorCount++;
-            } catch { errorCount++; }
-          }
-        }
-
-        alert(`Import complete!\nSuccess: ${successCount}\nErrors: ${errorCount}`);
 
         if (activeTab === 'leads') {
+          const leads = dataRows
+            .map(line => {
+              const values = parseRow(line);
+              const name = col(values, 'name', 'full_name', 'customer_name');
+              if (!name) return null;
+              return {
+                name,
+                status: col(values, 'status') || 'new',
+                phone: col(values, 'phone', 'phone_number'),
+                email: col(values, 'email', 'email_address'),
+                source: col(values, 'source') || 'manual',
+                notes: col(values, 'notes'),
+              };
+            })
+            .filter(Boolean);
+
+          const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
+            method: 'POST',
+            body: JSON.stringify({ leads })
+          });
+          const data = await response.json();
+          alert(`Import complete!\nImported: ${data.successCount}\nSkipped: ${data.errorCount}`);
           fetchLeads();
         } else {
+          const customers = dataRows
+            .map(line => {
+              const values = parseRow(line);
+              const name = col(values, 'name', 'full_name', 'customer_name');
+              if (!name) return null;
+              return {
+                name,
+                phone: col(values, 'phone', 'phone_number'),
+                email: col(values, 'email', 'email_address'),
+                last_service: col(values, 'last_service', 'service'),
+                last_service_date: col(values, 'last_service_date', 'last_visit') || null,
+                notes: col(values, 'notes'),
+              };
+            })
+            .filter(Boolean);
+
+          const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
+            method: 'POST',
+            body: JSON.stringify({ customers })
+          });
+          const data = await response.json();
+          alert(`Import complete!\nImported: ${data.successCount}\nSkipped: ${data.errorCount}`);
           fetchCustomers();
         }
 
