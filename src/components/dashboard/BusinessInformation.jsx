@@ -434,9 +434,9 @@ export default function BusinessInformation({
       const configData = configRes.ok ? await configRes.json() : { config: {} };
       const updated = { ...(configData.config || {}), paymentMode: value ? 'card_on_file' : 'none' };
       await authFetch(`${apiUrl}/api/booking-widget-config`, {
-        method: 'POST',
+        method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updated)
+        body: JSON.stringify({ config: updated })
       });
       setRequireCardOnFile(value);
     } catch { /* ignore */ }
