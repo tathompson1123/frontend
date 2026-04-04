@@ -202,6 +202,7 @@ export default function BusinessInformation({
     name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '',
     categoryId: '', bufferMinutes: '', isAddon: false, locationType: 'business_address', customAddress: ''
   });
+  const [serviceEmployeeIds, setServiceEmployeeIds] = useState([]);
   const [isSavingService, setIsSavingService] = useState(false);
   const [serviceVariants, setServiceVariants] = useState([]);
   const [variantForm, setVariantForm] = useState({ name: '', price: '', durationHours: '' });
@@ -1014,9 +1015,18 @@ export default function BusinessInformation({
       });
 
       if (!response.ok) throw new Error('Failed to save service');
+      const savedService = (await response.json()).service;
+      // Save employee assignments for this service
+      if (savedService && serviceEmployeeIds !== null) {
+        await authFetch(`${apiUrl}/api/services/${savedService.id}/employees`, {
+          method: 'PUT',
+          body: JSON.stringify({ employeeIds: serviceEmployeeIds })
+        }).catch(() => {});
+      }
       setShowAddService(false);
       setEditingService(null);
       setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false, locationType: 'business_address', customAddress: '' });
+      setServiceEmployeeIds([]);
       setServiceVariants([]);
       setShowVariantForm(false);
       setEditingVariant(null);
@@ -1044,12 +1054,15 @@ export default function BusinessInformation({
       customAddress: service.custom_address || ''
     });
     setServiceSubTab(service.is_addon ? 'addons' : 'main');
-    // Fetch variants for this service
+    setServiceEmployeeIds([]);
+    // Fetch variants and employee assignments for this service
     if (!service.is_addon) {
       fetchServiceVariants(service.id);
     } else {
       setServiceVariants([]);
     }
+    authFetch(`${apiUrl}/api/services/${service.id}/employees`)
+      .then(r => r.json()).then(d => setServiceEmployeeIds(d.employeeIds || [])).catch(() => {});
     setShowVariantForm(false);
     setEditingVariant(null);
     setVariantForm({ name: '', price: '', durationHours: '' });
@@ -1663,6 +1676,7 @@ export default function BusinessInformation({
                 type="button"
                 onClick={() => {
                   setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: serviceSubTab === 'addons', locationType: 'business_address', customAddress: '' });
+                  setServiceEmployeeIds([]);
                   setEditingService(null);
                   setServiceVariants([]);
                   setVariantForm({ name: '', price: '', durationHours: '' });
@@ -2283,6 +2297,34 @@ export default function BusinessInformation({
                     )}
                   </div>
 
+                  {/* Employee Assignment */}
+                  {employees.length > 0 && (
+                    <div className="border-2 border-amber-100 rounded-xl p-4 bg-amber-50">
+                      <h3 className="text-sm font-bold text-gray-800 mb-1">Assigned Employees</h3>
+                      <p className="text-xs text-gray-500 mb-3">Select which employees can perform this service. Leave all unchecked to allow any employee.</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        {employees.map(emp => (
+                          <label key={emp.id} className="flex items-center gap-2 p-2 rounded-lg border border-amber-200 bg-white cursor-pointer hover:border-amber-400 transition">
+                            <input
+                              type="checkbox"
+                              checked={serviceEmployeeIds.includes(emp.id)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setServiceEmployeeIds([...serviceEmployeeIds, emp.id]);
+                                } else {
+                                  setServiceEmployeeIds(serviceEmployeeIds.filter(id => id !== emp.id));
+                                }
+                              }}
+                              className="accent-amber-600"
+                            />
+                            <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: emp.color || '#3b82f6' }} />
+                            <span className="text-sm font-medium text-gray-800 truncate">{emp.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {saveError && (
                     <div className="bg-red-50 border-2 border-red-200 rounded-lg p-4 text-red-700">{saveError}</div>
                   )}
@@ -2293,6 +2335,7 @@ export default function BusinessInformation({
                         setShowAddService(false);
                         setEditingService(null);
                         setServiceForm({ name: '', description: '', durationHours: '', price: '', mediaUrl: '', mediaType: '', categoryId: '', bufferMinutes: '', isAddon: false, locationType: 'business_address', customAddress: '' });
+                        setServiceEmployeeIds([]);
                         setServiceVariants([]);
                         setShowVariantForm(false);
                         setEditingVariant(null);
