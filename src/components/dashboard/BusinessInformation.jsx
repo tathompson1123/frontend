@@ -247,6 +247,24 @@ export default function BusinessInformation({
   const [groupForm, setGroupForm] = useState({ name: '', selectedEmployees: [] });
   const [editingGroup, setEditingGroup] = useState(null);
   const [invitingEmployeeId, setInvitingEmployeeId] = useState(null);
+  const [togglingAdminId, setTogglingAdminId] = useState(null);
+
+  const handleToggleAdmin = async (employee) => {
+    const newVal = !employee.is_admin;
+    setTogglingAdminId(employee.id);
+    try {
+      await authFetch(`${apiUrl}/api/employees/${employee.id}/admin`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isAdmin: newVal }),
+      });
+      setEmployees(prev => prev.map(e => e.id === employee.id ? { ...e, is_admin: newVal } : e));
+    } catch {
+      alert('Failed to update admin status. Please try again.');
+    } finally {
+      setTogglingAdminId(null);
+    }
+  };
 
   // Permissions State
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
@@ -2794,6 +2812,25 @@ export default function BusinessInformation({
                         <Edit className="w-5 h-5" />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Admin Access */}
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                      <span className="text-xs font-medium text-gray-500">Admin Access</span>
+                      {employee.is_admin && (
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">Admin</span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleAdmin(employee)}
+                      disabled={togglingAdminId === employee.id}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-50 ${employee.is_admin ? 'bg-amber-500' : 'bg-gray-200'}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${employee.is_admin ? 'translate-x-6' : 'translate-x-1'}`} />
+                    </button>
                   </div>
 
                   {/* Mobile App Access */}
