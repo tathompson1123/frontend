@@ -1,4 +1,4 @@
-import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight, Building2, ChevronLeft, ChevronRight, Plus, Trash2, Check } from 'lucide-react';
+import { Calendar, Briefcase, Users, TrendingUp, Clock, DollarSign, Star, Globe, MessageSquare, Zap, Target, ArrowUpRight, CheckCircle2, Mail, Phone, Bot, Sparkles, ArrowLeft, ArrowRight, Building2, ChevronLeft, ChevronRight, Plus, Trash2, Check, AlertTriangle, Minus, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
 export default function Overview({ bookings, services, employees, setCurrentView, user, apiUrl, authFetch }) {
@@ -11,6 +11,13 @@ export default function Overview({ bookings, services, employees, setCurrentView
     try { return JSON.parse(localStorage.getItem('sorce_todos') || '[]'); } catch { return []; }
   });
   const [todoInput, setTodoInput] = useState('');
+  const [todoPriority, setTodoPriority] = useState('medium');
+
+  const PRIORITY_CONFIG = {
+    high:   { label: 'High',   color: 'text-red-600',    bg: 'bg-red-50',   border: 'border-red-200',   icon: <AlertTriangle className="w-3 h-3" /> },
+    medium: { label: 'Medium', color: 'text-amber-600',  bg: 'bg-amber-50', border: 'border-amber-200', icon: <Minus className="w-3 h-3" /> },
+    low:    { label: 'Low',    color: 'text-gray-400',   bg: 'bg-gray-50',  border: 'border-gray-200',  icon: <ChevronDown className="w-3 h-3" /> },
+  };
 
   const saveTodos = (updated) => {
     setTodos(updated);
@@ -19,11 +26,24 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const addTodo = () => {
     const text = todoInput.trim();
     if (!text) return;
-    saveTodos([...todos, { id: Date.now(), text, done: false }]);
+    saveTodos([...todos, { id: Date.now(), text, done: false, priority: todoPriority, createdAt: new Date().toISOString() }]);
     setTodoInput('');
   };
   const toggleTodo = (id) => saveTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
   const deleteTodo = (id) => saveTodos(todos.filter(t => t.id !== id));
+
+  const priorityOrder = { high: 0, medium: 1, low: 2 };
+  const sortedTodos = [...todos].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return (priorityOrder[a.priority] ?? 1) - (priorityOrder[b.priority] ?? 1);
+  });
+
+  const formatTodoDate = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' +
+      d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  };
 
   // Fetch customers and leads
   useEffect(() => {
@@ -436,7 +456,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
           <CheckCircle2 className="w-5 h-5 text-amber-600" />
           To-Do List
         </h2>
-        <div className="flex gap-2 mb-4">
+        <div className="flex gap-2 mb-2">
           <input
             type="text"
             value={todoInput}
@@ -454,29 +474,54 @@ export default function Overview({ bookings, services, employees, setCurrentView
             Add
           </button>
         </div>
+        <div className="flex gap-1.5 mb-4">
+          {Object.entries(PRIORITY_CONFIG).map(([key, cfg]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTodoPriority(key)}
+              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border transition ${todoPriority === key ? `${cfg.bg} ${cfg.border} ${cfg.color}` : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'}`}
+            >
+              {cfg.icon}{cfg.label}
+            </button>
+          ))}
+        </div>
         {todos.length === 0 ? (
           <p className="text-sm text-gray-400 text-center py-6">No tasks yet — add one above</p>
         ) : (
-          <div className="space-y-2">
-            {todos.map(todo => (
-              <div key={todo.id} className={`flex items-center gap-3 p-3 rounded-lg border transition ${todo.done ? 'bg-gray-50 border-gray-100' : 'bg-white border-gray-200'}`}>
-                <button
-                  type="button"
-                  onClick={() => toggleTodo(todo.id)}
-                  className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition ${todo.done ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-amber-500'}`}
-                >
-                  {todo.done && <Check className="w-3 h-3 text-white" />}
-                </button>
-                <span className={`flex-1 text-sm ${todo.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{todo.text}</span>
-                <button
-                  type="button"
-                  onClick={() => deleteTodo(todo.id)}
-                  className="p-1 text-gray-300 hover:text-red-500 transition flex-shrink-0"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
+          <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+            {sortedTodos.map(todo => {
+              const cfg = PRIORITY_CONFIG[todo.priority] || PRIORITY_CONFIG.medium;
+              return (
+                <div key={todo.id} className={`p-3 rounded-lg border transition ${todo.done ? 'bg-gray-50 border-gray-100 opacity-60' : `${cfg.bg} ${cfg.border}`}`}>
+                  <div className="flex items-start gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => toggleTodo(todo.id)}
+                      className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition mt-0.5 ${todo.done ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-amber-500'}`}
+                    >
+                      {todo.done && <Check className="w-3 h-3 text-white" />}
+                    </button>
+                    <div className="flex-1 min-w-0">
+                      <span className={`text-sm block ${todo.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{todo.text}</span>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className={`flex items-center gap-0.5 text-xs font-semibold ${cfg.color}`}>{cfg.icon}{cfg.label}</span>
+                        {todo.createdAt && (
+                          <span className="text-xs text-gray-400">{formatTodoDate(todo.createdAt)}</span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => deleteTodo(todo.id)}
+                      className="p-1 text-gray-300 hover:text-red-500 transition flex-shrink-0"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

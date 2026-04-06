@@ -1349,10 +1349,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                       </div>
                     ))}
                     {(() => {
-                      const subtotal = parseFloat(selectedBooking.subtotal) || parseFloat(selectedBooking.total_amount) || 0;
+                      const itemsSubtotal = selectedBooking.items.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0);
+                      const subtotal = parseFloat(selectedBooking.subtotal) || itemsSubtotal || 0;
+                      const totalAmount = parseFloat(selectedBooking.total_amount) || subtotal;
                       const taxRate = parseFloat(selectedBooking.tax_rate) || 0;
-                      const taxAmount = parseFloat(selectedBooking.tax_amount) || (subtotal * taxRate);
-                      const total = taxAmount > 0 ? subtotal + taxAmount : parseFloat(selectedBooking.total_amount) || subtotal;
+                      const taxAmount = parseFloat(selectedBooking.tax_amount) || (taxRate > 0 ? subtotal * taxRate : (totalAmount > subtotal + 0.005 ? totalAmount - subtotal : 0));
+                      const total = taxAmount > 0 ? subtotal + taxAmount : totalAmount;
                       return (
                         <div className="pt-3 border-t border-amber-200 space-y-1">
                           {taxAmount > 0 && (
@@ -1362,7 +1364,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                                 <span className="text-gray-700">${subtotal.toFixed(2)}</span>
                               </div>
                               <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600">Tax ({taxRate > 0 ? (taxRate * 100).toFixed(1) + '%' : ''})</span>
+                                <span className="text-gray-600">Tax{taxRate > 0 ? ` (${(taxRate * 100).toFixed(1)}%)` : ''}</span>
                                 <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
                               </div>
                             </>

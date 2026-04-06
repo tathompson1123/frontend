@@ -31,6 +31,13 @@ import {
   Flag
 } from 'lucide-react';
 
+// Always parse DB timestamps as UTC (PostgreSQL returns without 'Z')
+function parseTS(ts) {
+  if (!ts) return new Date(0);
+  const s = String(ts);
+  return new Date(/Z$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z');
+}
+
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
   const [activeTab, setActiveTab] = useState('leads');
   const [leadTables, setLeadTables] = useState([
@@ -69,6 +76,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [smsLeadMessages, setSmsLeadMessages] = useState([]);
   const [loadingSmsLeads, setLoadingSmsLeads] = useState(false);
   const [loadingSmsMessages, setLoadingSmsMessages] = useState(false);
+  const [viewingLeadEditMode, setViewingLeadEditMode] = useState(false);
+  const [viewingLeadEdit, setViewingLeadEdit] = useState({});
+  const [viewingLeadSmsMessages, setViewingLeadSmsMessages] = useState([]);
+  const [viewingLeadSmsLoading, setViewingLeadSmsLoading] = useState(false);
+  const [viewingLeadChatMessages, setViewingLeadChatMessages] = useState([]);
+  const [viewingLeadChatLoading, setViewingLeadChatLoading] = useState(false);
+  const [viewingLeadConvTab, setViewingLeadConvTab] = useState('sms'); // 'sms' | 'chat'
+  const [viewingCustomer, setViewingCustomer] = useState(null);
+  const [viewingCustomerEditMode, setViewingCustomerEditMode] = useState(false);
+  const [viewingCustomerEdit, setViewingCustomerEdit] = useState({});
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -191,37 +208,57 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         const lines = text.split('\n').map(r => r.trim()).filter(r => r);
         if (lines.length < 2) { alert('CSV file is empty or invalid'); return; }
 
-        // Use header row to map columns by name (case-insensitive)
-        const headers = parseRow(lines[0]).map(h => h.toLowerCase().replace(/\s+/g, '_'));
-        const col = (row, ...names) => {
-          for (const n of names) {
-            const idx = headers.indexOf(n);
-            if (idx !== -1 && row[idx]) return row[idx];
+        // Smarter column resolution: normalize headers, then find by substring match
+        const rawHeaders = parseRow(lines[0]);
+        const headers = rawHeaders.map(h => h.toLowerCase().trim());
+
+        // Find index of first header whose normalized form includes any of the given substrings
+        const findCol = (...substrings) => {
+          for (const sub of substrings) {
+            const idx = headers.findIndex(h => h.replace(/[\s_\-]/g, '').includes(sub.replace(/[\s_\-]/g, '')));
+            if (idx !== -1) return idx;
           }
-          return '';
+          return -1;
         };
+
+        const getVal = (row, idx) => (idx !== -1 && row[idx] != null ? row[idx].trim() : '');
 
         const dataRows = lines.slice(1);
 
         if (activeTab === 'leads') {
+          // Resolve column indices once for leads
+          const iFirstName = findCol('firstname', 'first_name');
+          const iLastName = findCol('lastname', 'last_name');
+          const iName = findCol('fullname', 'customername', 'name');
+          const iPhone = findCol('phone', 'mobile', 'cell');
+          const iEmail = findCol('email');
+          const iStatus = findCol('status');
+          const iSource = findCol('source');
+          const iNotes = findCol('notes', 'comment');
+
           const leads = dataRows
             .map(line => {
               const values = parseRow(line);
-              const name = col(values, 'name', 'full_name', 'customer_name');
+              let name = getVal(values, iName);
+              if (!name && iFirstName !== -1) {
+                const fn = getVal(values, iFirstName);
+                const ln = getVal(values, iLastName);
+                name = [fn, ln].filter(Boolean).join(' ');
+              }
               if (!name) return null;
               return {
                 name,
-                status: col(values, 'status') || 'new',
-                phone: col(values, 'phone', 'phone_number'),
-                email: col(values, 'email', 'email_address'),
-                source: col(values, 'source') || 'manual',
-                notes: col(values, 'notes'),
+                status: getVal(values, iStatus) || 'new',
+                phone: getVal(values, iPhone),
+                email: getVal(values, iEmail),
+                source: getVal(values, iSource) || 'manual',
+                notes: getVal(values, iNotes),
               };
             })
             .filter(Boolean);
 
           if (leads.length === 0) {
-            alert('No valid leads found in CSV. Make sure the file has a "name" column.');
+            alert('No valid leads found in CSV. Could not find a name column — tried "name", "full name", "first name".');
             return;
           }
           const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
@@ -233,24 +270,39 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           alert(`Import complete!\nImported: ${data.successCount}\nSkipped: ${data.errorCount}`);
           fetchLeads();
         } else {
+          // Resolve column indices once for customers
+          const iFirstName = findCol('firstname', 'first_name');
+          const iLastName = findCol('lastname', 'last_name');
+          const iName = findCol('fullname', 'customername', 'name');
+          const iPhone = findCol('phone', 'mobile', 'cell');
+          const iEmail = findCol('email');
+          const iService = findCol('lastservice', 'service');
+          const iServiceDate = findCol('servicedate', 'lastvisit', 'visitdate');
+          const iNotes = findCol('notes', 'comment');
+
           const customers = dataRows
             .map(line => {
               const values = parseRow(line);
-              const name = col(values, 'name', 'full_name', 'customer_name');
+              let name = getVal(values, iName);
+              if (!name && iFirstName !== -1) {
+                const fn = getVal(values, iFirstName);
+                const ln = getVal(values, iLastName);
+                name = [fn, ln].filter(Boolean).join(' ');
+              }
               if (!name) return null;
               return {
                 name,
-                phone: col(values, 'phone', 'phone_number'),
-                email: col(values, 'email', 'email_address'),
-                last_service: col(values, 'last_service', 'service'),
-                last_service_date: col(values, 'last_service_date', 'last_visit') || null,
-                notes: col(values, 'notes'),
+                phone: getVal(values, iPhone),
+                email: getVal(values, iEmail),
+                last_service: getVal(values, iService),
+                last_service_date: getVal(values, iServiceDate) || null,
+                notes: getVal(values, iNotes),
               };
             })
             .filter(Boolean);
 
           if (customers.length === 0) {
-            alert('No valid customers found in CSV. Make sure the file has a "name" column.');
+            alert('No valid customers found in CSV. Could not find a name column — tried "name", "full name", "first name".');
             return;
           }
           const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
@@ -277,6 +329,70 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     fetchLeads();
     fetchCustomers();
   }, []);
+
+  const openViewingLead = (lead) => {
+    setViewingLead(lead);
+    setViewingLeadEditMode(false);
+    setViewingLeadEdit({ status: lead.status || 'new', notes: lead.notes || '', priority: lead.priority || '', follow_up_date: lead.follow_up_date || '' });
+    setViewingLeadSmsMessages([]);
+    setViewingLeadChatMessages([]);
+    const isChatLead = lead.source === 'ai_chat_agent';
+    setViewingLeadConvTab(isChatLead ? 'chat' : 'sms');
+
+    if (lead.phone) {
+      setViewingLeadSmsLoading(true);
+      authFetch(`${apiUrl}/api/leads/${lead.id}/sms-conversation`)
+        .then(r => r.json())
+        .then(d => setViewingLeadSmsMessages(d.messages || []))
+        .catch(() => setViewingLeadSmsMessages([]))
+        .finally(() => setViewingLeadSmsLoading(false));
+    }
+
+    if (isChatLead) {
+      setViewingLeadChatLoading(true);
+      authFetch(`${apiUrl}/api/leads/${lead.id}/chat-conversation`)
+        .then(r => r.json())
+        .then(d => setViewingLeadChatMessages(d.messages || []))
+        .catch(() => setViewingLeadChatMessages([]))
+        .finally(() => setViewingLeadChatLoading(false));
+    }
+  };
+
+  const saveViewingLeadEdit = async () => {
+    if (!viewingLead) return;
+    try {
+      const response = await authFetch(`${apiUrl}/api/leads/${viewingLead.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(viewingLeadEdit)
+      });
+      if (response.ok) {
+        const updated = { ...viewingLead, ...viewingLeadEdit };
+        setViewingLead(updated);
+        setCurrentLeads(getCurrentLeads().map(l => l.id === viewingLead.id ? updated : l));
+        setViewingLeadEditMode(false);
+      }
+    } catch (err) {
+      console.error('Error saving lead:', err);
+    }
+  };
+
+  const saveViewingCustomerEdit = async () => {
+    if (!viewingCustomer) return;
+    try {
+      const response = await authFetch(`${apiUrl}/api/customers/${viewingCustomer.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(viewingCustomerEdit)
+      });
+      if (response.ok) {
+        const updated = { ...viewingCustomer, ...viewingCustomerEdit };
+        setViewingCustomer(updated);
+        setCustomers(customers.map(c => c.id === viewingCustomer.id ? updated : c));
+        setViewingCustomerEditMode(false);
+      }
+    } catch (err) {
+      console.error('Error saving customer:', err);
+    }
+  };
 
   const fetchLeads = async () => {
     try {
@@ -794,7 +910,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     if (!lead.created_at) return null;
     const terminalStatuses = ['converted', 'not_interested'];
     if (terminalStatuses.includes(lead.status)) return null;
-    const ageMs = Date.now() - new Date(lead.created_at).getTime();
+    const ageMs = Date.now() - parseTS(lead.created_at).getTime();
     const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24));
     if (ageDays >= 14) return { label: 'Needs Check-Up', days: ageDays, level: 'urgent' };
     if (ageDays >= 7) return { label: 'Follow Up', days: ageDays, level: 'warn' };
@@ -804,7 +920,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   // Returns true if a lead's follow_up_date is today or in the past
   const isFollowUpOverdue = (lead) => {
     if (!lead.follow_up_date) return false;
-    return new Date(lead.follow_up_date) <= new Date();
+    return parseTS(lead.follow_up_date) <= new Date();
   };
 
   const customerColumns = [
@@ -874,7 +990,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           </div>
         </div>
 
-        {/* Lead Tables Tabs (only show when on leads tab) */}
+        {/* Lead Tables Tabs */}
         {activeTab === 'leads' && (
           <div className="border-b border-gray-200 bg-white px-6">
             <div className="flex items-center gap-2 overflow-x-auto py-2">
@@ -964,7 +1080,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         )}
       </div>
 
-      {/* Needs Attention banner — only on Leads tab */}
+      {/* Needs Attention banner */}
       {activeTab === 'leads' && (() => {
         const allLeads = leadTables.flatMap(t => t.leads);
         const urgentCount = allLeads.filter(l => getLeadAgeFlag(l)?.level === 'urgent').length;
@@ -1047,19 +1163,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <LeadsTable
               leads={filteredLeads}
               columns={leadColumns}
-              editingCell={editingCell}
-              editValue={editValue}
-              handleCellEdit={handleCellEdit}
-              setEditValue={setEditValue}
-              saveCellEdit={saveCellEdit}
-              cancelCellEdit={cancelCellEdit}
+              openViewingLead={openViewingLead}
               deleteLead={deleteLead}
-              setSelectedLead={setSelectedLead}
-              loadSmsConversation={loadSmsConversation}
-              setShowSmsModal={setShowSmsModal}
               setConvertingLead={setConvertingLead}
               setShowConvertModal={setShowConvertModal}
-              updateLeadField={updateLeadField}
               getLeadAgeFlag={getLeadAgeFlag}
               isFollowUpOverdue={isFollowUpOverdue}
             />
@@ -1067,12 +1174,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <CustomersTable
               customers={filteredCustomers}
               columns={customerColumns}
-              editingCell={editingCell}
-              editValue={editValue}
-              handleCellEdit={handleCellEdit}
-              setEditValue={setEditValue}
-              saveCellEdit={saveCellEdit}
-              cancelCellEdit={cancelCellEdit}
+              openViewingCustomer={(c) => { setViewingCustomer(c); setViewingCustomerEditMode(false); setViewingCustomerEdit({ name: c.name, phone: c.phone, email: c.email, last_service: c.last_service, last_service_date: c.last_service_date, left_review: c.left_review, notes: c.notes }); }}
               deleteCustomer={deleteCustomer}
             />
           )}
@@ -1125,10 +1227,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <div className="flex-1 overflow-y-auto">
               {conversationType === 'chat' ? (
                 loadingConversations ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="text-gray-500 mt-3 text-sm">Loading...</p>
-                  </div>
+                  <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div><p className="text-gray-500 mt-3 text-sm">Loading...</p></div>
                 ) : conversations.length === 0 ? (
                   <div className="text-center py-12 px-4">
                     <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -1141,42 +1240,20 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     .map(conv => (
                     <button
                       key={conv.id}
-                      onClick={() => {
-                        setSelectedConversation(conv);
-                        fetchConversationMessages(conv.id);
-                        setTimeout(() => {
-                          if (messagesContainerRef.current) messagesContainerRef.current.scrollTop = 0;
-                        }, 50);
-                      }}
-                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
-                        selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
-                      }`}
+                      onClick={() => { setSelectedConversation(conv); fetchConversationMessages(conv.id); setTimeout(() => { if (messagesContainerRef.current) messagesContainerRef.current.scrollTop = 0; }, 50); }}
+                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-gray-900 truncate">
-                          Conversation #{conv.id}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${
-                          conv.source === 'embed' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {conv.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
+                        <span className="text-sm font-semibold text-gray-900 truncate">Conversation #{conv.id}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${conv.source === 'embed' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {conv.source === 'embed' ? 'Website Chat' : 'SMS Agent'}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 truncate">
-                        {conv.first_message || 'No messages'}
-                      </p>
+                      <p className="text-xs text-gray-500 truncate">{conv.first_message || 'No messages'}</p>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-400">
-                          {new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {new Date(conv.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          conv.outcome === 'booked' ? 'bg-green-100 text-green-700' :
-                          conv.outcome === 'no_response' ? 'bg-gray-100 text-gray-500' :
-                          'bg-red-50 text-red-600'
-                        }`}>
-                          {conv.outcome === 'booked' ? 'Booked' :
-                           conv.outcome === 'no_response' ? "Didn't respond" :
-                           "Didn't book"}
+                        <span className="text-xs text-gray-400">{parseTS(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {parseTS(conv.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${conv.outcome === 'booked' ? 'bg-green-100 text-green-700' : conv.outcome === 'no_response' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-600'}`}>
+                          {conv.outcome === 'booked' ? 'Booked' : conv.outcome === 'no_response' ? "No response" : "Didn't book"}
                         </span>
                       </div>
                     </button>
@@ -1184,10 +1261,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 )
               ) : (
                 loadingSmsLeads ? (
-                  <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-                    <p className="text-gray-500 mt-3 text-sm">Loading...</p>
-                  </div>
+                  <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div><p className="text-gray-500 mt-3 text-sm">Loading...</p></div>
                 ) : smsLeads.length === 0 ? (
                   <div className="text-center py-12 px-4">
                     <Phone className="w-12 h-12 text-gray-300 mx-auto mb-3" />
@@ -1201,31 +1275,18 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     <button
                       key={lead.id}
                       onClick={() => { setSelectedSmsLead(lead); fetchSmsLeadMessages(lead.id); }}
-                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
-                        selectedSmsLead?.id === lead.id ? 'bg-green-50 border-l-2 border-l-green-500' : ''
-                      }`}
+                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${selectedSmsLead?.id === lead.id ? 'bg-green-50 border-l-2 border-l-green-500' : ''}`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-gray-900 truncate">
-                          {lead.name || 'Unknown Lead'}
-                        </span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                          lead.status === 'contacted_sms' ? 'bg-green-100 text-green-700' :
-                          lead.status === 'sms_failed' ? 'bg-red-100 text-red-700' :
-                          'bg-gray-100 text-gray-600'
-                        }`}>
+                        <span className="text-sm font-semibold text-gray-900 truncate">{lead.name || 'Unknown Lead'}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${lead.status === 'contacted_sms' ? 'bg-green-100 text-green-700' : lead.status === 'sms_failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
                           {lead.status === 'contacted_sms' ? 'Contacted' : lead.status === 'sms_failed' ? 'Failed' : lead.status}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-500 truncate">
-                        {lead.last_message || 'No messages'}
-                      </p>
+                      <p className="text-xs text-gray-500 truncate">{lead.last_message || 'No messages'}</p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-xs text-gray-400">{lead.phone}</span>
-                        <span className="text-xs text-gray-400">
-                          {lead.last_message_at ? new Date(lead.last_message_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
-                          {' '}{lead.message_count} msg{lead.message_count !== 1 ? 's' : ''}
-                        </span>
+                        <span className="text-xs text-gray-400">{lead.last_message_at ? parseTS(lead.last_message_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}{' '}{lead.message_count} msg{lead.message_count !== 1 ? 's' : ''}</span>
                       </div>
                     </button>
                   ))
@@ -1242,7 +1303,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   <div className="text-center">
                     <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
                     <p className="text-gray-500 font-medium">Select a conversation</p>
-                    <p className="text-gray-400 text-sm mt-1">Choose a conversation from the list to view messages</p>
+                    <p className="text-gray-400 text-sm mt-1">Choose from the list to view messages</p>
                   </div>
                 </div>
               ) : (
@@ -1251,39 +1312,23 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-semibold text-gray-900">Conversation #{selectedConversation.id}</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {new Date(selectedConversation.created_at).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                          {' '}&middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
-                        </p>
+                        <p className="text-xs text-gray-500 mt-0.5">{parseTS(selectedConversation.created_at).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} &middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}</p>
                       </div>
-                      <button
-                        onClick={() => { setSelectedConversation(null); setConversationMessages([]); }}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
+                      <button onClick={() => { setSelectedConversation(null); setConversationMessages([]); }} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"><X className="w-4 h-4" /></button>
                     </div>
                   </div>
                   <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
                     {loadingMessages ? (
-                      <div className="text-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                      </div>
+                      <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div></div>
                     ) : conversationMessages.length === 0 ? (
-                      <div className="text-center py-12">
-                        <p className="text-gray-400 text-sm">No messages in this conversation</p>
-                      </div>
+                      <div className="text-center py-12"><p className="text-gray-400 text-sm">No messages in this conversation</p></div>
                     ) : (
                       conversationMessages.map((msg, idx) => (
                         <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
                           <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-blue-600 text-white'}`}>
-                            <div className={`text-xs font-medium mb-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>
-                              {msg.role === 'user' ? 'Customer' : 'AI Agent'}
-                            </div>
+                            <div className={`text-xs font-medium mb-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>{msg.role === 'user' ? 'Customer' : 'AI Agent'}</div>
                             <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                            <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>
-                              {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                            </p>
+                            <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{parseTS(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
                           </div>
                         </div>
                       ))
@@ -1297,53 +1342,59 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   <div className="text-center">
                     <Phone className="w-16 h-16 text-gray-200 mx-auto mb-4" />
                     <p className="text-gray-500 font-medium">Select a lead</p>
-                    <p className="text-gray-400 text-sm mt-1">Choose a lead to view their SMS conversation</p>
+                    <p className="text-gray-400 text-sm mt-1">Choose a lead to view their conversation and form submission</p>
                   </div>
                 </div>
               ) : (
-                <>
-                  <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <div className="flex items-center justify-between">
+                <div className="flex-1 flex overflow-hidden">
+                  {/* Contact Form Data */}
+                  <div className="w-64 border-r border-gray-200 overflow-y-auto bg-white flex-shrink-0">
+                    <div className="p-4 border-b border-gray-100 flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-gray-700">Form Submission</h4>
+                      <button onClick={() => { setSelectedSmsLead(null); setSmsLeadMessages([]); }} className="p-1 text-gray-400 hover:text-gray-600 rounded transition"><X className="w-3.5 h-3.5" /></button>
+                    </div>
+                    <div className="p-4 space-y-3 text-sm">
+                      <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Name</p><p className="text-gray-900 font-medium">{selectedSmsLead.name || '—'}</p></div>
+                      {selectedSmsLead.phone && <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Phone</p><p className="text-gray-700">{selectedSmsLead.phone}</p></div>}
+                      {selectedSmsLead.email && <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Email</p><p className="text-gray-700 break-all">{selectedSmsLead.email}</p></div>}
+                      {selectedSmsLead.service && <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Service Requested</p><p className="text-gray-700">{selectedSmsLead.service}</p></div>}
+                      {selectedSmsLead.message && <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Message</p><p className="text-gray-700 whitespace-pre-wrap">{selectedSmsLead.message}</p></div>}
+                      {selectedSmsLead.notes && <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Notes</p><p className="text-gray-600 italic">{selectedSmsLead.notes}</p></div>}
+                      <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Submitted</p><p className="text-gray-500">{parseTS(selectedSmsLead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p></div>
                       <div>
-                        <h3 className="font-semibold text-gray-900">{selectedSmsLead.name || 'Unknown Lead'}</h3>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {selectedSmsLead.phone} &middot; Lead SMS Agent
-                        </p>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Status</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${selectedSmsLead.status === 'contacted_sms' ? 'bg-green-100 text-green-700' : selectedSmsLead.status === 'sms_failed' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {selectedSmsLead.status === 'contacted_sms' ? 'Contacted' : selectedSmsLead.status === 'sms_failed' ? 'Failed' : selectedSmsLead.status}
+                        </span>
                       </div>
-                      <button
-                        onClick={() => { setSelectedSmsLead(null); setSmsLeadMessages([]); }}
-                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
                     </div>
                   </div>
-                  <div className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
-                    {loadingSmsMessages ? (
-                      <div className="text-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
-                      </div>
-                    ) : smsLeadMessages.length === 0 ? (
-                      <div className="text-center py-12">
-                        <p className="text-gray-400 text-sm">No messages in this conversation</p>
-                      </div>
-                    ) : (
-                      smsLeadMessages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
-                          <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.direction === 'incoming' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-green-600 text-white'}`}>
-                            <div className={`text-xs font-medium mb-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-100'}`}>
-                              {msg.direction === 'incoming' ? 'Customer' : 'AI Agent'}
+
+                  {/* SMS Thread */}
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="p-3 border-b border-gray-200 bg-gray-50">
+                      <p className="text-sm font-semibold text-gray-700">{selectedSmsLead.name} · SMS Conversation</p>
+                      <p className="text-xs text-gray-400">{selectedSmsLead.message_count} message{selectedSmsLead.message_count !== 1 ? 's' : ''}</p>
+                    </div>
+                    <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3">
+                      {loadingSmsMessages ? (
+                        <div className="text-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div></div>
+                      ) : smsLeadMessages.length === 0 ? (
+                        <div className="text-center py-12"><p className="text-gray-400 text-sm">No messages in this conversation</p></div>
+                      ) : (
+                        smsLeadMessages.map((msg, idx) => (
+                          <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
+                            <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.direction === 'incoming' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-green-600 text-white'}`}>
+                              <div className={`text-xs font-medium mb-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-100'}`}>{msg.direction === 'incoming' ? 'Customer' : 'AI Agent'}</div>
+                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                              <p className={`text-xs mt-2 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{parseTS(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
                             </div>
-                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                            <p className={`text-xs mt-2 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>
-                              {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                            </p>
                           </div>
-                        </div>
-                      ))
-                    )}
+                        ))
+                      )}
+                    </div>
                   </div>
-                </>
+                </div>
               )
             )}
           </div>
@@ -1840,72 +1891,51 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
       {/* Lead Detail Slide-Over */}
       {viewingLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-end" onClick={() => setViewingLead(null)}>
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-end" onClick={() => { setViewingLead(null); setViewingLeadEditMode(false); }}>
           <div
-            className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-y-auto"
+            className="bg-white w-full max-w-xl h-full shadow-2xl flex flex-col overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 flex items-start justify-between bg-gray-50">
+            <div className="p-5 border-b border-gray-200 flex items-start justify-between bg-gray-50">
               <div>
                 <h2 className="text-xl font-bold text-gray-900">{viewingLead.name}</h2>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(viewingLead.status)}`}>
-                    {formatLabel(viewingLead.status)}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${getSourceColor(viewingLead.source)}`}>
-                    {formatLabel(viewingLead.source)}
-                  </span>
-                  {viewingLead.created_at && (
-                    <span className="text-xs text-gray-400">
-                      {new Date(viewingLead.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                    </span>
-                  )}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(viewingLead.status)}`}>{formatLabel(viewingLead.status)}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${getSourceColor(viewingLead.source)}`}>{formatLabel(viewingLead.source)}</span>
+                  {viewingLead.created_at && <span className="text-xs text-gray-400">{parseTS(viewingLead.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>}
                 </div>
               </div>
-              <button onClick={() => setViewingLead(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setViewingLeadEditMode(!viewingLeadEditMode)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewingLeadEditMode ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  <Edit2 className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button onClick={() => { setViewingLead(null); setViewingLeadEditMode(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Contact Info */}
-            <div className="p-6 border-b border-gray-100">
+            <div className="p-5 border-b border-gray-100">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact</h3>
               <div className="space-y-2">
-                {viewingLead.email && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <a href={`mailto:${viewingLead.email}`} className="text-blue-600 hover:underline text-sm">{viewingLead.email}</a>
-                  </div>
-                )}
-                {viewingLead.phone && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                    <a href={`tel:${viewingLead.phone}`} className="text-blue-600 hover:underline text-sm">{viewingLead.phone}</a>
-                  </div>
-                )}
+                {viewingLead.email && <div className="flex items-center gap-3"><Mail className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`mailto:${viewingLead.email}`} className="text-blue-600 hover:underline text-sm">{viewingLead.email}</a></div>}
+                {viewingLead.phone && <div className="flex items-center gap-3"><Phone className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`tel:${viewingLead.phone}`} className="text-blue-600 hover:underline text-sm">{viewingLead.phone}</a></div>}
               </div>
             </div>
 
             {/* Form Submission */}
-            <div className="p-6 border-b border-gray-100">
+            <div className="p-5 border-b border-gray-100">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Form Submission</h3>
-              <div className="space-y-4">
-                {viewingLead.service && (
-                  <div>
-                    <p className="text-xs text-gray-400 mb-1">Service Requested</p>
-                    <p className="text-sm text-gray-900 font-medium">{viewingLead.service}</p>
-                  </div>
-                )}
-                {viewingLead.message && (
-                  <div>
-                    <p className="text-xs text-gray-400 mb-1">Message</p>
-                    <p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3">{viewingLead.message}</p>
-                  </div>
-                )}
-                {!viewingLead.service && !viewingLead.message && (
-                  <p className="text-sm text-gray-400 italic">No form message was submitted.</p>
-                )}
+              <div className="space-y-3">
+                {viewingLead.service && <div><p className="text-xs text-gray-400 mb-1">Service Requested</p><p className="text-sm text-gray-900 font-medium">{viewingLead.service}</p></div>}
+                {viewingLead.message && <div><p className="text-xs text-gray-400 mb-1">Message</p><p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3">{viewingLead.message}</p></div>}
+                {!viewingLead.service && !viewingLead.message && <p className="text-sm text-gray-400 italic">No form message was submitted.</p>}
                 {viewingLead.sms_consent !== undefined && (
                   <div className="flex items-center gap-2">
                     <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${viewingLead.sms_consent ? 'bg-green-500' : 'bg-gray-300'}`}>
@@ -1917,53 +1947,103 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               </div>
             </div>
 
-            {/* CRM Fields */}
-            <div className="p-6 border-b border-gray-100">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">CRM</h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                {viewingLead.priority && (
-                  <div>
-                    <p className="text-xs text-gray-400 mb-1">Priority</p>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                      viewingLead.priority === 'urgent' ? 'bg-red-100 text-red-700'
-                      : viewingLead.priority === 'high' ? 'bg-orange-100 text-orange-700'
-                      : viewingLead.priority === 'low' ? 'bg-gray-100 text-gray-500'
-                      : 'bg-blue-50 text-blue-600'
-                    }`}>{formatLabel(viewingLead.priority)}</span>
+            {/* Edit Panel */}
+            {viewingLeadEditMode && (
+              <div className="p-5 border-b border-blue-100 bg-blue-50">
+                <h3 className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-4">Edit Lead</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Status</label>
+                      <select value={viewingLeadEdit.status || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, status: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option value="new">New</option>
+                        <option value="contacted">Contacted</option>
+                        <option value="contacted_sms">Contacted (SMS)</option>
+                        <option value="qualified">Qualified</option>
+                        <option value="converted">Converted</option>
+                        <option value="not_interested">Not Interested</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Priority</label>
+                      <select value={viewingLeadEdit.priority || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, priority: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
+                        <option value="">Normal</option>
+                        <option value="low">Low</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </div>
                   </div>
-                )}
-                {viewingLead.follow_up_date && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Follow-Up Date</p>
-                    <p className="text-gray-900">{new Date(viewingLead.follow_up_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    <label className="text-xs text-gray-500 mb-1 block">Follow-Up Date</label>
+                    <input type="date" value={viewingLeadEdit.follow_up_date || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, follow_up_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
                   </div>
-                )}
-                {viewingLead.last_contact_at && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Last Contacted</p>
-                    <p className="text-gray-900">{new Date(viewingLead.last_contact_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                    <label className="text-xs text-gray-500 mb-1 block">Notes</label>
+                    <textarea value={viewingLeadEdit.notes || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, notes: e.target.value }))} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Add notes..." />
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={saveViewingLeadEdit} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Save Changes</button>
+                    <button onClick={() => setViewingLeadEditMode(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Conversation History */}
+            <div className="p-5 border-b border-gray-100">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Conversation</h3>
+                {viewingLead.source === 'ai_chat_agent' && (
+                  <div className="flex gap-1">
+                    <button onClick={() => setViewingLeadConvTab('chat')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${viewingLeadConvTab === 'chat' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Chat Agent</button>
+                    <button onClick={() => setViewingLeadConvTab('sms')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${viewingLeadConvTab === 'sms' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>SMS</button>
                   </div>
                 )}
               </div>
-              {viewingLead.notes && (
-                <div className="mt-3">
-                  <p className="text-xs text-gray-400 mb-1">Notes</p>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingLead.notes}</p>
-                </div>
+
+              {viewingLeadConvTab === 'chat' ? (
+                viewingLeadChatLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>Loading...</div>
+                ) : viewingLeadChatMessages.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">No chat messages found for this lead.</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {viewingLeadChatMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                        <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gray-100 text-gray-900' : 'bg-blue-600 text-white'}`}>
+                          <p className={`text-xs font-medium mb-0.5 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{msg.role === 'user' ? 'Customer' : 'AI Agent'}</p>
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                          <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{parseTS(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              ) : (
+                !viewingLead.phone ? (
+                  <p className="text-sm text-gray-400 italic">No phone number — no SMS conversation available.</p>
+                ) : viewingLeadSmsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>Loading...</div>
+                ) : viewingLeadSmsMessages.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">No SMS messages yet.</p>
+                ) : (
+                  <div className="space-y-2 max-h-72 overflow-y-auto">
+                    {viewingLeadSmsMessages.map((msg, idx) => (
+                      <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
+                        <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.direction === 'incoming' ? 'bg-gray-100 text-gray-900' : 'bg-green-600 text-white'}`}>
+                          <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                          <p className={`text-xs mt-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{parseTS(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
               )}
             </div>
 
             {/* Actions */}
-            <div className="p-6 flex gap-3 flex-wrap">
-              {viewingLead.phone && (
-                <button
-                  onClick={() => { setSelectedLead(viewingLead); loadSmsConversation(viewingLead.id); setShowSmsModal(true); setViewingLead(null); }}
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
-                >
-                  <MessageCircle className="w-4 h-4" />
-                  SMS Conversation
-                </button>
-              )}
+            <div className="p-5 flex gap-3 flex-wrap">
               <button
                 onClick={() => { setConvertingLead(viewingLead); setShowConvertModal(true); setViewingLead(null); }}
                 className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition"
@@ -1972,6 +2052,71 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 Convert to Customer
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Detail Panel */}
+      {viewingCustomer && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-end" onClick={() => { setViewingCustomer(null); setViewingCustomerEditMode(false); }}>
+          <div className="bg-white w-full max-w-xl h-full shadow-2xl flex flex-col overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="p-5 border-b border-gray-200 flex items-start justify-between bg-gray-50">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{viewingCustomer.name}</h2>
+                <p className="text-sm text-gray-500 mt-0.5">{viewingCustomer.total_jobs ? `${viewingCustomer.total_jobs} booking${viewingCustomer.total_jobs !== 1 ? 's' : ''}` : 'No bookings'}{viewingCustomer.lifetime_value ? ` · $${Number(viewingCustomer.lifetime_value).toFixed(2)} lifetime` : ''}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => setViewingCustomerEditMode(!viewingCustomerEditMode)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewingCustomerEditMode ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                  <Edit2 className="w-3.5 h-3.5" />
+                  Edit
+                </button>
+                <button onClick={() => { setViewingCustomer(null); setViewingCustomerEditMode(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"><X className="w-5 h-5" /></button>
+              </div>
+            </div>
+
+            {/* Contact */}
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact</h3>
+              <div className="space-y-2">
+                {viewingCustomer.email && <div className="flex items-center gap-3"><Mail className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`mailto:${viewingCustomer.email}`} className="text-blue-600 hover:underline text-sm">{viewingCustomer.email}</a></div>}
+                {viewingCustomer.phone && <div className="flex items-center gap-3"><Phone className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`tel:${viewingCustomer.phone}`} className="text-blue-600 hover:underline text-sm">{viewingCustomer.phone}</a></div>}
+              </div>
+            </div>
+
+            {/* Service History */}
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Service History</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {viewingCustomer.last_service && <div><p className="text-xs text-gray-400 mb-1">Last Service</p><p className="text-gray-900 font-medium">{viewingCustomer.last_service}</p></div>}
+                {viewingCustomer.last_service_date && <div><p className="text-xs text-gray-400 mb-1">Last Visit</p><p className="text-gray-900">{new Date(viewingCustomer.last_service_date.toString().slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p></div>}
+                {viewingCustomer.left_review && <div><p className="text-xs text-gray-400 mb-1">Left Review</p><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${viewingCustomer.left_review === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{viewingCustomer.left_review === 'Y' ? 'Yes' : 'No'}</span></div>}
+              </div>
+              {viewingCustomer.notes && <div className="mt-3"><p className="text-xs text-gray-400 mb-1">Notes</p><p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingCustomer.notes}</p></div>}
+            </div>
+
+            {/* Edit Panel */}
+            {viewingCustomerEditMode && (
+              <div className="p-5 border-b border-blue-100 bg-blue-50">
+                <h3 className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-4">Edit Customer</h3>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-xs text-gray-500 mb-1 block">Phone</label><input type="text" value={viewingCustomerEdit.phone || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+                    <div><label className="text-xs text-gray-500 mb-1 block">Email</label><input type="text" value={viewingCustomerEdit.email || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, email: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+                  </div>
+                  <div><label className="text-xs text-gray-500 mb-1 block">Last Service</label><input type="text" value={viewingCustomerEdit.last_service || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, last_service: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-xs text-gray-500 mb-1 block">Last Visit Date</label><input type="date" value={viewingCustomerEdit.last_service_date?.toString().slice(0,10) || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, last_service_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
+                    <div><label className="text-xs text-gray-500 mb-1 block">Left Review</label><select value={viewingCustomerEdit.left_review || 'N'} onChange={e => setViewingCustomerEdit(v => ({ ...v, left_review: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"><option value="N">No</option><option value="Y">Yes</option></select></div>
+                  </div>
+                  <div><label className="text-xs text-gray-500 mb-1 block">Notes</label><textarea value={viewingCustomerEdit.notes || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, notes: e.target.value }))} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm resize-none" placeholder="Add notes..." /></div>
+                  <div className="flex gap-2">
+                    <button onClick={saveViewingCustomerEdit} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Save Changes</button>
+                    <button onClick={() => setViewingCustomerEditMode(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -2025,7 +2170,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                             msg.direction === 'outgoing' ? 'text-green-100' : 'text-gray-500'
                           }`}
                         >
-                          {new Date(msg.created_at).toLocaleString()}
+                          {parseTS(msg.created_at).toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -2128,7 +2273,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 }
 
 // LeadsTable component
-function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteLead, setSelectedLead, loadSmsConversation, setShowSmsModal, setConvertingLead, setShowConvertModal, updateLeadField, getLeadAgeFlag, isFollowUpOverdue }) {
+function LeadsTable({ leads, columns, openViewingLead, deleteLead, setConvertingLead, setShowConvertModal, getLeadAgeFlag, isFollowUpOverdue }) {
   if (leads.length === 0) {
     return (
       <div className="text-center py-12">
@@ -2160,123 +2305,43 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
           const ageFlag = getLeadAgeFlag ? getLeadAgeFlag(lead) : null;
           const followUpOverdue = isFollowUpOverdue ? isFollowUpOverdue(lead) : false;
           return (
-          <tr key={lead.id} className={`hover:bg-gray-50 ${ageFlag?.level === 'urgent' ? 'bg-red-50' : ageFlag?.level === 'warn' ? 'bg-amber-50' : ''}`}>
+          <tr key={lead.id} onClick={() => openViewingLead(lead)} className={`cursor-pointer hover:bg-blue-50 transition ${ageFlag?.level === 'urgent' ? 'bg-red-50' : ageFlag?.level === 'warn' ? 'bg-amber-50' : ''}`}>
             <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
             {columns.map((col) => (
               <td key={col.key} className="px-4 py-3 text-sm">
-                {editingCell?.id === lead.id && editingCell?.field === col.key ? (
-                  <div className="flex items-center gap-2">
-                    {col.type === 'select' ? (
-                      <select value={editValue} onChange={(e) => setEditValue(e.target.value)} className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm" autoFocus>
-                        <option value="">Select...</option>
-                        {col.options.map(opt => <option key={opt} value={opt}>{formatLabel(opt)}</option>)}
-                      </select>
-                    ) : col.type === 'date' ? (
-                      <input
-                        type="date"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
-                      />
-                    ) : (
-                      <input
-                        type="text"
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
-                      />
+                {col.key === 'name' ? (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-blue-600 font-medium">{lead.name || <span className="text-gray-400">-</span>}</span>
+                    {ageFlag && (
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${ageFlag.level === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>
+                        <AlertCircle className="w-3 h-3" />{ageFlag.label}
+                      </span>
                     )}
-                    <button onClick={saveCellEdit} className="p-1 text-green-600 hover:bg-green-50 rounded"><Save className="w-4 h-4" /></button>
-                    <button onClick={cancelCellEdit} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4" /></button>
                   </div>
+                ) : col.key === 'status' ? (
+                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+                ) : col.key === 'priority' ? (
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${lead.priority === 'urgent' ? 'bg-red-100 text-red-700' : lead.priority === 'high' ? 'bg-orange-100 text-orange-700' : lead.priority === 'low' ? 'bg-gray-100 text-gray-500' : 'bg-blue-50 text-blue-600'}`}>{formatLabel(lead.priority || 'normal')}</span>
+                ) : col.key === 'follow_up_date' ? (
+                  lead.follow_up_date ? (
+                    <span className={`flex items-center gap-1 text-xs font-medium ${followUpOverdue ? 'text-red-600' : 'text-gray-700'}`}>
+                      {followUpOverdue && <Bell className="w-3 h-3" />}
+                      {new Date(lead.follow_up_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </span>
+                  ) : <span className="text-gray-400 text-xs">—</span>
+                ) : col.key === 'source' ? (
+                  <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
+                ) : col.type === 'datetime' ? (
+                  lead[col.key] ? <span className="text-gray-600 text-xs">{parseTS(lead[col.key]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span> : <span className="text-gray-400">—</span>
                 ) : (
-                  <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key] || '')} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
-                    {col.key === 'name' ? (
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setViewingLead(lead); }}
-                          className="text-blue-600 hover:underline font-medium text-left"
-                        >
-                          {lead.name || <span className="text-gray-400">-</span>}
-                        </button>
-                        {ageFlag && (
-                          <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                            ageFlag.level === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            <AlertCircle className="w-3 h-3" />
-                            {ageFlag.label}
-                          </span>
-                        )}
-                      </div>
-                    ) : col.key === 'status' ? (
-                      <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
-                    ) : col.key === 'priority' ? (
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                        lead.priority === 'urgent' ? 'bg-red-100 text-red-700'
-                        : lead.priority === 'high' ? 'bg-orange-100 text-orange-700'
-                        : lead.priority === 'low' ? 'bg-gray-100 text-gray-500'
-                        : 'bg-blue-50 text-blue-600'
-                      }`}>{formatLabel(lead.priority || 'normal')}</span>
-                    ) : col.key === 'follow_up_date' ? (
-                      lead.follow_up_date ? (
-                        <span className={`flex items-center gap-1 text-xs font-medium ${followUpOverdue ? 'text-red-600' : 'text-gray-700'}`}>
-                          {followUpOverdue && <Bell className="w-3 h-3" />}
-                          {new Date(lead.follow_up_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      ) : <span className="text-gray-400 text-xs">Set date</span>
-                    ) : col.key === 'source' ? (
-                      <span className={`px-2 py-1 rounded-full text-xs ${getSourceColor(lead[col.key])}`}>{formatLabel(lead[col.key])}</span>
-                    ) : col.type === 'datetime' ? (
-                      lead[col.key] ? (
-                        <span className="text-gray-600 text-xs">
-                          {new Date(lead[col.key]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                        </span>
-                      ) : <span className="text-gray-400">-</span>
-                    ) : col.key === 'email' ? (
-                      <a href={`mailto:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
-                    ) : col.key === 'phone' ? (
-                      <a href={`tel:${lead[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{lead[col.key]}</a>
-                    ) : (
-                      lead[col.key] || <span className="text-gray-400">-</span>
-                    )}
-                  </div>
+                  <span className="text-gray-700">{lead[col.key] || <span className="text-gray-400">—</span>}</span>
                 )}
               </td>
             ))}
-            <td className="px-4 py-3">
-              <div className="flex items-center gap-2">
-                {lead.phone && (
-                  <button
-                    onClick={() => {
-                      setSelectedLead(lead);
-                      loadSmsConversation(lead.id);
-                      setShowSmsModal(true);
-                    }}
-                    className="p-1 text-green-600 hover:bg-green-50 rounded"
-                    title="View SMS Conversation"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                  </button>
-                )}
-
-                <button
-                  onClick={() => {
-                    setConvertingLead(lead);
-                    setShowConvertModal(true);
-                  }}
-                  className="p-1 text-amber-600 hover:bg-amber-50 rounded"
-                  title="Convert to Customer"
-                >
-                  <Users className="w-4 h-4" />
-                </button>
-
-                <button onClick={() => deleteLead(lead.id)} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete Lead">
-                  <Trash2 className="w-4 h-4" />
-                </button>
+            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-1">
+                <button onClick={(e) => { e.stopPropagation(); setConvertingLead(lead); setShowConvertModal(true); }} className="p-1 text-amber-600 hover:bg-amber-50 rounded" title="Convert to Customer"><Users className="w-4 h-4" /></button>
+                <button onClick={(e) => { e.stopPropagation(); deleteLead(lead.id); }} className="p-1 text-red-600 hover:bg-red-50 rounded" title="Delete Lead"><Trash2 className="w-4 h-4" /></button>
               </div>
             </td>
           </tr>
@@ -2285,9 +2350,9 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
       </tbody>
     </table>
   );
-} 
+}
 
-function CustomersTable({ customers, columns, editingCell, editValue, handleCellEdit, setEditValue, saveCellEdit, cancelCellEdit, deleteCustomer }) {
+function CustomersTable({ customers, columns, openViewingCustomer, deleteCustomer }) {
   if (customers.length === 0) {
     return (
       <div className="text-center py-12">
@@ -2316,50 +2381,23 @@ function CustomersTable({ customers, columns, editingCell, editValue, handleCell
       </thead>
       <tbody className="divide-y divide-gray-200">
         {customers.map((customer, idx) => (
-          <tr key={customer.id} className="hover:bg-gray-50">
+          <tr key={customer.id} onClick={() => openViewingCustomer(customer)} className="cursor-pointer hover:bg-blue-50 transition">
             <td className="px-4 py-3 text-sm text-gray-500">{idx + 1}</td>
             {columns.map((col) => (
               <td key={col.key} className="px-4 py-3 text-sm">
-                {editingCell?.id === customer.id && editingCell?.field === col.key ? (
-                  <div className="flex items-center gap-2">
-                    {col.type === 'select' ? (
-                      <select value={editValue} onChange={(e) => setEditValue(e.target.value)} className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm" autoFocus>
-                        {col.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-                      </select>
-                    ) : (
-                      <input
-                        type={col.type === 'date' ? 'date' : 'text'}
-                        value={editValue}
-                        onChange={(e) => setEditValue(e.target.value)}
-                        className="flex-1 px-2 py-1 border border-blue-500 rounded text-sm"
-                        autoFocus
-                        onKeyDown={(e) => { if (e.key === 'Enter') saveCellEdit(); if (e.key === 'Escape') cancelCellEdit(); }}
-                      />
-                    )}
-                    <button onClick={saveCellEdit} className="p-1 text-green-600 hover:bg-green-50 rounded"><Save className="w-4 h-4" /></button>
-                    <button onClick={cancelCellEdit} className="p-1 text-red-600 hover:bg-red-50 rounded"><X className="w-4 h-4" /></button>
-                  </div>
+                {col.key === 'name' ? (
+                  <span className="text-blue-600 font-medium">{customer.name || <span className="text-gray-400">—</span>}</span>
+                ) : col.key === 'left_review' ? (
+                  <span className={`px-2 py-1 rounded-full text-xs font-semibold ${customer[col.key] === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>{customer[col.key] === 'Y' ? 'Yes' : 'No'}</span>
+                ) : col.key === 'last_service_date' ? (
+                  customer[col.key] ? (() => { const d = customer[col.key].toString().slice(0, 10).split('-'); return new Date(d[0], d[1] - 1, d[2]).toLocaleDateString(); })() : <span className="text-gray-400">—</span>
                 ) : (
-                  <div onClick={() => col.editable && handleCellEdit(customer.id, col.key, customer[col.key])} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
-                    {col.key === 'left_review' ? (
-                      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${customer[col.key] === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                        {customer[col.key] || 'N'}
-                      </span>
-                    ) : col.key === 'email' ? (
-                      <a href={`mailto:${customer[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{customer[col.key]}</a>
-                    ) : col.key === 'phone' ? (
-                      <a href={`tel:${customer[col.key]}`} className="text-blue-600 hover:underline" onClick={(e) => e.stopPropagation()}>{customer[col.key]}</a>
-                    ) : col.key === 'last_service_date' ? (
-                      customer[col.key] ? (() => { const d = customer[col.key].toString().slice(0, 10).split('-'); return new Date(d[0], d[1] - 1, d[2]).toLocaleDateString(); })() : <span className="text-gray-400">-</span>
-                    ) : (
-                      customer[col.key] || <span className="text-gray-400">-</span>
-                    )}
-                  </div>
+                  <span className="text-gray-700">{customer[col.key] || <span className="text-gray-400">—</span>}</span>
                 )}
               </td>
             ))}
-            <td className="px-4 py-3">
-              <button onClick={() => deleteCustomer(customer.id)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
+            <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+              <button onClick={(e) => { e.stopPropagation(); deleteCustomer(customer.id); }} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
             </td>
           </tr>
         ))}

@@ -369,13 +369,17 @@ export default function BusinessInformation({
   const [statusTemplates, setStatusTemplates] = useState([]);
   const [loadingTemplates, setLoadingTemplates] = useState(false);
   const [savingTemplate, setSavingTemplate] = useState(null);
-  const [appSettingsSubTab, setAppSettingsSubTab] = useState('messages');
-  // Email Reminders
+  const [appSettingsSubTab, setAppSettingsSubTab] = useState('email');
+  // Email & SMS Reminders
   const [reminders, setReminders] = useState([]);
   const [loadingReminders, setLoadingReminders] = useState(false);
   const [savingReminder, setSavingReminder] = useState(null);
   const [showAddReminder, setShowAddReminder] = useState(false);
   const [newReminderHours, setNewReminderHours] = useState('');
+  // Cancellation Policy
+  const [cancellationPolicyEnabled, setCancellationPolicyEnabled] = useState(false);
+  const [cancellationPolicyText, setCancellationPolicyText] = useState('');
+  const [savingCancellationPolicy, setSavingCancellationPolicy] = useState(false);
 
   const statusLabels = {
     in_progress: 'Job Started',
@@ -396,8 +400,8 @@ export default function BusinessInformation({
 
   useEffect(() => {
     if (activeTab === 'app-settings') {
-      fetchStatusTemplates();
       fetchReminders();
+      fetchCancellationPolicy();
     }
     if (activeTab === 'services') {
       fetchCategories();
@@ -556,6 +560,28 @@ export default function BusinessInformation({
       await authFetch(`${apiUrl}/api/booking-reminders/${id}`, { method: 'DELETE' });
       setReminders(prev => prev.filter(r => r.id !== id));
     } catch (err) { console.error(err); }
+  };
+
+  const fetchCancellationPolicy = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/booking-reminders/cancellation-policy`);
+      if (res.ok) {
+        const data = await res.json();
+        setCancellationPolicyEnabled(data.enabled);
+        setCancellationPolicyText(data.text || '');
+      }
+    } catch (err) { console.error(err); }
+  };
+
+  const saveCancellationPolicy = async () => {
+    setSavingCancellationPolicy(true);
+    try {
+      await authFetch(`${apiUrl}/api/booking-reminders/cancellation-policy`, {
+        method: 'PUT',
+        body: JSON.stringify({ enabled: cancellationPolicyEnabled, text: cancellationPolicyText })
+      });
+    } catch (err) { console.error(err); }
+    finally { setSavingCancellationPolicy(false); }
   };
 
   const handleSendInvite = async (employeeId) => {
@@ -1301,8 +1327,8 @@ export default function BusinessInformation({
               className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'app-settings' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
             >
               <div className="flex items-center gap-2">
-                <Smartphone className="w-4 h-4" />
-                App Settings
+                <MessageSquare className="w-4 h-4" />
+                Reminders
               </div>
               {activeTab === 'app-settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
@@ -3110,101 +3136,27 @@ export default function BusinessInformation({
         </div>
       )}
 
-      {/* App Settings Tab */}
+      {/* Reminders Tab */}
       {activeTab === 'app-settings' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          {/* Sub-tab nav */}
           <div className="flex border-b border-gray-200 px-6 pt-2">
             <button
-              onClick={() => setAppSettingsSubTab('messages')}
-              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors mr-4 ${appSettingsSubTab === 'messages' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
-            >
-              Customer Update Messages
-            </button>
-            <button
-              onClick={() => setAppSettingsSubTab('reminders')}
-              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${appSettingsSubTab === 'reminders' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+              onClick={() => setAppSettingsSubTab('email')}
+              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors mr-4 ${appSettingsSubTab === 'email' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
             >
               Email Reminders
+            </button>
+            <button
+              onClick={() => setAppSettingsSubTab('sms')}
+              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${appSettingsSubTab === 'sms' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+            >
+              Text Reminders
             </button>
           </div>
 
           <div className="p-6">
-          {appSettingsSubTab === 'messages' && (
-          <div className="max-w-2xl space-y-6">
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">Customer Update Messages</h3>
-              <p className="text-sm text-gray-600">
-                Configure automatic text message prompts sent to customers when employees update booking status.
-                Messages are sent from the employee's phone via their native messaging app.
-              </p>
-            </div>
-
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm text-amber-800 font-medium mb-1">Available Variables</p>
-              <div className="flex flex-wrap gap-2">
-                {['{{customerFirstName}}', '{{employeeFirstName}}', '{{businessName}}', '{{serviceName}}'].map(v => (
-                  <code key={v} className="px-2 py-1 bg-white rounded text-xs font-mono text-amber-700 border border-amber-200">{v}</code>
-                ))}
-              </div>
-            </div>
-
-            {loadingTemplates ? (
-              <div className="flex justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" />
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {statusTemplates.map(template => (
-                  <div key={template.status} className="bg-gray-50 rounded-xl p-6 border border-gray-200">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <h4 className="font-semibold text-gray-900">
-                          {statusLabels[template.status] || template.status}
-                        </h4>
-                        {template.status === 'progress_update' && (
-                          <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">Pro</span>
-                        )}
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={template.enabled}
-                          onChange={(e) => handleSaveTemplate(template.status, template.message_template, e.target.checked)}
-                          className="sr-only peer"
-                        />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-amber-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-600"></div>
-                      </label>
-                    </div>
-                    <textarea
-                      value={template.message_template}
-                      onChange={(e) => {
-                        setStatusTemplates(prev => prev.map(t =>
-                          t.status === template.status ? { ...t, message_template: e.target.value } : t
-                        ));
-                      }}
-                      rows={3}
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none transition-colors text-sm resize-none"
-                    />
-                    <div className="flex justify-end mt-3">
-                      <button
-                        onClick={() => handleSaveTemplate(template.status, template.message_template, template.enabled)}
-                        disabled={savingTemplate === template.status}
-                        className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition-colors disabled:opacity-50"
-                      >
-                        <Save className="w-3.5 h-3.5" />
-                        {savingTemplate === template.status ? 'Saving...' : 'Save'}
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          )}
-
           {/* Email Reminders Sub-tab */}
-          {appSettingsSubTab === 'reminders' && (
+          {appSettingsSubTab === 'email' && (
             <div className="max-w-2xl space-y-6">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-1">Booking Email Reminders</h3>
@@ -3271,7 +3223,6 @@ export default function BusinessInformation({
                     </div>
                   ))}
 
-                  {/* Add custom reminder */}
                   {showAddReminder ? (
                     <div className="flex items-center gap-3 p-4 border-2 border-dashed border-blue-200 rounded-xl">
                       <div className="flex-1">
@@ -3299,6 +3250,92 @@ export default function BusinessInformation({
                       Add Custom Reminder
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* Cancellation Policy */}
+              <div className="border-t border-gray-200 pt-6">
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900">Cancellation Policy</h3>
+                    <p className="text-sm text-gray-500 mt-0.5">When enabled, your policy is included in all reminder emails.</p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={cancellationPolicyEnabled}
+                      onChange={(e) => setCancellationPolicyEnabled(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  </label>
+                </div>
+                <textarea
+                  value={cancellationPolicyText}
+                  onChange={(e) => setCancellationPolicyText(e.target.value)}
+                  placeholder="e.g. Cancellations must be made at least 24 hours before your appointment to avoid a cancellation fee."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm resize-none"
+                />
+                <div className="flex justify-end mt-2">
+                  <button
+                    onClick={saveCancellationPolicy}
+                    disabled={savingCancellationPolicy}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  >
+                    <Save className="w-3.5 h-3.5" />
+                    {savingCancellationPolicy ? 'Saving...' : 'Save Policy'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* SMS Reminders Sub-tab */}
+          {appSettingsSubTab === 'sms' && (
+            <div className="max-w-2xl space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Booking Text Reminders</h3>
+                <p className="text-sm text-gray-600">
+                  Send SMS reminders to customers before their appointment. Uses the same timing as your email reminders — toggle SMS on for each interval.
+                </p>
+              </div>
+
+              {loadingReminders ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {reminders.map(reminder => (
+                    <div key={reminder.id} className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!reminder.sms_enabled}
+                              onChange={(e) => handleUpdateReminder(reminder.id, { sms_enabled: e.target.checked })}
+                              className="sr-only peer"
+                            />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                          </label>
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">
+                              {reminder.hours_before >= 48
+                                ? `${reminder.hours_before / 24} days before`
+                                : `${reminder.hours_before} hours before`}
+                            </p>
+                            <p className="text-xs text-gray-500">{reminder.label}</p>
+                          </div>
+                        </div>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${reminder.sms_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {reminder.sms_enabled ? 'SMS On' : 'SMS Off'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                  <p className="text-xs text-gray-400">Custom message text is shared with email reminders. Edit it in the Email Reminders tab.</p>
                 </div>
               )}
             </div>
