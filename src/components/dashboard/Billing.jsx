@@ -1,23 +1,195 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle } from 'lucide-react';
+import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle, ArrowUpRight, Phone, ChevronDown } from 'lucide-react';
 
 const PLAN_LEVEL = { basic: 1, pro: 2, scale: 3 };
+
+const PLAN_META = {
+  basic:  { name: 'Basic',  price: 29.95,  color: 'from-gray-500 to-gray-600',    icon: Sparkles,   smsLimit: 100,  chatLimit: 200  },
+  pro:    { name: 'Pro',    price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 100,  chatLimit: 500  },
+  scale:  { name: 'Scale',  price: 175.95, color: 'from-purple-500 to-pink-600',   icon: TrendingUp, smsLimit: 500,  chatLimit: 99999 },
+  expert: { name: 'Expert', price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 200,  chatLimit: 500  },
+};
+
+function UsageMeter({ label, used, limit, color = 'blue', upgradeNote }) {
+  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const isUnlimited = limit >= 99999;
+  const isWarning = pct >= 80;
+  const barColor = isWarning ? 'bg-red-500' : color === 'green' ? 'bg-green-500' : 'bg-blue-500';
+  return (
+    <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-semibold text-gray-800 text-sm">{label}</span>
+        {isUnlimited
+          ? <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-0.5 rounded-full">Unlimited</span>
+          : <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isWarning ? 'bg-red-100 text-red-700' : 'bg-gray-200 text-gray-600'}`}>{used} / {limit}</span>
+        }
+      </div>
+      {!isUnlimited && (
+        <>
+          <div className="w-full h-2.5 bg-gray-200 rounded-full overflow-hidden mb-1">
+            <div className={`h-full rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-400">{pct}% used this month</span>
+            {isWarning && upgradeNote && (
+              <span className="text-xs text-red-500 font-semibold">{upgradeNote}</span>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function ContactSalesForm({ apiUrl, authFetch, onClose, onSuccess }) {
+  const [form, setForm] = useState({ name: '', phone: '', reason: '', flaws: '', feedback: '' });
+  const [submitting, setSubmitting] = useState(false);
+  const reasons = [
+    'Too expensive',
+    'Missing features I need',
+    'Switching to a different provider',
+    'Business is closed / paused',
+    'Only needed it temporarily',
+    'Technical issues',
+    'Other',
+  ];
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.name || !form.phone || !form.reason) return;
+    setSubmitting(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/billing/contact-sales`, {
+        method: 'POST',
+        body: JSON.stringify(form),
+      });
+      if (res.ok) onSuccess();
+      else alert('Failed to submit. Please try again.');
+    } catch { alert('Something went wrong.'); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-t-2xl p-6 text-white">
+          <h2 className="text-xl font-bold mb-1">Contact Sales to Unsubscribe</h2>
+          <p className="text-red-100 text-sm">A team member will reach out within 1 business day to process your request.</p>
+        </div>
+        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Full Name *</label>
+            <input
+              type="text"
+              required
+              value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              placeholder="Your name"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Personal Phone Number *</label>
+            <input
+              type="tel"
+              required
+              value={form.phone}
+              onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400"
+              placeholder="(555) 000-0000"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Reason for Unsubscribing *</label>
+            <div className="relative">
+              <select
+                required
+                value={form.reason}
+                onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 appearance-none bg-white pr-8"
+              >
+                <option value="">Select a reason...</option>
+                {reasons.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+              <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">What could we improve? (Dashboard flaws)</label>
+            <textarea
+              value={form.flaws}
+              onChange={e => setForm(f => ({ ...f, flaws: e.target.value }))}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+              placeholder="What didn't work well or felt frustrating?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Additional Feedback</label>
+            <textarea
+              value={form.feedback}
+              onChange={e => setForm(f => ({ ...f, feedback: e.target.value }))}
+              rows={3}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+              placeholder="Anything else you'd like us to know?"
+            />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button
+              type="submit"
+              disabled={submitting || !form.name || !form.phone || !form.reason}
+              className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition disabled:opacity-50"
+            >
+              {submitting ? 'Submitting...' : 'Submit Unsubscribe Request'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-5 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export default function Billing({ user, apiUrl, authFetch }) {
   const [currentPlan, setCurrentPlan] = useState(null);
   const [basePlan, setBasePlan] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [showCancel, setShowCancel] = useState(false);
-  const [cancelStep, setCancelStep] = useState(0);
-  const [canceling, setCanceling] = useState(false);
+  const [usage, setUsage] = useState(null);
+  const [subscription, setSubscription] = useState(null);
+  const [showContactForm, setShowContactForm] = useState(false);
+  const [contactSuccess, setContactSuccess] = useState(false);
 
   useEffect(() => {
-    setCurrentPlan(user?.plan || null);
-    setBasePlan(user?.base_plan || user?.plan || null);
-    if (user?.plan && user.plan !== 'free') {
+    const plan = user?.plan || null;
+    const bp = user?.base_plan || plan;
+    setCurrentPlan(plan);
+    setBasePlan(bp);
+    if (plan && plan !== 'free') {
       window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 5 } }));
+      fetchUsage();
+      fetchSubscription();
     }
   }, [user]);
+
+  const fetchUsage = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/billing/usage`);
+      if (res.ok) setUsage(await res.json());
+    } catch {}
+  };
+
+  const fetchSubscription = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/billing/subscription`);
+      if (res.ok) setSubscription(await res.json());
+    } catch {}
+  };
 
   const handleUpgrade = async (planId) => {
     const bp = basePlan || currentPlan;
@@ -31,24 +203,189 @@ export default function Billing({ user, apiUrl, authFetch }) {
       });
       const data = await response.json();
       if (data.upgraded || data.downgraded) {
-        // Plan changed in-place via Stripe — reload to sync all UI
         window.location.reload();
       } else if (data.url) {
         window.location.href = data.url;
       } else {
         alert(data.error || 'Failed to start checkout. Please try again.');
       }
-    } catch (error) {
-      console.error('Checkout error:', error);
+    } catch {
       alert('Something went wrong. Please contact support.');
     } finally {
       setLoading(false);
     }
   };
 
-  const SMS_LIMIT = { free: 0, basic: 100, pro: 100, scale: 500, expert: 200 };
-  const planSmsLimit = SMS_LIMIT[currentPlan] || 0;
+  const isOnPaidPlan = currentPlan && currentPlan !== 'free';
+  const meta = PLAN_META[basePlan || currentPlan];
+  const PlanIcon = meta?.icon || Sparkles;
+  const nextBilling = subscription?.current_period_end
+    ? new Date(subscription.current_period_end * 1000).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : null;
 
+  // ── CURRENT PLAN DASHBOARD ────────────────────────────────────────────────
+  if (isOnPaidPlan && meta) {
+    const isProOrBelow = (PLAN_LEVEL[basePlan || currentPlan] || 0) < PLAN_LEVEL.scale;
+    const smsUsed = usage?.smsUsed ?? 0;
+    const smsLimit = meta.smsLimit;
+    const chatUsed = usage?.chatUsed ?? 0;
+    const chatLimit = meta.chatLimit;
+    const smsPct = smsLimit > 0 ? Math.round((smsUsed / smsLimit) * 100) : 0;
+    const chatPct = chatLimit < 99999 && chatLimit > 0 ? Math.round((chatUsed / chatLimit) * 100) : 0;
+    const nearLimit = smsPct >= 80 || chatPct >= 80;
+
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-8">
+
+        {/* Plan header */}
+        <div className={`bg-gradient-to-br ${meta.color} rounded-2xl p-7 text-white mb-6 shadow-lg`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center">
+                <PlanIcon className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Current Plan</p>
+                <h1 className="text-3xl font-bold">{meta.name}</h1>
+                <p className="text-white/80 text-sm">${meta.price}/month</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full">Active</span>
+              {nextBilling && (
+                <p className="text-white/60 text-xs mt-2">Renews {nextBilling}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Usage limit warning */}
+        {nearLimit && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-red-800 text-sm">Approaching your plan limits</p>
+              <p className="text-red-600 text-xs mt-0.5">Upgrade to Scale for 5x more SMS and unlimited chat responses.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Usage meters */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
+          <h2 className="font-bold text-gray-900 mb-4">This Month's Usage</h2>
+          <div className="space-y-4">
+            <UsageMeter
+              label="SMS Messages Sent"
+              used={smsUsed}
+              limit={smsLimit}
+              color="blue"
+              upgradeNote={smsPct >= 80 ? 'Upgrade for 500/mo' : null}
+            />
+            <UsageMeter
+              label="Chat Agent AI Responses"
+              used={chatUsed}
+              limit={chatLimit}
+              color="green"
+              upgradeNote={chatPct >= 80 ? 'Upgrade for unlimited' : null}
+            />
+          </div>
+        </div>
+
+        {/* Upgrade to Scale */}
+        {isProOrBelow && (
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 mb-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <TrendingUp className="w-5 h-5 text-purple-600" />
+                  <h3 className="font-bold text-gray-900">Upgrade to Scale — $175.95/mo</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">Remove your SMS and chat limits and unlock everything at full capacity.</p>
+                <div className="space-y-1.5">
+                  {[
+                    '500 SMS / month (5× more)',
+                    'Unlimited chat agent responses',
+                    'Higher priority support',
+                  ].map(f => (
+                    <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                      <Check className="w-4 h-4 text-purple-600 flex-shrink-0" />
+                      {f}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <button
+                onClick={() => handleUpgrade('scale')}
+                disabled={loading}
+                className="flex-shrink-0 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50"
+              >
+                <ArrowUpRight className="w-4 h-4" />
+                Upgrade to Scale
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* What's included */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
+          <h2 className="font-bold text-gray-900 mb-4">What's Included in Your Plan</h2>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {[
+              'AI Website Generator',
+              'Online Booking Calendar',
+              'Customer & Lead Management',
+              'Team Management',
+              ...(currentPlan !== 'basic' ? [
+                'AI Chat Agent (24/7)',
+                'SMS Lead Follow-Up Agent',
+                'Automated Google Reviews',
+                'Weekly AI Email Marketing',
+                'Market Research Reports',
+              ] : []),
+            ].map(f => (
+              <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
+                <Check className="w-4 h-4 text-green-500 flex-shrink-0" />
+                {f}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="text-center space-y-3">
+          <div className="text-xs text-gray-400 flex items-center justify-center gap-6">
+            <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" />Billed monthly</span>
+            <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" />Cancel anytime</span>
+            <span className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" />Secure payments via Stripe</span>
+          </div>
+
+          {/* Tiny unsubscribe link */}
+          {!contactSuccess ? (
+            <button
+              onClick={() => setShowContactForm(true)}
+              className="text-[11px] text-gray-300 hover:text-gray-400 underline transition-colors"
+            >
+              Need to unsubscribe? Contact sales
+            </button>
+          ) : (
+            <p className="text-[11px] text-green-600 font-medium">Request received — we'll reach out within 1 business day.</p>
+          )}
+        </div>
+
+        {/* Contact form modal */}
+        {showContactForm && (
+          <ContactSalesForm
+            apiUrl={apiUrl}
+            authFetch={authFetch}
+            onClose={() => setShowContactForm(false)}
+            onSuccess={() => { setShowContactForm(false); setContactSuccess(true); }}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // ── PRICING PAGE (no active plan) ─────────────────────────────────────────
   const plans = [
     {
       id: 'basic',
@@ -81,16 +418,16 @@ export default function Billing({ user, apiUrl, authFetch }) {
       popular: true,
       trial: '1-week free trial',
       smsLimit: 100,
+      chatLimit: 500,
       features: [
         { text: 'Everything in Basic', included: true, bold: true },
         { text: 'AI Chat Agent (24/7 on your website)', included: true, highlight: true },
         { text: 'SMS Lead Follow-Up Agent', included: true, highlight: true },
         { text: '100 SMS / month', included: true, highlight: true },
+        { text: '500 chat AI responses / month', included: true, highlight: true },
         { text: 'Automated Google Review Requests', included: true, highlight: true },
-        { text: 'Embed on Any Website (Wix, Squarespace...)', included: true, highlight: true },
         { text: 'Weekly AI Email Marketing', included: true, highlight: true },
         { text: 'Market Research Reports', included: true },
-        { text: 'SEO Blog Writing (4 posts/month)', included: true },
         { text: 'Priority Support', included: true },
       ],
       cta: 'Start free trial',
@@ -106,8 +443,8 @@ export default function Billing({ user, apiUrl, authFetch }) {
       smsLimit: 500,
       features: [
         { text: 'Everything in Pro', included: true, bold: true },
-        { text: '500 SMS / month (5x more)', included: true, highlight: true },
-        { text: 'Higher chat conversation limits', included: true, highlight: true },
+        { text: '500 SMS / month (5× more)', included: true, highlight: true },
+        { text: 'Unlimited chat agent responses', included: true, highlight: true },
         { text: 'White-label options', included: true, soon: true },
         { text: 'Dedicated account manager', included: true, soon: true },
         { text: 'Custom API integrations', included: true, soon: true },
@@ -116,14 +453,11 @@ export default function Billing({ user, apiUrl, authFetch }) {
     },
   ];
 
-  const isCurrentPlanPaid = currentPlan && currentPlan !== 'free';
-
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="text-center mb-10">
         <h1 className="text-4xl font-bold text-gray-900 mb-3">Choose Your Plan</h1>
         <p className="text-lg text-gray-600">AI-powered tools that grow your business on autopilot</p>
-
         {!currentPlan && (
           <div className="mt-5 mx-auto max-w-xl p-4 bg-amber-50 border-2 border-amber-300 rounded-xl">
             <p className="text-amber-900 font-semibold">You need a plan to get started — choose one below</p>
@@ -131,7 +465,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
         )}
       </div>
 
-      {/* Cost breakdown callout */}
+      {/* Value callout */}
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 border border-blue-200 rounded-2xl p-6 mb-10">
         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <Zap className="w-5 h-5 text-blue-600" /> What you get with Pro — estimated value
@@ -141,7 +475,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
             { label: 'AI Chat Agent', value: '$199/mo', icon: MessageSquare, desc: '24/7 lead capture & booking on your site' },
             { label: 'SMS Lead Agent', value: '$79/mo', icon: Zap, desc: 'Texts every new lead within 60 seconds' },
             { label: 'AI Email Marketing', value: '$149/mo', icon: Mail, desc: 'Weekly offers to past customers, on autopilot' },
-          ].map((item) => {
+          ].map(item => {
             const Icon = item.icon;
             return (
               <div key={item.label} className="bg-white rounded-xl p-4 border border-blue-100">
@@ -156,14 +490,14 @@ export default function Billing({ user, apiUrl, authFetch }) {
         </div>
         <p className="text-center text-sm text-gray-600 mt-4">
           Total standalone value: <span className="font-bold text-gray-900 line-through">$427/mo</span>
-          {' '} → <span className="font-bold text-green-600">$99.95/mo with Pro</span>
+          {' '}→ <span className="font-bold text-green-600">$99.95/mo with Pro</span>
           <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">76% OFF</span>
         </p>
       </div>
 
       {/* Plans grid */}
       <div className="grid md:grid-cols-3 gap-6">
-        {plans.map((plan) => {
+        {plans.map(plan => {
           const bp = basePlan || currentPlan;
           const isActive = bp === plan.id;
           const isUpgrade = bp && PLAN_LEVEL[plan.id] > (PLAN_LEVEL[bp] || 0);
@@ -172,15 +506,11 @@ export default function Billing({ user, apiUrl, authFetch }) {
           return (
             <div
               key={plan.name}
-              className={`relative rounded-2xl border-2 transition-all ${
-                plan.popular ? 'border-blue-500 shadow-xl md:scale-105' : 'border-gray-200'
-              } ${isActive ? 'ring-4 ring-green-200' : ''}`}
+              className={`relative rounded-2xl border-2 transition-all ${plan.popular ? 'border-blue-500 shadow-xl md:scale-105' : 'border-gray-200'} ${isActive ? 'ring-4 ring-green-200' : ''}`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-5 py-1 rounded-full text-sm font-bold shadow">
-                    MOST POPULAR
-                  </div>
+                  <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-5 py-1 rounded-full text-sm font-bold shadow">MOST POPULAR</div>
                 </div>
               )}
               <div className="p-7">
@@ -193,20 +523,13 @@ export default function Billing({ user, apiUrl, authFetch }) {
                     <p className="text-xs text-gray-500">{plan.tagline}</p>
                   </div>
                 </div>
-
                 <div className="mb-6">
                   <div className="flex items-baseline gap-1">
                     <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
                     <span className="text-gray-500 text-sm">/month</span>
                   </div>
-                  {plan.trial && (
-                    <p className="text-xs text-green-600 font-semibold mt-1 bg-green-50 inline-block px-2 py-0.5 rounded-full">{plan.trial}</p>
-                  )}
-                  {plan.smsLimit && (
-                    <p className="text-xs text-blue-600 font-medium mt-1">{plan.smsLimit} SMS leads/month included</p>
-                  )}
+                  {plan.trial && <p className="text-xs text-green-600 font-semibold mt-1 bg-green-50 inline-block px-2 py-0.5 rounded-full">{plan.trial}</p>}
                 </div>
-
                 <div className="space-y-2 mb-7">
                   {plan.features.map((f, i) => (
                     <div key={i} className={`flex items-start gap-2 ${f.highlight ? 'bg-blue-50 -mx-2 px-2 py-1 rounded-lg' : ''}`}>
@@ -220,15 +543,10 @@ export default function Billing({ user, apiUrl, authFetch }) {
                     </div>
                   ))}
                 </div>
-
                 <button
                   onClick={() => handleUpgrade(plan.id)}
                   disabled={isActive || loading}
-                  className={`w-full py-3 rounded-xl font-bold transition-all text-sm ${
-                    isActive
-                      ? 'bg-green-100 text-green-700 cursor-default'
-                      : `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`
-                  }`}
+                  className={`w-full py-3 rounded-xl font-bold transition-all text-sm ${isActive ? 'bg-green-100 text-green-700 cursor-default' : `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`}`}
                 >
                   {isActive ? '✓ Current Plan' : loading ? 'Processing...' : isUpgrade ? `Upgrade to ${plan.name}` : isDowngrade ? `Switch to ${plan.name}` : plan.cta}
                 </button>
@@ -238,122 +556,11 @@ export default function Billing({ user, apiUrl, authFetch }) {
         })}
       </div>
 
-      {isCurrentPlanPaid && (
-        <div className="mt-8 bg-gray-50 rounded-xl p-5 border border-gray-200 text-sm text-gray-600">
-          <p className="font-semibold text-gray-800 mb-1">Your plan: <span className="capitalize">{currentPlan}</span></p>
-          <p>SMS lead follow-ups: <strong>{planSmsLimit}/month</strong> included.
-            {currentPlan === 'pro' && ' Upgrade to Scale for 500 SMS/month.'}
-          </p>
-        </div>
-      )}
-
       <div className="mt-10 text-center text-sm text-gray-500 flex items-center justify-center gap-8">
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />Free trial included</span>
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />Cancel anytime</span>
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />No setup fees</span>
       </div>
-
-      {/* Cancel Subscription - small, tucked away */}
-      {isCurrentPlanPaid && (
-        <div className="mt-6 text-center">
-          {!showCancel ? (
-            <button
-              onClick={() => setShowCancel(true)}
-              className="text-[11px] text-gray-400 hover:text-gray-500 underline"
-            >
-              Cancel subscription
-            </button>
-          ) : cancelStep === 0 ? (
-            <div className="max-w-sm mx-auto bg-red-50 border border-red-200 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertTriangle className="w-4 h-4 text-red-500" />
-                <span className="text-xs font-semibold text-red-700">Cancel your subscription?</span>
-              </div>
-              <p className="text-[11px] text-red-600 mb-3 leading-relaxed">
-                You will lose <strong>immediate access</strong> to:
-              </p>
-              <ul className="text-[11px] text-red-600 space-y-1 mb-3 text-left pl-2">
-                <li className="flex items-start gap-1.5">
-                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
-                  <span>Your published website will go offline</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
-                  <span>Online booking system will be disabled</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
-                  <span>AI lead agents will stop running</span>
-                </li>
-                <li className="flex items-start gap-1.5">
-                  <X className="w-3 h-3 mt-0.5 flex-shrink-0 text-red-400" />
-                  <span>Automated review system will be turned off</span>
-                </li>
-              </ul>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setCancelStep(1)}
-                  className="text-[10px] px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                >
-                  I understand, continue
-                </button>
-                <button
-                  onClick={() => { setShowCancel(false); setCancelStep(0); }}
-                  className="text-[10px] px-3 py-1 text-gray-500 hover:text-gray-700"
-                >
-                  Keep my plan
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-sm mx-auto bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-[11px] text-red-700 font-semibold mb-2">
-                Are you sure? This cannot be undone easily.
-              </p>
-              <p className="text-[10px] text-red-500 mb-3">
-                Your subscription will remain active until the end of your current billing period, then all services will be deactivated.
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={async () => {
-                    setCanceling(true);
-                    try {
-                      const res = await authFetch(`${apiUrl}/api/billing/cancel-subscription`, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                      });
-                      if (res.ok) {
-                        setCancelStep(2);
-                      } else {
-                        alert('Failed to cancel. Please contact support.');
-                      }
-                    } catch (err) {
-                      alert('Something went wrong. Please try again.');
-                    } finally {
-                      setCanceling(false);
-                    }
-                  }}
-                  disabled={canceling}
-                  className="text-[10px] px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
-                >
-                  {canceling ? 'Canceling...' : 'Yes, cancel my subscription'}
-                </button>
-                <button
-                  onClick={() => { setShowCancel(false); setCancelStep(0); }}
-                  className="text-[10px] px-3 py-1 text-gray-500 hover:text-gray-700"
-                >
-                  Never mind
-                </button>
-              </div>
-              {cancelStep === 2 && (
-                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-[10px] text-yellow-700">
-                  Your subscription has been canceled. You'll retain access until the end of your billing period.
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }

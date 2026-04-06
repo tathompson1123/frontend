@@ -3147,10 +3147,10 @@ export default function BusinessInformation({
               Email Reminders
             </button>
             <button
-              onClick={() => setAppSettingsSubTab('sms')}
-              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${appSettingsSubTab === 'sms' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
+              onClick={() => setAppSettingsSubTab('policy')}
+              className={`px-4 py-3 text-sm font-semibold border-b-2 transition-colors ${appSettingsSubTab === 'policy' ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-800'}`}
             >
-              Text Reminders
+              Cancellation Policy
             </button>
           </div>
 
@@ -3252,13 +3252,23 @@ export default function BusinessInformation({
                   )}
                 </div>
               )}
+            </div>
+          )}
 
-              {/* Cancellation Policy */}
-              <div className="border-t border-gray-200 pt-6">
-                <div className="flex items-center justify-between mb-3">
+          {/* Cancellation Policy Sub-tab */}
+          {appSettingsSubTab === 'policy' && (
+            <div className="max-w-2xl space-y-6">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">Cancellation Policy</h3>
+                <p className="text-sm text-gray-600">
+                  When enabled, your cancellation policy appears in all booking reminder emails as a highlighted notice.
+                </p>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900">Cancellation Policy</h3>
-                    <p className="text-sm text-gray-500 mt-0.5">When enabled, your policy is included in all reminder emails.</p>
+                    <p className="font-semibold text-gray-900 text-sm">Include in reminder emails</p>
+                    <p className="text-xs text-gray-500 mt-0.5">Customers will see your policy in every reminder email.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
                     <input
@@ -3270,14 +3280,15 @@ export default function BusinessInformation({
                     <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                   </label>
                 </div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Policy Text</label>
                 <textarea
                   value={cancellationPolicyText}
                   onChange={(e) => setCancellationPolicyText(e.target.value)}
                   placeholder="e.g. Cancellations must be made at least 24 hours before your appointment to avoid a cancellation fee."
-                  rows={3}
+                  rows={4}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm resize-none"
                 />
-                <div className="flex justify-end mt-2">
+                <div className="flex justify-end mt-3">
                   <button
                     onClick={saveCancellationPolicy}
                     disabled={savingCancellationPolicy}
@@ -3288,56 +3299,6 @@ export default function BusinessInformation({
                   </button>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* SMS Reminders Sub-tab */}
-          {appSettingsSubTab === 'sms' && (
-            <div className="max-w-2xl space-y-6">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-1">Booking Text Reminders</h3>
-                <p className="text-sm text-gray-600">
-                  Send SMS reminders to customers before their appointment. Uses the same timing as your email reminders — toggle SMS on for each interval.
-                </p>
-              </div>
-
-              {loadingReminders ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {reminders.map(reminder => (
-                    <div key={reminder.id} className="bg-gray-50 rounded-xl p-5 border border-gray-200">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={!!reminder.sms_enabled}
-                              onChange={(e) => handleUpdateReminder(reminder.id, { sms_enabled: e.target.checked })}
-                              className="sr-only peer"
-                            />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
-                          </label>
-                          <div>
-                            <p className="font-semibold text-gray-900 text-sm">
-                              {reminder.hours_before >= 48
-                                ? `${reminder.hours_before / 24} days before`
-                                : `${reminder.hours_before} hours before`}
-                            </p>
-                            <p className="text-xs text-gray-500">{reminder.label}</p>
-                          </div>
-                        </div>
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${reminder.sms_enabled ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                          {reminder.sms_enabled ? 'SMS On' : 'SMS Off'}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  <p className="text-xs text-gray-400">Custom message text is shared with email reminders. Edit it in the Email Reminders tab.</p>
-                </div>
-              )}
             </div>
           )}
           </div>
