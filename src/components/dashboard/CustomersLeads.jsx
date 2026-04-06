@@ -62,6 +62,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [conversationMessages, setConversationMessages] = useState([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [conversationSearch, setConversationSearch] = useState('');
+  const [conversationType, setConversationType] = useState('chat'); // 'chat' | 'sms'
+  const [smsLeads, setSmsLeads] = useState([]);
+  const [selectedSmsLead, setSelectedSmsLead] = useState(null);
+  const [smsLeadMessages, setSmsLeadMessages] = useState([]);
+  const [loadingSmsLeads, setLoadingSmsLeads] = useState(false);
+  const [loadingSmsMessages, setLoadingSmsMessages] = useState(false);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -213,11 +219,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             })
             .filter(Boolean);
 
+          if (leads.length === 0) {
+            alert('No valid leads found in CSV. Make sure the file has a "name" column.');
+            return;
+          }
           const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
             method: 'POST',
             body: JSON.stringify({ leads })
           });
           const data = await response.json();
+          if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
           alert(`Import complete!\nImported: ${data.successCount}\nSkipped: ${data.errorCount}`);
           fetchLeads();
         } else {
@@ -237,11 +248,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             })
             .filter(Boolean);
 
+          if (customers.length === 0) {
+            alert('No valid customers found in CSV. Make sure the file has a "name" column.');
+            return;
+          }
           const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
             method: 'POST',
             body: JSON.stringify({ customers })
           });
           const data = await response.json();
+          if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
           alert(`Import complete!\nImported: ${data.successCount}\nSkipped: ${data.errorCount}`);
           fetchCustomers();
         }
@@ -397,6 +413,36 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       console.error('Error fetching messages:', error);
     } finally {
       setLoadingMessages(false);
+    }
+  };
+
+  const fetchSmsLeadConversations = async () => {
+    try {
+      setLoadingSmsLeads(true);
+      const response = await authFetch(`${apiUrl}/api/leads/sms-conversations`);
+      if (response.ok) {
+        const data = await response.json();
+        setSmsLeads(data.leads || []);
+      }
+    } catch (error) {
+      console.error('Error fetching SMS conversations:', error);
+    } finally {
+      setLoadingSmsLeads(false);
+    }
+  };
+
+  const fetchSmsLeadMessages = async (leadId) => {
+    try {
+      setLoadingSmsMessages(true);
+      const response = await authFetch(`${apiUrl}/api/leads/${leadId}/sms-conversation`);
+      if (response.ok) {
+        const data = await response.json();
+        setSmsLeadMessages(data.messages || []);
+      }
+    } catch (error) {
+      console.error('Error fetching SMS messages:', error);
+    } finally {
+      setLoadingSmsMessages(false);
     }
   };
 
@@ -803,7 +849,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               {activeTab === 'customers' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
             <button
-              onClick={() => { setActiveTab('conversations'); setSearchTerm(''); setEditingCell(null); fetchConversations(); }}
+              onClick={() => { setActiveTab('conversations'); setSearchTerm(''); setEditingCell(null); fetchConversations(); fetchSmsLeadConversations(); }}
               className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'conversations' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
             >
               <div className="flex items-center gap-2">
@@ -1041,6 +1087,25 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 flex" style={{ height: '700px' }}>
           {/* Conversation List */}
           <div className="w-96 border-r border-gray-200 flex flex-col">
+            {/* Type Toggle */}
+            <div className="p-3 border-b border-gray-200 bg-gray-50 flex gap-1">
+              <button
+                onClick={() => { setConversationType('chat'); setSelectedSmsLead(null); setSmsLeadMessages([]); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all ${conversationType === 'chat' ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+              >
+                <MessageCircle className="w-3.5 h-3.5" />
+                Chat Agent
+              </button>
+              <button
+                onClick={() => { setConversationType('sms'); setSelectedConversation(null); setConversationMessages([]); fetchSmsLeadConversations(); }}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all ${conversationType === 'sms' ? 'bg-green-600 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
+              >
+                <Phone className="w-3.5 h-3.5" />
+                Lead SMS
+              </button>
+            </div>
+
+            {/* Search */}
             <div className="p-4 border-b border-gray-200">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -1053,53 +1118,54 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 />
               </div>
             </div>
+
             <div className="flex-1 overflow-y-auto">
-              {loadingConversations ? (
-                <div className="text-center py-12">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-gray-500 mt-3 text-sm">Loading...</p>
-                </div>
-              ) : conversations.length === 0 ? (
-                <div className="text-center py-12 px-4">
-                  <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">No conversations yet</p>
-                  <p className="text-gray-400 text-xs mt-1">Chat conversations from your website will appear here</p>
-                </div>
-              ) : (
-                conversations
-                  .filter(c => !conversationSearch || (c.first_message || '').toLowerCase().includes(conversationSearch.toLowerCase()))
-                  .map(conv => (
-                  <button
-                    key={conv.id}
-                    onClick={() => {
-                      setSelectedConversation(conv);
-                      fetchConversationMessages(conv.id);
-                      setTimeout(() => {
-                        if (messagesContainerRef.current) messagesContainerRef.current.scrollTop = 0;
-                      }, 50);
-                    }}
-                    className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
-                      selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm font-semibold text-gray-900 truncate">
-                        Conversation #{conv.id}
-                      </span>
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        conv.source === 'embed' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
-                      }`}>
-                        {conv.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 truncate">
-                      {conv.first_message || 'No messages'}
-                    </p>
-                    <div className="flex items-center justify-between mt-2">
-                      <span className="text-xs text-gray-400">
-                        {new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {new Date(conv.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                      </span>
-                      <div className="flex items-center gap-2">
+              {conversationType === 'chat' ? (
+                loadingConversations ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-3 text-sm">Loading...</p>
+                  </div>
+                ) : conversations.length === 0 ? (
+                  <div className="text-center py-12 px-4">
+                    <MessageCircle className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No chat conversations yet</p>
+                    <p className="text-gray-400 text-xs mt-1">Chat conversations from your website will appear here</p>
+                  </div>
+                ) : (
+                  conversations
+                    .filter(c => !conversationSearch || (c.first_message || '').toLowerCase().includes(conversationSearch.toLowerCase()))
+                    .map(conv => (
+                    <button
+                      key={conv.id}
+                      onClick={() => {
+                        setSelectedConversation(conv);
+                        fetchConversationMessages(conv.id);
+                        setTimeout(() => {
+                          if (messagesContainerRef.current) messagesContainerRef.current.scrollTop = 0;
+                        }, 50);
+                      }}
+                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
+                        selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-gray-900 truncate">
+                          Conversation #{conv.id}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          conv.source === 'embed' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                          {conv.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 truncate">
+                        {conv.first_message || 'No messages'}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-gray-400">
+                          {new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {new Date(conv.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                        </span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           conv.outcome === 'booked' ? 'bg-green-100 text-green-700' :
                           conv.outcome === 'no_response' ? 'bg-gray-100 text-gray-500' :
@@ -1110,80 +1176,172 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                            "Didn't book"}
                         </span>
                       </div>
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  ))
+                )
+              ) : (
+                loadingSmsLeads ? (
+                  <div className="text-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                    <p className="text-gray-500 mt-3 text-sm">Loading...</p>
+                  </div>
+                ) : smsLeads.length === 0 ? (
+                  <div className="text-center py-12 px-4">
+                    <Phone className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                    <p className="text-gray-500 text-sm">No SMS conversations yet</p>
+                    <p className="text-gray-400 text-xs mt-1">Lead SMS conversations will appear here once your agent sends messages</p>
+                  </div>
+                ) : (
+                  smsLeads
+                    .filter(l => !conversationSearch || (l.name || '').toLowerCase().includes(conversationSearch.toLowerCase()) || (l.last_message || '').toLowerCase().includes(conversationSearch.toLowerCase()))
+                    .map(lead => (
+                    <button
+                      key={lead.id}
+                      onClick={() => { setSelectedSmsLead(lead); fetchSmsLeadMessages(lead.id); }}
+                      className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${
+                        selectedSmsLead?.id === lead.id ? 'bg-green-50 border-l-2 border-l-green-500' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-sm font-semibold text-gray-900 truncate">
+                          {lead.name || 'Unknown Lead'}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          lead.status === 'contacted_sms' ? 'bg-green-100 text-green-700' :
+                          lead.status === 'sms_failed' ? 'bg-red-100 text-red-700' :
+                          'bg-gray-100 text-gray-600'
+                        }`}>
+                          {lead.status === 'contacted_sms' ? 'Contacted' : lead.status === 'sms_failed' ? 'Failed' : lead.status}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 truncate">
+                        {lead.last_message || 'No messages'}
+                      </p>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-gray-400">{lead.phone}</span>
+                        <span className="text-xs text-gray-400">
+                          {lead.last_message_at ? new Date(lead.last_message_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
+                          {' '}{lead.message_count} msg{lead.message_count !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )
               )}
             </div>
           </div>
 
           {/* Message Thread */}
           <div className="flex-1 flex flex-col">
-            {!selectedConversation ? (
-              <div className="flex-1 flex items-center justify-center">
-                <div className="text-center">
-                  <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
-                  <p className="text-gray-500 font-medium">Select a conversation</p>
-                  <p className="text-gray-400 text-sm mt-1">Choose a conversation from the list to view messages</p>
-                </div>
-              </div>
-            ) : (
-              <>
-                {/* Thread Header */}
-                <div className="p-4 border-b border-gray-200 bg-gray-50">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">Conversation #{selectedConversation.id}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">
-                        {new Date(selectedConversation.created_at).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
-                        {' '} &middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => { setSelectedConversation(null); setConversationMessages([]); }}
-                      className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
+            {conversationType === 'chat' ? (
+              !selectedConversation ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <MessageCircle className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium">Select a conversation</p>
+                    <p className="text-gray-400 text-sm mt-1">Choose a conversation from the list to view messages</p>
                   </div>
                 </div>
-
-                {/* Messages */}
-                <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
-                  {loadingMessages ? (
-                    <div className="text-center py-12">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                    </div>
-                  ) : conversationMessages.length === 0 ? (
-                    <div className="text-center py-12">
-                      <p className="text-gray-400 text-sm">No messages in this conversation</p>
-                    </div>
-                  ) : (
-                    conversationMessages.map((msg, idx) => (
-                      <div
-                        key={idx}
-                        className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}
-                      >
-                        <div
-                          className={`max-w-[75%] rounded-2xl px-4 py-3 ${
-                            msg.role === 'user'
-                              ? 'bg-white border border-gray-200 text-gray-900'
-                              : 'bg-blue-600 text-white'
-                          }`}
-                        >
-                          <div className={`text-xs font-medium mb-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>
-                            {msg.role === 'user' ? 'Customer' : 'AI Agent'}
-                          </div>
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>
-                            {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                          </p>
-                        </div>
+              ) : (
+                <>
+                  <div className="p-4 border-b border-gray-200 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">Conversation #{selectedConversation.id}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {new Date(selectedConversation.created_at).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          {' '}&middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}
+                        </p>
                       </div>
-                    ))
-                  )}
+                      <button
+                        onClick={() => { setSelectedConversation(null); setConversationMessages([]); }}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
+                    {loadingMessages ? (
+                      <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                      </div>
+                    ) : conversationMessages.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-gray-400 text-sm">No messages in this conversation</p>
+                      </div>
+                    ) : (
+                      conversationMessages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                          <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-blue-600 text-white'}`}>
+                            <div className={`text-xs font-medium mb-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>
+                              {msg.role === 'user' ? 'Customer' : 'AI Agent'}
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )
+            ) : (
+              !selectedSmsLead ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <div className="text-center">
+                    <Phone className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                    <p className="text-gray-500 font-medium">Select a lead</p>
+                    <p className="text-gray-400 text-sm mt-1">Choose a lead to view their SMS conversation</p>
+                  </div>
                 </div>
-              </>
+              ) : (
+                <>
+                  <div className="p-4 border-b border-gray-200 bg-gray-50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{selectedSmsLead.name || 'Unknown Lead'}</h3>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {selectedSmsLead.phone} &middot; Lead SMS Agent
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => { setSelectedSmsLead(null); setSmsLeadMessages([]); }}
+                        className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
+                    {loadingSmsMessages ? (
+                      <div className="text-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                      </div>
+                    ) : smsLeadMessages.length === 0 ? (
+                      <div className="text-center py-12">
+                        <p className="text-gray-400 text-sm">No messages in this conversation</p>
+                      </div>
+                    ) : (
+                      smsLeadMessages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
+                          <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.direction === 'incoming' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-green-600 text-white'}`}>
+                            <div className={`text-xs font-medium mb-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-100'}`}>
+                              {msg.direction === 'incoming' ? 'Customer' : 'AI Agent'}
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            <p className={`text-xs mt-2 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>
+                              {new Date(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                            </p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )
             )}
           </div>
         </div>

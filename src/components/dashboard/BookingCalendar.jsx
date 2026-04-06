@@ -969,7 +969,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         key={offset}
                         className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
                       >
-                        {dayBookings.map((booking) => {
+                        {dayBookings.map((booking, bookingIndex) => {
                           const [startHour, startMin] = booking.start_time.split(':').map(Number);
                           const [endHour, endMin] = booking.end_time.split(':').map(Number);
                           const startMinutes = startHour * 60 + startMin;
@@ -981,6 +981,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                           const employee = employees?.find(emp => emp.id === booking.employee_id);
                           const employeeColor = employee?.color || '#3b82f6';
                           const employeeName = employee?.name || 'Unassigned';
+                          const total = dayBookings.length;
+                          const colWidthPct = 100 / total;
+                          const leftPct = (bookingIndex / total) * 100;
 
                           return (
                             <button
@@ -992,13 +995,15 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                                 setShowBookingModal(true);
                                 setEditingNotes(false);
                               }}
-                              className="absolute left-2 right-2 rounded text-white text-xs cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden shadow-md border-l-4 z-10"
+                              className="absolute rounded text-white text-xs cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden shadow-md border-l-4 z-10"
                               style={{
                                 top: `${topOffset}px`,
                                 height: `${Math.max(blockHeight, 40)}px`,
                                 backgroundColor: employeeColor,
                                 borderLeftColor: employeeColor,
-                                filter: 'brightness(0.95)'
+                                filter: 'brightness(0.95)',
+                                left: `calc(${leftPct}% + 4px)`,
+                                width: `calc(${colWidthPct}% - 8px)`
                               }}
                             >
                               <div className="p-2 h-full flex flex-col pointer-events-none">
