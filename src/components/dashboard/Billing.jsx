@@ -328,9 +328,12 @@ export default function Billing({ user, apiUrl, authFetch }) {
     const smsLimit = meta.smsLimit;
     const chatUsed = usage?.chatUsed ?? 0;
     const chatLimit = meta.chatLimit;
+    const claudeCostMonth = usage?.claudeCostMonth ?? 0;
+    const chatCostLimit = usage?.chatCostLimit ?? null; // null = unlimited
     const smsPct = smsLimit > 0 ? Math.round((smsUsed / smsLimit) * 100) : 0;
     const chatPct = chatLimit < 99999 && chatLimit > 0 ? Math.round((chatUsed / chatLimit) * 100) : 0;
-    const nearLimit = smsPct >= 80 || chatPct >= 80;
+    const chatCostPct = chatCostLimit ? Math.round((claudeCostMonth / chatCostLimit) * 100) : 0;
+    const nearLimit = smsPct >= 80 || chatPct >= 80 || chatCostPct >= 80;
 
     return (
       <div className="max-w-3xl mx-auto px-4 py-8">
@@ -379,13 +382,23 @@ export default function Billing({ user, apiUrl, authFetch }) {
               color="blue"
               upgradeNote={smsPct >= 80 ? 'Upgrade for 500/mo' : null}
             />
-            <UsageMeter
-              label="Chat Agent AI Responses"
-              used={chatUsed}
-              limit={chatLimit}
-              color="green"
-              upgradeNote={chatPct >= 80 ? 'Upgrade for unlimited' : null}
-            />
+            {chatCostLimit != null ? (
+              <UsageMeter
+                label={`AI Chat Budget — $${claudeCostMonth.toFixed(2)} of $${chatCostLimit.toFixed(2)}/mo`}
+                used={Math.round(chatCostPct)}
+                limit={100}
+                color="green"
+                upgradeNote={chatCostPct >= 80 ? 'Upgrade to Scale for unlimited AI chat' : null}
+              />
+            ) : (
+              <UsageMeter
+                label="Chat Agent AI Responses"
+                used={chatUsed}
+                limit={chatLimit}
+                color="green"
+                upgradeNote={chatPct >= 80 ? 'Upgrade for unlimited' : null}
+              />
+            )}
           </div>
         </div>
 

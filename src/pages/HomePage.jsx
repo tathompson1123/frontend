@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart, Calendar, Globe, Brain, LineChart } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
-import GenerateModal from '../components/GenerateModal';
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -16,8 +15,6 @@ export default function HomePage() {
     }
   }, [navigate]);
   const [authMode, setAuthMode] = useState('signup');
-  const [showGenerateModal, setShowGenerateModal] = useState(false);
-
   const handleGetStarted = () => {
     setAuthMode('signup');
     setShowAuthModal(true);
@@ -549,26 +546,25 @@ export default function HomePage() {
             Ready to Stop Losing Customers?
           </h2>
           <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Generate your website now. Add growth features later. Start turning visitors into customers today.
+            Get your business running on autopilot. Start booking more customers today.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={handleGetStarted}
               className="px-10 py-5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold text-xl hover:shadow-2xl transition-all inline-flex items-center gap-3 justify-center"
             >
-              <Wand2 className="w-6 h-6" />
-              Generate Free Website
+              Get Started Free
               <ArrowRight className="w-6 h-6" />
             </button>
             <button
               onClick={handleNavigateToPricing}
               className="px-10 py-5 bg-white text-gray-900 border-2 border-gray-300 rounded-xl font-semibold text-xl hover:border-primary-600 transition-all"
             >
-              See Growth Plans →
+              See Plans →
             </button>
           </div>
           <p className="text-sm text-gray-500 mt-6">
-            Free website generation • Upgrade anytime for AI chat, reviews & SEO
+            Free to start • Upgrade anytime for AI chat, reviews & SEO
           </p>
         </div>
       </section>
@@ -613,11 +609,6 @@ export default function HomePage() {
         onSuccess={handleAuthSuccess}
       />
 
-      {/* Generate Website Modal */}
-      <GenerateModal
-        isOpen={showGenerateModal}
-        onClose={() => setShowGenerateModal(false)}
-      />
     </div>
   );
 }
