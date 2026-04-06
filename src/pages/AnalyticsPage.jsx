@@ -231,7 +231,7 @@ export default function AnalyticsPage() {
                       {th('SMS / mo', 'sms_sent_month')}
                       {th('SMS Cost', 'sms_cost')}
                       {th('Chats / mo', 'chat_convos_month')}
-                      {th('Chat Cost', 'chat_cost')}
+                      {th('Claude Cost', 'claude_cost_month')}
                       {th('Total Cost', 'total_cost')}
                       {th('Margin', 'margin')}
                       {th('Status', 'is_trialing')}
@@ -284,8 +284,11 @@ export default function AnalyticsPage() {
                           <span className="text-gray-500 text-xs">{fmtN(u.chat_convos_total)} total</span>
                         </td>
 
-                        {/* Chat Cost */}
-                        <td className="px-4 py-3 text-orange-300 text-xs">{fmt$(u.chat_cost)}</td>
+                        {/* Claude Cost (real tracked) */}
+                        <td className="px-4 py-3 text-orange-300 text-xs">
+                          {fmt$(u.claude_cost_month)}
+                          {u.claude_cost_month === 0 && <span className="block text-gray-600 text-[10px]">no data yet</span>}
+                        </td>
 
                         {/* Total Cost */}
                         <td className="px-4 py-3 font-medium text-orange-400">{fmt$(u.total_cost)}</td>
@@ -333,7 +336,7 @@ export default function AnalyticsPage() {
 
             {/* Cost breakdown note */}
             <p className="text-gray-600 text-xs text-center">
-              Cost estimates: SMS $0.0075/msg · Claude chat $0.04/conversation · AI SMS response $0.003/msg · Actual Claude costs visible at console.anthropic.com
+              Claude costs are real tracked token usage (logged on every API call from this deploy forward) · SMS cost estimated at $0.0075/outbound msg · Total org-level spend at console.anthropic.com
             </p>
           </>
         )}
