@@ -14,6 +14,8 @@ import UnsubscribePage from './pages/UnsubscribePage';
 import WebsitePreview from './pages/WebsitePreview';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CardOnFilePage from './pages/CardOnFilePage';
+import AnalyticsLogin from './pages/AnalyticsLogin';
+import AnalyticsPage from './pages/AnalyticsPage';
 
 function App() {
   return (
@@ -35,6 +37,8 @@ function App() {
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/card-on-file/:token" element={<CardOnFilePage />} />
+        <Route path="/analytics/login" element={<AnalyticsLogin />} />
+        <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
