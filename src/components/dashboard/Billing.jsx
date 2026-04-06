@@ -261,6 +261,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
   const [subscription, setSubscription] = useState(null);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactSuccess, setContactSuccess] = useState(false);
+  const [showEnterprise, setShowEnterprise] = useState(false);
 
   useEffect(() => {
     const plan = user?.plan || null;
@@ -483,8 +484,6 @@ export default function Billing({ user, apiUrl, authFetch }) {
   }
 
   // ── PRICING PAGE (no active plan) ─────────────────────────────────────────
-  const [showEnterprise, setShowEnterprise] = useState(false);
-
   const plans = [
     {
       id: 'pro',
