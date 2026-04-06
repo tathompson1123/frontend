@@ -140,8 +140,8 @@ export default function Overview({ bookings, services, employees, setCurrentView
 
   const today = new Date().toDateString();
   const todayBookings = bookings.filter(b => {
-    const d = String(b.booking_date || '').slice(0, 10);
-    return d && new Date(d + 'T12:00:00').toDateString() === today;
+    if (!b.created_at) return false;
+    return new Date(b.created_at).toDateString() === today;
   });
 
   const weekStats = {
@@ -304,13 +304,13 @@ export default function Overview({ bookings, services, employees, setCurrentView
         </div>
       </div>
 
-      {/* Main 2-Column Layout: Today's Bookings (left) + Revolving Performance Cards (right) */}
+      {/* Main 2-Column Layout: Booked Today (left) + Revolving Performance Cards (right) */}
       <div className="grid lg:grid-cols-2 gap-6">
-        {/* LEFT: Today's Bookings */}
+        {/* LEFT: Booked Today */}
         <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
-            Today's Bookings
+            Booked Today
           </h2>
           {todayBookings.length > 0 ? (
             <div className="space-y-3">
@@ -341,8 +341,8 @@ export default function Overview({ bookings, services, employees, setCurrentView
           ) : (
             <div className="flex flex-col items-center justify-center py-12 text-gray-400">
               <Calendar className="w-12 h-12 mb-3 opacity-30" />
-              <p className="text-sm font-medium">No bookings today</p>
-              <p className="text-xs mt-1">Bookings will appear here as they come in</p>
+              <p className="text-sm font-medium">No bookings yet today</p>
+              <p className="text-xs mt-1">New bookings will appear here as they come in</p>
             </div>
           )}
         </div>
