@@ -139,7 +139,10 @@ export default function Overview({ bookings, services, employees, setCurrentView
   });
 
   const today = new Date().toDateString();
-  const todayBookings = bookings.filter(b => new Date(b.booking_date).toDateString() === today);
+  const todayBookings = bookings.filter(b => {
+    const d = String(b.booking_date || '').slice(0, 10);
+    return d && new Date(d + 'T12:00:00').toDateString() === today;
+  });
 
   const weekStats = {
     websiteChat: {

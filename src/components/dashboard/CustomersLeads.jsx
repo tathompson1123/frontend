@@ -1934,7 +1934,29 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Form Submission</h3>
               <div className="space-y-3">
                 {viewingLead.service && <div><p className="text-xs text-gray-400 mb-1">Service Requested</p><p className="text-sm text-gray-900 font-medium">{viewingLead.service}</p></div>}
-                {viewingLead.message && <div><p className="text-xs text-gray-400 mb-1">Message</p><p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3">{viewingLead.message}</p></div>}
+                {viewingLead.message && (() => {
+                  // Parse pipe-delimited "Key: Value | Key: Value" format from lead magnets
+                  const parts = viewingLead.message.split(' | ').map(p => p.trim()).filter(Boolean);
+                  const isParseable = parts.length > 1 && parts.every(p => p.includes(': '));
+                  if (isParseable) {
+                    return (
+                      <div className="bg-gray-50 border border-gray-100 rounded-lg overflow-hidden">
+                        {parts.map((part, i) => {
+                          const colonIdx = part.indexOf(': ');
+                          const key = part.slice(0, colonIdx);
+                          const val = part.slice(colonIdx + 2);
+                          return (
+                            <div key={i} className={`flex gap-3 px-3 py-2 ${i < parts.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                              <p className="text-xs text-gray-400 w-36 flex-shrink-0 pt-0.5">{key}</p>
+                              <p className="text-sm text-gray-900 font-medium">{val}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  }
+                  return <div><p className="text-xs text-gray-400 mb-1">Message</p><p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3">{viewingLead.message}</p></div>;
+                })()}
                 {!viewingLead.service && !viewingLead.message && <p className="text-sm text-gray-400 italic">No form message was submitted.</p>}
                 {viewingLead.sms_consent !== undefined && (
                   <div className="flex items-center gap-2">

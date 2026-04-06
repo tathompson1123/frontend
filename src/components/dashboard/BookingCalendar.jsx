@@ -25,7 +25,8 @@ import {
   LayoutGrid,
   List,
   Trash2,
-  CreditCard
+  CreditCard,
+  Palette
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
@@ -874,22 +875,27 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             </div>
           </div>
 
-          {employees && employees.length > 0 && (
-            <div className="flex items-center gap-3 flex-wrap px-2 py-3 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-xs font-medium text-gray-600">Team:</span>
-              {employees.map(employee => (
-                <div key={employee.id} className="flex items-center gap-2">
-                  <div 
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: employee.color || '#3b82f6' }}
-                  />
-                  <span className="text-xs text-gray-700">{employee.name}</span>
-                </div>
-              ))}
-            </div>
-          )}
-
           <div className="flex items-center gap-3">
+            {employees && employees.length > 0 && (
+              <div className="relative group">
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-100 rounded-lg cursor-default select-none">
+                  <Palette className="w-3.5 h-3.5 text-gray-500" />
+                  <span className="text-xs font-medium text-gray-600">Team</span>
+                </div>
+                {/* Hover legend — appears above the pill */}
+                <div className="absolute bottom-full right-0 mb-2 w-48 bg-white border border-gray-200 rounded-lg shadow-lg p-3 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Team Colors</p>
+                  <div className="space-y-1.5">
+                    {employees.map(employee => (
+                      <div key={employee.id} className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: employee.color || '#3b82f6' }} />
+                        <span className="text-xs text-gray-700 truncate">{employee.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
             <button
               type="button"
               onClick={() => {

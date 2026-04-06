@@ -19,7 +19,8 @@ export default function HomePage() {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
 
   const handleGetStarted = () => {
-    setShowGenerateModal(true);
+    setAuthMode('signup');
+    setShowAuthModal(true);
   };
 
   const handleLogin = () => {

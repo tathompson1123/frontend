@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Circle, ChevronRight, ChevronLeft, Sparkles, AlertCircle, Phone, MapPin, Briefcase, Users, Globe } from 'lucide-react';
 
-export default function OnboardingWidget({ user, setCurrentView, isMinimized, setIsMinimized, apiUrl, authFetch }) {
+export default function OnboardingWidget({ user, setCurrentView, isMinimized, setIsMinimized, apiUrl, authFetch, inline = false }) {
   const [completedSteps, setCompletedSteps] = useState(user?.onboarding_steps_completed || {});
   const [businessValidation, setBusinessValidation] = useState({
     contactInfo: false,
@@ -293,165 +293,158 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
     { key: 'team', label: 'Team members', icon: Users },
   ];
 
+  // ── Inline (tab) mode ─────────────────────────────────────────────────────
+  if (inline) {
+    return (
+      <div className="max-w-2xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-1">
+            <Sparkles className="w-5 h-5 text-amber-600" />
+            <h1 className="text-2xl font-bold text-gray-900">Getting Started</h1>
+          </div>
+          <p className="text-gray-500 text-sm">Complete these steps to get the most out of SORCE.</p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-gray-200 mb-6">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-gray-700">{completedCount} of {steps.length} complete</span>
+            <span className="text-sm font-bold text-amber-600">{Math.round(progressPercentage)}%</span>
+          </div>
+          <div className="h-2.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-amber-500 to-blue-600 transition-all duration-500 rounded-full"
+              style={{ width: `${progressPercentage}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Steps */}
+        <div className="space-y-3">
+          {steps.map((step) => {
+            const isCompleted = completedSteps[step.key];
+            const isStep1 = step.id === 1;
+            return (
+              <div key={step.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <button
+                  onClick={() => setCurrentView(step.view)}
+                  className={`w-full flex items-center gap-4 px-5 py-4 text-left transition-colors ${
+                    isCompleted ? 'hover:bg-green-50' : 'hover:bg-gray-50'
+                  }`}
+                >
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                    isCompleted ? 'bg-green-100' : 'bg-gray-100'
+                  }`}>
+                    {isCompleted
+                      ? <CheckCircle className="w-5 h-5 text-green-600" />
+                      : <span className="text-sm font-bold text-gray-400">{step.id}</span>
+                    }
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`font-semibold text-gray-900 ${isCompleted ? 'line-through text-gray-400' : ''}`}>
+                      {step.label}
+                    </p>
+                    {step.description && (
+                      <p className="text-sm text-gray-500 mt-0.5">{step.description}</p>
+                    )}
+                  </div>
+                  {!isCompleted && <ChevronRight className="w-5 h-5 text-gray-400 flex-shrink-0" />}
+                </button>
+
+                {/* Step 1 checklist */}
+                {isStep1 && !isCompleted && (
+                  <div className="px-5 pb-4 pt-0 border-t border-gray-100">
+                    <div className="grid grid-cols-2 gap-2 mt-3">
+                      {isValidating ? (
+                        <p className="text-xs text-gray-400 italic col-span-2">Checking business settings…</p>
+                      ) : validationItems.map((item) => {
+                        const Icon = item.icon;
+                        const isValid = businessValidation[item.key];
+                        return (
+                          <div key={item.key} className={`flex items-center gap-1.5 text-xs ${isValid ? 'text-green-600' : 'text-gray-400'}`}>
+                            {isValid ? <CheckCircle className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
+                            <Icon className="w-3 h-3" />
+                            <span className={isValid ? 'line-through' : ''}>{item.label}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {completedCount === steps.length && (
+          <div className="mt-6 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6 text-center">
+            <div className="text-3xl mb-2">🎉</div>
+            <p className="font-bold text-green-900">All done! You're all set up.</p>
+            <p className="text-sm text-green-700 mt-1">Head to Overview to see your dashboard.</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Sidebar (fixed panel) mode — kept for legacy, no longer used by default ──
   return (
     <aside className={`fixed top-0 right-0 h-full bg-white shadow-xl transition-all duration-300 z-50 ${isMinimized ? 'w-16' : 'w-72'}`}>
-    {/* Header */}
-<div className="p-4 border-b border-gray-200 flex items-center justify-between">
-  {!isMinimized && (
-    <div className="flex items-center gap-2">
-      <Sparkles className="w-5 h-5 text-amber-600" />
-      <h2 className="font-bold text-gray-900">Get Started</h2>
-    </div>
-  )}
-  <button
-    onClick={() => setIsMinimized(!isMinimized)}
-    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-    title={isMinimized ? 'Expand' : 'Minimize'}
-  >
-    {isMinimized ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-  </button>
-</div>
-      
-      {/* Progress Bar */}
+      <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+        {!isMinimized && (
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-amber-600" />
+            <h2 className="font-bold text-gray-900">Get Started</h2>
+          </div>
+        )}
+        <button onClick={() => setIsMinimized(!isMinimized)} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+          {isMinimized ? <ChevronLeft className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        </button>
+      </div>
       {!isMinimized && (
         <div className="px-4 py-3 bg-gradient-to-r from-amber-50 to-blue-50">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">
-              {completedCount} of {steps.length} complete
-            </span>
-            <span className="text-sm font-bold text-amber-600">
-              {Math.round(progressPercentage)}%
-            </span>
+            <span className="text-sm font-medium text-gray-700">{completedCount} of {steps.length} complete</span>
+            <span className="text-sm font-bold text-amber-600">{Math.round(progressPercentage)}%</span>
           </div>
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-gradient-to-r from-amber-600 to-blue-600 transition-all duration-500"
-              style={{ width: `${progressPercentage}%` }}
-            ></div>
+            <div className="h-full bg-gradient-to-r from-amber-600 to-blue-600 transition-all duration-500" style={{ width: `${progressPercentage}%` }} />
           </div>
         </div>
       )}
-
-      {/* Minimized View */}
-      {isMinimized && (
-        <div className="flex flex-col items-center py-4 space-y-3">
-          <div className="relative">
-            <svg className="w-12 h-12 transform -rotate-90">
-              <circle
-                cx="24"
-                cy="24"
-                r="20"
-                stroke="#E5E7EB"
-                strokeWidth="4"
-                fill="none"
-              />
-              <circle
-                cx="24"
-                cy="24"
-                r="20"
-                stroke="url(#gradient)"
-                strokeWidth="4"
-                fill="none"
-                strokeDasharray={`${progressPercentage * 1.25} ${125.6 - progressPercentage * 1.25}`}
-                strokeLinecap="round"
-              />
-              <defs>
-                <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stopColor="#9333EA" />
-                  <stop offset="100%" stopColor="#2563EB" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-xs font-bold text-amber-600">{completedCount}</span>
-            </div>
-          </div>
-          {steps.map((step) => (
-            <div key={step.id} className="w-full flex justify-center">
-              {completedSteps[step.key] ? (
-                <CheckCircle className="w-5 h-5 text-green-600" />
-              ) : (
-                <Circle className="w-5 h-5 text-gray-300" />
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Steps List */}
       {!isMinimized && (
         <nav className="p-4 space-y-2 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 180px)' }}>
           {steps.map((step) => {
             const isCompleted = completedSteps[step.key];
             const isStep1 = step.id === 1;
-
             return (
               <div key={step.id}>
-                <button
-                  onClick={() => setCurrentView(step.view)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${
-                    isCompleted
-                      ? 'bg-green-50 text-green-900 hover:bg-green-100'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {isCompleted ? (
-                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                  ) : (
-                    <Circle className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                  )}
+                <button onClick={() => setCurrentView(step.view)} className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left ${isCompleted ? 'bg-green-50 text-green-900 hover:bg-green-100' : 'text-gray-700 hover:bg-gray-100'}`}>
+                  {isCompleted ? <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" /> : <Circle className="w-5 h-5 text-gray-400 flex-shrink-0" />}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`text-xs font-bold ${isCompleted ? 'text-green-600' : 'text-gray-400'}`}>
-                        {step.id}
-                      </span>
-                      <span className={`text-sm font-medium truncate ${isCompleted ? 'line-through' : ''}`}>
-                        {step.label}
-                      </span>
+                      <span className={`text-xs font-bold ${isCompleted ? 'text-green-600' : 'text-gray-400'}`}>{step.id}</span>
+                      <span className={`text-sm font-medium truncate ${isCompleted ? 'line-through' : ''}`}>{step.label}</span>
                     </div>
-                    {step.description && !isCompleted && (
-                      <p className="text-xs text-gray-500 mt-0.5 truncate">{step.description}</p>
-                    )}
+                    {step.description && !isCompleted && <p className="text-xs text-gray-500 mt-0.5 truncate">{step.description}</p>}
                   </div>
                 </button>
-
-                {/* Step 1 Validation Checklist */}
                 {isStep1 && !isCompleted && (
                   <div className="ml-8 mt-2 mb-3 space-y-1.5 border-l-2 border-amber-200 pl-3">
-                    {isValidating ? (
-                      <p className="text-xs text-gray-400 italic">Checking...</p>
-                    ) : (
-                      validationItems.map((item) => {
-                        const Icon = item.icon;
-                        const isValid = businessValidation[item.key];
-                        return (
-                          <div
-                            key={item.key}
-                            className={`flex items-center gap-2 text-xs ${
-                              isValid ? 'text-green-600' : 'text-gray-500'
-                            }`}
-                          >
-                            {isValid ? (
-                              <CheckCircle className="w-3.5 h-3.5" />
-                            ) : (
-                              <Circle className="w-3.5 h-3.5" />
-                            )}
-                            <Icon className="w-3 h-3" />
-                            <span className={isValid ? 'line-through' : ''}>{item.label}</span>
-                          </div>
-                        );
-                      })
-                    )}
-                    <button
-                      onClick={() => {
-                        setCurrentView('business-settings');
-                        // Trigger re-validation after a delay
-                        setTimeout(validateBusinessSettings, 1000);
-                      }}
-                      className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1"
-                    >
-                      <span>Go to Business Settings</span>
-                      <ChevronRight className="w-3 h-3" />
+                    {isValidating ? <p className="text-xs text-gray-400 italic">Checking...</p> : validationItems.map((item) => {
+                      const Icon = item.icon;
+                      const isValid = businessValidation[item.key];
+                      return (
+                        <div key={item.key} className={`flex items-center gap-2 text-xs ${isValid ? 'text-green-600' : 'text-gray-500'}`}>
+                          {isValid ? <CheckCircle className="w-3.5 h-3.5" /> : <Circle className="w-3.5 h-3.5" />}
+                          <Icon className="w-3 h-3" />
+                          <span className={isValid ? 'line-through' : ''}>{item.label}</span>
+                        </div>
+                      );
+                    })}
+                    <button onClick={() => { setCurrentView('business-settings'); setTimeout(validateBusinessSettings, 1000); }} className="mt-2 text-xs text-amber-600 hover:text-amber-700 font-medium flex items-center gap-1">
+                      <span>Go to Business Settings</span><ChevronRight className="w-3 h-3" />
                     </button>
                   </div>
                 )}
@@ -459,17 +452,6 @@ export default function OnboardingWidget({ user, setCurrentView, isMinimized, se
             );
           })}
         </nav>
-      )}
-
-      {/* Completion Message */}
-      {!isMinimized && completedCount === steps.length && (
-        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-t border-green-200">
-          <div className="text-center">
-            <div className="text-2xl mb-2">🎉</div>
-            <p className="text-sm font-bold text-green-900 mb-1">All Done!</p>
-            <p className="text-xs text-green-700">You've completed the setup</p>
-          </div>
-        </div>
       )}
     </aside>
   );

@@ -475,7 +475,14 @@ useEffect(() => {
     setPendingView(null);
   };
 
+  const onboardingActuallyComplete = (() => {
+    const steps = user?.onboarding_steps_completed || {};
+    const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
+    return validStepKeys.filter(k => steps[k]).length === 5;
+  })();
+
   const topMenuItems = [
+    ...(!onboardingActuallyComplete ? [{ id: 'getting-started', icon: Sparkles, label: 'Getting Started' }] : []),
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'Embed Website' },
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
@@ -517,24 +524,7 @@ useEffect(() => {
   />
 )}
 
-{user && Object.keys(user).length > 0 && (() => {
-  // Only hide widget if ALL 5 steps are actually complete
-  const steps = user?.onboarding_steps_completed || {};
-  const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
-  const completedCount = validStepKeys.filter(key => steps[key]).length;
-  const actuallyComplete = completedCount === 5;
-  console.log('🎯 OnboardingWidget check:', { steps, completedCount, actuallyComplete, shouldShow: !actuallyComplete });
-  return !actuallyComplete;
-})() && (
-  <OnboardingWidget
-    user={user}
-    setCurrentView={setCurrentView}
-    isMinimized={widgetMinimized}
-    setIsMinimized={setWidgetMinimized}
-    apiUrl={apiUrl}
-    authFetch={authFetch}
-  />
-)}
+{/* Onboarding sidebar widget removed — now shown as Getting Started tab */}
 
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
@@ -646,7 +636,7 @@ useEffect(() => {
       </aside>
 
       {/* Main Content */}
-     <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'} ${!user?.onboarding_completed ? (widgetMinimized ? 'mr-16' : 'mr-72') : ''}`}>
+     <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
         <div className="p-8">
           {/* Top bar with plan-styled business name */}
           <div className="flex items-center justify-between mb-6">
@@ -727,7 +717,17 @@ useEffect(() => {
             }
           `}</style>
 
-         {currentView === 'overview' && (
+         {currentView === 'getting-started' && (
+            <OnboardingWidget
+              user={user}
+              setCurrentView={setCurrentView}
+              apiUrl={apiUrl}
+              authFetch={authFetch}
+              inline={true}
+            />
+          )}
+
+          {currentView === 'overview' && (
             <Overview
               bookings={bookings}
               services={services}
