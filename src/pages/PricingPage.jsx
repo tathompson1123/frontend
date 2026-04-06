@@ -1,15 +1,115 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, X, ArrowRight, Sparkles, Crown, TrendingUp, Zap, MessageSquare, Mail, Star } from 'lucide-react';
+import { Check, X, ArrowRight, Sparkles, Crown, TrendingUp, Zap, MessageSquare, Mail, Star, ChevronDown } from 'lucide-react';
 import SignupModal from '../components/SignupModal';
+
+const ENTERPRISE_REASONS = [
+  'Multi-location business',
+  'High SMS / chat volume needs',
+  'White-label / agency use',
+  'Custom integrations required',
+  'Other',
+];
+
+function EnterpriseModal({ onClose }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', reason: '', details: '' });
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await fetch('/api/billing/enterprise-inquiry', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+      setSubmitted(true);
+    } catch { setSubmitted(true); } // show success even if fetch fails
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-2xl p-6 text-white">
+          <h2 className="text-xl font-bold mb-1">Enterprise Inquiry</h2>
+          <p className="text-gray-300 text-sm">Tell us about your business and we'll reach out within 1 business day.</p>
+        </div>
+        {submitted ? (
+          <div className="p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Request Received!</h3>
+            <p className="text-gray-600 text-sm mb-6">Our sales team will reach out within 1 business day.</p>
+            <button onClick={onClose} className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition">Close</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Full Name *</label>
+                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="Jane Smith" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Company *</label>
+                <input required value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="Acme Co." />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Email *</label>
+              <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="jane@company.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Phone *</label>
+              <input required type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="(555) 000-0000" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Primary Need *</label>
+              <div className="relative">
+                <select required value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 appearance-none bg-white pr-8">
+                  <option value="">Select...</option>
+                  {ENTERPRISE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Tell us more</label>
+              <textarea value={form.details} onChange={e => setForm(f => ({ ...f, details: e.target.value }))}
+                rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
+                placeholder="Number of locations, monthly volume, specific requirements..." />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={submitting || !form.name || !form.email || !form.phone || !form.company || !form.reason}
+                className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition disabled:opacity-50">
+                {submitting ? 'Sending...' : 'Submit Inquiry'}
+              </button>
+              <button type="button" onClick={onClose} className="px-5 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">Cancel</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function PricingPage() {
   const navigate = useNavigate();
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
 
   const handleSelectPlan = (plan) => {
-    if (plan.id === null) return; // free plan, no checkout
+    if (plan.enterprise) { setShowEnterpriseModal(true); return; }
+    if (plan.id === null) return;
     setSelectedPlan({ plan: plan.id, price: plan.price, billing: 'monthly' });
     setShowSignupModal(true);
   };
@@ -20,28 +120,6 @@ export default function PricingPage() {
   };
 
   const plans = [
-    {
-      id: 'basic',
-      name: 'Basic',
-      price: 29.95,
-      description: 'Essential tools to get started',
-      icon: Sparkles,
-      gradient: 'from-gray-500 to-gray-600',
-      trial: '2-week Pro trial included',
-      features: [
-        { text: 'AI Website Generator', included: true },
-        { text: 'Publish & Host Your Website', included: true },
-        { text: 'Online Booking Calendar', included: true },
-        { text: 'Customer & Lead Management', included: true },
-        { text: 'Team Management', included: true },
-        { text: '2-Week PRO Features Trial', included: true, highlight: true },
-        { text: 'AI Chat Agent', included: false },
-        { text: 'SMS Lead Follow-Up Agent', included: false },
-        { text: 'Weekly AI Email Marketing', included: false },
-      ],
-      cta: 'Get 2 weeks of Pro for free',
-      ctaClass: 'bg-gray-700 hover:bg-gray-800',
-    },
     {
       id: 'pro',
       name: 'Pro',
@@ -86,6 +164,26 @@ export default function PricingPage() {
       ],
       cta: 'Start free trial',
       ctaClass: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-xl',
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      price: null,
+      description: 'Custom solutions for large or multi-location businesses',
+      icon: Star,
+      gradient: 'from-gray-700 to-gray-900',
+      features: [
+        { text: 'Everything in Scale', included: true, bold: true },
+        { text: 'Unlimited SMS & chat responses', included: true, highlight: true },
+        { text: 'Multi-location support', included: true, highlight: true },
+        { text: 'White-label branding', included: true, highlight: true },
+        { text: 'Dedicated account manager', included: true },
+        { text: 'Custom API integrations', included: true },
+        { text: 'Custom onboarding & training', included: true },
+      ],
+      cta: 'Contact Sales',
+      ctaClass: 'bg-gray-900 hover:bg-gray-800',
+      enterprise: true,
     },
   ];
 
@@ -138,7 +236,7 @@ export default function PricingPage() {
         </div>
 
         {/* Plans */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16 items-start">
+        <div className="grid md:grid-cols-3 gap-6 mb-16 items-start" style={{gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
           {plans.map((plan) => {
             const Icon = plan.icon;
             return (
@@ -239,6 +337,7 @@ export default function PricingPage() {
         selectedPlan={selectedPlan}
         onSuccess={handleSignupSuccess}
       />
+      {showEnterpriseModal && <EnterpriseModal onClose={() => setShowEnterpriseModal(false)} />}
     </div>
   );
 }

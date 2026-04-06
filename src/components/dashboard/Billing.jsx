@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle, ArrowUpRight, Phone, ChevronDown } from 'lucide-react';
+import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle, ArrowUpRight, Phone, ChevronDown, Star } from 'lucide-react';
 
-const PLAN_LEVEL = { basic: 1, pro: 2, scale: 3 };
+const PLAN_LEVEL = { pro: 1, scale: 2 };
 
 const PLAN_META = {
-  basic:  { name: 'Basic',  price: 29.95,  color: 'from-gray-500 to-gray-600',    icon: Sparkles,   smsLimit: 100,  chatLimit: 200  },
+  basic:  { name: 'Basic',  price: 29.95,  color: 'from-gray-500 to-gray-600',    icon: Sparkles,   smsLimit: 100,  chatLimit: 200  }, // legacy
   pro:    { name: 'Pro',    price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 100,  chatLimit: 500  },
   scale:  { name: 'Scale',  price: 175.95, color: 'from-purple-500 to-pink-600',   icon: TrendingUp, smsLimit: 500,  chatLimit: 99999 },
-  expert: { name: 'Expert', price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 200,  chatLimit: 500  },
+  expert: { name: 'Expert', price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 200,  chatLimit: 500  }, // legacy
 };
 
 function UsageMeter({ label, used, limit, color = 'blue', upgradeNote }) {
@@ -151,6 +151,103 @@ function ContactSalesForm({ apiUrl, authFetch, onClose, onSuccess }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+const ENTERPRISE_REASONS = [
+  'Multi-location business',
+  'High SMS / chat volume needs',
+  'White-label / agency use',
+  'Custom API integrations required',
+  'Other',
+];
+
+function EnterpriseInquiryModal({ apiUrl, authFetch, onClose }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', reason: '', details: '' });
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await authFetch(`${apiUrl}/api/billing/enterprise-inquiry`, {
+        method: 'POST',
+        body: JSON.stringify(form),
+      });
+      setSubmitted(true);
+    } catch { setSubmitted(true); }
+    finally { setSubmitting(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-2xl p-6 text-white">
+          <h2 className="text-xl font-bold mb-1">Enterprise Inquiry</h2>
+          <p className="text-gray-300 text-sm">Tell us about your business and we'll reach out within 1 business day.</p>
+        </div>
+        {submitted ? (
+          <div className="p-8 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Check className="w-8 h-8 text-green-600" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Request Received!</h3>
+            <p className="text-gray-600 text-sm mb-6">Our sales team will reach out within 1 business day.</p>
+            <button onClick={onClose} className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition">Close</button>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Full Name *</label>
+                <input required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="Jane Smith" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Company *</label>
+                <input required value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="Acme Co." />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Email *</label>
+              <input required type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="jane@company.com" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Phone *</label>
+              <input required type="tel" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="(555) 000-0000" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Primary Need *</label>
+              <div className="relative">
+                <select required value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 appearance-none bg-white pr-8">
+                  <option value="">Select...</option>
+                  {ENTERPRISE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">Tell us more</label>
+              <textarea value={form.details} onChange={e => setForm(f => ({ ...f, details: e.target.value }))}
+                rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
+                placeholder="Number of locations, monthly volume, specific requirements..." />
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button type="submit" disabled={submitting || !form.name || !form.email || !form.phone || !form.company || !form.reason}
+                className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition disabled:opacity-50">
+                {submitting ? 'Sending...' : 'Submit Inquiry'}
+              </button>
+              <button type="button" onClick={onClose} className="px-5 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">Cancel</button>
+            </div>
+          </form>
+        )}
       </div>
     </div>
   );
@@ -386,28 +483,9 @@ export default function Billing({ user, apiUrl, authFetch }) {
   }
 
   // ── PRICING PAGE (no active plan) ─────────────────────────────────────────
+  const [showEnterprise, setShowEnterprise] = useState(false);
+
   const plans = [
-    {
-      id: 'basic',
-      name: 'Basic',
-      tagline: 'Essential tools to get started',
-      price: 29.95,
-      icon: Sparkles,
-      gradient: 'from-gray-500 to-gray-600',
-      trial: '2-week Pro trial included',
-      features: [
-        { text: 'AI Website Generator', included: true },
-        { text: 'Publish & Host Your Website', included: true },
-        { text: 'Online Booking Calendar', included: true },
-        { text: 'Customer & Lead Management', included: true },
-        { text: 'Team Management', included: true },
-        { text: '2-Week PRO Features Trial', included: true, highlight: true },
-        { text: 'AI Chat Agent', included: false },
-        { text: 'SMS Lead Follow-Up Agent', included: false },
-        { text: 'Automated Google Reviews', included: false },
-      ],
-      cta: 'Get 2 weeks of Pro for free',
-    },
     {
       id: 'pro',
       name: 'Pro',
@@ -450,6 +528,25 @@ export default function Billing({ user, apiUrl, authFetch }) {
         { text: 'Custom API integrations', included: true, soon: true },
       ],
       cta: 'Start free trial',
+    },
+    {
+      id: 'enterprise',
+      name: 'Enterprise',
+      tagline: 'Custom solutions for large businesses',
+      price: null,
+      icon: Star,
+      gradient: 'from-gray-700 to-gray-900',
+      features: [
+        { text: 'Everything in Scale', included: true, bold: true },
+        { text: 'Unlimited SMS & chat responses', included: true, highlight: true },
+        { text: 'Multi-location support', included: true, highlight: true },
+        { text: 'White-label branding', included: true, highlight: true },
+        { text: 'Dedicated account manager', included: true },
+        { text: 'Custom API integrations', included: true },
+        { text: 'Custom onboarding & training', included: true },
+      ],
+      cta: 'Contact Sales',
+      enterprise: true,
     },
   ];
 
@@ -544,11 +641,11 @@ export default function Billing({ user, apiUrl, authFetch }) {
                   ))}
                 </div>
                 <button
-                  onClick={() => handleUpgrade(plan.id)}
-                  disabled={isActive || loading}
+                  onClick={() => plan.enterprise ? setShowEnterprise(true) : handleUpgrade(plan.id)}
+                  disabled={isActive || (loading && !plan.enterprise)}
                   className={`w-full py-3 rounded-xl font-bold transition-all text-sm ${isActive ? 'bg-green-100 text-green-700 cursor-default' : `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`}`}
                 >
-                  {isActive ? '✓ Current Plan' : loading ? 'Processing...' : isUpgrade ? `Upgrade to ${plan.name}` : isDowngrade ? `Switch to ${plan.name}` : plan.cta}
+                  {isActive ? '✓ Current Plan' : (loading && !plan.enterprise) ? 'Processing...' : plan.enterprise ? 'Contact Sales' : isUpgrade ? `Upgrade to ${plan.name}` : isDowngrade ? `Switch to ${plan.name}` : plan.cta}
                 </button>
               </div>
             </div>
@@ -561,6 +658,9 @@ export default function Billing({ user, apiUrl, authFetch }) {
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />Cancel anytime</span>
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />No setup fees</span>
       </div>
+
+      {/* Enterprise modal */}
+      {showEnterprise && <EnterpriseInquiryModal apiUrl={apiUrl} authFetch={authFetch} onClose={() => setShowEnterprise(false)} />}
     </div>
   );
 }
