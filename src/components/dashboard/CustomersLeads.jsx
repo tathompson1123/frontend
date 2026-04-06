@@ -55,6 +55,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [newRecord, setNewRecord] = useState({});
   const [showConvertModal, setShowConvertModal] = useState(false);
   const [convertingLead, setConvertingLead] = useState(null);
+  const [viewingLead, setViewingLead] = useState(null);
   const [isConverting, setIsConverting] = useState(false);
   const [conversations, setConversations] = useState([]);
   const [loadingConversations, setLoadingConversations] = useState(false);
@@ -423,6 +424,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       if (response.ok) {
         const data = await response.json();
         setSmsLeads(data.leads || []);
+      } else {
+        console.error('SMS conversations endpoint returned', response.status);
       }
     } catch (error) {
       console.error('Error fetching SMS conversations:', error);
@@ -1835,6 +1838,144 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
       )}
 
+      {/* Lead Detail Slide-Over */}
+      {viewingLead && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-end" onClick={() => setViewingLead(null)}>
+          <div
+            className="bg-white w-full max-w-lg h-full shadow-2xl flex flex-col overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="p-6 border-b border-gray-200 flex items-start justify-between bg-gray-50">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">{viewingLead.name}</h2>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(viewingLead.status)}`}>
+                    {formatLabel(viewingLead.status)}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs ${getSourceColor(viewingLead.source)}`}>
+                    {formatLabel(viewingLead.source)}
+                  </span>
+                  {viewingLead.created_at && (
+                    <span className="text-xs text-gray-400">
+                      {new Date(viewingLead.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => setViewingLead(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Contact Info */}
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact</h3>
+              <div className="space-y-2">
+                {viewingLead.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <a href={`mailto:${viewingLead.email}`} className="text-blue-600 hover:underline text-sm">{viewingLead.email}</a>
+                  </div>
+                )}
+                {viewingLead.phone && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <a href={`tel:${viewingLead.phone}`} className="text-blue-600 hover:underline text-sm">{viewingLead.phone}</a>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Form Submission */}
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Form Submission</h3>
+              <div className="space-y-4">
+                {viewingLead.service && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Service Requested</p>
+                    <p className="text-sm text-gray-900 font-medium">{viewingLead.service}</p>
+                  </div>
+                )}
+                {viewingLead.message && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Message</p>
+                    <p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3">{viewingLead.message}</p>
+                  </div>
+                )}
+                {!viewingLead.service && !viewingLead.message && (
+                  <p className="text-sm text-gray-400 italic">No form message was submitted.</p>
+                )}
+                {viewingLead.sms_consent !== undefined && (
+                  <div className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${viewingLead.sms_consent ? 'bg-green-500' : 'bg-gray-300'}`}>
+                      {viewingLead.sms_consent && <span className="text-white text-[10px] font-bold">✓</span>}
+                    </div>
+                    <p className="text-xs text-gray-500">SMS consent {viewingLead.sms_consent ? 'given' : 'not given'}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CRM Fields */}
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">CRM</h3>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                {viewingLead.priority && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Priority</p>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      viewingLead.priority === 'urgent' ? 'bg-red-100 text-red-700'
+                      : viewingLead.priority === 'high' ? 'bg-orange-100 text-orange-700'
+                      : viewingLead.priority === 'low' ? 'bg-gray-100 text-gray-500'
+                      : 'bg-blue-50 text-blue-600'
+                    }`}>{formatLabel(viewingLead.priority)}</span>
+                  </div>
+                )}
+                {viewingLead.follow_up_date && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Follow-Up Date</p>
+                    <p className="text-gray-900">{new Date(viewingLead.follow_up_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                  </div>
+                )}
+                {viewingLead.last_contact_at && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Last Contacted</p>
+                    <p className="text-gray-900">{new Date(viewingLead.last_contact_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                  </div>
+                )}
+              </div>
+              {viewingLead.notes && (
+                <div className="mt-3">
+                  <p className="text-xs text-gray-400 mb-1">Notes</p>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingLead.notes}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="p-6 flex gap-3 flex-wrap">
+              {viewingLead.phone && (
+                <button
+                  onClick={() => { setSelectedLead(viewingLead); loadSmsConversation(viewingLead.id); setShowSmsModal(true); setViewingLead(null); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  SMS Conversation
+                </button>
+              )}
+              <button
+                onClick={() => { setConvertingLead(viewingLead); setShowConvertModal(true); setViewingLead(null); }}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition"
+              >
+                <Users className="w-4 h-4" />
+                Convert to Customer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SMS Modal */}
       {showSmsModal && selectedLead && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -2056,7 +2197,12 @@ function LeadsTable({ leads, columns, editingCell, editValue, handleCellEdit, se
                   <div onClick={() => col.editable && handleCellEdit(lead.id, col.key, lead[col.key] || '')} className="cursor-pointer hover:bg-gray-100 px-2 py-1 rounded min-h-[24px]">
                     {col.key === 'name' ? (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span>{lead.name || <span className="text-gray-400">-</span>}</span>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); setViewingLead(lead); }}
+                          className="text-blue-600 hover:underline font-medium text-left"
+                        >
+                          {lead.name || <span className="text-gray-400">-</span>}
+                        </button>
                         {ageFlag && (
                           <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${
                             ageFlag.level === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'
