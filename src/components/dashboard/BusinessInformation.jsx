@@ -2760,7 +2760,8 @@ export default function BusinessInformation({
                   setEmployeeForm({
                     name: '', email: '', phone: '', color: getNextColor(),
                     workDays: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
-                    workHours: { startTime: '09:00', endTime: '17:00' }
+                    workHours: { startTime: '09:00', endTime: '17:00' },
+                    serviceIds: []
                   });
                 }}
                 className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
@@ -2783,7 +2784,8 @@ export default function BusinessInformation({
                   setEmployeeForm({
                     name: '', email: '', phone: '', color: getNextColor(),
                     workDays: { monday: true, tuesday: true, wednesday: true, thursday: true, friday: true, saturday: false, sunday: false },
-                    workHours: { startTime: '09:00', endTime: '17:00' }
+                    workHours: { startTime: '09:00', endTime: '17:00' },
+                    serviceIds: []
                   });
                 }}
                 className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all"
