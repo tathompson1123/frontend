@@ -131,7 +131,10 @@ export default function Dashboard() {
     }
   };
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [inOnboarding, setInOnboarding] = useState(() => !isOnboardingComplete());
+  const [inOnboarding, setInOnboarding] = useState(() => {
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    return !!u.questionnaire_completed && !isOnboardingComplete();
+  });
   const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
   const [savedFlash, setSavedFlash] = useState(false);
 

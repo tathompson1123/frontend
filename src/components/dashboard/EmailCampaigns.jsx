@@ -721,7 +721,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
           </div>
 
           {/* This Week's Campaign */}
-          {loadingDraft ? (
+          {(loadingDraft || stats === null) ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
               <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <Loader className="w-7 h-7 text-blue-500 animate-spin" />
