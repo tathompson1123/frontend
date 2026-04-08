@@ -33,7 +33,11 @@ export default function HomePage() {
   const handleAuthSuccess = (user, token) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    navigate('/dashboard');
+    if (!user.questionnaire_completed) {
+      navigate('/onboarding');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleNavigateToPricing = () => {

@@ -16,6 +16,7 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import CardOnFilePage from './pages/CardOnFilePage';
 import AnalyticsLogin from './pages/AnalyticsLogin';
 import AnalyticsPage from './pages/AnalyticsPage';
+import OnboardingQuestionnairePage from './pages/OnboardingQuestionnairePage';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
         <Route path="/card-on-file/:token" element={<CardOnFilePage />} />
         <Route path="/analytics/login" element={<AnalyticsLogin />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/onboarding" element={<OnboardingQuestionnairePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
