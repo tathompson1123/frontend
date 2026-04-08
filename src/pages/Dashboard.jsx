@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import OnboardingWizard from '../components/dashboard/OnboardingWizard';
 import OnboardingWidget from '../components/dashboard/OnboardingWidget';
 import OnboardingFlowBanner from '../components/dashboard/OnboardingFlowBanner';
+import OnboardingScreen, { isOnboardingComplete, ONBOARDING_STEPS } from '../components/dashboard/OnboardingScreen';
 import {
   Home,
   Calendar,
@@ -130,6 +131,7 @@ export default function Dashboard() {
     }
   };
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [inOnboarding, setInOnboarding] = useState(() => !isOnboardingComplete());
   const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
   const [savedFlash, setSavedFlash] = useState(false);
 
@@ -435,6 +437,24 @@ useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [currentView]);
 
+  // Watch for onboarding flow completion
+  useEffect(() => {
+    const handler = () => {
+      if (isOnboardingComplete()) setInOnboarding(false);
+    };
+    window.addEventListener('flow-step-done', handler);
+    return () => window.removeEventListener('flow-step-done', handler);
+  }, []);
+
+  const handleSkipOnboarding = () => {
+    // Mark all steps done so they don't see it again
+    const flow = {};
+    ONBOARDING_STEPS.forEach(s => { flow[s.key] = true; });
+    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+    setInOnboarding(false);
+    setCurrentView('overview');
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -511,6 +531,170 @@ useEffect(() => {
       setProOpen(true);
     }
   }, [currentView]);
+
+  // Content shared between onboarding and normal dashboard
+  const renderCurrentView = () => (
+    <>
+      {currentView === 'overview' && (
+        <Overview
+          bookings={bookings}
+          services={services}
+          employees={employees}
+          setCurrentView={requestViewChange}
+          user={user}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+        />
+      )}
+      {currentView === 'booking-calendar' && (
+        <BookingCalendar
+          apiUrl={apiUrl}
+          user={user}
+          services={services}
+          employees={employees}
+          authFetch={authFetch}
+        />
+      )}
+      {currentView === 'customers-leads' && (
+        <CustomersLeads
+          user={user}
+          setCurrentView={requestViewChange}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+        />
+      )}
+      {currentView === 'ai-agents' && (
+        <AIAgentBuilder
+          user={user}
+          setCurrentView={requestViewChange}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+          onDirtyChange={handleDirtyChange}
+        />
+      )}
+      {currentView === 'email-campaigns' && (
+        <EmailCampaigns
+          user={user}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+          onDirtyChange={handleDirtyChange}
+        />
+      )}
+      {currentView === 'website' && (
+        <>
+          {savedFlash && (
+            <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-medium shadow-sm">
+              <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+              Changes successfully saved and published.
+              <button onClick={() => setSavedFlash(false)} className="ml-auto text-green-600 hover:text-green-800">✕</button>
+            </div>
+          )}
+          <MyWebsite
+            apiUrl={apiUrl}
+            user={user}
+            navigate={navigate}
+            websiteData={websiteData}
+            authFetch={authFetch}
+            setCurrentView={requestViewChange}
+            refreshWebsiteData={refreshWebsiteData}
+            onUserPlanUpdate={(plan) => {
+              const updatedUser = { ...user, plan };
+              localStorage.setItem('user', JSON.stringify(updatedUser));
+              setUser(updatedUser);
+            }}
+          />
+        </>
+      )}
+      {currentView === 'google-business' && (
+        <GoogleBusiness
+          apiUrl={apiUrl}
+          user={user}
+          profileData={googleBusinessData}
+          authFetch={authFetch}
+        />
+      )}
+      {currentView === 'business-settings' && (
+        <BusinessInformation
+          businessHours={businessHours}
+          setBusinessHours={setBusinessHours}
+          services={services}
+          setServices={setServices}
+          fetchServices={fetchServices}
+          employees={employees}
+          setEmployees={setEmployees}
+          fetchEmployees={fetchEmployees}
+          apiUrl={apiUrl}
+          user={user}
+          authFetch={authFetch}
+          onDirtyChange={handleDirtyChange}
+          saveRef={saveRef}
+          initialTab={viewSubTab}
+        />
+      )}
+      {currentView === 'market-research' && (
+        <FeatureGate user={user} requiredPlan="expert" feature="market-research" onUpgradeClick={() => requestViewChange('billing')}>
+          <MarketResearch apiUrl={apiUrl} authFetch={authFetch} user={user} />
+        </FeatureGate>
+      )}
+      {currentView === 'seo-audit' && (
+        <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} />
+      )}
+      {currentView === 'payment-settings' && (
+        <PaymentSettingsPage
+          apiUrl={apiUrl}
+          user={user}
+          authFetch={authFetch}
+          justConnected={justConnectedProcessor}
+        />
+      )}
+      {currentView === 'billing' && (
+        <Billing user={user} apiUrl={apiUrl} authFetch={authFetch} />
+      )}
+      {currentView === 'settings' && (
+        <SettingsPage
+          user={user}
+          apiUrl={apiUrl}
+          authFetch={authFetch}
+          onUserUpdate={(updatedUser) => {
+            const merged = { ...user, ...updatedUser };
+            localStorage.setItem('user', JSON.stringify(merged));
+            setUser(merged);
+          }}
+          onDirtyChange={handleDirtyChange}
+          saveRef={saveRef}
+        />
+      )}
+    </>
+  );
+
+  if (inOnboarding) {
+    return (
+      <>
+        <OnboardingScreen
+          currentView={currentView}
+          setCurrentView={setCurrentView}
+          onSkip={handleSkipOnboarding}
+        >
+          {renderCurrentView()}
+        </OnboardingScreen>
+        {showUnsavedModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[9999]" onClick={handleUnsavedCancel}>
+            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
+              <div className="p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-2">Unsaved Changes</h3>
+                <p className="text-sm text-gray-500 mb-6">You have changes that haven't been saved yet.</p>
+                <div className="flex gap-3">
+                  <button onClick={handleUnsavedCancel} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-gray-700 font-medium hover:bg-gray-50">Cancel</button>
+                  <button onClick={handleUnsavedLeave} className="flex-1 px-4 py-2 border border-red-200 text-red-700 rounded-xl font-medium hover:bg-red-50">Leave anyway</button>
+                  <button onClick={handleUnsavedSave} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700">Save & leave</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
@@ -739,167 +923,10 @@ useEffect(() => {
             }
           `}</style>
 
-          {/* Persistent guided onboarding banner (replaces Getting Started tab) */}
+          {/* Persistent guided onboarding banner (shows after onboarding, for reference) */}
           <OnboardingFlowBanner setCurrentView={requestViewChange} />
 
-          {currentView === 'overview' && (
-            <Overview
-              bookings={bookings}
-              services={services}
-              employees={employees}
-              setCurrentView={requestViewChange}
-              user={user}
-              apiUrl={apiUrl}
-              authFetch={authFetch}
-            />
-          )}
-
-          {currentView === 'booking-calendar' && (
-            <BookingCalendar
-              apiUrl={apiUrl}
-              user={user}
-              services={services}
-              employees={employees}
-              authFetch={authFetch}
-            />
-          )}
-
-          {currentView === 'customers-leads' && (
-            <CustomersLeads
-              user={user}
-              setCurrentView={requestViewChange}
-              apiUrl={apiUrl}
-              authFetch={authFetch}
-            />
-          )}
-
-
-          {currentView === 'ai-agents' && (
-            <AIAgentBuilder
-              user={user}
-              setCurrentView={requestViewChange}
-              apiUrl={apiUrl}
-              authFetch={authFetch}
-              onDirtyChange={handleDirtyChange}
-            />
-          )}
-
-          {currentView === 'email-campaigns' && (
-            <FeatureGate user={user} requiredPlan="pro" feature="email-campaigns" onUpgradeClick={() => requestViewChange('billing')}>
-              <EmailCampaigns
-                user={user}
-                apiUrl={apiUrl}
-                authFetch={authFetch}
-                onDirtyChange={handleDirtyChange}
-              />
-            </FeatureGate>
-          )}
-
-          {currentView === 'website' && (
-            <>
-              {savedFlash && (
-                <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-sm font-medium shadow-sm">
-                  <svg className="w-5 h-5 text-green-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                  Changes successfully saved and published.
-                  <button onClick={() => setSavedFlash(false)} className="ml-auto text-green-600 hover:text-green-800">✕</button>
-                </div>
-              )}
-              <MyWebsite
-                apiUrl={apiUrl}
-                user={user}
-                navigate={navigate}
-                websiteData={websiteData}
-                authFetch={authFetch}
-                setCurrentView={requestViewChange}
-                refreshWebsiteData={refreshWebsiteData}
-                onUserPlanUpdate={(plan) => {
-                  const updatedUser = { ...user, plan };
-                  localStorage.setItem('user', JSON.stringify(updatedUser));
-                  setUser(updatedUser);
-                }}
-              />
-            </>
-          )}
-
-          {currentView === 'google-business' && (
-            <GoogleBusiness 
-              apiUrl={apiUrl} 
-              user={user}
-              profileData={googleBusinessData}
-              authFetch={authFetch}
-            />
-          )}
-
-          {currentView === 'business-settings' && (
-            <BusinessInformation
-              businessHours={businessHours}
-              setBusinessHours={setBusinessHours}
-              services={services}
-              setServices={setServices}
-              fetchServices={fetchServices}
-              employees={employees}
-              setEmployees={setEmployees}
-              fetchEmployees={fetchEmployees}
-              apiUrl={apiUrl}
-              user={user}
-              authFetch={authFetch}
-              onDirtyChange={handleDirtyChange}
-              saveRef={saveRef}
-              initialTab={viewSubTab}
-            />
-          )}
-
-        {currentView === 'market-research' && (
-  <FeatureGate
-    user={user}
-    requiredPlan="expert"
-    feature="market-research"
-    onUpgradeClick={() => requestViewChange('billing')}
-  >
-    <MarketResearch
-      apiUrl={apiUrl}
-      authFetch={authFetch}
-      user={user}
-    />
-  </FeatureGate>
-)}
-
-        {currentView === 'seo-audit' && (
-          <FeatureGate user={user} requiredPlan="pro" feature="ai-agents" onUpgradeClick={() => requestViewChange('billing')}>
-            <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} />
-          </FeatureGate>
-        )}
-          {currentView === 'payment-settings' && (
-            <PaymentSettingsPage
-              apiUrl={apiUrl}
-              user={user}
-              authFetch={authFetch}
-              justConnected={justConnectedProcessor}
-            />
-          )}
-
-          {currentView === 'billing' && (
-            <Billing 
-              user={user} 
-              apiUrl={apiUrl}
-              authFetch={authFetch}
-            />
-          )}
-
-          {currentView === 'settings' && (
-            <SettingsPage
-              user={user}
-              apiUrl={apiUrl}
-              authFetch={authFetch}
-              onUserUpdate={(updatedUser) => {
-                const merged = { ...user, ...updatedUser };
-                localStorage.setItem('user', JSON.stringify(merged));
-                setUser(merged);
-              }}
-              onDirtyChange={handleDirtyChange}
-              saveRef={saveRef}
-            />
-          )}
+          {renderCurrentView()}
         </div>
 
         {/* Dashboard Footer */}

@@ -227,7 +227,7 @@ export default function FeatureGate({
 
         <p className="text-xs text-gray-500 mt-4">
           {currentLevel === 0 ? (
-            'Plans start at $29/month • Cancel anytime'
+            'Plans start at $99/month • Cancel anytime'
           ) : (
             `Upgrade from ${user?.plan} to unlock this feature`
           )}
