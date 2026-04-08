@@ -14,7 +14,6 @@ import {
   FileText,
   Code,
   Image,
-  MapPin,
   Cpu,
   ClipboardList,
   Clock,

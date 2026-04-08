@@ -58,7 +58,7 @@ const FEATURE_OPTIONS = [
     value: 'seo_audit',
     icon: TrendingUp,
     label: 'Website SEO Audit',
-    sub: 'See exactly what's holding your site back in search rankings',
+    sub: "See exactly what's holding your site back in search rankings",
     color: 'green',
     firstStep: 'Run your first SEO audit from the SEO Analyzer tab to find quick wins.',
   },
