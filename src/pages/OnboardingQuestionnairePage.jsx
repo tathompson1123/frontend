@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  MessageCircle, Zap, Star, Mail, Calendar, Users,
+  MessageCircle, Zap, Star, Mail, Users,
   ChevronRight, ChevronLeft, Check, ArrowRight, Sparkles, TrendingUp
 } from 'lucide-react';
 
@@ -55,12 +55,12 @@ const FEATURE_OPTIONS = [
     firstStep: 'Set up your email list in the Email Campaigns tab to launch your first campaign.',
   },
   {
-    value: 'bookings',
-    icon: Calendar,
-    label: 'Online Booking',
-    sub: 'Let customers book appointments directly from your site',
+    value: 'seo_audit',
+    icon: TrendingUp,
+    label: 'Website SEO Audit',
+    sub: 'See exactly what's holding your site back in search rankings',
     color: 'green',
-    firstStep: 'Add your services in the Booking tab and share your booking link with customers.',
+    firstStep: 'Run your first SEO audit from the SEO Analyzer tab to find quick wins.',
   },
   {
     value: 'crm',
