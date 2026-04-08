@@ -3,7 +3,7 @@ import {
   Sparkles, Star, RefreshCw, Copy, CheckCircle, MessageSquare,
   Calendar, TrendingUp, Clock, Users, BarChart3, Send, Mail,
   Phone, ExternalLink, CheckCircle2, XCircle, Loader2, Info, AlertCircle,
-  Link as LinkIcon, Search
+  Link as LinkIcon, Search, Globe
 } from 'lucide-react';
 import GBPAnalyzer from './GBPAnalyzer';
 
@@ -210,8 +210,41 @@ const saveReviewConfig = async () => {
   }
 };
 
+  // Onboarding flow
+  const [gbpFlowDone, setGbpFlowDone] = useState(() => {
+    try { return !!JSON.parse(localStorage.getItem('onboarding_flow') || '{}').flow_gbp; } catch { return false; }
+  });
+
+  const markGBPDone = () => {
+    const flow = (() => { try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; } })();
+    flow.flow_gbp = true;
+    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+    window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_gbp' } }));
+    setGbpFlowDone(true);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Onboarding banner */}
+      {!gbpFlowDone && (
+        <div className="rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Search className="w-4 h-4 text-orange-600" />
+            <span className="font-bold text-orange-900 text-sm">Getting Started · Step 4: GBP Audit</span>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Audit your Google Business Profile to see where you stand. Use the <strong>Profile Analyzer</strong> tab below to run your audit.
+          </p>
+          <button
+            onClick={markGBPDone}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all"
+          >
+            <Globe className="w-4 h-4" />
+            Mark Done & Continue to Embed →
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900">Google Business Profile</h2>

@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Bot, MessageCircle, Sparkles, ChevronDown, ChevronRight, Save, Rocket,
   Crown, Settings, User, Brain, Phone, PhoneOff, Send, RefreshCw,
-  BookOpen, Target, MessageSquare, Loader2, Calendar, Wrench
+  BookOpen, Target, MessageSquare, Loader2, Calendar, Wrench, CheckCircle, Star
 } from 'lucide-react';
 import MissedCallTextBack from './MissedCallTextBack';
 
@@ -12,6 +12,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
   const [chatAgentDeployed, setChatAgentDeployed] = useState(false);
   const [leadAgentDeployed, setLeadAgentDeployed] = useState(false);
   const [missedCallDeployed, setMissedCallDeployed] = useState(false);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [agentFlowDone, setAgentFlowDone] = useState(() => {
+    try { return !!JSON.parse(localStorage.getItem('onboarding_flow') || '{}').flow_agent; } catch { return false; }
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
   const [expandedSections, setExpandedSections] = useState(['personality']);
@@ -353,10 +357,21 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
       });
 
       if (response.ok) {
-        alert('Agent deployed successfully!');
         loadDeploymentStatus();
-        // Notify onboarding widget that "Deploy an AI agent" step is complete
+        // Mark onboarding flow_agent step done
+        const flow = (() => { try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; } })();
+        const wasFirstDeploy = !flow.flow_agent;
+        flow.flow_agent = true;
+        localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+        window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_agent' } }));
         window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 4 } }));
+        setAgentFlowDone(true);
+        if (wasFirstDeploy) {
+          setShowCelebration(true);
+          setTimeout(() => setShowCelebration(false), 7000);
+        } else {
+          alert('Agent deployed successfully!');
+        }
       } else {
         const data = await response.json().catch(() => ({}));
         alert(data.error || 'Failed to deploy agent');
@@ -875,6 +890,68 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
 
   return (
     <div className="h-full flex flex-col">
+      {/* Deploy Celebration Overlay */}
+      {showCelebration && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm" onClick={() => setShowCelebration(false)}>
+          {/* Confetti dots */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {Array.from({ length: 40 }).map((_, i) => (
+              <div
+                key={i}
+                className="absolute rounded-full animate-bounce"
+                style={{
+                  width: `${6 + (i % 5) * 4}px`,
+                  height: `${6 + (i % 5) * 4}px`,
+                  left: `${(i * 2.5) % 100}%`,
+                  top: `${(i * 7) % 80}%`,
+                  background: ['#f59e0b','#3b82f6','#10b981','#8b5cf6','#ef4444','#f97316'][i % 6],
+                  animationDelay: `${(i * 0.07) % 0.8}s`,
+                  animationDuration: `${0.6 + (i % 4) * 0.2}s`,
+                }}
+              />
+            ))}
+          </div>
+          <div className="relative bg-white rounded-3xl p-10 max-w-md w-full mx-4 text-center shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">You're officially live!</h2>
+            <p className="text-gray-600 mb-1">Their training is complete. Your AI agent is now deployed and ready to capture leads 24/7.</p>
+            <div className="mt-5 space-y-2 text-left">
+              <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Suggested next steps</p>
+              {[
+                { icon: '📧', text: 'Set up weekly email campaigns to re-engage customers' },
+                { icon: '🔍', text: 'Implement your SEO plan from the audit results' },
+                { icon: '⭐', text: 'Enable automated review requests after bookings' },
+                { icon: '📊', text: 'Check your Leads & CRM to see incoming conversations' },
+              ].map((s, i) => (
+                <div key={i} className="flex items-start gap-2 text-sm text-gray-700 bg-gray-50 rounded-xl px-3 py-2">
+                  <span className="text-base">{s.icon}</span>
+                  <span>{s.text}</span>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowCelebration(false)}
+              className="mt-6 w-full py-3 bg-gradient-to-r from-amber-500 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all"
+            >
+              Let's Go! 🚀
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding banner */}
+      {!agentFlowDone && (
+        <div className="rounded-2xl border border-green-200 bg-gradient-to-r from-green-50 to-emerald-50 p-5 shadow-sm mb-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Bot className="w-4 h-4 text-green-600" />
+            <span className="font-bold text-green-900 text-sm">Getting Started · Step 6: Train & Deploy Your Agent</span>
+          </div>
+          <p className="text-sm text-gray-600">
+            Edit your contact form, customize your chat agent, then hit <strong>Deploy</strong>. Once it's live you're officially up and running!
+          </p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
         <div className="flex items-center justify-between">

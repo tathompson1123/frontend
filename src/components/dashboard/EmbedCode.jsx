@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Copy, Check, Code, MessageCircle, Calendar, Mail, ChevronRight, ChevronLeft, ExternalLink, Bot, FileText, Settings, Sparkles, Plus, X, Eye, AlertTriangle } from 'lucide-react';
+import { Copy, Check, Code, MessageCircle, Calendar, Mail, ChevronRight, ChevronLeft, ExternalLink, Bot, FileText, Settings, Sparkles, Plus, X, Eye, AlertTriangle, Globe, CheckCircle } from 'lucide-react';
 
 const PLATFORMS = [
   { id: 'wix', name: 'Wix', color: 'bg-blue-600', letter: 'W' },
@@ -256,8 +256,41 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
 
   const enabledCount = [settings.chatEnabled, settings.bookingEnabled, settings.leadFormEnabled].filter(Boolean).length;
 
+  // Onboarding flow
+  const [embedFlowDone, setEmbedFlowDone] = useState(() => {
+    try { return !!JSON.parse(localStorage.getItem('onboarding_flow') || '{}').flow_embed; } catch { return false; }
+  });
+
+  const markEmbedDone = () => {
+    const flow = (() => { try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; } })();
+    flow.flow_embed = true;
+    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+    window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_embed' } }));
+    setEmbedFlowDone(true);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Onboarding banner */}
+      {!embedFlowDone && (
+        <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 to-violet-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Globe className="w-4 h-4 text-purple-600" />
+            <span className="font-bold text-purple-900 text-sm">Getting Started · Step 5: Embed SORCE</span>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Follow the steps below to add SORCE to your website so leads can reach you 24/7. Once you've copied and pasted the embed code, mark it done to continue.
+          </p>
+          <button
+            onClick={markEmbedDone}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-violet-500 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all"
+          >
+            <CheckCircle className="w-4 h-4" />
+            I've Embedded It — Continue to Final Step →
+          </button>
+        </div>
+      )}
+
       {/* Header - centered */}
       <div className="text-center">
         <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-amber-500 to-orange-600 rounded-2xl mb-3 shadow-lg shadow-amber-200">

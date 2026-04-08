@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import OnboardingWizard from '../components/dashboard/OnboardingWizard';
 import OnboardingWidget from '../components/dashboard/OnboardingWidget';
+import OnboardingFlowBanner from '../components/dashboard/OnboardingFlowBanner';
 import {
   Home,
   Calendar,
@@ -482,7 +483,6 @@ useEffect(() => {
   })();
 
   const topMenuItems = [
-    ...(!onboardingActuallyComplete ? [{ id: 'getting-started', icon: Sparkles, label: 'Getting Started' }] : []),
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'Embed Website' },
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
@@ -688,6 +688,28 @@ useEffect(() => {
                 );
               }
 
+              // PRO trial (plan='pro' but trial_ends_at in future)
+              const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at) : null;
+              const onTrial = trialEnd && trialEnd > new Date() && plan === 'pro';
+              if (onTrial) {
+                const daysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / 86400000));
+                return (
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
+                      {name}
+                    </h1>
+                    <Zap className="w-5 h-5 text-amber-500" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 shadow-sm shadow-amber-200">
+                      <Crown className="w-3 h-3" />
+                      PRO
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                      {daysLeft} day{daysLeft !== 1 ? 's' : ''} free trial
+                    </span>
+                  </div>
+                );
+              }
+
               // Free / no plan
               return (
                 <div className="flex items-center gap-3">
@@ -717,15 +739,8 @@ useEffect(() => {
             }
           `}</style>
 
-         {currentView === 'getting-started' && (
-            <OnboardingWidget
-              user={user}
-              setCurrentView={setCurrentView}
-              apiUrl={apiUrl}
-              authFetch={authFetch}
-              inline={true}
-            />
-          )}
+          {/* Persistent guided onboarding banner (replaces Getting Started tab) */}
+          <OnboardingFlowBanner setCurrentView={requestViewChange} />
 
           {currentView === 'overview' && (
             <Overview

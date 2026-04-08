@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   RefreshCw,
+  MapPin,
   Globe,
   Zap,
   FileText,
@@ -410,8 +411,50 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
 
   const overallColor = audit ? scoreColor(audit.score) : null;
 
+  // Onboarding flow
+  const [flowSEO] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; }
+  });
+  const [seoFlowDone, setSeoFlowDone] = useState(!!flowSEO.flow_seo);
+
+  const markSEODone = () => {
+    const flow = { ...flowSEO };
+    flow.flow_seo = true;
+    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+    window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_seo' } }));
+    setSeoFlowDone(true);
+  };
+
   return (
     <div className="space-y-6">
+      {/* Onboarding banner */}
+      {!seoFlowDone && (
+        <div className="rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50 p-5 shadow-sm">
+          <div className="flex items-center gap-2 mb-2">
+            <Search className="w-4 h-4 text-teal-600" />
+            <span className="font-bold text-teal-900 text-sm">Getting Started · Step 3: SEO Audit</span>
+          </div>
+          {!audit ? (
+            <p className="text-sm text-gray-600">Run the full audit to get your personalized SEO game plan. Enter your website URL below and hit "Run Audit".</p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-700 font-medium">
+                Don't worry, we'll implement the SEO plan later. Now let's audit your Google Business Profile next. 👇
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={markSEODone}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all"
+                >
+                  <MapPin className="w-4 h-4" />
+                  Continue to GBP Audit →
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-3xl font-bold text-gray-900">SEO Audit</h2>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical, Calendar, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical, Calendar, ToggleLeft, ToggleRight, CheckCircle, AlertCircle, ChevronRight } from 'lucide-react';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -138,6 +138,99 @@ function SortableServiceCard({ service, isAddon, categories, allServices, onEdit
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Onboarding flow helpers ──────────────────────────────────
+function getOnboardingFlow() {
+  try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; }
+}
+
+function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveTab }) {
+  const [checked, setChecked] = useState(false);
+  const [errors, setErrors] = useState([]);
+  const [done, setDone] = useState(false);
+  const flow = getOnboardingFlow();
+  const alreadyDone = !!flow.flow_business;
+
+  if (alreadyDone) return null;
+
+  const validate = () => {
+    const errs = [];
+    if (!businessInfo.phone?.trim()) errs.push({ tab: 'info', msg: 'Add your business phone number' });
+    if (!businessInfo.email?.trim()) errs.push({ tab: 'info', msg: 'Add your business email address' });
+    if (!businessInfo.address?.trim()) errs.push({ tab: 'info', msg: 'Add your business address' });
+    if (!businessInfo.city?.trim() || !businessInfo.state?.trim()) errs.push({ tab: 'info', msg: 'Add your city and state' });
+    const hasServiceArea = (businessInfo.serviceZipCodes?.length > 0) || businessInfo.centerZipCode?.trim();
+    if (!hasServiceArea) errs.push({ tab: 'info', msg: 'Set your service area (zip codes or radius)' });
+    if (!services || services.length === 0) errs.push({ tab: 'services', msg: 'Add at least one service' });
+    if (!employees || employees.length === 0) errs.push({ tab: 'team', msg: 'Add at least one team member' });
+    setErrors(errs);
+    setChecked(true);
+    if (errs.length === 0) setDone(true);
+  };
+
+  const markDone = () => {
+    const flow = getOnboardingFlow();
+    flow.flow_business = true;
+    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+    window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_business' } }));
+  };
+
+  return (
+    <div className="mb-6 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <Briefcase className="w-4 h-4 text-blue-600" />
+        <span className="font-bold text-blue-900 text-sm">Getting Started · Step 2: Business Setup</span>
+      </div>
+      <p className="text-sm text-gray-600 mb-4">
+        Fill out all your business information so the AI agents can start going to work on your behalf. When done, check your completion below.
+      </p>
+      {!checked ? (
+        <button
+          onClick={validate}
+          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-all"
+        >
+          <CheckCircle className="w-4 h-4" />
+          Check Completion
+        </button>
+      ) : errors.length > 0 ? (
+        <div>
+          <div className="mb-3 space-y-2">
+            {errors.map((e, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveTab(e.tab)}
+                className="flex items-center gap-2 w-full text-left px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 hover:bg-red-100 transition-all"
+              >
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-red-500" />
+                <span className="flex-1">{e.msg}</span>
+                <ChevronRight className="w-3 h-3 text-red-400" />
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={validate}
+            className="text-sm text-blue-600 underline hover:no-underline"
+          >
+            Re-check after saving
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 text-green-700 text-sm font-semibold">
+            <CheckCircle className="w-4 h-4 text-green-600" />
+            All sections complete!
+          </div>
+          <button
+            onClick={markDone}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-sm font-semibold rounded-lg hover:shadow-md transition-all"
+          >
+            Continue to Next Step →
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -1280,6 +1373,13 @@ export default function BusinessInformation({
 
   return (
     <div className="space-y-6">
+      <OnboardingBusinessCheck
+        businessInfo={businessInfo}
+        services={services}
+        employees={employees}
+        setActiveTab={setActiveTab}
+      />
+
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">

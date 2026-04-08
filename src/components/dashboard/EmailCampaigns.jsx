@@ -2,8 +2,162 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Mail, Send, CheckCircle, AlertCircle, Loader, Sparkles,
   Settings, Users, Clock, ChevronDown, ChevronUp, FlaskConical,
-  History, X, Zap,
+  History, X, Zap, Upload, ArrowRight,
 } from 'lucide-react';
+
+// ── CSV parsing (mirrors CustomersLeads logic) ────────────────
+function parseCustomerCSV(text) {
+  const rows = [];
+  let inQuote = false, cur = '', cells = [];
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') { inQuote = !inQuote; }
+    else if (ch === ',' && !inQuote) { cells.push(cur.trim()); cur = ''; }
+    else if ((ch === '\n' || ch === '\r') && !inQuote) {
+      if (cur.trim() || cells.length) { cells.push(cur.trim()); rows.push(cells); }
+      cur = ''; cells = [];
+      if (ch === '\r' && text[i + 1] === '\n') i++;
+    } else { cur += ch; }
+  }
+  if (cur.trim() || cells.length) { cells.push(cur.trim()); rows.push(cells); }
+  if (rows.length < 2) return [];
+
+  const headers = rows[0].map(h => h.replace(/^["']/, '').replace(/["']$/, '').toLowerCase().trim());
+  const resolve = (...terms) => {
+    for (const t of terms) {
+      const idx = headers.findIndex(h => h.includes(t) || t.includes(h));
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+  const nameIdx = resolve('full name', 'name');
+  const firstIdx = resolve('first name', 'first');
+  const lastIdx = resolve('last name', 'last');
+  const emailIdx = resolve('email');
+  const phoneIdx = resolve('phone', 'mobile', 'cell');
+
+  const customers = [];
+  for (let r = 1; r < rows.length; r++) {
+    const row = rows[r];
+    let name = '';
+    if (nameIdx !== -1) name = (row[nameIdx] || '').replace(/^[+'"]/, '').trim();
+    else {
+      const fn = firstIdx !== -1 ? (row[firstIdx] || '').trim() : '';
+      const ln = lastIdx !== -1 ? (row[lastIdx] || '').trim() : '';
+      name = [fn, ln].filter(Boolean).join(' ');
+    }
+    const email = emailIdx !== -1 ? (row[emailIdx] || '').replace(/^[+'"]/, '').trim() : '';
+    const phone = phoneIdx !== -1 ? (row[phoneIdx] || '').replace(/^[+'"]/, '').trim() : '';
+    if (name || email || phone) customers.push({ name: name || email.split('@')[0] || 'Customer', email, phone });
+  }
+  return customers;
+}
+
+// ── First-time import screen ──────────────────────────────────
+function FirstTimeImportScreen({ apiUrl, authFetch, onImportDone }) {
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState(0);
+  const [error, setError] = useState('');
+  const fileRef = useRef(null);
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setError('');
+    setImporting(true);
+    try {
+      const text = await file.text();
+      const customers = parseCustomerCSV(text);
+      if (customers.length === 0) { setError('No valid rows found. Make sure your CSV has name, email, or phone columns.'); setImporting(false); return; }
+      const res = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customers }),
+      });
+      const data = await res.json();
+      if (data.success || data.imported !== undefined) {
+        setImported(data.imported || customers.length);
+        // Mark onboarding flow step done
+        try {
+          const flow = JSON.parse(localStorage.getItem('onboarding_flow') || '{}');
+          flow.flow_csv = true;
+          localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+          window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_csv' } }));
+        } catch (_) {}
+        setTimeout(() => onImportDone(), 2200);
+      } else {
+        setError(data.error || 'Import failed. Please try again.');
+      }
+    } catch (err) {
+      setError('Failed to read file. Please try again.');
+    } finally {
+      setImporting(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  if (imported > 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center max-w-sm">
+          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <CheckCircle className="w-10 h-10 text-green-600" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Customers imported!</h2>
+          <p className="text-gray-600 mb-1">{imported} customers added to your list.</p>
+          <p className="text-sm text-gray-400">Generating your first email campaign…</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex-1 flex items-center justify-center p-8">
+      <div className="max-w-lg w-full">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold text-gray-900 mb-3">
+            Let's get you started off with a bang! 🚀
+          </h1>
+          <p className="text-gray-600 leading-relaxed">
+            Get some repeat business going. Upload your customer base using a CSV file from your current CRM or wherever you keep track of customers.
+          </p>
+        </div>
+
+        {/* Drop zone */}
+        <div
+          onClick={() => fileRef.current?.click()}
+          className="border-2 border-dashed border-amber-300 rounded-2xl p-10 text-center cursor-pointer hover:border-amber-500 hover:bg-amber-50 transition-all mb-4"
+        >
+          <Upload className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+          <p className="font-semibold text-gray-800 mb-1">Click to upload your customer CSV</p>
+          <p className="text-sm text-gray-500">Supports Name, Email, Phone columns from any CRM</p>
+          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleFile} />
+        </div>
+
+        {importing && (
+          <div className="flex items-center justify-center gap-2 text-amber-700 text-sm font-medium mb-4">
+            <Loader className="w-4 h-4 animate-spin" />
+            Importing customers…
+          </div>
+        )}
+        {error && (
+          <div className="flex items-center gap-2 text-red-700 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            {error}
+          </div>
+        )}
+
+        <p className="text-xs text-center text-gray-400">
+          After this, if you want to import more customers use the <strong>Customers &amp; Leads</strong> tab.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 // ── Settings Modal ───────────────────────────────────────────
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -315,6 +469,9 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
   const [feedback, setFeedback] = useState('');
   const feedbackRef = useRef(null);
 
+  // First-time import screen
+  const [showImportScreen, setShowImportScreen] = useState(false);
+
   // UI state
   const [showSettings, setShowSettings] = useState(false);
   const [toast, setToast] = useState(null);
@@ -344,7 +501,10 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
       });
       setCtaLink(savedConfig.cta_link || '');
       if (histData.campaigns) setHistory(histData.campaigns);
-      if (statsData.subscriberCount !== undefined) setStats(statsData);
+      if (statsData.subscriberCount !== undefined) {
+        setStats(statsData);
+        if ((statsData.subscriberCount ?? 0) === 0) setShowImportScreen(true);
+      }
     });
 
     // Fetch or auto-generate this week's campaign
@@ -477,9 +637,27 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     }
   };
 
+  const handleImportDone = () => {
+    setShowImportScreen(false);
+    authFetch(`${apiUrl}/api/email-campaigns/stats`).then(r => r.json()).then(d => {
+      if (d.subscriberCount !== undefined) setStats(d);
+    }).catch(() => {});
+    authFetch(`${apiUrl}/api/email-campaigns/current-draft`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.campaign) { setCampaign(data.campaign); setDraftId(data.campaign.id); }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingDraft(false));
+  };
+
   const sendDay = config.send_day
     ? config.send_day.charAt(0).toUpperCase() + config.send_day.slice(1)
     : 'Monday';
+
+  if (showImportScreen) {
+    return <FirstTimeImportScreen apiUrl={apiUrl} authFetch={authFetch} onImportDone={handleImportDone} />;
+  }
 
   return (
     <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 112px)' }}>
