@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import OnboardingWizard from '../components/dashboard/OnboardingWizard';
-import OnboardingWidget from '../components/dashboard/OnboardingWidget';
 import OnboardingFlowBanner from '../components/dashboard/OnboardingFlowBanner';
 import OnboardingScreen, { isOnboardingComplete, ONBOARDING_STEPS } from '../components/dashboard/OnboardingScreen';
 import {
@@ -130,7 +128,6 @@ export default function Dashboard() {
       setViewSubTab(null);
     }
   };
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [inOnboarding, setInOnboarding] = useState(() => {
     const u = JSON.parse(localStorage.getItem('user') || '{}');
     return !!u.questionnaire_completed && !isOnboardingComplete();
@@ -184,46 +181,6 @@ const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
   const [googleBusinessData, setGoogleBusinessData] = useState(null);
   const [showDomainPolicy, setShowDomainPolicy] = useState(false);
   
-// Show welcome wizard ONLY on first signup (never on login)
-useEffect(() => {
-  console.log('🎯 Onboarding check:', {
-    hasUser: !!user,
-    userKeys: Object.keys(user || {}).length,
-    hasSeenWelcome: user?.hasSeenWelcome,
-    showOnboarding
-  });
- if (user && Object.keys(user).length > 0 && !user.hasSeenWelcome) {
-    setShowOnboarding(true);
-    console.log('✅ Setting showOnboarding to TRUE');
-    setShowOnboarding(true);
-    markWelcomeAsSeen();
-  }
-}, [user]);
-
-const markWelcomeAsSeen = async () => {
-  try {
-    await authFetch(`${apiUrl}/api/auth/welcome-seen`, {
-      method: 'POST'
-    });
-    
-    // Update local storage
-    const updatedUser = { ...user, hasSeenWelcome: true };
-    localStorage.setItem('user', JSON.stringify(updatedUser));
-    setUser(updatedUser);
-  } catch (error) {
-    console.error('Error marking welcome as seen:', error);
-  }
-};
-
-const handleOnboardingComplete = async () => {
-  setShowOnboarding(false);
-  await markWelcomeAsSeen(); // Mark as seen AFTER completing
-};
-  
-const handleOnboardingSkip = async () => {
-  setShowOnboarding(false);
-  await markWelcomeAsSeen(); // Mark as seen AFTER skipping
-};
 
 // Listen for navigation events from onboarding
 useEffect(() => {
@@ -499,12 +456,6 @@ useEffect(() => {
     setPendingView(null);
   };
 
-  const onboardingActuallyComplete = (() => {
-    const steps = user?.onboarding_steps_completed || {};
-    const validStepKeys = ['step1', 'step2', 'step3', 'step4', 'step5'];
-    return validStepKeys.filter(k => steps[k]).length === 5;
-  })();
-
   const topMenuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'Embed Website' },
@@ -701,17 +652,6 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
-      {showOnboarding && user && Object.keys(user).length > 0 && (
-  <OnboardingWizard
-    user={user}
-    onComplete={handleOnboardingComplete}
-    onSkip={handleOnboardingSkip}
-    apiUrl={apiUrl}
-    authFetch={authFetch}
-  />
-)}
-
-{/* Onboarding sidebar widget removed — now shown as Getting Started tab */}
 
       {/* Sidebar */}
       <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>

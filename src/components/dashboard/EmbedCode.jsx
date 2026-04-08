@@ -235,6 +235,19 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
     }
   };
 
+  // Onboarding flow (must be before any early returns)
+  const [embedFlowDone, setEmbedFlowDone] = useState(() => {
+    try { return !!JSON.parse(localStorage.getItem('onboarding_flow') || '{}').flow_embed; } catch { return false; }
+  });
+
+  const markEmbedDone = () => {
+    const flow = (() => { try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; } })();
+    flow.flow_embed = true;
+    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+    window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_embed' } }));
+    setEmbedFlowDone(true);
+  };
+
   const embedBaseUrl = import.meta.env.VITE_EMBED_URL || import.meta.env.VITE_PRODUCTION_BACKEND_URL || 'https://backend-production-ab50.up.railway.app';
   const embedCode = `<script src="${embedBaseUrl}/embed.js" data-site-key="${siteKey}" async></script>`;
 
@@ -255,19 +268,6 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
   ];
 
   const enabledCount = [settings.chatEnabled, settings.bookingEnabled, settings.leadFormEnabled].filter(Boolean).length;
-
-  // Onboarding flow
-  const [embedFlowDone, setEmbedFlowDone] = useState(() => {
-    try { return !!JSON.parse(localStorage.getItem('onboarding_flow') || '{}').flow_embed; } catch { return false; }
-  });
-
-  const markEmbedDone = () => {
-    const flow = (() => { try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; } })();
-    flow.flow_embed = true;
-    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
-    window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_embed' } }));
-    setEmbedFlowDone(true);
-  };
 
   return (
     <div className="space-y-6">
