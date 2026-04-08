@@ -146,10 +146,15 @@ const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'
   const [widgetMinimized, setWidgetMinimized] = useState(false);
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-  // Guard: redirect to home if not authenticated
+  // Guard: redirect if not authenticated or not verified
   useEffect(() => {
     if (!localStorage.getItem('token')) {
       navigate('/', { replace: true });
+      return;
+    }
+    const u = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!u.email_verified) {
+      navigate('/verify-email', { replace: true });
     }
   }, []);
 

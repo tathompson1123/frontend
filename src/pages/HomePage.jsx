@@ -33,7 +33,9 @@ export default function HomePage() {
   const handleAuthSuccess = (user, token) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
-    if (!user.questionnaire_completed) {
+    if (!user.email_verified) {
+      navigate('/verify-email');
+    } else if (!user.questionnaire_completed) {
       navigate('/onboarding');
     } else {
       navigate('/dashboard');

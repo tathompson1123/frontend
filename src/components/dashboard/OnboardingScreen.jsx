@@ -137,12 +137,6 @@ export default function OnboardingScreen({ currentView, setCurrentView, onSkip, 
               />
             </div>
           </div>
-          <button
-            onClick={onSkip}
-            className="text-xs text-gray-400 hover:text-gray-600 underline transition-colors"
-          >
-            Skip setup
-          </button>
         </div>
       </div>
 
