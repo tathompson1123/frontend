@@ -920,21 +920,11 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
               SMS Lead Agent
               {leadAgentDeployed && <span className="w-2 h-2 bg-green-500 rounded-full" />}
             </button>
-            <button
-              onClick={() => {
-                if (isAgentDirty() && !confirm('You have unsaved changes. Switch agent tab anyway? Your changes will be lost.')) return;
-                setActiveAgent('missedcall');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                activeAgent === 'missedcall'
-                  ? 'bg-white text-amber-600 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
-            >
+            <div className="relative flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-gray-400 cursor-not-allowed select-none">
               <PhoneOff className="w-4 h-4" />
               Missed Call
-              {missedCallDeployed && <span className="w-2 h-2 bg-green-500 rounded-full" />}
-            </button>
+              <span className="text-[10px] font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-full leading-none">Soon</span>
+            </div>
           </div>
         </div>
       </div>

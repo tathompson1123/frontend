@@ -73,8 +73,8 @@ function ContactSalesForm({ apiUrl, authFetch, onClose, onSuccess }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
         <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-t-2xl p-6 text-white">
-          <h2 className="text-xl font-bold mb-1">Contact Sales to Unsubscribe</h2>
-          <p className="text-red-100 text-sm">A team member will reach out within 1 business day to process your request.</p>
+          <h2 className="text-xl font-bold mb-1">Cancel Subscription</h2>
+          <p className="text-red-100 text-sm">A team member will reach out within 24 hours to process your request.</p>
         </div>
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           <div>
@@ -100,7 +100,7 @@ function ContactSalesForm({ apiUrl, authFetch, onClose, onSuccess }) {
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Reason for Unsubscribing *</label>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">Reason for Cancelling *</label>
             <div className="relative">
               <select
                 required
@@ -140,7 +140,7 @@ function ContactSalesForm({ apiUrl, authFetch, onClose, onSuccess }) {
               disabled={submitting || !form.name || !form.phone || !form.reason}
               className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold text-sm hover:bg-red-700 transition disabled:opacity-50"
             >
-              {submitting ? 'Submitting...' : 'Submit Unsubscribe Request'}
+              {submitting ? 'Submitting...' : 'Submit Cancellation Request'}
             </button>
             <button
               type="button"
@@ -333,6 +333,10 @@ export default function Billing({ user, apiUrl, authFetch }) {
     const smsPct = smsLimit > 0 ? Math.round((smsUsed / smsLimit) * 100) : 0;
     const chatPct = chatLimit < 99999 && chatLimit > 0 ? Math.round((chatUsed / chatLimit) * 100) : 0;
     const chatCostPct = chatCostLimit ? Math.round((claudeCostMonth / chatCostLimit) * 100) : 0;
+    // Convert dollar budget → estimated conversation count (avg ~$0.04/conversation)
+    const AVG_COST_PER_CONVO = 0.04;
+    const totalConvos = chatCostLimit ? Math.floor(chatCostLimit / AVG_COST_PER_CONVO) : 0;
+    const convosUsed = Math.min(Math.round(claudeCostMonth / AVG_COST_PER_CONVO), totalConvos);
     const nearLimit = smsPct >= 80 || chatPct >= 80 || chatCostPct >= 80;
 
     return (
@@ -384,9 +388,9 @@ export default function Billing({ user, apiUrl, authFetch }) {
             />
             {chatCostLimit != null ? (
               <UsageMeter
-                label={`AI Chat Budget — $${claudeCostMonth.toFixed(2)} of $${chatCostLimit.toFixed(2)}/mo`}
-                used={Math.round(chatCostPct)}
-                limit={100}
+                label="AI Chat Conversations"
+                used={convosUsed}
+                limit={totalConvos}
                 color="green"
                 upgradeNote={chatCostPct >= 80 ? 'Upgrade to Scale for unlimited AI chat' : null}
               />
@@ -476,7 +480,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
               onClick={() => setShowContactForm(true)}
               className="text-[11px] text-gray-300 hover:text-gray-400 underline transition-colors"
             >
-              Need to unsubscribe? Contact sales
+              Cancel Subscription
             </button>
           ) : (
             <p className="text-[11px] text-green-600 font-medium">Request received — we'll reach out within 1 business day.</p>

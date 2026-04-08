@@ -208,28 +208,37 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         const lines = text.split('\n').map(r => r.trim()).filter(r => r);
         if (lines.length < 2) { alert('CSV file is empty or invalid'); return; }
 
-        // Smarter column resolution: normalize headers, then find by substring match
+        // Smarter column resolution: normalize headers, then find by substring match (bidirectional)
         const rawHeaders = parseRow(lines[0]);
+        // Strip BOM if present on first header
+        if (rawHeaders[0]) rawHeaders[0] = rawHeaders[0].replace(/^\uFEFF/, '');
         const headers = rawHeaders.map(h => h.toLowerCase().trim());
 
-        // Find index of first header whose normalized form includes any of the given substrings
+        // Bidirectional match: header contains term OR term contains header (handles short names like "First", "Last")
         const findCol = (...substrings) => {
           for (const sub of substrings) {
-            const idx = headers.findIndex(h => h.replace(/[\s_\-]/g, '').includes(sub.replace(/[\s_\-]/g, '')));
+            const normSub = sub.replace(/[\s_\-]/g, '').toLowerCase();
+            const idx = headers.findIndex(h => {
+              const normH = h.replace(/[\s_\-]/g, '').toLowerCase();
+              return normH === normSub || normH.includes(normSub) || normSub.includes(normH);
+            });
             if (idx !== -1) return idx;
           }
           return -1;
         };
 
         const getVal = (row, idx) => (idx !== -1 && row[idx] != null ? row[idx].trim() : '');
+        // Strip Wix/Excel phone apostrophe prefix and normalize
+        const cleanPhone = (val) => val.replace(/^'+/, '').trim();
 
         const dataRows = lines.slice(1);
 
         if (activeTab === 'leads') {
           // Resolve column indices once for leads
-          const iFirstName = findCol('firstname', 'first_name');
-          const iLastName = findCol('lastname', 'last_name');
-          const iName = findCol('fullname', 'customername', 'name');
+          // Wix exports: "First Name*", "Last Name", "Email 1 - Value", "Phone 1 - Value"
+          const iFirstName = findCol('firstname', 'first_name', 'first', 'givenname', 'fname', 'given');
+          const iLastName = findCol('lastname', 'last_name', 'last', 'surname', 'familyname', 'lname', 'family');
+          const iName = findCol('fullname', 'customername', 'contactname', 'clientname', 'displayname', 'name');
           const iPhone = findCol('phone', 'mobile', 'cell');
           const iEmail = findCol('email');
           const iStatus = findCol('status');
@@ -240,17 +249,28 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             .map(line => {
               const values = parseRow(line);
               let name = getVal(values, iName);
+              let email = getVal(values, iEmail);
               if (!name && iFirstName !== -1) {
                 const fn = getVal(values, iFirstName);
                 const ln = getVal(values, iLastName);
-                name = [fn, ln].filter(Boolean).join(' ');
+                // Wix exports sometimes put email in Last Name field when no last name was stored
+                if (ln.includes('@') && !email) {
+                  name = fn;
+                  email = ln;
+                } else {
+                  name = [fn, ln].filter(Boolean).join(' ');
+                }
+              }
+              // Last resort: if name is still empty but email exists, derive from email username
+              if (!name && email) {
+                name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
               }
               if (!name) return null;
               return {
                 name,
                 status: getVal(values, iStatus) || 'new',
-                phone: getVal(values, iPhone),
-                email: getVal(values, iEmail),
+                phone: cleanPhone(getVal(values, iPhone)),
+                email,
                 source: getVal(values, iSource) || 'manual',
                 notes: getVal(values, iNotes),
               };
@@ -258,7 +278,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             .filter(Boolean);
 
           if (leads.length === 0) {
-            alert('No valid leads found in CSV. Could not find a name column — tried "name", "full name", "first name".');
+            const detectedHeaders = rawHeaders.slice(0, 8).join(', ');
+            alert(`No valid leads found in CSV.\nHeaders detected: ${detectedHeaders}\n\nExpected columns like "First Name", "Last Name", "Email", "Phone".`);
             return;
           }
           const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
@@ -267,13 +288,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           });
           const data = await response.json();
           if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-          alert(`Import complete!\nImported: ${data.successCount}\nSkipped: ${data.errorCount}`);
+          const lparts = [`Imported: ${data.successCount}`];
+          if (data.duplicateCount > 0) lparts.push(`Duplicates skipped: ${data.duplicateCount}`);
+          if (data.errorCount > 0) lparts.push(`Errors: ${data.errorCount}`);
+          alert('Import complete!\n' + lparts.join('\n'));
           fetchLeads();
         } else {
           // Resolve column indices once for customers
-          const iFirstName = findCol('firstname', 'first_name');
-          const iLastName = findCol('lastname', 'last_name');
-          const iName = findCol('fullname', 'customername', 'name');
+          // Wix exports: "First Name*", "Last Name", "Email 1 - Value", "Phone 1 - Value"
+          const iFirstName = findCol('firstname', 'first_name', 'first', 'givenname', 'fname', 'given');
+          const iLastName = findCol('lastname', 'last_name', 'last', 'surname', 'familyname', 'lname', 'family');
+          const iName = findCol('fullname', 'customername', 'contactname', 'clientname', 'displayname', 'name');
           const iPhone = findCol('phone', 'mobile', 'cell');
           const iEmail = findCol('email');
           const iService = findCol('lastservice', 'service');
@@ -284,16 +309,27 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             .map(line => {
               const values = parseRow(line);
               let name = getVal(values, iName);
+              let email = getVal(values, iEmail);
               if (!name && iFirstName !== -1) {
                 const fn = getVal(values, iFirstName);
                 const ln = getVal(values, iLastName);
-                name = [fn, ln].filter(Boolean).join(' ');
+                // Wix exports sometimes put email in Last Name field when no last name was stored
+                if (ln.includes('@') && !email) {
+                  name = fn;
+                  email = ln;
+                } else {
+                  name = [fn, ln].filter(Boolean).join(' ');
+                }
+              }
+              // Last resort: if name is still empty but email exists, use email username as name
+              if (!name && email) {
+                name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
               }
               if (!name) return null;
               return {
                 name,
-                phone: getVal(values, iPhone),
-                email: getVal(values, iEmail),
+                phone: cleanPhone(getVal(values, iPhone)),
+                email,
                 last_service: getVal(values, iService),
                 last_service_date: getVal(values, iServiceDate) || null,
                 notes: getVal(values, iNotes),
@@ -302,7 +338,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             .filter(Boolean);
 
           if (customers.length === 0) {
-            alert('No valid customers found in CSV. Could not find a name column — tried "name", "full name", "first name".');
+            const detectedHeaders = rawHeaders.slice(0, 8).join(', ');
+            alert(`No valid customers found in CSV.\nHeaders detected: ${detectedHeaders}\n\nExpected columns like "First Name", "Last Name", "Email", "Phone".`);
             return;
           }
           const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
@@ -311,7 +348,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           });
           const data = await response.json();
           if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-          alert(`Import complete!\nImported: ${data.successCount}\nSkipped: ${data.errorCount}`);
+          const parts = [`Imported: ${data.successCount}`];
+          if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
+          if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
+          alert('Import complete!\n' + parts.join('\n'));
           fetchCustomers();
         }
 
@@ -1135,6 +1175,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 type="file"
                 accept=".csv"
                 onChange={importFromCSV}
+                onClick={e => { e.target.value = ''; }}
                 className="hidden"
               />
             </label>
