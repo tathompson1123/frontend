@@ -151,12 +151,9 @@ function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveT
   const [checked, setChecked] = useState(false);
   const [errors, setErrors] = useState([]);
   const [done, setDone] = useState(false);
-  const flow = getOnboardingFlow();
-  const alreadyDone = !!flow.flow_business;
+  const alreadyDone = !!getOnboardingFlow().flow_business;
 
-  if (alreadyDone) return null;
-
-  const validate = () => {
+  const computeErrors = () => {
     const errs = [];
     if (!businessInfo.phone?.trim()) errs.push({ tab: 'info', msg: 'Add your business phone number' });
     if (!businessInfo.email?.trim()) errs.push({ tab: 'info', msg: 'Add your business email address' });
@@ -166,9 +163,27 @@ function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveT
     if (!hasServiceArea) errs.push({ tab: 'info', msg: 'Set your service area (zip codes or radius)' });
     if (!services || services.length === 0) errs.push({ tab: 'services', msg: 'Add at least one service' });
     if (!employees || employees.length === 0) errs.push({ tab: 'team', msg: 'Add at least one team member' });
+    return errs;
+  };
+
+  // Auto-recheck whenever data changes (only after first manual check)
+  useEffect(() => {
+    if (!checked) return;
+    const errs = computeErrors();
+    setErrors(errs);
+    setDone(errs.length === 0);
+  }, [
+    businessInfo.phone, businessInfo.email, businessInfo.address,
+    businessInfo.city, businessInfo.state,
+    businessInfo.serviceZipCodes?.length, businessInfo.centerZipCode,
+    services?.length, employees?.length,
+  ]);
+
+  const handleCheck = () => {
+    const errs = computeErrors();
     setErrors(errs);
     setChecked(true);
-    if (errs.length === 0) setDone(true);
+    setDone(errs.length === 0);
   };
 
   const markDone = () => {
@@ -177,6 +192,8 @@ function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveT
     localStorage.setItem('onboarding_flow', JSON.stringify(flow));
     window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_business' } }));
   };
+
+  if (alreadyDone) return null;
 
   return (
     <div className="mb-6 rounded-2xl border border-blue-200 bg-gradient-to-r from-blue-50 to-indigo-50 p-5 shadow-sm">
@@ -189,33 +206,25 @@ function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveT
       </p>
       {!checked ? (
         <button
-          onClick={validate}
+          onClick={handleCheck}
           className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-all"
         >
           <CheckCircle className="w-4 h-4" />
           Check Completion
         </button>
       ) : errors.length > 0 ? (
-        <div>
-          <div className="mb-3 space-y-2">
-            {errors.map((e, i) => (
-              <button
-                key={i}
-                onClick={() => setActiveTab(e.tab)}
-                className="flex items-center gap-2 w-full text-left px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 hover:bg-red-100 transition-all"
-              >
-                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-red-500" />
-                <span className="flex-1">{e.msg}</span>
-                <ChevronRight className="w-3 h-3 text-red-400" />
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={validate}
-            className="text-sm text-blue-600 underline hover:no-underline"
-          >
-            Re-check after saving
-          </button>
+        <div className="space-y-2">
+          {errors.map((e, i) => (
+            <button
+              key={i}
+              onClick={() => setActiveTab(e.tab)}
+              className="flex items-center gap-2 w-full text-left px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 hover:bg-red-100 transition-all"
+            >
+              <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-red-500" />
+              <span className="flex-1">{e.msg}</span>
+              <ChevronRight className="w-3 h-3 text-red-400" />
+            </button>
+          ))}
         </div>
       ) : (
         <div className="flex items-center gap-3">
