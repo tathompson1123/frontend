@@ -239,7 +239,6 @@ function EmailPreview({ html, annotations }) {
             title="Email Preview"
             className="w-full rounded-xl border border-gray-200 bg-white"
             style={{ minHeight: 400 }}
-            sandbox="allow-same-origin"
           />
         </div>
 
@@ -650,9 +649,12 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
 
       {/* Ask SORCE — pinned at bottom, always visible while scrolling the email */}
       {campaign && (
-        <div className="flex-shrink-0 border-t border-blue-100 bg-white shadow-[0_-4px_20px_rgba(59,130,246,0.08)]">
+        <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-[0_-6px_24px_rgba(59,130,246,0.25)]">
           <div className="max-w-2xl mx-auto w-full px-4 py-3">
-            <p className="text-[11px] font-semibold text-gray-400 mb-1.5 uppercase tracking-wide">Ask SORCE to change something</p>
+            <div className="flex items-center gap-1.5 mb-2">
+              <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+              <p className="text-xs font-bold text-blue-100 uppercase tracking-wider">Ask SORCE to change something</p>
+            </div>
             <div className="flex gap-2">
               <input
                 ref={feedbackRef}
@@ -662,12 +664,12 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleRefine(); } }}
                 placeholder='e.g. "Make the offer 20% off" or "Add more urgency"'
                 disabled={refining}
-                className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60 bg-gray-50"
+                className="flex-1 border-0 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-white/50 outline-none disabled:opacity-60 bg-white/15 text-white placeholder-blue-200"
               />
               <button
                 onClick={handleRefine}
                 disabled={refining || !feedback.trim()}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-all flex-shrink-0"
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 disabled:opacity-50 transition-all flex-shrink-0 shadow-sm"
               >
                 {refining ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
                 {refining ? 'Updating…' : 'Update'}
