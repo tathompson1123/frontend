@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Oakame-style three-bar loader */
+@keyframes oakame-bar {
+  0%   { transform: scaleY(1); }
+  100% { transform: scaleY(0.08); }
+}
+.oakame-bar {
+  display: inline-block;
+  border-radius: 4px;
+  transform-origin: center bottom;
+  animation: oakame-bar 0.3s linear infinite alternate;
+}
+
 /* GenerationProgress animations */
 @keyframes gp-spin {
   from { transform: rotate(0deg); }

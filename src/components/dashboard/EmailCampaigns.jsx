@@ -4,6 +4,7 @@ import {
   Settings, Users, Clock, ChevronDown, ChevronUp, FlaskConical,
   History, X, Zap, Upload, ArrowRight,
 } from 'lucide-react';
+import OakameLoader from '../OakameLoader';
 
 // ── CSV parsing (mirrors CustomersLeads logic) ────────────────
 function parseCustomerCSV(text) {
@@ -297,7 +298,7 @@ const ANNOTATION_INKS = [
   { color: '#dc2626', light: '#fee2e2' }, // red
 ];
 
-// ── Onboarding intro typing screen ───────────────────────────
+// ── Onboarding intro screen ───────────────────────────────────
 const INTRO_TEXT = "Let's get this started with a bang and generate some sales!";
 
 function IntroScreen({ onDone }) {
@@ -305,29 +306,35 @@ function IntroScreen({ onDone }) {
   const [fading, setFading] = useState(false);
 
   useEffect(() => {
-    let i = 0;
-    const iv = setInterval(() => {
-      i++;
-      setDisplayed(INTRO_TEXT.slice(0, i));
-      if (i >= INTRO_TEXT.length) {
-        clearInterval(iv);
-        setTimeout(() => {
-          setFading(true);
-          setTimeout(onDone, 500);
-        }, 1200);
-      }
-    }, 38);
-    return () => clearInterval(iv);
+    // Brief pause so the loader registers, then start typing
+    const startDelay = setTimeout(() => {
+      let i = 0;
+      const iv = setInterval(() => {
+        i++;
+        setDisplayed(INTRO_TEXT.slice(0, i));
+        if (i >= INTRO_TEXT.length) {
+          clearInterval(iv);
+          setTimeout(() => {
+            setFading(true);
+            setTimeout(onDone, 500);
+          }, 1400);
+        }
+      }, 38);
+      return () => clearInterval(iv);
+    }, 600);
+    return () => clearTimeout(startDelay);
   }, []);
 
   return (
     <div className={`flex flex-col items-center justify-center py-24 px-8 transition-opacity duration-500 ${fading ? 'opacity-0' : 'opacity-100'}`}>
-      <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-blue-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg">
-        <Sparkles className="w-8 h-8 text-white" />
+      {/* Oakame three-bar loader */}
+      <div className="mb-10">
+        <OakameLoader size="xl" color="#f59e0b" />
       </div>
-      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center max-w-md leading-snug">
+
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center max-w-md leading-snug min-h-[3rem]">
         {displayed}
-        {displayed.length < INTRO_TEXT.length && (
+        {displayed.length > 0 && displayed.length < INTRO_TEXT.length && (
           <span className="inline-block w-0.5 h-7 bg-amber-500 ml-0.5 align-middle animate-pulse" />
         )}
       </h1>
@@ -765,8 +772,8 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
           {/* This Week's Campaign */}
           {(loadingDraft || stats === null) ? (
             <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-              <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Loader className="w-7 h-7 text-blue-500 animate-spin" />
+              <div className="flex justify-center mb-5">
+                <OakameLoader size="lg" color="#3b82f6" />
               </div>
               <p className="font-semibold text-gray-700">SORCE is preparing this week's campaign…</p>
               <p className="text-sm text-gray-400 mt-1">Crafting a fresh offer for your customers</p>
