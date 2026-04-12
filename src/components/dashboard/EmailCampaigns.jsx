@@ -726,9 +726,9 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
 
       {/* Scrollable content area */}
       <div className={inOnboarding ? '' : 'flex-1 overflow-y-auto min-h-0'}>
-        <div className="max-w-2xl mx-auto w-full px-4 py-6 space-y-5">
 
-          {/* Header */}
+        {/* ── Header (stays max-w-2xl) ── */}
+        <div className="max-w-2xl mx-auto w-full px-4 pt-6 pb-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
@@ -768,10 +768,13 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
               <Settings className="w-4 h-4" />
             </button>
           </div>
+        </div>
 
-          {/* This Week's Campaign */}
+        {/* ── Campaign section — wider flex layout so annotations can float beside the card ── */}
+        <div className="w-full px-4 pb-6">
+
           {(loadingDraft || stats === null) ? (
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-200 p-12 text-center">
               <div className="flex justify-center mb-5">
                 <OakameLoader size="lg" color="#3b82f6" />
               </div>
@@ -779,120 +782,122 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
               <p className="text-sm text-gray-400 mt-1">Crafting a fresh offer for your customers</p>
             </div>
           ) : campaign ? (
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-              {/* Campaign meta bar */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-0.5">This Week's Campaign</p>
-                  <p className="text-sm font-bold text-gray-900 truncate">{campaign.subject}</p>
-                  {campaign.previewText && (
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{campaign.previewText}</p>
-                  )}
-                </div>
-                <button
-                  onClick={handleRegenerate}
-                  disabled={regenerating}
-                  title="Generate a completely new campaign"
-                  className="flex-shrink-0 ml-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-all"
+            /* Outer flex row: [left notes] [card] [right notes] */
+            <div
+              className="mx-auto flex items-start gap-3"
+              style={{ maxWidth: hasAnnotations ? 980 : 672 }}
+            >
+              {/* Left annotation column — floats beside the card, NOT inside it */}
+              {hasAnnotations && leftAnnotations.length > 0 && (
+                <div
+                  className="w-40 flex-shrink-0 relative"
+                  style={{ height: emailHeight, marginTop: 86 }}
                 >
-                  {regenerating ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                  Regenerate
-                </button>
-              </div>
-
-              {/* "Why it works" label — sits in the white card, above the email row */}
-              {hasAnnotations && (
-                <div className="flex items-center gap-1.5 px-5 pt-3 pb-1">
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                  </svg>
-                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Why it works</span>
+                  {leftAnnotations.map((a, i) => {
+                    const yPct = BLOCK_Y_PCT[a.blockType] ?? (15 + i * 35);
+                    return (
+                      <div key={i} style={{ position: 'absolute', top: `${yPct}%`, transform: 'translateY(-50%)', left: 0, right: 0 }}>
+                        <AnnotationCard a={a} i={i * 2} side="left" />
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* Annotation columns + email preview row */}
-              <div className="flex items-stretch">
-                {/* Left annotation column — white space outside grey email box */}
-                {hasAnnotations && leftAnnotations.length > 0 && (
-                  <div className="w-40 flex-shrink-0 relative bg-white" style={{ minHeight: emailHeight }}>
-                    {leftAnnotations.map((a, i) => {
-                      const yPct = BLOCK_Y_PCT[a.blockType] ?? (15 + i * 35);
-                      return (
-                        <div key={i} style={{ position: 'absolute', top: `${yPct}%`, transform: 'translateY(-50%)', left: 8, right: 4 }}>
-                          <AnnotationCard a={a} i={i * 2} side="left" />
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+              {/* Campaign card — email fills its full natural width */}
+              <div className="flex-1 min-w-0 bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
 
-                {/* Email iframe — in the grey box */}
+                {/* Meta bar */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-0.5">This Week's Campaign</p>
+                    <p className="text-sm font-bold text-gray-900 truncate">{campaign.subject}</p>
+                    {campaign.previewText && (
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{campaign.previewText}</p>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleRegenerate}
+                    disabled={regenerating}
+                    title="Generate a completely new campaign"
+                    className="flex-shrink-0 ml-3 flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-100 disabled:opacity-50 transition-all"
+                  >
+                    {regenerating ? <Loader className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    Regenerate
+                  </button>
+                </div>
+
+                {/* Email preview — full width of the card */}
                 <EmailPreview
                   html={campaign.bodyHtml || campaign.body_html || ''}
                   onHeightChange={setEmailHeight}
                 />
 
-                {/* Right annotation column — white space outside grey email box */}
-                {hasAnnotations && rightAnnotations.length > 0 && (
-                  <div className="w-40 flex-shrink-0 relative bg-white" style={{ minHeight: emailHeight }}>
-                    {rightAnnotations.map((a, i) => {
-                      const yPct = BLOCK_Y_PCT[a.blockType] ?? (30 + i * 35);
-                      return (
-                        <div key={i} style={{ position: 'absolute', top: `${yPct}%`, transform: 'translateY(-50%)', left: 4, right: 8 }}>
-                          <AnnotationCard a={a} i={i * 2 + 1} side="right" />
-                        </div>
-                      );
-                    })}
+                {/* CTA Button link */}
+                <div className="px-5 pb-3 border-t border-gray-100 pt-4">
+                  <p className="text-xs font-semibold text-gray-500 mb-1.5">Button link URL <span className="font-normal text-gray-400">(saved for all future campaigns)</span></p>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={ctaLink}
+                      onChange={e => setCtaLink(e.target.value)}
+                      onKeyDown={e => { if (e.key === 'Enter') saveCtaLink(); }}
+                      placeholder="https://yourbusiness.com/book"
+                      className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-gray-400 outline-none"
+                    />
+                    <button
+                      onClick={saveCtaLink}
+                      disabled={savingCtaLink}
+                      className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all flex-shrink-0"
+                    >
+                      {savingCtaLink ? <Loader className="w-4 h-4 animate-spin" /> : 'Save'}
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
 
-              {/* CTA Button link */}
-              <div className="px-5 pb-3 border-t border-gray-100 pt-4">
-                <p className="text-xs font-semibold text-gray-500 mb-1.5">Button link URL <span className="font-normal text-gray-400">(saved for all future campaigns)</span></p>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={ctaLink}
-                    onChange={e => setCtaLink(e.target.value)}
-                    onKeyDown={e => { if (e.key === 'Enter') saveCtaLink(); }}
-                    placeholder="https://yourbusiness.com/book"
-                    className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-gray-400 outline-none"
-                  />
+                {/* Actions */}
+                <div className="flex gap-3 px-5 pb-5">
                   <button
-                    onClick={saveCtaLink}
-                    disabled={savingCtaLink}
-                    className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all flex-shrink-0"
+                    onClick={handleTestSend}
+                    disabled={sendingTest}
+                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 transition-all"
                   >
-                    {savingCtaLink ? <Loader className="w-4 h-4 animate-spin" /> : 'Save'}
+                    {sendingTest ? <Loader className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
+                    {sendingTest ? 'Sending…' : 'Send Test to Me'}
+                  </button>
+                  <button
+                    onClick={handleApprove}
+                    disabled={sending}
+                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-all shadow-sm shadow-green-200"
+                  >
+                    {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                    {sending ? 'Sending…' : `Approve & Send to ${stats?.subscriberCount ?? 'All'} Customers`}
                   </button>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex gap-3 px-5 pb-5">
-                <button
-                  onClick={handleTestSend}
-                  disabled={sendingTest}
-                  className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 transition-all"
+              {/* Right annotation column — floats beside the card, NOT inside it */}
+              {hasAnnotations && rightAnnotations.length > 0 && (
+                <div
+                  className="w-40 flex-shrink-0 relative"
+                  style={{ height: emailHeight, marginTop: 86 }}
                 >
-                  {sendingTest ? <Loader className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
-                  {sendingTest ? 'Sending…' : 'Send Test to Me'}
-                </button>
-                <button
-                  onClick={handleApprove}
-                  disabled={sending}
-                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-all shadow-sm shadow-green-200"
-                >
-                  {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                  {sending ? 'Sending…' : `Approve & Send to ${stats?.subscriberCount ?? 'All'} Customers`}
-                </button>
-              </div>
+                  {rightAnnotations.map((a, i) => {
+                    const yPct = BLOCK_Y_PCT[a.blockType] ?? (30 + i * 35);
+                    return (
+                      <div key={i} style={{ position: 'absolute', top: `${yPct}%`, transform: 'translateY(-50%)', left: 0, right: 0 }}>
+                        <AnnotationCard a={a} i={i * 2 + 1} side="right" />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
+
           ) : (
-            /* No campaign — just sent or none */
-            <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+            /* No campaign state */
+            <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-200 p-12 text-center">
               <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <CheckCircle className="w-7 h-7 text-green-500" />
               </div>
@@ -910,7 +915,9 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
           )}
 
           {/* Past campaigns */}
-          <PastCampaigns history={history} />
+          <div className="max-w-2xl mx-auto mt-5">
+            <PastCampaigns history={history} />
+          </div>
 
         </div>
       </div>
