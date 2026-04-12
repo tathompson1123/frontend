@@ -16,10 +16,10 @@ const BUSINESS_TYPES = [
 ];
 
 const LEAD_OPTIONS = [
-  { value: '0-5',  label: '0 – 5',   sub: 'Just getting started' },
-  { value: '5-15', label: '5 – 15',  sub: 'Steady flow of prospects' },
-  { value: '15-30',label: '15 – 30', sub: 'Consistently busy' },
-  { value: '30+',  label: '30+',     sub: 'High-volume operation' },
+  { value: '0-10',   label: '0 – 10',   sub: 'Just getting started' },
+  { value: '10-50',  label: '10 – 50',  sub: 'Building momentum' },
+  { value: '50-150', label: '50 – 150', sub: 'Established & growing' },
+  { value: '150+',   label: '150+',     sub: 'High-volume operation' },
 ];
 
 const REVENUE_OPTIONS = [
