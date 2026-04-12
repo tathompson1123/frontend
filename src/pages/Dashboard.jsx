@@ -537,6 +537,7 @@ useEffect(() => {
           apiUrl={apiUrl}
           authFetch={authFetch}
           onDirtyChange={handleDirtyChange}
+          inOnboarding={inOnboarding}
         />
       )}
       {currentView === 'website' && (

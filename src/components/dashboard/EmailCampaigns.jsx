@@ -276,6 +276,18 @@ function SettingsModal({ config, onSave, onClose }) {
   );
 }
 
+// ── Block y-position map (% down the email each block typically appears) ─────
+const BLOCK_Y_PCT = {
+  header:       4,
+  hero_image:   22,
+  urgency_bar:  36,
+  body:         52,
+  offer_box:    67,
+  cta_button:   80,
+  signoff:      90,
+  footer:       96,
+};
+
 // ── Annotation ink colors ────────────────────────────────────
 const ANNOTATION_INKS = [
   { color: '#2563eb', light: '#dbeafe' }, // blue
@@ -284,6 +296,44 @@ const ANNOTATION_INKS = [
   { color: '#059669', light: '#d1fae5' }, // green
   { color: '#dc2626', light: '#fee2e2' }, // red
 ];
+
+// ── Onboarding intro typing screen ───────────────────────────
+const INTRO_TEXT = "Let's get this started with a bang and generate some sales!";
+
+function IntroScreen({ onDone }) {
+  const [displayed, setDisplayed] = useState('');
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    let i = 0;
+    const iv = setInterval(() => {
+      i++;
+      setDisplayed(INTRO_TEXT.slice(0, i));
+      if (i >= INTRO_TEXT.length) {
+        clearInterval(iv);
+        setTimeout(() => {
+          setFading(true);
+          setTimeout(onDone, 500);
+        }, 1200);
+      }
+    }, 38);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div className={`flex flex-col items-center justify-center py-24 px-8 transition-opacity duration-500 ${fading ? 'opacity-0' : 'opacity-100'}`}>
+      <div className="w-16 h-16 bg-gradient-to-br from-amber-400 to-blue-600 rounded-2xl flex items-center justify-center mb-8 shadow-lg">
+        <Sparkles className="w-8 h-8 text-white" />
+      </div>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center max-w-md leading-snug">
+        {displayed}
+        {displayed.length < INTRO_TEXT.length && (
+          <span className="inline-block w-0.5 h-7 bg-amber-500 ml-0.5 align-middle animate-pulse" />
+        )}
+      </h1>
+    </div>
+  );
+}
 
 // ── Annotation note card ─────────────────────────────────────
 function AnnotationCard({ a, i, side }) {
@@ -342,8 +392,8 @@ function AnnotationCard({ a, i, side }) {
   );
 }
 
-// ── Email preview + side annotations ────────────────────────
-function EmailPreview({ html, annotations }) {
+// ── Email iframe only (no annotations) ──────────────────────
+function EmailPreview({ html, onHeightChange }) {
   const iframeRef = useRef(null);
 
   useEffect(() => {
@@ -355,56 +405,23 @@ function EmailPreview({ html, annotations }) {
     doc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0;padding:16px;background:#f3f4f6;font-family:Arial,sans-serif}*{box-sizing:border-box}</style></head><body>${html}</body></html>`);
     doc.close();
     const resize = () => {
-      try { iframe.style.height = doc.body.scrollHeight + 32 + 'px'; } catch {}
+      try {
+        const h = doc.body.scrollHeight + 32;
+        iframe.style.height = h + 'px';
+        onHeightChange?.(h);
+      } catch {}
     };
     setTimeout(resize, 100);
   }, [html]);
 
-  const hasAnnotations = annotations && annotations.length > 0;
-  const leftWithIdx = hasAnnotations ? annotations.map((a, i) => ({ a, i })).filter((_, i) => i % 2 === 0) : [];
-  const rightWithIdx = hasAnnotations ? annotations.map((a, i) => ({ a, i })).filter((_, i) => i % 2 === 1) : [];
-
   return (
-    <div className="bg-gray-100 py-4 px-3">
-      {/* "Why it works" label — only shown when there are annotations */}
-      {hasAnnotations && (
-        <div className="flex items-center gap-1 mb-3 px-1">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
-          </svg>
-          <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Why it works</span>
-        </div>
-      )}
-
-      <div className="flex items-start gap-3">
-        {/* Left annotations — sit in the grey space to the left of the email */}
-        {hasAnnotations && (
-          <div className="w-36 flex-shrink-0 space-y-2">
-            {leftWithIdx.map(({ a, i }) => (
-              <AnnotationCard key={i} a={a} i={i} side="left" />
-            ))}
-          </div>
-        )}
-
-        {/* Email iframe */}
-        <div className="flex-1">
-          <iframe
-            ref={iframeRef}
-            title="Email Preview"
-            className="w-full rounded-xl border border-gray-200 bg-white"
-            style={{ minHeight: 400 }}
-          />
-        </div>
-
-        {/* Right annotations — sit in the grey space to the right of the email */}
-        {hasAnnotations && (
-          <div className="w-36 flex-shrink-0 space-y-2">
-            {rightWithIdx.map(({ a, i }) => (
-              <AnnotationCard key={i} a={a} i={i} side="right" />
-            ))}
-          </div>
-        )}
-      </div>
+    <div className="flex-1 bg-gray-100 py-4 px-3">
+      <iframe
+        ref={iframeRef}
+        title="Email Preview"
+        className="w-full rounded-xl border border-gray-200 bg-white"
+        style={{ minHeight: 400 }}
+      />
     </div>
   );
 }
@@ -449,7 +466,7 @@ function PastCampaigns({ history }) {
 }
 
 // ── Main Component ────────────────────────────────────────────
-export default function EmailCampaigns({ apiUrl, authFetch, user }) {
+export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }) {
   const [campaign, setCampaign] = useState(null);  // current draft
   const [draftId, setDraftId] = useState(null);
   const [config, setConfig] = useState({ from_name: '', from_email: '', send_day: 'monday', send_hour: 9, enabled: true, auto_send: false, cta_link: '' });
@@ -471,6 +488,16 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
 
   // First-time import screen
   const [showImportScreen, setShowImportScreen] = useState(false);
+
+  // Onboarding intro
+  const [showIntro, setShowIntro] = useState(() => {
+    if (!inOnboarding) return false;
+    const seen = localStorage.getItem('email_intro_seen');
+    return !seen;
+  });
+
+  // Email height for annotation column positioning
+  const [emailHeight, setEmailHeight] = useState(640);
 
   // UI state
   const [showSettings, setShowSettings] = useState(false);
@@ -659,8 +686,23 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
     return <FirstTimeImportScreen apiUrl={apiUrl} authFetch={authFetch} onImportDone={handleImportDone} />;
   }
 
+  if (showIntro) {
+    return (
+      <IntroScreen onDone={() => {
+        localStorage.setItem('email_intro_seen', '1');
+        setShowIntro(false);
+      }} />
+    );
+  }
+
+  // Annotation layout helpers (computed here so JSX stays clean)
+  const campaignAnnotations = campaign?.annotations || [];
+  const hasAnnotations = campaignAnnotations.length > 0;
+  const leftAnnotations = campaignAnnotations.filter((_, i) => i % 2 === 0);
+  const rightAnnotations = campaignAnnotations.filter((_, i) => i % 2 === 1);
+
   return (
-    <div className="flex flex-col bg-gray-50" style={{ height: 'calc(100vh - 112px)' }}>
+    <div className="flex flex-col bg-gray-50" style={inOnboarding ? {} : { height: 'calc(100vh - 112px)' }}>
 
       {/* Toast */}
       {toast && (
@@ -676,7 +718,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
       )}
 
       {/* Scrollable content area */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className={inOnboarding ? '' : 'flex-1 overflow-y-auto min-h-0'}>
         <div className="max-w-2xl mx-auto w-full px-4 py-6 space-y-5">
 
           {/* Header */}
@@ -752,11 +794,52 @@ export default function EmailCampaigns({ apiUrl, authFetch, user }) {
                 </button>
               </div>
 
-              {/* Email preview — annotations live in the grey space around the iframe */}
-              <EmailPreview
-                html={campaign.bodyHtml || campaign.body_html || ''}
-                annotations={campaign.annotations}
-              />
+              {/* "Why it works" label — sits in the white card, above the email row */}
+              {hasAnnotations && (
+                <div className="flex items-center gap-1.5 px-5 pt-3 pb-1">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                  </svg>
+                  <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Why it works</span>
+                </div>
+              )}
+
+              {/* Annotation columns + email preview row */}
+              <div className="flex items-stretch">
+                {/* Left annotation column — white space outside grey email box */}
+                {hasAnnotations && leftAnnotations.length > 0 && (
+                  <div className="w-40 flex-shrink-0 relative bg-white" style={{ minHeight: emailHeight }}>
+                    {leftAnnotations.map((a, i) => {
+                      const yPct = BLOCK_Y_PCT[a.blockType] ?? (15 + i * 35);
+                      return (
+                        <div key={i} style={{ position: 'absolute', top: `${yPct}%`, transform: 'translateY(-50%)', left: 8, right: 4 }}>
+                          <AnnotationCard a={a} i={i * 2} side="left" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Email iframe — in the grey box */}
+                <EmailPreview
+                  html={campaign.bodyHtml || campaign.body_html || ''}
+                  onHeightChange={setEmailHeight}
+                />
+
+                {/* Right annotation column — white space outside grey email box */}
+                {hasAnnotations && rightAnnotations.length > 0 && (
+                  <div className="w-40 flex-shrink-0 relative bg-white" style={{ minHeight: emailHeight }}>
+                    {rightAnnotations.map((a, i) => {
+                      const yPct = BLOCK_Y_PCT[a.blockType] ?? (30 + i * 35);
+                      return (
+                        <div key={i} style={{ position: 'absolute', top: `${yPct}%`, transform: 'translateY(-50%)', left: 4, right: 8 }}>
+                          <AnnotationCard a={a} i={i * 2 + 1} side="right" />
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
 
               {/* CTA Button link */}
               <div className="px-5 pb-3 border-t border-gray-100 pt-4">
