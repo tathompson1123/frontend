@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   MessageCircle, Zap, Star, Mail, Users,
   ChevronRight, ChevronLeft, Check, ArrowRight, Sparkles, TrendingUp,
-  Briefcase, Plus, X
+  Briefcase
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -100,8 +100,7 @@ export default function OnboardingQuestionnairePage() {
   // Step 1 — Business profile
   const [businessType, setBusinessType] = useState('');
   const [customBusinessType, setCustomBusinessType] = useState('');
-  const [serviceInput, setServiceInput] = useState('');
-  const [services, setServices] = useState([]);
+  const [servicesText, setServicesText] = useState('');
   const [knownFor, setKnownFor] = useState('');
 
   // Step 2 — Leads
@@ -123,22 +122,8 @@ export default function OnboardingQuestionnairePage() {
     setTimeout(() => { setStep(next); setAnimating(false); }, 220);
   };
 
-  const addService = () => {
-    const s = serviceInput.trim();
-    if (s && !services.includes(s) && services.length < 10) {
-      setServices([...services, s]);
-      setServiceInput('');
-    }
-  };
-
-  const removeService = (s) => setServices(services.filter(x => x !== s));
-
-  const handleServiceKeyDown = (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); addService(); }
-  };
-
   const finalBusinessType = businessType === 'Other' ? customBusinessType.trim() : businessType;
-  const step1Valid = finalBusinessType && services.length > 0 && knownFor.trim();
+  const step1Valid = finalBusinessType && servicesText.trim() && knownFor.trim();
 
   const handleFinish = async () => {
     setSaving(true);
@@ -149,7 +134,7 @@ export default function OnboardingQuestionnairePage() {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           businessType: finalBusinessType,
-          businessServices: services.join(', '),
+          businessServices: servicesText.trim(),
           businessKnownFor: knownFor.trim(),
           leadsPerWeek,
           revenueRange,
@@ -250,37 +235,14 @@ export default function OnboardingQuestionnairePage() {
               <div className="mb-6">
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   What services do you provide?
-                  <span className="text-gray-400 font-normal ml-1">(add up to 10)</span>
                 </label>
-                <div className="flex gap-2 mb-2">
-                  <input
-                    type="text"
-                    value={serviceInput}
-                    onChange={e => setServiceInput(e.target.value)}
-                    onKeyDown={handleServiceKeyDown}
-                    placeholder="e.g. Drain cleaning, Water heater install…"
-                    className="flex-1 border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-amber-400 outline-none"
-                  />
-                  <button
-                    onClick={addService}
-                    disabled={!serviceInput.trim() || services.length >= 10}
-                    className="px-4 py-2.5 bg-amber-500 text-white rounded-xl font-semibold text-sm hover:bg-amber-600 transition-all disabled:opacity-40"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-                {services.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {services.map(s => (
-                      <span key={s} className="flex items-center gap-1 px-3 py-1 bg-blue-50 border border-blue-200 text-blue-800 text-sm rounded-full">
-                        {s}
-                        <button onClick={() => removeService(s)} className="text-blue-400 hover:text-blue-700">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </span>
-                    ))}
-                  </div>
-                )}
+                <textarea
+                  value={servicesText}
+                  onChange={e => setServicesText(e.target.value)}
+                  placeholder="e.g. Drain cleaning, water heater install, pipe repair…"
+                  rows={3}
+                  className="w-full border-2 border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:border-amber-400 outline-none resize-none"
+                />
               </div>
 
               {/* Known for */}
