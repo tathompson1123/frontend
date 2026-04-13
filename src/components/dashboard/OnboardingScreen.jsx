@@ -3,6 +3,7 @@ import {
   Mail, Briefcase, Search, MapPin, Globe, Bot,
   CheckCircle, Lock, ChevronRight, X, Sparkles
 } from 'lucide-react';
+import OakameLoader from '../OakameLoader';
 
 export const ONBOARDING_STEPS = [
   {
@@ -10,11 +11,12 @@ export const ONBOARDING_STEPS = [
     num: 1,
     icon: Mail,
     label: 'Email Marketing',
-    title: 'Import your customers & send your first email',
-    description: "Let's get you started off with a bang and get some repeat business going. Upload your customer base using a CSV file from your current CRM.",
+    title: 'Turn past customers into revenue',
+    description: "Upload your customer list and we'll write a personalized promotional email for them — ready to send in seconds.",
     view: 'email-campaigns',
     color: 'from-blue-500 to-indigo-600',
     accent: 'blue',
+    transitionText: "Now let's take a quick moment to set up the boring stuff",
   },
   {
     key: 'flow_business',
@@ -26,6 +28,7 @@ export const ONBOARDING_STEPS = [
     view: 'business-settings',
     color: 'from-violet-500 to-purple-600',
     accent: 'violet',
+    transitionText: "Great — now let's see how your website is ranking in search",
   },
   {
     key: 'flow_seo',
@@ -37,6 +40,7 @@ export const ONBOARDING_STEPS = [
     view: 'seo-audit',
     color: 'from-teal-500 to-cyan-600',
     accent: 'teal',
+    transitionText: "Nice — time to check your Google Business Profile",
   },
   {
     key: 'flow_gbp',
@@ -48,6 +52,7 @@ export const ONBOARDING_STEPS = [
     view: 'google-business',
     color: 'from-orange-500 to-amber-600',
     accent: 'orange',
+    transitionText: "Looking good — let's get SORCE live on your website",
   },
   {
     key: 'flow_embed',
@@ -59,6 +64,7 @@ export const ONBOARDING_STEPS = [
     view: 'website',
     color: 'from-pink-500 to-rose-600',
     accent: 'pink',
+    transitionText: "Almost there — let's get your AI agent trained and deployed",
   },
   {
     key: 'flow_agent',
@@ -70,8 +76,48 @@ export const ONBOARDING_STEPS = [
     view: 'ai-agents',
     color: 'from-amber-500 to-yellow-500',
     accent: 'amber',
+    transitionText: null,
   },
 ];
+
+// ── Step transition animation ─────────────────────────────────
+function StepTransitionScreen({ text, onDone }) {
+  const [displayed, setDisplayed] = useState('');
+  const [fading, setFading] = useState(false);
+
+  useEffect(() => {
+    const startDelay = setTimeout(() => {
+      let i = 0;
+      const iv = setInterval(() => {
+        i++;
+        setDisplayed(text.slice(0, i));
+        if (i >= text.length) {
+          clearInterval(iv);
+          setTimeout(() => {
+            setFading(true);
+            setTimeout(onDone, 500);
+          }, 1200);
+        }
+      }, 36);
+      return () => clearInterval(iv);
+    }, 400);
+    return () => clearTimeout(startDelay);
+  }, []);
+
+  return (
+    <div className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-white transition-opacity duration-500 ${fading ? 'opacity-0' : 'opacity-100'}`}>
+      <div className="mb-10">
+        <OakameLoader size="xl" color="#f59e0b" />
+      </div>
+      <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 text-center max-w-md leading-snug min-h-[3rem] px-8">
+        {displayed}
+        {displayed.length > 0 && displayed.length < text.length && (
+          <span className="inline-block w-0.5 h-7 bg-amber-500 ml-0.5 align-middle animate-pulse" />
+        )}
+      </h1>
+    </div>
+  );
+}
 
 function getFlow() {
   try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; }
@@ -84,24 +130,41 @@ export function isOnboardingComplete() {
 
 export default function OnboardingScreen({ currentView, setCurrentView, onSkip, children }) {
   const [flow, setFlow] = useState(getFlow);
+  const [transitionText, setTransitionText] = useState(null);
+  const [pendingView, setPendingView] = useState(null);
 
   useEffect(() => {
-    const handler = () => {
+    const handleFlowDone = (e) => {
       const f = getFlow();
       setFlow({ ...f });
-      // Auto-advance to next incomplete step
+      const completedKey = e?.detail?.key;
+      const completedIdx = ONBOARDING_STEPS.findIndex(s => s.key === completedKey);
+      // Always go to the sequential next step, even if it's already been completed
+      const nextStep = completedIdx >= 0 ? ONBOARDING_STEPS[completedIdx + 1] : null;
+      if (!nextStep) return;
+      const completedStep = ONBOARDING_STEPS[completedIdx];
+      if (completedStep?.transitionText) {
+        setPendingView(nextStep.view);
+        setTransitionText(completedStep.transitionText);
+      } else {
+        setCurrentView(nextStep.view);
+      }
+    };
+    const handleStorage = () => {
+      const f = getFlow();
+      setFlow({ ...f });
       const next = ONBOARDING_STEPS.find(s => !f[s.key]);
       if (next) setCurrentView(next.view);
     };
-    window.addEventListener('flow-step-done', handler);
-    window.addEventListener('storage', handler);
+    window.addEventListener('flow-step-done', handleFlowDone);
+    window.addEventListener('storage', handleStorage);
     return () => {
-      window.removeEventListener('flow-step-done', handler);
-      window.removeEventListener('storage', handler);
+      window.removeEventListener('flow-step-done', handleFlowDone);
+      window.removeEventListener('storage', handleStorage);
     };
   }, [setCurrentView]);
 
-  // On mount, force view to active step
+  // On mount, force view to first incomplete step (no animation)
   useEffect(() => {
     const f = getFlow();
     const next = ONBOARDING_STEPS.find(s => !f[s.key]);
@@ -109,10 +172,27 @@ export default function OnboardingScreen({ currentView, setCurrentView, onSkip, 
   }, []);
 
   const doneCount = ONBOARDING_STEPS.filter(s => flow[s.key]).length;
-  const activeStep = ONBOARDING_STEPS.find(s => !flow[s.key]) || ONBOARDING_STEPS[ONBOARDING_STEPS.length - 1];
+  // Show step info based on what's currently on screen, not just first incomplete
+  const activeStep = ONBOARDING_STEPS.find(s => s.view === currentView)
+    || ONBOARDING_STEPS.find(s => !flow[s.key])
+    || ONBOARDING_STEPS[ONBOARDING_STEPS.length - 1];
 
   return (
     <div className="fixed inset-0 z-50 bg-white flex flex-col">
+
+      {/* Step transition overlay */}
+      {transitionText && (
+        <StepTransitionScreen
+          text={transitionText}
+          onDone={() => {
+            setTransitionText(null);
+            if (pendingView) {
+              setCurrentView(pendingView);
+              setPendingView(null);
+            }
+          }}
+        />
+      )}
 
       {/* Top bar */}
       <div className="flex-shrink-0 h-14 border-b border-gray-200 flex items-center justify-between px-6 bg-white">

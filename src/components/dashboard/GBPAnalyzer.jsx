@@ -97,7 +97,7 @@ function ActionDescription({ description }) {
 }
 
 // ─── Main Component ───────────────────────────────────────
-export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
+export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
   const [subTab, setSubTab] = useState('audit');
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
@@ -121,10 +121,21 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
   const [mapsApiKey, setMapsApiKey] = useState(null);
   const [hoveredPoint, setHoveredPoint] = useState(null);
 
-  // ── Load existing profile + maps key on mount ──
+  // ── Load existing profile + maps key on mount, auto-populate business name ──
   useEffect(() => {
     loadProfile();
     loadMapsKey();
+    // Fetch business name from settings if not already in user prop
+    const currentQuery = (user?.business_name || user?.businessName || '').trim();
+    if (!currentQuery) {
+      authFetch(`${apiUrl}/api/business-info`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          const name = (data?.businessInfo?.business_name || '').trim();
+          if (name) setSearchQuery(name);
+        })
+        .catch(() => {});
+    }
   }, []);
 
   async function loadMapsKey() {
@@ -147,10 +158,39 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
     try {
       const res = await authFetch(`${apiUrl}/api/gbp-analyzer/search?q=${encodeURIComponent(query)}`);
       const data = await res.json();
-      setSearchResults(data.results || []);
-      setShowResults(true);
+      const results = data.results || [];
+      setSearchResults(results);
+      if (results.length > 0) setShowResults(true);
     } catch {
       setSearchResults([]);
+    } finally {
+      setSearching(false);
+    }
+  }
+
+  async function handleSearchAnalyze() {
+    if (!searchQuery.trim()) return;
+    // If we already have results, pick the first one
+    if (searchResults.length > 0) {
+      selectBusiness(searchResults[0]);
+      return;
+    }
+    // Otherwise search first, then pick the first result
+    setSearching(true);
+    setError(null);
+    try {
+      const res = await authFetch(`${apiUrl}/api/gbp-analyzer/search?q=${encodeURIComponent(searchQuery)}`);
+      const data = await res.json();
+      const results = data.results || [];
+      if (results.length > 0) {
+        setSearchResults(results);
+        selectBusiness(results[0]);
+      } else {
+        setSearchResults([]);
+        setError('No businesses found. Try a more specific name or use "Paste URL" mode.');
+      }
+    } catch {
+      setError('Search failed. Please try again.');
     } finally {
       setSearching(false);
     }
@@ -334,7 +374,7 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
   // ── No profile yet — show analysis input ──
   if (!profile) {
     return (
-      <div className="max-w-xl mx-auto">
+      <div className="max-w-xl mx-auto space-y-4">
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl border-2 border-amber-200 p-8 text-center">
           <div className="w-16 h-16 bg-amber-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
             <Search className="w-8 h-8 text-amber-600" />
@@ -368,8 +408,9 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
                     type="text"
                     value={searchQuery}
                     onChange={e => { setSearchQuery(e.target.value); setShowResults(true); }}
-                    onFocus={() => searchResults.length > 0 && setShowResults(true)}
-                    onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                    onFocus={() => setShowResults(searchResults.length > 0)}
+                    onBlur={() => setTimeout(() => setShowResults(false), 250)}
+                    onKeyDown={e => e.key === 'Enter' && !analyzing && handleSearchAnalyze()}
                     placeholder="Type your business name..."
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   />
@@ -377,6 +418,14 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
                     <Loader2 className="w-4 h-4 animate-spin text-gray-400 absolute right-3 top-3.5" />
                   )}
                 </div>
+                <button
+                  onClick={handleSearchAnalyze}
+                  disabled={analyzing || searching || !searchQuery.trim()}
+                  className="px-6 py-3 bg-amber-600 text-white rounded-lg font-semibold hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2 shrink-0"
+                >
+                  {analyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                  {analyzing ? 'Analyzing...' : 'Analyze'}
+                </button>
               </div>
 
               {/* Autocomplete dropdown */}
@@ -431,6 +480,22 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch }) {
             </div>
           )}
         </div>
+
+        {inOnboarding && (
+          <div className="text-center">
+            <button
+              onClick={() => {
+                const flow = JSON.parse(localStorage.getItem('onboarding_flow') || '{}');
+                flow.flow_gbp = true;
+                localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+                window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_gbp' } }));
+              }}
+              className="text-sm text-gray-400 hover:text-gray-600 transition-colors underline-offset-2 hover:underline"
+            >
+              I don't have a Google Business Profile
+            </button>
+          </div>
+        )}
       </div>
     );
   }

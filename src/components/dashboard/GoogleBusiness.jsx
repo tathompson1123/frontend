@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import GBPAnalyzer from './GBPAnalyzer';
 
-export default function GoogleBusiness({ apiUrl, user, authFetch }) {
+export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }) {
   const [activeTab, setActiveTab] = useState('analyzer');
   
   // Review Generator State
@@ -245,12 +245,6 @@ const saveReviewConfig = async () => {
         </div>
       )}
 
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">Google Business Profile</h2>
-        <p className="text-gray-600 mt-1">Manage reviews and automate customer feedback</p>
-      </div>
-
       {/* Tabs - Profile Analyzer first, Review Requests second, AI Reply Generator third */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
@@ -268,32 +262,36 @@ const saveReviewConfig = async () => {
                 <span>Profile Analyzer</span>
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('review-requests')}
-              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
-                activeTab === 'review-requests'
-                  ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Send className="w-5 h-5" />
-                <span>Review Requests</span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab('reply-generator')}
-              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
-                activeTab === 'reply-generator'
-                  ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                <span>AI Reply Generator</span>
-              </div>
-            </button>
+            {!inOnboarding && (
+              <>
+                <button
+                  onClick={() => setActiveTab('review-requests')}
+                  className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+                    activeTab === 'review-requests'
+                      ? 'border-amber-600 text-amber-600 bg-amber-50'
+                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Send className="w-5 h-5" />
+                    <span>Review Requests</span>
+                  </div>
+                </button>
+                <button
+                  onClick={() => setActiveTab('reply-generator')}
+                  className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+                    activeTab === 'reply-generator'
+                      ? 'border-amber-600 text-amber-600 bg-amber-50'
+                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-5 h-5" />
+                    <span>AI Reply Generator</span>
+                  </div>
+                </button>
+              </>
+            )}
           </div>
         </div>
 
@@ -301,7 +299,7 @@ const saveReviewConfig = async () => {
         <div className="p-6">
           {/* PROFILE ANALYZER TAB */}
           {activeTab === 'analyzer' && (
-            <GBPAnalyzer apiUrl={apiUrl} user={user} authFetch={authFetch} />
+            <GBPAnalyzer apiUrl={apiUrl} user={user} authFetch={authFetch} inOnboarding={inOnboarding} />
           )}
 
           {/* REPLY GENERATOR TAB */}

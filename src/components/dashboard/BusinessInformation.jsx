@@ -147,7 +147,7 @@ function getOnboardingFlow() {
   try { return JSON.parse(localStorage.getItem('onboarding_flow') || '{}'); } catch { return {}; }
 }
 
-function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveTab }) {
+function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveTab, onSave }) {
   const [checked, setChecked] = useState(false);
   const [errors, setErrors] = useState([]);
   const [done, setDone] = useState(false);
@@ -186,7 +186,10 @@ function OnboardingBusinessCheck({ businessInfo, services, employees, setActiveT
     setDone(errs.length === 0);
   };
 
-  const markDone = () => {
+  const markDone = async () => {
+    if (onSave) {
+      try { await onSave(); } catch { /* proceed even if save fails */ }
+    }
     const flow = getOnboardingFlow();
     flow.flow_business = true;
     localStorage.setItem('onboarding_flow', JSON.stringify(flow));
@@ -482,6 +485,7 @@ export default function BusinessInformation({
   const [cancellationPolicyEnabled, setCancellationPolicyEnabled] = useState(false);
   const [cancellationPolicyText, setCancellationPolicyText] = useState('');
   const [savingCancellationPolicy, setSavingCancellationPolicy] = useState(false);
+  const [cancellationPolicySaved, setCancellationPolicySaved] = useState(false);
 
   const statusLabels = {
     in_progress: 'Job Started',
@@ -682,6 +686,8 @@ export default function BusinessInformation({
         method: 'PUT',
         body: JSON.stringify({ enabled: cancellationPolicyEnabled, text: cancellationPolicyText })
       });
+      setCancellationPolicySaved(true);
+      setTimeout(() => setCancellationPolicySaved(false), 3000);
     } catch (err) { console.error(err); }
     finally { setSavingCancellationPolicy(false); }
   };
@@ -1387,6 +1393,7 @@ export default function BusinessInformation({
         services={services}
         employees={employees}
         setActiveTab={setActiveTab}
+        onSave={handleSaveAll}
       />
 
       {/* Header */}
@@ -3399,7 +3406,12 @@ export default function BusinessInformation({
                   rows={4}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:border-blue-500 focus:outline-none text-sm resize-none"
                 />
-                <div className="flex justify-end mt-3">
+                <div className="flex items-center justify-end gap-3 mt-3">
+                  {cancellationPolicySaved && (
+                    <span className="flex items-center gap-1 text-sm text-green-600 font-medium">
+                      <CheckCircle className="w-4 h-4" /> Saved
+                    </span>
+                  )}
                   <button
                     onClick={saveCancellationPolicy}
                     disabled={savingCancellationPolicy}

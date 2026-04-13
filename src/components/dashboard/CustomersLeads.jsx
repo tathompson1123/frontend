@@ -215,11 +215,13 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         const headers = rawHeaders.map(h => h.toLowerCase().trim());
 
         // Bidirectional match: header contains term OR term contains header (handles short names like "First", "Last")
+        // Skip empty headers — empty string matches everything via String.includes(''), causing all columns to map to the first empty header
         const findCol = (...substrings) => {
           for (const sub of substrings) {
             const normSub = sub.replace(/[\s_\-]/g, '').toLowerCase();
             const idx = headers.findIndex(h => {
               const normH = h.replace(/[\s_\-]/g, '').toLowerCase();
+              if (!normH) return false; // skip empty header cells
               return normH === normSub || normH.includes(normSub) || normSub.includes(normH);
             });
             if (idx !== -1) return idx;

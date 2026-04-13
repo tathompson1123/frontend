@@ -356,7 +356,19 @@ export default function Billing({ user, apiUrl, authFetch }) {
               </div>
             </div>
             <div className="text-right">
-              <span className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full">Active</span>
+              {(() => {
+                const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at) : null;
+                const onTrial = trialEnd && trialEnd > new Date();
+                if (onTrial) {
+                  const daysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / 86400000));
+                  return (
+                    <span className="bg-green-400/30 text-white text-xs font-bold px-3 py-1.5 rounded-full">
+                      {daysLeft} day free trial
+                    </span>
+                  );
+                }
+                return <span className="bg-white/20 text-white text-xs font-bold px-3 py-1.5 rounded-full">Active</span>;
+              })()}
               {nextBilling && (
                 <p className="text-white/60 text-xs mt-2">Renews {nextBilling}</p>
               )}

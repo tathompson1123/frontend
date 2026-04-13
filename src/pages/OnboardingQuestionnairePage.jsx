@@ -29,6 +29,113 @@ const REVENUE_OPTIONS = [
   { value: '1m_plus',    label: '$1M+',             sub: 'Enterprise level' },
 ];
 
+// Mini illustrations for each feature card
+const ChatIllustration = () => (
+  <div className="flex flex-col gap-1.5 w-full px-3 pt-1">
+    <div className="flex items-end gap-1.5">
+      <div className="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">V</div>
+      <div className="bg-white rounded-2xl rounded-bl-none px-3 py-1.5 text-xs text-gray-700 shadow-sm max-w-[140px]">Hey! I need a quote 👋</div>
+    </div>
+    <div className="flex items-end gap-1.5 flex-row-reverse">
+      <div className="w-7 h-7 rounded-full bg-blue-500 flex items-center justify-center">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg>
+      </div>
+      <div className="bg-blue-500 rounded-2xl rounded-br-none px-3 py-1.5 text-xs text-white shadow-sm max-w-[150px]">I'd love to help! What service do you need?</div>
+    </div>
+    <div className="flex items-end gap-1.5">
+      <div className="w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-xs font-bold text-blue-700">V</div>
+      <div className="bg-white rounded-2xl rounded-bl-none px-3 py-1.5 text-xs text-gray-700 shadow-sm">AC repair, ASAP!</div>
+    </div>
+  </div>
+);
+
+const SmsIllustration = () => (
+  <div className="flex flex-col items-center justify-center w-full h-full gap-2">
+    <div className="relative">
+      <div className="w-14 h-20 rounded-xl border-2 border-gray-300 bg-gray-800 flex flex-col items-center justify-end pb-1.5 gap-1">
+        <div className="w-8 h-1 rounded bg-gray-600"/>
+        <div className="w-3 h-3 rounded-full border border-gray-500"/>
+      </div>
+      <div className="absolute -top-2 -right-2 bg-amber-400 text-white text-[10px] font-bold rounded-full w-6 h-6 flex items-center justify-center shadow">1</div>
+    </div>
+    <div className="bg-amber-50 border border-amber-200 rounded-xl px-3 py-1.5 text-[10px] text-amber-800 font-medium text-center leading-tight shadow-sm">
+      ⚡ New lead from your site!<br/>Texting them now…
+    </div>
+  </div>
+);
+
+const ReviewIllustration = () => (
+  <div className="flex flex-col items-center justify-center w-full h-full gap-2">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-2.5 w-full mx-3">
+      <div className="flex items-center gap-1.5 mb-1">
+        <div className="w-5 h-5 rounded-full bg-yellow-400 flex items-center justify-center text-[9px] font-bold text-white">G</div>
+        <span className="text-[11px] font-semibold text-gray-700">Google Review</span>
+      </div>
+      <div className="flex gap-0.5 mb-1">
+        {[1,2,3,4,5].map(i => <span key={i} className="text-yellow-400 text-sm">★</span>)}
+      </div>
+      <p className="text-[10px] text-gray-500 leading-tight">"Great service, highly recommend!"</p>
+    </div>
+    <div className="text-[10px] text-yellow-700 font-medium bg-yellow-50 rounded-lg px-2.5 py-1 border border-yellow-200">✓ Sent automatically after job</div>
+  </div>
+);
+
+const EmailIllustration = () => (
+  <div className="flex flex-col gap-1.5 w-full px-3">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-gray-800 px-3 py-1.5 flex items-center justify-between">
+        <span className="text-white text-[10px] font-semibold">April Flash Sale 🔥</span>
+        <span className="text-gray-400 text-[9px]">AI written</span>
+      </div>
+      <div className="px-3 py-2 space-y-1">
+        <div className="h-1.5 bg-gray-200 rounded w-full"/>
+        <div className="h-1.5 bg-gray-200 rounded w-4/5"/>
+        <div className="h-1.5 bg-gray-200 rounded w-3/5"/>
+        <div className="mt-2 bg-purple-500 rounded-lg py-1 px-2 text-white text-[9px] font-semibold text-center w-20">Book Now →</div>
+      </div>
+    </div>
+  </div>
+);
+
+const SeoIllustration = () => (
+  <div className="flex flex-col items-center justify-center w-full h-full gap-2 px-3">
+    <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 p-2.5">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold text-gray-600">SEO Score</span>
+        <span className="text-sm font-bold text-green-600">87</span>
+      </div>
+      <div className="flex items-end gap-1 h-8">
+        {[40,55,45,65,72,80,87].map((h, i) => (
+          <div key={i} className="flex-1 rounded-t" style={{ height: `${h}%`, backgroundColor: i === 6 ? '#22c55e' : `hsl(${140 + i*5}, 60%, ${65 + i*2}%)` }}/>
+        ))}
+      </div>
+      <div className="flex justify-between mt-1">
+        <span className="text-[8px] text-gray-400">Before</span>
+        <span className="text-[8px] text-green-600 font-medium">After SORCE</span>
+      </div>
+    </div>
+  </div>
+);
+
+const CrmIllustration = () => (
+  <div className="flex flex-col gap-1.5 w-full px-3">
+    {[
+      { name: 'John D.', status: 'New Lead', dot: 'bg-blue-400' },
+      { name: 'Sarah M.', status: 'Quoted', dot: 'bg-amber-400' },
+      { name: 'Mike R.', status: 'Booked ✓', dot: 'bg-green-400' },
+    ].map((c, i) => (
+      <div key={i} className="bg-white rounded-xl shadow-sm border border-gray-100 px-3 py-1.5 flex items-center gap-2">
+        <div className="w-6 h-6 rounded-full bg-rose-100 flex items-center justify-center text-[9px] font-bold text-rose-600">{c.name[0]}</div>
+        <span className="text-[10px] font-semibold text-gray-700 flex-1">{c.name}</span>
+        <div className="flex items-center gap-1">
+          <div className={`w-1.5 h-1.5 rounded-full ${c.dot}`}/>
+          <span className="text-[9px] text-gray-500">{c.status}</span>
+        </div>
+      </div>
+    ))}
+  </div>
+);
+
 const FEATURE_OPTIONS = [
   {
     value: 'ai_chat',
@@ -37,6 +144,8 @@ const FEATURE_OPTIONS = [
     sub: '24/7 lead capture & qualification on your site',
     color: 'blue',
     firstStep: 'Deploy your AI Chat Agent on your website from the AI Agents tab.',
+    illustration: ChatIllustration,
+    illustrationBg: 'from-blue-50 to-blue-100',
   },
   {
     value: 'sms_followup',
@@ -45,6 +154,8 @@ const FEATURE_OPTIONS = [
     sub: 'Auto-text new leads within 60 seconds of contact',
     color: 'amber',
     firstStep: 'Enable the SMS Lead Agent in the AI Agents tab — it starts working immediately.',
+    illustration: SmsIllustration,
+    illustrationBg: 'from-amber-50 to-amber-100',
   },
   {
     value: 'reviews',
@@ -53,6 +164,8 @@ const FEATURE_OPTIONS = [
     sub: 'Auto-request Google reviews after every completed job',
     color: 'yellow',
     firstStep: 'Add your Google Review link in Business Settings to start collecting reviews.',
+    illustration: ReviewIllustration,
+    illustrationBg: 'from-yellow-50 to-yellow-100',
   },
   {
     value: 'email_marketing',
@@ -61,6 +174,8 @@ const FEATURE_OPTIONS = [
     sub: 'Weekly AI-written campaigns sent to past customers',
     color: 'purple',
     firstStep: 'Set up your email list in the Email Campaigns tab to launch your first campaign.',
+    illustration: EmailIllustration,
+    illustrationBg: 'from-purple-50 to-purple-100',
   },
   {
     value: 'seo_audit',
@@ -69,6 +184,8 @@ const FEATURE_OPTIONS = [
     sub: "See exactly what's holding your site back in search rankings",
     color: 'green',
     firstStep: 'Run your first SEO audit from the SEO Analyzer tab to find quick wins.',
+    illustration: SeoIllustration,
+    illustrationBg: 'from-green-50 to-green-100',
   },
   {
     value: 'crm',
@@ -77,16 +194,18 @@ const FEATURE_OPTIONS = [
     sub: 'Manage all leads and customers in one place',
     color: 'rose',
     firstStep: 'Import your existing customer list in the Customers & Leads tab to get started.',
+    illustration: CrmIllustration,
+    illustrationBg: 'from-rose-50 to-rose-100',
   },
 ];
 
 const COLOR_MAP = {
-  blue:   { bg: 'bg-blue-50',   border: 'border-blue-400',   icon: 'text-blue-600',   ring: 'ring-blue-400' },
-  amber:  { bg: 'bg-amber-50',  border: 'border-amber-400',  icon: 'text-amber-600',  ring: 'ring-amber-400' },
-  yellow: { bg: 'bg-yellow-50', border: 'border-yellow-400', icon: 'text-yellow-600', ring: 'ring-yellow-400' },
-  purple: { bg: 'bg-purple-50', border: 'border-purple-400', icon: 'text-purple-600', ring: 'ring-purple-400' },
-  green:  { bg: 'bg-green-50',  border: 'border-green-400',  icon: 'text-green-600',  ring: 'ring-green-400' },
-  rose:   { bg: 'bg-rose-50',   border: 'border-rose-400',   icon: 'text-rose-600',   ring: 'ring-rose-400' },
+  blue:   { border: 'border-blue-400',   icon: 'text-blue-600',   iconBg: 'bg-blue-100',   check: 'bg-blue-500' },
+  amber:  { border: 'border-amber-400',  icon: 'text-amber-600',  iconBg: 'bg-amber-100',  check: 'bg-amber-500' },
+  yellow: { border: 'border-yellow-400', icon: 'text-yellow-600', iconBg: 'bg-yellow-100', check: 'bg-yellow-500' },
+  purple: { border: 'border-purple-400', icon: 'text-purple-600', iconBg: 'bg-purple-100', check: 'bg-purple-500' },
+  green:  { border: 'border-green-400',  icon: 'text-green-600',  iconBg: 'bg-green-100',  check: 'bg-green-500' },
+  rose:   { border: 'border-rose-400',   icon: 'text-rose-600',   iconBg: 'bg-rose-100',   check: 'bg-rose-500' },
 };
 
 const TOTAL_STEPS = 4;
@@ -114,10 +233,12 @@ export default function OnboardingQuestionnairePage() {
     const token = localStorage.getItem('token');
     if (!token) { navigate('/'); return; }
     const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!user.email_verified) { navigate('/verify-email', { replace: true }); return; }
     if (user.questionnaire_completed) { navigate('/dashboard', { replace: true }); }
   }, [navigate]);
 
   const goTo = (next) => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     setAnimating(true);
     setTimeout(() => { setStep(next); setAnimating(false); }, 220);
   };
@@ -325,32 +446,36 @@ export default function OnboardingQuestionnairePage() {
                 What excites you most about SORCE?
               </h1>
               <p className="text-gray-500 text-center mb-8">We'll make sure this is the first thing you see in your dashboard.</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {FEATURE_OPTIONS.map(feat => {
                   const Icon = feat.icon;
                   const c = COLOR_MAP[feat.color];
                   const selected = interestedFeature === feat.value;
+                  const Illustration = feat.illustration;
                   return (
                     <button
                       key={feat.value}
                       onClick={() => setInterestedFeature(feat.value)}
-                      className={`p-4 rounded-2xl border-2 text-left transition-all duration-150 hover:shadow-md flex items-start gap-3 ${
-                        selected ? `${c.border} ${c.bg} shadow-md` : 'border-gray-200 bg-white hover:border-gray-300'
+                      className={`rounded-2xl border-2 text-left transition-all duration-150 hover:shadow-md overflow-hidden flex flex-col ${
+                        selected ? `${c.border} shadow-md` : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
-                      <div className={`p-2 rounded-xl ${selected ? c.bg : 'bg-gray-100'} flex-shrink-0 mt-0.5`}>
-                        <Icon className={`w-5 h-5 ${selected ? c.icon : 'text-gray-500'}`} />
+                      {/* Illustration area */}
+                      <div className={`bg-gradient-to-b ${feat.illustrationBg} h-28 flex items-center justify-center relative`}>
+                        <Illustration />
+                        {selected && (
+                          <div className={`absolute top-2 right-2 w-5 h-5 ${c.check} rounded-full flex items-center justify-center shadow`}>
+                            <Check className="w-3 h-3 text-white" strokeWidth={3} />
+                          </div>
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-gray-900 text-sm">{feat.label}</span>
-                          {selected && (
-                            <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                              <Check className="w-3 h-3 text-white" strokeWidth={3} />
-                            </div>
-                          )}
+                      {/* Label area */}
+                      <div className="p-3 bg-white flex-1">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${selected ? c.icon : 'text-gray-400'}`} />
+                          <span className="font-semibold text-gray-900 text-xs leading-tight">{feat.label}</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5 leading-snug">{feat.sub}</p>
+                        <p className="text-[10px] text-gray-500 leading-snug">{feat.sub}</p>
                       </div>
                     </button>
                   );

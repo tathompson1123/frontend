@@ -557,6 +557,7 @@ useEffect(() => {
             authFetch={authFetch}
             setCurrentView={requestViewChange}
             refreshWebsiteData={refreshWebsiteData}
+            inOnboarding={inOnboarding}
             onUserPlanUpdate={(plan) => {
               const updatedUser = { ...user, plan };
               localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -571,6 +572,7 @@ useEffect(() => {
           user={user}
           profileData={googleBusinessData}
           authFetch={authFetch}
+          inOnboarding={inOnboarding}
         />
       )}
       {currentView === 'business-settings' && (
@@ -597,7 +599,7 @@ useEffect(() => {
         </FeatureGate>
       )}
       {currentView === 'seo-audit' && (
-        <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} />
+        <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} inOnboarding={inOnboarding} />
       )}
       {currentView === 'payment-settings' && (
         <PaymentSettingsPage
@@ -793,6 +795,28 @@ useEffect(() => {
                 );
               }
 
+              // PRO trial check must come before plain pro check
+              const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at) : null;
+              const onTrial = trialEnd && trialEnd > new Date() && plan === 'pro';
+              if (onTrial) {
+                const daysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / 86400000));
+                return (
+                  <div className="flex items-center gap-3">
+                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
+                      {name}
+                    </h1>
+                    <Zap className="w-5 h-5 text-amber-500" />
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 shadow-sm shadow-amber-200">
+                      <Crown className="w-3 h-3" />
+                      PRO
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
+                      {daysLeft} day free trial
+                    </span>
+                  </div>
+                );
+              }
+
               if (plan === 'pro' || plan === 'expert') {
                 return (
                   <div className="flex items-center gap-3">
@@ -816,28 +840,6 @@ useEffect(() => {
                     </h1>
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gray-100 text-gray-500 border-gray-200">
                       Basic
-                    </span>
-                  </div>
-                );
-              }
-
-              // PRO trial (plan='pro' but trial_ends_at in future)
-              const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at) : null;
-              const onTrial = trialEnd && trialEnd > new Date() && plan === 'pro';
-              if (onTrial) {
-                const daysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / 86400000));
-                return (
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
-                      {name}
-                    </h1>
-                    <Zap className="w-5 h-5 text-amber-500" />
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 shadow-sm shadow-amber-200">
-                      <Crown className="w-3 h-3" />
-                      PRO
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                      {daysLeft} day{daysLeft !== 1 ? 's' : ''} free trial
                     </span>
                   </div>
                 );

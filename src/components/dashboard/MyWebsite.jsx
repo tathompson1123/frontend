@@ -5,7 +5,7 @@ import EmbedCode from './EmbedCode';
 import FeatureGate from './FeatureGate';
 import GenerateModal from '../GenerateModal';
 
-export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData, onUserPlanUpdate }) {
+export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFetch, setCurrentView, refreshWebsiteData, onUserPlanUpdate, inOnboarding }) {
   const [currentWebsite, setCurrentWebsite] = useState(null);
   const [isPublished, setIsPublished] = useState(false);
   const [customDomain, setCustomDomain] = useState('');
@@ -375,7 +375,7 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
           </div>
         </div>
       ) : subTab === 'integrate' ? (
-        <EmbedCode apiUrl={apiUrl} authFetch={authFetch} setCurrentView={setCurrentView} />
+        <EmbedCode apiUrl={apiUrl} authFetch={authFetch} setCurrentView={setCurrentView} inOnboarding={inOnboarding} />
       ) : subTab === 'website' ? (
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />

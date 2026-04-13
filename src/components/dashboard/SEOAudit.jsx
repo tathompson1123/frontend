@@ -19,6 +19,7 @@ import {
   Clock,
   ArrowRight,
 } from 'lucide-react';
+import OakameLoader from '../OakameLoader';
 
 // ── Helpers ──────────────────────────────────────────────────
 function scoreColor(score) {
@@ -194,9 +195,19 @@ const PLAN_TASKS = [
   { label: 'Finalizing your optimization plan', icon: CheckCircle },
 ];
 
+const LAST_STEP_MESSAGES = [
+  'Hang tight, almost there…',
+  'Still crunching the numbers…',
+  'Running final calculations…',
+  'Nearly done, just a moment…',
+];
+
 function LoadingScreen({ tasks, title, subtitle, accentClass }) {
   const [completedCount, setCompletedCount] = useState(0);
   const [dots, setDots] = useState('');
+  const [lastStepMsgIdx, setLastStepMsgIdx] = useState(0);
+
+  const isOnLastStep = completedCount === tasks.length - 1;
 
   useEffect(() => {
     // Advance one task every ~1.8s, stopping before the last (it completes when response arrives)
@@ -214,6 +225,15 @@ function LoadingScreen({ tasks, title, subtitle, accentClass }) {
       clearInterval(dotInterval);
     };
   }, [tasks.length]);
+
+  // Cycle through "still working" messages on the last step
+  useEffect(() => {
+    if (!isOnLastStep) return;
+    const msgInterval = setInterval(() => {
+      setLastStepMsgIdx(i => (i + 1) % LAST_STEP_MESSAGES.length);
+    }, 2200);
+    return () => clearInterval(msgInterval);
+  }, [isOnLastStep]);
 
   const activeIdx = completedCount;
 
@@ -270,6 +290,16 @@ function LoadingScreen({ tasks, title, subtitle, accentClass }) {
           );
         })}
       </div>
+
+      {/* Last-step "still working" animation */}
+      {isOnLastStep && (
+        <div className="mt-8 flex flex-col items-center gap-3 animate-fade-in">
+          <OakameLoader size="md" color={accentClass.loaderColor || '#f59e0b'} />
+          <p className="text-sm text-gray-400 font-medium transition-all duration-500">
+            {LAST_STEP_MESSAGES[lastStepMsgIdx]}
+          </p>
+        </div>
+      )}
     </div>
   );
 }
@@ -288,6 +318,7 @@ function AuditLoadingScreen() {
         activeBorder: 'border-blue-200',
         activeText: 'text-blue-800',
         spinnerBorder: 'border-blue-500',
+        loaderColor: '#3b82f6',
       }}
     />
   );
@@ -307,15 +338,19 @@ function PlanLoadingScreen() {
         activeBorder: 'border-amber-200',
         activeText: 'text-amber-800',
         spinnerBorder: 'border-amber-500',
+        loaderColor: '#f59e0b',
       }}
     />
   );
 }
 
 // ── Main Component ────────────────────────────────────────────
-export default function SEOAudit({ apiUrl, user, authFetch }) {
+const ANALYZING_WORDS = ['Analyzing', 'Crunching', 'Auditing', 'Scanning', 'Inspecting', 'Scoring'];
+
+export default function SEOAudit({ apiUrl, user, authFetch, inOnboarding }) {
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
+  const [analyzingIdx, setAnalyzingIdx] = useState(0);
   const [error, setError] = useState('');
   const [audit, setAudit] = useState(null);
   const [plan, setPlan] = useState(null);
@@ -323,6 +358,13 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
   const [planError, setPlanError] = useState('');
   const [savedAt, setSavedAt] = useState(null);
   const [platform, setPlatform] = useState('');
+
+  // Cycle button label while loading
+  useEffect(() => {
+    if (!loading) { setAnalyzingIdx(0); return; }
+    const iv = setInterval(() => setAnalyzingIdx(i => (i + 1) % ANALYZING_WORDS.length), 1400);
+    return () => clearInterval(iv);
+  }, [loading]);
 
   // Load last saved audit + pre-fill URL
   useEffect(() => {
@@ -426,8 +468,8 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
 
   return (
     <div className="space-y-6">
-      {/* Onboarding banner */}
-      {!seoFlowDone && (
+      {/* Onboarding banner — hidden during the main onboarding flow (replaced by inline nudge below results) */}
+      {!seoFlowDone && !inOnboarding && (
         <div className="rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50 p-5 shadow-sm">
           <div className="flex items-center gap-2 mb-2">
             <Search className="w-4 h-4 text-teal-600" />
@@ -454,18 +496,44 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
         </div>
       )}
 
-      {/* Header */}
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">SEO Audit</h2>
-        <p className="text-gray-600 mt-1">
-          AI-powered SEO analysis for your business website
-          {savedAt && (
-            <span className="ml-2 text-xs text-gray-400">
-              · Last run {new Date(savedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-            </span>
-          )}
-        </p>
-      </div>
+      {/* Header — hidden during onboarding (OnboardingScreen already shows step title) */}
+      {!inOnboarding && (
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">SEO Audit</h2>
+          <p className="text-gray-600 mt-1">
+            AI-powered SEO analysis for your business website
+            {savedAt && (
+              <span className="ml-2 text-xs text-gray-400">
+                · Last run {new Date(savedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </span>
+            )}
+          </p>
+        </div>
+      )}
+
+      {/* Onboarding nudge — shown above URL input once audit is complete */}
+      {inOnboarding && audit && !loading && (
+        <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex items-start gap-4">
+          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+            <Search className="w-5 h-5 text-blue-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-blue-900 text-sm">Your SEO baseline is saved.</p>
+            <p className="text-blue-700 text-sm mt-0.5">We'll build your full optimization plan once you're set up. Next, let's audit your Google Business Profile.</p>
+          </div>
+          <button
+            onClick={() => {
+              const flow = JSON.parse(localStorage.getItem('onboarding_flow') || '{}');
+              flow.flow_seo = true;
+              localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+              window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_seo' } }));
+            }}
+            className="shrink-0 flex items-center gap-1.5 bg-blue-600 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+          >
+            Next <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* Input Card */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-6">
@@ -498,7 +566,7 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
             {loading ? (
               <>
                 <RefreshCw className="w-5 h-5 animate-spin" />
-                Analyzing...
+                {ANALYZING_WORDS[analyzingIdx]}…
               </>
             ) : audit ? (
               <>
@@ -530,25 +598,34 @@ export default function SEOAudit({ apiUrl, user, authFetch }) {
 
       {/* Results — Step-by-step tabs */}
       {audit && !loading && (() => {
-        const STEPS = [
-          { id: 'score', label: 'Score' },
-          { id: 'categories', label: 'Categories' },
-          { id: 'issues', label: 'Issues & Wins' },
-          { id: 'plan', label: 'Optimization Plan' },
-        ];
+        const STEPS = inOnboarding
+          ? [
+              { id: 'score', label: 'Score' },
+              { id: 'categories', label: 'Categories' },
+              { id: 'issues', label: 'Issues & Wins' },
+            ]
+          : [
+              { id: 'score', label: 'Score' },
+              { id: 'categories', label: 'Categories' },
+              { id: 'issues', label: 'Issues & Wins' },
+              { id: 'plan', label: 'Optimization Plan' },
+            ];
         return (
-          <AuditSteps
-            audit={audit}
-            plan={plan}
-            loadingPlan={loadingPlan}
-            planError={planError}
-            onCreatePlan={createPlan}
-            platform={platform}
-            onPlatformChange={setPlatform}
-            onRerun={runAudit}
-            overallColor={overallColor}
-            steps={STEPS}
-          />
+          <>
+            <AuditSteps
+              audit={audit}
+              plan={plan}
+              loadingPlan={loadingPlan}
+              planError={planError}
+              onCreatePlan={createPlan}
+              platform={platform}
+              onPlatformChange={setPlatform}
+              onRerun={runAudit}
+              overallColor={overallColor}
+              steps={STEPS}
+              inOnboarding={inOnboarding}
+            />
+          </>
         );
       })()}
     </div>
@@ -570,7 +647,7 @@ const PLATFORMS = [
   { id: 'other',       label: 'Other',        emoji: '🌐' },
 ];
 
-function AuditSteps({ audit, plan, loadingPlan, planError, onCreatePlan, onRerun, overallColor, steps, platform, onPlatformChange }) {
+function AuditSteps({ audit, plan, loadingPlan, planError, onCreatePlan, onRerun, overallColor, steps, platform, onPlatformChange, inOnboarding }) {
   const [activeStep, setActiveStep] = useState('score');
 
   return (
@@ -675,15 +752,17 @@ function AuditSteps({ audit, plan, loadingPlan, planError, onCreatePlan, onRerun
                   </ul>
                 </div>
               )}
-              <button onClick={() => setActiveStep('plan')} className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2">
-                <ClipboardList className="w-5 h-5" />
-                Create SEO Optimization Plan <ArrowRight className="w-4 h-4" />
-              </button>
+              {!inOnboarding && (
+                <button onClick={() => setActiveStep('plan')} className="w-full py-3 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                  <ClipboardList className="w-5 h-5" />
+                  Create SEO Optimization Plan <ArrowRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
 
-          {/* Step 4 — Optimization Plan */}
-          {activeStep === 'plan' && (
+          {/* Step 4 — Optimization Plan (dashboard only) */}
+          {activeStep === 'plan' && !inOnboarding && (
             <div>
               {!plan && !loadingPlan && (
                 <div className="space-y-6">

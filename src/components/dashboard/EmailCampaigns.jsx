@@ -78,13 +78,6 @@ function FirstTimeImportScreen({ apiUrl, authFetch, onImportDone }) {
       const data = await res.json();
       if (data.success || data.imported !== undefined) {
         setImported(data.imported || customers.length);
-        // Mark onboarding flow step done
-        try {
-          const flow = JSON.parse(localStorage.getItem('onboarding_flow') || '{}');
-          flow.flow_csv = true;
-          localStorage.setItem('onboarding_flow', JSON.stringify(flow));
-          window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_csv' } }));
-        } catch (_) {}
         setTimeout(() => onImportDone(), 2200);
       } else {
         setError(data.error || 'Import failed. Please try again.');
@@ -121,10 +114,10 @@ function FirstTimeImportScreen({ apiUrl, authFetch, onImportDone }) {
             <Sparkles className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-3">
-            Let's get you started off with a bang! 🚀
+            Import your customer list
           </h1>
           <p className="text-gray-600 leading-relaxed">
-            Get some repeat business going. Upload your customer base using a CSV file from your current CRM or wherever you keep track of customers.
+            Upload a CSV from your current CRM or wherever you track customers — we'll build a personalized email campaign for them instantly.
           </p>
         </div>
 
@@ -627,7 +620,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
   };
 
   const handleTestSend = async () => {
-    if (!config.from_email) { showToast('Add a reply-to email in Settings first', 'error'); return; }
+    if (!config.from_email) { showToast('Add a reply-to email below before sending', 'error'); return; }
     setSendingTest(true);
     try {
       const r = await authFetch(`${apiUrl}/api/email-campaigns/test-send`, {
@@ -644,7 +637,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
   };
 
   const handleApprove = async () => {
-    if (!config.from_email) { showToast('Add a reply-to email in Settings first', 'error'); return; }
+    if (!config.from_email) { showToast('Add a reply-to email below before sending', 'error'); return; }
     const count = stats?.subscriberCount ?? 'your';
     if (!confirm(`Send this campaign to ${count} customers now?`)) return;
     setSending(true);
@@ -689,10 +682,6 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
     ? config.send_day.charAt(0).toUpperCase() + config.send_day.slice(1)
     : 'Monday';
 
-  if (showImportScreen) {
-    return <FirstTimeImportScreen apiUrl={apiUrl} authFetch={authFetch} onImportDone={handleImportDone} />;
-  }
-
   if (showIntro) {
     return (
       <IntroScreen onDone={() => {
@@ -700,6 +689,10 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
         setShowIntro(false);
       }} />
     );
+  }
+
+  if (showImportScreen) {
+    return <FirstTimeImportScreen apiUrl={apiUrl} authFetch={authFetch} onImportDone={handleImportDone} />;
   }
 
   // Annotation layout helpers (computed here so JSX stays clean)
@@ -726,6 +719,25 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
 
       {/* Scrollable content area */}
       <div className={inOnboarding ? '' : 'flex-1 overflow-y-auto min-h-0'}>
+
+        {/* Onboarding continue button — top */}
+        {inOnboarding && campaign && (
+          <div className="max-w-2xl mx-auto w-full px-4 pt-4 flex justify-end">
+            <button
+              onClick={() => {
+                try {
+                  const flow = JSON.parse(localStorage.getItem('onboarding_flow') || '{}');
+                  flow.flow_csv = true;
+                  localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+                  window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_csv' } }));
+                } catch (_) {}
+              }}
+              className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:shadow-lg transition-all"
+            >
+              Looks good, continue <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
 
         {/* ── Header (stays max-w-2xl) ── */}
         <div className="max-w-2xl mx-auto w-full px-4 pt-6 pb-4">
@@ -761,12 +773,6 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
                 </div>
               </div>
             </div>
-            <button
-              onClick={() => setShowSettings(true)}
-              className="p-2 rounded-xl border border-gray-200 bg-white text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-all"
-            >
-              <Settings className="w-4 h-4" />
-            </button>
           </div>
         </div>
 
@@ -834,25 +840,51 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
                   onHeightChange={setEmailHeight}
                 />
 
-                {/* CTA Button link */}
-                <div className="px-5 pb-3 border-t border-gray-100 pt-4">
-                  <p className="text-xs font-semibold text-gray-500 mb-1.5">Button link URL <span className="font-normal text-gray-400">(saved for all future campaigns)</span></p>
+                {/* Sender + CTA link */}
+                <div className="px-5 pb-3 border-t border-gray-100 pt-4 space-y-3">
                   <div className="flex gap-2">
-                    <input
-                      type="url"
-                      value={ctaLink}
-                      onChange={e => setCtaLink(e.target.value)}
-                      onKeyDown={e => { if (e.key === 'Enter') saveCtaLink(); }}
-                      placeholder="https://yourbusiness.com/book"
-                      className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-gray-400 outline-none"
-                    />
-                    <button
-                      onClick={saveCtaLink}
-                      disabled={savingCtaLink}
-                      className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all flex-shrink-0"
-                    >
-                      {savingCtaLink ? <Loader className="w-4 h-4 animate-spin" /> : 'Save'}
-                    </button>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-500 mb-1.5">Business name</p>
+                      <input
+                        type="text"
+                        value={config.from_name}
+                        onChange={e => setConfig(p => ({ ...p, from_name: e.target.value }))}
+                        onBlur={() => saveSettings(config)}
+                        placeholder="Your Business Name"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-gray-400 outline-none"
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-semibold text-gray-500 mb-1.5">Reply-to email</p>
+                      <input
+                        type="email"
+                        value={config.from_email}
+                        onChange={e => setConfig(p => ({ ...p, from_email: e.target.value }))}
+                        onBlur={() => saveSettings(config)}
+                        placeholder="hello@yourbusiness.com"
+                        className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-gray-400 outline-none"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-gray-500 mb-1.5">Button link URL</p>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={ctaLink}
+                        onChange={e => setCtaLink(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') saveCtaLink(); }}
+                        placeholder="https://yourbusiness.com/book"
+                        className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-gray-400 outline-none"
+                      />
+                      <button
+                        onClick={saveCtaLink}
+                        disabled={savingCtaLink}
+                        className="px-4 py-2.5 border border-gray-300 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-all flex-shrink-0"
+                      >
+                        {savingCtaLink ? <Loader className="w-4 h-4 animate-spin" /> : 'Save'}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -919,40 +951,59 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
             <PastCampaigns history={history} />
           </div>
 
-        </div>
-      </div>
-
-      {/* Ask SORCE — pinned at bottom, always visible while scrolling the email */}
-      {campaign && (
-        <div className="flex-shrink-0 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-[0_-6px_24px_rgba(59,130,246,0.25)]">
-          <div className="max-w-2xl mx-auto w-full px-4 py-3">
-            <div className="flex items-center gap-1.5 mb-2">
-              <Sparkles className="w-3.5 h-3.5 text-blue-200" />
-              <p className="text-xs font-bold text-blue-100 uppercase tracking-wider">Ask SORCE to change something</p>
-            </div>
-            <div className="flex gap-2">
-              <input
-                ref={feedbackRef}
-                type="text"
-                value={feedback}
-                onChange={e => setFeedback(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleRefine(); } }}
-                placeholder='e.g. "Make the offer 20% off" or "Add more urgency"'
-                disabled={refining}
-                className="flex-1 border-0 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-white/50 outline-none disabled:opacity-60 bg-white/15 text-white placeholder-blue-200"
-              />
+          {/* Onboarding continue button */}
+          {inOnboarding && campaign && (
+            <div className="max-w-2xl mx-auto mt-6 mb-4 flex justify-end">
               <button
-                onClick={handleRefine}
-                disabled={refining || !feedback.trim()}
-                className="flex items-center gap-1.5 px-4 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 disabled:opacity-50 transition-all flex-shrink-0 shadow-sm"
+                onClick={() => {
+                  try {
+                    const flow = JSON.parse(localStorage.getItem('onboarding_flow') || '{}');
+                    flow.flow_csv = true;
+                    localStorage.setItem('onboarding_flow', JSON.stringify(flow));
+                    window.dispatchEvent(new CustomEvent('flow-step-done', { detail: { key: 'flow_csv' } }));
+                  } catch (_) {}
+                }}
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 to-blue-600 text-white px-6 py-3 rounded-xl font-semibold text-sm hover:shadow-lg transition-all"
               >
-                {refining ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {refining ? 'Updating…' : 'Update'}
+                Looks good, continue <ArrowRight className="w-4 h-4" />
               </button>
             </div>
+          )}
+
+        {/* Ask SORCE — sticky at bottom of scroll container */}
+        {campaign && (
+          <div className="sticky bottom-0 bg-gradient-to-r from-blue-600 to-indigo-600 shadow-[0_-6px_24px_rgba(59,130,246,0.25)]">
+            <div className="max-w-2xl mx-auto w-full px-4 py-3">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Sparkles className="w-3.5 h-3.5 text-blue-200" />
+                <p className="text-xs font-bold text-blue-100 uppercase tracking-wider">Ask SORCE to change something</p>
+              </div>
+              <div className="flex gap-2">
+                <input
+                  ref={feedbackRef}
+                  type="text"
+                  value={feedback}
+                  onChange={e => setFeedback(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleRefine(); } }}
+                  placeholder='e.g. "Make the offer 20% off" or "Add more urgency"'
+                  disabled={refining}
+                  className="flex-1 border-0 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-white/50 outline-none disabled:opacity-60 bg-white/15 text-white placeholder-blue-200"
+                />
+                <button
+                  onClick={handleRefine}
+                  disabled={refining || !feedback.trim()}
+                  className="flex items-center gap-1.5 px-4 py-2.5 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 disabled:opacity-50 transition-all flex-shrink-0 shadow-sm"
+                >
+                  {refining ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                  {refining ? 'Updating…' : 'Update'}
+                </button>
+              </div>
+            </div>
           </div>
+        )}
+
         </div>
-      )}
+      </div>
     </div>
   );
 }

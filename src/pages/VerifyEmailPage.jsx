@@ -109,6 +109,7 @@ export default function VerifyEmailPage() {
             We sent a 6-digit code to<br />
             <span className="font-semibold text-gray-800">{email}</span>
           </p>
+          <p className="text-xs text-gray-400 mt-2">It can take up to a minute to arrive.</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">

@@ -91,7 +91,7 @@ const PLATFORM_STEPS = {
   },
 };
 
-export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
+export default function EmbedCode({ apiUrl, authFetch, setCurrentView, inOnboarding }) {
   const [siteKey, setSiteKey] = useState('');
   const DEFAULT_FIELDS = [
     { id: 'name',    label: 'Name',                placeholder: 'Your name',                      required: true },
@@ -571,46 +571,49 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
         {step === 4 && (
           <div className="p-8">
             <div className="text-center mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Configure Your Integrations</h3>
-              <p className="text-gray-500 mt-1">Set up and customize the features you enabled</p>
+              <h3 className="text-xl font-bold text-gray-900">{inOnboarding ? 'Customize Your Contact Form' : 'Configure Your Integrations'}</h3>
+              <p className="text-gray-500 mt-1">{inOnboarding ? 'Edit the form your leads will fill out when they contact you' : 'Set up and customize the features you enabled'}</p>
             </div>
 
             <div className="max-w-xl mx-auto">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
-                <button
-                  onClick={() => setCurrentView?.('ai-agents')}
-                  className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-gray-200 hover:border-amber-400 hover:bg-amber-50/50 transition group"
-                >
-                  <div className="w-11 h-11 bg-amber-100 group-hover:bg-amber-500 rounded-xl flex items-center justify-center transition">
-                    <Bot className="w-6 h-6 text-amber-600 group-hover:text-white transition" />
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">Train Your AI Agents</span>
-                  <span className="text-xs text-gray-400">Customize chat personality & responses</span>
-                </button>
+              <div className={`grid gap-3 mb-8 ${inOnboarding ? 'flex justify-center' : 'grid-cols-1 sm:grid-cols-3'}`}>
+                {!inOnboarding && (
+                  <button
+                    onClick={() => setCurrentView?.('ai-agents')}
+                    className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-gray-200 hover:border-amber-400 hover:bg-amber-50/50 transition group"
+                  >
+                    <div className="w-11 h-11 bg-amber-100 group-hover:bg-amber-500 rounded-xl flex items-center justify-center transition">
+                      <Bot className="w-6 h-6 text-amber-600 group-hover:text-white transition" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-800">Train Your AI Agents</span>
+                    <span className="text-xs text-gray-400">Customize chat personality & responses</span>
+                  </button>
+                )}
 
                 <button
                   onClick={() => setStep(5)}
-                  className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition group"
+                  className={`flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-blue-200 hover:border-blue-400 bg-blue-50/50 hover:bg-blue-50 transition group ${inOnboarding ? 'w-48' : ''}`}
                 >
                   <div className="w-11 h-11 bg-blue-100 group-hover:bg-blue-500 rounded-xl flex items-center justify-center transition">
                     <FileText className="w-6 h-6 text-blue-600 group-hover:text-white transition" />
                   </div>
-                  <span className="text-sm font-semibold text-gray-800">Edit Your Contact Form</span>
+                  <span className="text-sm font-semibold text-gray-800">Edit Contact Form</span>
                   <span className="text-xs text-gray-400">Customize fields, titles & page rules</span>
                 </button>
 
-                <button
-                  onClick={() => setCurrentView?.('business-settings:services')}
-                  className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-gray-200 hover:border-green-400 hover:bg-green-50/50 transition group"
-                >
-                  <div className="w-11 h-11 bg-green-100 group-hover:bg-green-500 rounded-xl flex items-center justify-center transition">
-                    <Settings className="w-6 h-6 text-green-600 group-hover:text-white transition" />
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800">Configure Booking</span>
-                  <span className="text-xs text-gray-400">Set up services for online booking</span>
-                </button>
+                {!inOnboarding && (
+                  <button
+                    onClick={() => setCurrentView?.('business-settings:services')}
+                    className="flex flex-col items-center gap-2 p-5 rounded-xl border-2 border-gray-200 hover:border-green-400 hover:bg-green-50/50 transition group"
+                  >
+                    <div className="w-11 h-11 bg-green-100 group-hover:bg-green-500 rounded-xl flex items-center justify-center transition">
+                      <Settings className="w-6 h-6 text-green-600 group-hover:text-white transition" />
+                    </div>
+                    <span className="text-sm font-semibold text-gray-800">Configure Booking</span>
+                    <span className="text-xs text-gray-400">Set up services for online booking</span>
+                  </button>
+                )}
               </div>
-
             </div>
 
             <div className="flex justify-between mt-6 max-w-xl mx-auto">
@@ -638,11 +641,11 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView }) {
                 </div>
               </div>
               <button
-                onClick={handleSave}
+                onClick={async () => { await handleSave(); markEmbedDone(); }}
                 disabled={saving}
                 className="px-6 py-2.5 bg-amber-600 text-white rounded-xl font-semibold hover:bg-amber-700 transition disabled:opacity-50 inline-flex items-center gap-2 text-sm"
               >
-                {saving ? 'Saving...' : saveSuccess ? <><Check className="w-4 h-4" /> Saved!</> : 'Save Changes'}
+                {saving ? 'Saving...' : 'Save & Continue'}
               </button>
             </div>
 
