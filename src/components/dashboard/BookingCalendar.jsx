@@ -1390,6 +1390,17 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 )}
               </div>
 
+              {/* Customer notes from online booking form */}
+              {selectedBooking.customer_notes && (
+                <div className="bg-blue-50 rounded-xl p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <h3 className="font-bold text-gray-900">Note from Customer</h3>
+                  </div>
+                  <p className="text-gray-800 whitespace-pre-wrap">{selectedBooking.customer_notes}</p>
+                </div>
+              )}
+
               <div className="bg-green-50 rounded-xl p-4">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
@@ -1432,7 +1443,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   <textarea
                     value={bookingNotes}
                     onChange={(e) => setBookingNotes(e.target.value)}
-                    placeholder="Add notes about this job..."
+                    placeholder="Add internal notes about this job..."
                     rows={6}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 resize-none"
                   />
@@ -1443,7 +1454,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         {selectedBooking.job_notes || bookingNotes}
                       </p>
                     ) : (
-                      <p className="text-gray-400 italic">No notes added yet</p>
+                      <p className="text-gray-400 italic">No internal notes added yet</p>
                     )}
                   </div>
                 )}
