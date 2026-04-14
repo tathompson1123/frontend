@@ -34,12 +34,8 @@ export default function HelpPage({ setInOnboarding, requestViewChange, setUser }
     if (setUser) setUser(updated);
     // Activate onboarding mode in Dashboard
     setInOnboarding(true);
-    // Navigate to first incomplete step (or overview if all done)
-    if (nextStep) {
-      requestViewChange(nextStep.view);
-    } else {
-      requestViewChange('overview');
-    }
+    // Always start from step 1 — completed steps stay green, user can click through
+    requestViewChange(ONBOARDING_STEPS[0].view);
   };
 
   return (
@@ -137,9 +133,9 @@ export default function HelpPage({ setInOnboarding, requestViewChange, setUser }
                 </h3>
                 <p className="text-sm text-gray-600 mb-4">
                   {allDone
-                    ? "All steps done — but you can revisit any of them any time."
+                    ? "Walks through all 6 steps from the beginning. Completed steps stay green — you can click through them quickly or redo any."
                     : nextStep
-                    ? `Pick up where you left off. Next: "${nextStep.title}"`
+                    ? `Starts at step 1 and skips you to where you left off. Next incomplete: "${nextStep.title}"`
                     : "Let's finish getting SORCE configured for your business."}
                 </p>
                 <button

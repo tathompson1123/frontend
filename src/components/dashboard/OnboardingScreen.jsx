@@ -209,7 +209,7 @@ export default function OnboardingScreen({ currentView, setCurrentView, onSkip, 
         <div className="flex items-center gap-4">
           {/* Progress */}
           <div className="hidden sm:flex items-center gap-2">
-            <span className="text-xs text-gray-400 font-medium">Step {doneCount + 1} of {ONBOARDING_STEPS.length}</span>
+            <span className="text-xs text-gray-400 font-medium">Step {activeStep.num} of {ONBOARDING_STEPS.length}</span>
             <div className="w-28 h-1.5 bg-gray-100 rounded-full">
               <div
                 className="h-1.5 bg-gradient-to-r from-amber-400 to-yellow-400 rounded-full transition-all duration-500"
