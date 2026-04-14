@@ -117,7 +117,7 @@ export default function FeatureGate({
       icon: Crown,
       requiredPlan: 'Pro',
       benefits: [
-        'Claude generates irresistible weekly offers',
+        'SORCE generates irresistible weekly offers',
         'Sends automatically to all past customers',
         'Seasonal & upsell campaigns on autopilot',
         'Full campaign history & analytics'

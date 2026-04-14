@@ -25,6 +25,7 @@ import {
   Flame,
   Sparkles,
   Search,
+  Link,
 } from 'lucide-react';
 
 // Component imports
@@ -37,6 +38,8 @@ import GoogleBusiness from '../components/dashboard/GoogleBusiness';
 import BusinessInformation from '../components/dashboard/BusinessInformation';
 import MarketResearch from '../components/dashboard/MarketResearch';
 import SEOAudit from '../components/dashboard/SEOAudit';
+import BacklinksPage from '../components/dashboard/BacklinksPage';
+import SorceAssistant from '../components/dashboard/SorceAssistant';
 import Billing from '../components/dashboard/Billing';
 import EmailCampaigns from '../components/dashboard/EmailCampaigns';
 import SettingsPage from '../components/dashboard/Settings';
@@ -480,13 +483,14 @@ useEffect(() => {
     { id: 'email-campaigns', icon: Mail, label: 'Email Marketing' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'seo-audit', icon: Search, label: 'SEO Audit' },
+    { id: 'backlinks', icon: Link, label: 'Backlinks & Citations' },
     { id: 'market-research', icon: TrendingUp, label: 'Upsell Potential' },
   ];
 
   // Auto-open Pro section when navigating to a Pro view
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (['ai-agents', 'email-campaigns', 'google-business', 'seo-audit', 'market-research'].includes(currentView)) {
+    if (['ai-agents', 'email-campaigns', 'google-business', 'seo-audit', 'backlinks', 'market-research'].includes(currentView)) {
       setProOpen(true);
     }
   }, [currentView]);
@@ -601,6 +605,9 @@ useEffect(() => {
       {currentView === 'seo-audit' && (
         <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} inOnboarding={inOnboarding} />
       )}
+      {currentView === 'backlinks' && (
+        <BacklinksPage apiUrl={apiUrl} authFetch={authFetch} user={user} />
+      )}
       {currentView === 'payment-settings' && (
         <PaymentSettingsPage
           apiUrl={apiUrl}
@@ -687,6 +694,7 @@ useEffect(() => {
               <button
                 key={item.id}
                 onClick={() => requestViewChange(item.id)}
+                title={!sidebarOpen ? item.label : undefined}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
@@ -703,6 +711,7 @@ useEffect(() => {
           <div className="pt-2">
             <button
               onClick={() => setProOpen(p => !p)}
+              title={!sidebarOpen ? 'PRO Features' : undefined}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-900 hover:from-amber-100 hover:to-yellow-100 border-2 border-amber-200 shadow-md"
             >
               <Zap className="w-5 h-5 flex-shrink-0 text-amber-600" />
@@ -723,6 +732,7 @@ useEffect(() => {
                     <button
                       key={item.id}
                       onClick={() => requestViewChange(item.id)}
+                      title={!sidebarOpen ? item.label : undefined}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                         isActive
                           ? 'bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 text-white shadow-lg'
@@ -745,6 +755,7 @@ useEffect(() => {
               <button
                 key={item.id}
                 onClick={() => requestViewChange(item.id)}
+                title={!sidebarOpen ? item.label : undefined}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
                     ? 'bg-gradient-to-r from-primary-600 to-accent-600 text-white shadow-lg'
@@ -899,6 +910,8 @@ useEffect(() => {
       </main>
 
       {showDomainPolicy && <DomainPolicyModal onClose={() => setShowDomainPolicy(false)} />}
+
+      <SorceAssistant apiUrl={apiUrl} authFetch={authFetch} />
 
       {/* Unsaved Changes Modal */}
       {showUnsavedModal && (

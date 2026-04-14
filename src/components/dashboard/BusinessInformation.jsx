@@ -785,10 +785,11 @@ export default function BusinessInformation({
 
     if (businessInfo.serviceAreaType !== 'radius') {
       if (leafletMapRef.current) {
-        leafletMapRef.current.remove();
+        const mapToRemove = leafletMapRef.current;
         leafletMapRef.current = null;
         leafletCircleRef.current = null;
         centerMarkerRef.current = null;
+        try { mapToRemove.remove(); } catch (_) {}
       }
       return;
     }
@@ -831,10 +832,11 @@ export default function BusinessInformation({
     map.fitBounds(circle.getBounds(), { padding: [30, 30] });
 
     return () => {
-      map.remove();
+      // Null refs first so any async Leaflet events that fire during remove() don't access stale DOM nodes
       leafletMapRef.current = null;
       leafletCircleRef.current = null;
       centerMarkerRef.current = null;
+      try { map.remove(); } catch (_) {}
     };
   }, [leafletReady, businessInfo.serviceAreaType, mapCenter]);
 

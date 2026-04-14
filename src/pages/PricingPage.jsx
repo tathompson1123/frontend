@@ -314,7 +314,7 @@ export default function PricingPage() {
           <div className="grid md:grid-cols-2 gap-6">
             {[
               { q: 'What is the SMS Lead Agent?', a: 'When someone submits your contact form or books a service, our AI automatically texts them within 60 seconds with a personalized follow-up. Pro includes 100 texts/month; Scale includes 500.' },
-              { q: 'How does the AI Email Marketing work?', a: 'Every week, Claude generates an irresistible promotional offer tailored to your business and sends it to all past customers automatically. You set it up once and it runs on autopilot.' },
+              { q: 'How does the AI Email Marketing work?', a: 'Every week, SORCE generates an irresistible promotional offer tailored to your business and sends it to all past customers automatically. You set it up once and it runs on autopilot.' },
               { q: 'Can I cancel or change plans anytime?', a: 'Yes — upgrade, downgrade, or cancel at any time. Changes take effect at your next billing period.' },
               { q: 'Do I need technical knowledge?', a: 'Not at all. Just describe your business, and our AI builds and manages everything for you.' },
             ].map((faq, i) => (

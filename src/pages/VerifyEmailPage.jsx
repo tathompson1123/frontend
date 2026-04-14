@@ -24,11 +24,12 @@ export default function VerifyEmailPage() {
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const email = user.email || '';
 
-  // If no token, redirect to home
+  // If no token, redirect to home; if already verified skip ahead; otherwise fire a fresh code
   useEffect(() => {
-    if (!localStorage.getItem('token')) navigate('/', { replace: true });
-    // If already verified, skip to onboarding
-    if (user.email_verified) navigate('/onboarding', { replace: true });
+    if (!localStorage.getItem('token')) { navigate('/', { replace: true }); return; }
+    if (user.email_verified) { navigate('/onboarding', { replace: true }); return; }
+    // Auto-send a fresh verification code as soon as the page opens
+    authFetch('/api/auth/resend-verification', { method: 'POST' }).catch(() => {});
   }, []);
 
   const fullCode = code.join('');
