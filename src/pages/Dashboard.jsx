@@ -26,6 +26,7 @@ import {
   Sparkles,
   Search,
   Link,
+  HelpCircle,
 } from 'lucide-react';
 
 // Component imports
@@ -50,6 +51,7 @@ import PaymentProcessors from '../components/dashboard/PaymentSettings';
 import Transactions from '../components/dashboard/Transactions';
 import TaxFees from '../components/dashboard/TaxFees';
 import DomainPolicyModal from '../components/dashboard/DomainPolicyModal';
+import HelpPage from '../components/dashboard/HelpPage';
 
 // Combined Payment Settings page with sub-tabs
 function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConnected }) {
@@ -476,6 +478,7 @@ useEffect(() => {
     { id: 'payment-settings', icon: Wallet, label: 'Payment Settings' },
     { id: 'billing', icon: CreditCard, label: 'Billing' },
     { id: 'settings', icon: Settings, label: 'Settings' },
+    { id: 'help', icon: HelpCircle, label: 'Help' },
   ];
 
   const proMenuItems = [
@@ -627,6 +630,13 @@ useEffect(() => {
           }}
           onDirtyChange={handleDirtyChange}
           saveRef={saveRef}
+        />
+      )}
+      {currentView === 'help' && (
+        <HelpPage
+          setInOnboarding={setInOnboarding}
+          requestViewChange={requestViewChange}
+          setUser={setUser}
         />
       )}
     </>

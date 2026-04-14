@@ -1604,12 +1604,12 @@ function SeoEmbedCard({ apiUrl, authFetch, audit, savedHeadCode, savedLlmsTxtCon
         <div className="flex-1">
           <h3 className="text-base font-bold text-gray-900 mb-1">Get Your SEO Embed Code</h3>
           <p className="text-sm text-gray-600 mb-4">
-            SORCE generates a copy-paste code block for your website's <code className="bg-white border border-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> — works on Wix, Squarespace, WordPress, Shopify, and any other platform. Includes JSON-LD structured data, meta tags, and an <code className="bg-white border border-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">llms.txt</code> file so AI search engines can find you.
+            SORCE generates a copy-paste code block for your website's <code className="bg-white border border-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">&lt;head&gt;</code> — works on Wix, Squarespace, WordPress, Shopify, and any other platform. Includes business-specific JSON-LD schema, Speakable markup for Google AI Mode, FAQPage schema for local queries, meta tags, and an <code className="bg-white border border-gray-200 px-1.5 py-0.5 rounded text-xs font-mono">llms.txt</code> file.
           </p>
           <div className="flex flex-wrap gap-2 mb-4">
             {[
-              { icon: Code,     label: 'JSON-LD Schema' },
-              { icon: FileText, label: 'Meta & OG Tags' },
+              { icon: Code,     label: 'JSON-LD + Speakable' },
+              { icon: FileText, label: 'FAQPage Schema' },
               { icon: Cpu,      label: 'llms.txt (AI Search)' },
               { icon: Globe,    label: 'Any Platform' },
             ].map(({ icon: Icon, label }) => (
@@ -1993,6 +1993,41 @@ export default function SEOAudit({ apiUrl, user, authFetch, inOnboarding }) {
 
             {!inOnboarding && (
               <>
+                {/* Google AI Mode tips */}
+                <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5">
+                  <div className="flex items-start gap-3">
+                    <Cpu className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-bold text-blue-900 mb-1">Ranking higher in Google AI Mode</h3>
+                      <p className="text-xs text-blue-700 mb-3">
+                        Google AI Mode ranks local businesses using three signals that standard SEO misses: <strong>Speakable schema</strong> (tells AI what to read aloud), <strong>FAQPage schema</strong> (answers local search queries directly), and <strong>entity verification</strong> via your Google Business Profile.
+                        The embed code below now includes all three — regenerate it if you haven't recently.
+                      </p>
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-3">
+                        <p className="text-xs font-semibold text-amber-800 mb-1">Seeing a competitor's link on your listing?</p>
+                        <p className="text-xs text-amber-700">
+                          This is almost always a <strong>Google Business Profile</strong> issue — either your website URL is wrong or a citation site (Yelp, YP, BBB) has bad data that Google pulled in.
+                          Fix it now:
+                        </p>
+                        <ol className="text-xs text-amber-700 mt-1.5 space-y-1 list-decimal list-inside">
+                          <li>Go to <strong>business.google.com</strong> → click your listing → Info → verify your Website URL is correct</li>
+                          <li>Search Google Maps for your business and check the listed website</li>
+                          <li>Check Yelp, YellowPages, and BBB for your business — correct any wrong website URLs</li>
+                          <li>Add your correct Google Business Profile URL to the <code className="bg-amber-100 px-1 rounded font-mono">sameAs</code> field in your SEO embed code below</li>
+                        </ol>
+                      </div>
+                      <a
+                        href="https://business.google.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-700 hover:text-blue-900"
+                      >
+                        Open Google Business Profile <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Step 1 — Embed the SEO code */}
                 <SeoEmbedCard
                   apiUrl={apiUrl}

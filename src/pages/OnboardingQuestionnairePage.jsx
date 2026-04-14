@@ -215,6 +215,8 @@ export default function OnboardingQuestionnairePage() {
   const [step, setStep] = useState(1);
   const [animating, setAnimating] = useState(false);
   const [saving, setSaving] = useState(false);
+  // 0 = not skipping, 1 = first confirm, 2 = second confirm
+  const [skipConfirm, setSkipConfirm] = useState(0);
 
   // Step 1 — Business profile
   const [businessType, setBusinessType] = useState('');
@@ -236,6 +238,32 @@ export default function OnboardingQuestionnairePage() {
     if (!user.email_verified) { navigate('/verify-email', { replace: true }); return; }
     if (user.questionnaire_completed) { navigate('/dashboard', { replace: true }); }
   }, [navigate]);
+
+  // Save whatever the user has filled in (partial is fine), mark questionnaire done, go to dashboard
+  const doSkip = async () => {
+    setSkipConfirm(0);
+    setSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      const finalBT = businessType === 'Other' ? customBusinessType.trim() : businessType;
+      await fetch(`${API_URL}/api/auth/onboarding/questionnaire`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          businessType: finalBT || null,
+          businessServices: servicesText.trim() || null,
+          businessKnownFor: knownFor.trim() || null,
+          leadsPerWeek: leadsPerWeek || null,
+          revenueRange: revenueRange || null,
+          interestedFeature: interestedFeature || null,
+        }),
+      });
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      localStorage.setItem('user', JSON.stringify({ ...user, questionnaire_completed: true }));
+    } catch (_) {}
+    setSaving(false);
+    navigate('/dashboard');
+  };
 
   const goTo = (next) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -275,6 +303,66 @@ export default function OnboardingQuestionnairePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-amber-50 flex flex-col">
+
+      {/* Skip confirm — first */}
+      {skipConfirm === 1 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div className="w-14 h-14 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">🤔</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Are you sure?</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              This setup personalizes your AI agents with your business info. Skipping means they'll start with generic defaults — you can always redo it later from the Help tab.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSkipConfirm(0)}
+                className="flex-1 px-4 py-2.5 rounded-xl border-2 border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+              >
+                Go back
+              </button>
+              <button
+                onClick={() => setSkipConfirm(2)}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-100 text-sm font-semibold text-gray-600 hover:bg-gray-200 transition-all"
+              >
+                Skip anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Skip confirm — second */}
+      {skipConfirm === 2 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
+            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <span className="text-2xl">⚠️</span>
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Really skip?</h2>
+            <p className="text-sm text-gray-500 mb-6">
+              Your AI agents won't know your services or what makes you stand out. You can run through setup anytime from <strong>Help → Onboarding</strong> in the dashboard.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSkipConfirm(0)}
+                className="flex-1 px-4 py-2.5 rounded-xl border-2 border-amber-400 text-sm font-semibold text-amber-700 hover:bg-amber-50 transition-all"
+              >
+                Complete setup
+              </button>
+              <button
+                onClick={doSkip}
+                disabled={saving}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-300 transition-all disabled:opacity-50"
+              >
+                {saving ? 'Saving…' : 'Yes, skip for now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-4">
         <div className="flex items-center gap-2">
@@ -282,7 +370,7 @@ export default function OnboardingQuestionnairePage() {
           <span className="font-bold text-gray-900 text-lg tracking-tight">SORCE</span>
         </div>
         {step < TOTAL_STEPS && (
-          <button onClick={() => navigate('/dashboard')} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={() => setSkipConfirm(1)} className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
             Skip for now
           </button>
         )}
