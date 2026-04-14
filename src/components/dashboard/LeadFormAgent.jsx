@@ -2,6 +2,49 @@ import { useState, useEffect } from 'react';
 import { Mail, Clock, CheckCircle, TrendingUp, Calendar, Save, Rocket, Crown, Sparkles, MessageCircle, AlertCircle, Settings, Phone, ChevronDown, ChevronUp, Plus, Trash2, Brain } from 'lucide-react';
 import FeatureGate from './FeatureGate';
 
+function WebhookFixButton({ apiUrl, authFetch }) {
+  const [status, setStatus] = useState(null); // null | 'checking' | 'ok' | 'fixed' | 'error'
+
+  const check = async () => {
+    setStatus('checking');
+    try {
+      const res = await authFetch(`${apiUrl}/api/sms/webhook-status`);
+      const data = await res.json();
+      if (data.isCorrect) {
+        setStatus('ok');
+      } else {
+        // Auto-fix it
+        const fixRes = await authFetch(`${apiUrl}/api/sms/fix-webhook`, { method: 'POST' });
+        if (fixRes.ok) setStatus('fixed');
+        else setStatus('error');
+      }
+    } catch {
+      setStatus('error');
+    }
+    setTimeout(() => setStatus(null), 5000);
+  };
+
+  return (
+    <button
+      onClick={check}
+      disabled={status === 'checking'}
+      title="Check and fix SMS reply webhook"
+      className={`text-xs font-semibold px-2.5 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+        status === 'ok'    ? 'bg-green-100 text-green-700' :
+        status === 'fixed' ? 'bg-amber-100 text-amber-700' :
+        status === 'error' ? 'bg-red-100 text-red-700' :
+        'bg-gray-100 text-gray-600 hover:bg-gray-200'
+      }`}
+    >
+      {status === 'checking' ? '...' :
+       status === 'ok'       ? '✓ Replies OK' :
+       status === 'fixed'    ? '✓ Webhook Fixed' :
+       status === 'error'    ? '✗ Fix Failed' :
+       'Check SMS Replies'}
+    </button>
+  );
+}
+
 export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView, isDeployed, onDeploymentChange }) {
   const [agentConfig, setAgentConfig] = useState({
     emailEnabled: true,
@@ -346,9 +389,12 @@ export default function LeadFormAgent({ user, apiUrl, authFetch, setCurrentView,
               {isDeployed ? '● Deployed' : '○ Not Deployed'}
             </div>
             {phoneNumber && (
-              <div className="px-3 py-1 rounded-lg font-medium text-sm bg-blue-100 text-blue-700 flex items-center gap-2">
-                <Phone className="w-4 h-4" />
-                {phoneNumber}
+              <div className="flex items-center gap-2">
+                <div className="px-3 py-1 rounded-lg font-medium text-sm bg-blue-100 text-blue-700 flex items-center gap-2">
+                  <Phone className="w-4 h-4" />
+                  {phoneNumber}
+                </div>
+                <WebhookFixButton apiUrl={apiUrl} authFetch={authFetch} />
               </div>
             )}
           </div>
