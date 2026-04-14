@@ -23,12 +23,30 @@ function useCopy(text, ms = 2000) {
   return [copied, copy];
 }
 
+// ── Toast ──────────────────────────────────────────────────────
+function Toast({ message, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 4000);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-fade-in">
+      <div className="bg-gray-900 text-white text-sm font-medium px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 max-w-sm text-center">
+        <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+        {message}
+      </div>
+    </div>
+  );
+}
+
 // ── Tab 1: Directory Submissions ──────────────────────────────
 function DirectoryTab({ apiUrl, authFetch }) {
   const [dirs, setDirs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all | pending | submitted
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [toast, setToast] = useState(null);
+  const [justOpened, setJustOpened] = useState({}); // tracks which Submit buttons were clicked
 
   useEffect(() => {
     authFetch(`${apiUrl}/api/backlinks/directories`)
@@ -38,12 +56,23 @@ function DirectoryTab({ apiUrl, authFetch }) {
       .finally(() => setLoading(false));
   }, []);
 
+  const showToast = (msg) => { setToast(msg); };
+
   const mark = async (directoryId, status) => {
-    setDirs(prev => prev.map(d => d.id === directoryId ? { ...d, status } : d));
+    const dir = dirs.find(d => d.id === directoryId);
+    setDirs(prev => prev.map(d => d.id === directoryId ? { ...d, status, submitted_at: status === 'submitted' ? new Date().toISOString() : d.submitted_at } : d));
+    if (status === 'submitted') {
+      showToast(`✓ ${dir?.name || 'Directory'} marked as submitted! It can take 2–6 weeks to appear in search results.`);
+    }
     await authFetch(`${apiUrl}/api/backlinks/directories/mark`, {
       method: 'POST',
       body: JSON.stringify({ directoryId, status }),
     }).catch(() => {});
+  };
+
+  const openSubmit = (dir) => {
+    setJustOpened(prev => ({ ...prev, [dir.id]: true }));
+    window.open(dir.url, '_blank', 'noopener,noreferrer');
   };
 
   const submitted = dirs.filter(d => d.status === 'submitted').length;
@@ -64,6 +93,7 @@ function DirectoryTab({ apiUrl, authFetch }) {
 
   return (
     <div className="space-y-5">
+      {toast && <Toast message={toast} onDone={() => setToast(null)} />}
       {/* Progress header */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
@@ -124,22 +154,25 @@ function DirectoryTab({ apiUrl, authFetch }) {
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {dir.status !== 'submitted' && (
-                  <a href={dir.url} target="_blank" rel="noopener noreferrer"
-                    className="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
-                    <ExternalLink className="w-3 h-3" />
-                    Submit
-                  </a>
-                )}
-                <div className="flex gap-1">
+              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                <div className="flex items-center gap-2">
+                  {dir.status !== 'submitted' && (
+                    <button
+                      onClick={() => openSubmit(dir)}
+                      className="text-xs font-semibold px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1.5">
+                      <ExternalLink className="w-3 h-3" />
+                      Open & Submit
+                    </button>
+                  )}
                   <button
                     onClick={() => mark(dir.id, dir.status === 'submitted' ? 'pending' : 'submitted')}
-                    title={dir.status === 'submitted' ? 'Undo' : 'Mark submitted'}
+                    title={dir.status === 'submitted' ? 'Undo' : 'Mark as submitted'}
                     className={`p-1.5 rounded-lg transition-all ${
                       dir.status === 'submitted'
                         ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                        : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'
+                        : justOpened[dir.id]
+                          ? 'bg-green-500 text-white animate-pulse hover:bg-green-600'
+                          : 'bg-gray-100 text-gray-400 hover:bg-green-100 hover:text-green-600'
                     }`}>
                     <CheckCircle className="w-4 h-4" />
                   </button>
@@ -150,16 +183,18 @@ function DirectoryTab({ apiUrl, authFetch }) {
                     <span className="text-xs font-bold">–</span>
                   </button>
                 </div>
+                {justOpened[dir.id] && dir.status !== 'submitted' && (
+                  <p className="text-xs text-green-600 font-medium">← Click ✓ once you've submitted</p>
+                )}
               </div>
             </div>
           );
         })}
       </div>
 
-      <p className="text-xs text-gray-400 text-center">
-        Click <strong>Submit</strong> to open the directory, create your listing, then click ✓ to mark it done.
-        Aim for all Priority 1 & 2 directories first.
-      </p>
+      <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-xs text-amber-800 leading-relaxed">
+        <strong>How it works:</strong> Click <strong>Open & Submit</strong> — it opens the directory in a new tab. Create or claim your listing there, then come back here and click the <strong>✓ checkmark</strong> to record it as done. SORCE can't submit on your behalf, but every submission builds a citation Google uses to rank you locally.
+      </div>
     </div>
   );
 }
