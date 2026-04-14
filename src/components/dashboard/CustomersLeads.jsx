@@ -28,7 +28,9 @@ import {
   Bell,
   AlertCircle,
   Calendar,
-  Flag
+  Flag,
+  CheckCircle,
+  PhoneCall
 } from 'lucide-react';
 
 // Always parse DB timestamps as UTC (PostgreSQL returns without 'Z')
@@ -1279,7 +1281,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   </div>
                 ) : (
                   conversations
-                    .filter(c => !conversationSearch || (c.first_message || '').toLowerCase().includes(conversationSearch.toLowerCase()))
+                    .filter(c => !conversationSearch || (c.lead_name || '').toLowerCase().includes(conversationSearch.toLowerCase()) || (c.first_message || '').toLowerCase().includes(conversationSearch.toLowerCase()))
                     .map(conv => (
                     <button
                       key={conv.id}
@@ -1287,16 +1289,26 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                       className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${selectedConversation?.id === conv.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : ''}`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-sm font-semibold text-gray-900 truncate">Conversation #{conv.id}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full ${conv.source === 'embed' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                        <span className="text-sm font-semibold text-gray-900 truncate">
+                          {conv.lead_name || 'Website Visitor'}
+                        </span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full flex-shrink-0 ${conv.source === 'embed' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
                           {conv.source === 'embed' ? 'Website Chat' : 'SMS Agent'}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 truncate">{conv.first_message || 'No messages'}</p>
                       <div className="flex items-center justify-between mt-2">
                         <span className="text-xs text-gray-400">{parseTS(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {parseTS(conv.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${conv.outcome === 'booked' ? 'bg-green-100 text-green-700' : conv.outcome === 'no_response' ? 'bg-gray-100 text-gray-500' : 'bg-red-50 text-red-600'}`}>
-                          {conv.outcome === 'booked' ? 'Booked' : conv.outcome === 'no_response' ? "No response" : "Didn't book"}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                          conv.outcome === 'booked' ? 'bg-green-100 text-green-700' :
+                          conv.outcome === 'callback' ? 'bg-amber-100 text-amber-700' :
+                          conv.outcome === 'no_response' ? 'bg-gray-100 text-gray-500' :
+                          'bg-red-50 text-red-600'
+                        }`}>
+                          {conv.outcome === 'booked' ? '✓ Booked' :
+                           conv.outcome === 'callback' ? '📞 Call Back' :
+                           conv.outcome === 'no_response' ? 'No response' :
+                           "Didn't book"}
                         </span>
                       </div>
                     </button>
@@ -1352,12 +1364,63 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               ) : (
                 <>
                   <div className="p-4 border-b border-gray-200 bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900">Conversation #{selectedConversation.id}</h3>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-semibold text-gray-900">
+                            {selectedConversation.lead_name || 'Website Visitor'}
+                          </h3>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
+                            selectedConversation.outcome === 'booked' ? 'bg-green-100 text-green-700' :
+                            selectedConversation.outcome === 'callback' ? 'bg-amber-100 text-amber-700' :
+                            selectedConversation.outcome === 'no_response' ? 'bg-gray-100 text-gray-500' :
+                            'bg-red-50 text-red-600'
+                          }`}>
+                            {selectedConversation.outcome === 'booked' ? '✓ Booked' :
+                             selectedConversation.outcome === 'callback' ? '📞 Call Back' :
+                             selectedConversation.outcome === 'no_response' ? 'No response' :
+                             "Didn't book"}
+                          </span>
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">{parseTS(selectedConversation.created_at).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} &middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}</p>
                       </div>
-                      <button onClick={() => { setSelectedConversation(null); setConversationMessages([]); }} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"><X className="w-4 h-4" /></button>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {selectedConversation.outcome !== 'callback' && (
+                          <button
+                            onClick={async () => {
+                              await authFetch(`${apiUrl}/api/chat/conversations/${selectedConversation.id}/outcome`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ outcome: 'callback' }),
+                              });
+                              setSelectedConversation(c => ({ ...c, outcome: 'callback' }));
+                              setConversations(cs => cs.map(c => c.id === selectedConversation.id ? { ...c, outcome: 'callback' } : c));
+                            }}
+                            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-lg transition"
+                          >
+                            <PhoneCall className="w-3.5 h-3.5" />
+                            Call Back
+                          </button>
+                        )}
+                        {selectedConversation.outcome !== 'booked' && (
+                          <button
+                            onClick={async () => {
+                              await authFetch(`${apiUrl}/api/chat/conversations/${selectedConversation.id}/outcome`, {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ outcome: 'booked' }),
+                              });
+                              setSelectedConversation(c => ({ ...c, outcome: 'booked' }));
+                              setConversations(cs => cs.map(c => c.id === selectedConversation.id ? { ...c, outcome: 'booked' } : c));
+                            }}
+                            className="flex items-center gap-1 text-xs font-semibold px-2.5 py-1.5 bg-green-100 text-green-700 hover:bg-green-200 rounded-lg transition"
+                          >
+                            <CheckCircle className="w-3.5 h-3.5" />
+                            Booked
+                          </button>
+                        )}
+                        <button onClick={() => { setSelectedConversation(null); setConversationMessages([]); }} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"><X className="w-4 h-4" /></button>
+                      </div>
                     </div>
                   </div>
                   <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-6 bg-gray-50 space-y-4">
