@@ -483,14 +483,13 @@ useEffect(() => {
     { id: 'email-campaigns', icon: Mail, label: 'Email Marketing' },
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'seo-audit', icon: Search, label: 'SEO Audit' },
-    { id: 'backlinks', icon: Link, label: 'Backlinks & Citations' },
     { id: 'market-research', icon: TrendingUp, label: 'Upsell Potential' },
   ];
 
   // Auto-open Pro section when navigating to a Pro view
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (['ai-agents', 'email-campaigns', 'google-business', 'seo-audit', 'backlinks', 'market-research'].includes(currentView)) {
+    if (['ai-agents', 'email-campaigns', 'google-business', 'seo-audit', 'market-research'].includes(currentView)) {
       setProOpen(true);
     }
   }, [currentView]);
@@ -604,9 +603,6 @@ useEffect(() => {
       )}
       {currentView === 'seo-audit' && (
         <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} inOnboarding={inOnboarding} />
-      )}
-      {currentView === 'backlinks' && (
-        <BacklinksPage apiUrl={apiUrl} authFetch={authFetch} user={user} />
       )}
       {currentView === 'payment-settings' && (
         <PaymentSettingsPage

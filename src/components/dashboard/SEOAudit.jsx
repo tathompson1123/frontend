@@ -21,8 +21,10 @@ import {
   Sparkles,
   ExternalLink,
   Loader2,
+  Link,
 } from 'lucide-react';
 import OakameLoader from '../OakameLoader';
+import BacklinksPage from './BacklinksPage';
 
 // ── Helpers ──────────────────────────────────────────────────
 function scoreColor(score) {
@@ -1640,6 +1642,7 @@ function SeoEmbedCard({ apiUrl, authFetch, audit, savedHeadCode, savedLlmsTxtCon
 const ANALYZING_WORDS = ['Analyzing', 'Crunching', 'Auditing', 'Scanning', 'Inspecting', 'Scoring'];
 
 export default function SEOAudit({ apiUrl, user, authFetch, inOnboarding }) {
+  const [seoTab, setSeoTab] = useState('audit');
   const [url, setUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [analyzingIdx, setAnalyzingIdx] = useState(0);
@@ -1767,6 +1770,39 @@ export default function SEOAudit({ apiUrl, user, authFetch, inOnboarding }) {
 
   return (
     <div className="space-y-6">
+      {/* Top-level tabs: SEO Audit | Backlinks & Citations */}
+      {!inOnboarding && (
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
+          <button
+            onClick={() => setSeoTab('audit')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              seoTab === 'audit' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <Search className="w-4 h-4" />
+            SEO Audit
+          </button>
+          <button
+            onClick={() => setSeoTab('backlinks')}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+              seoTab === 'backlinks' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'
+            }`}
+          >
+            <Link className="w-4 h-4" />
+            Backlinks & Citations
+          </button>
+        </div>
+      )}
+
+      {/* Backlinks tab */}
+      {seoTab === 'backlinks' && !inOnboarding && (
+        <BacklinksPage apiUrl={apiUrl} authFetch={authFetch} user={user} />
+      )}
+
+      {/* SEO Audit tab */}
+      {(seoTab === 'audit' || inOnboarding) && (
+      <div className="space-y-6">
+
       {/* Onboarding banner — hidden during the main onboarding flow (replaced by inline nudge below results) */}
       {!seoFlowDone && !inOnboarding && (
         <div className="rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-cyan-50 p-5 shadow-sm">
@@ -1991,6 +2027,8 @@ export default function SEOAudit({ apiUrl, user, authFetch, inOnboarding }) {
           </>
         );
       })()}
+      </div>
+      )}
     </div>
   );
 }
