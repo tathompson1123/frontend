@@ -28,8 +28,18 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!localStorage.getItem('token')) { navigate('/', { replace: true }); return; }
     if (user.email_verified) { navigate('/onboarding', { replace: true }); return; }
-    // Auto-send a fresh verification code as soon as the page opens
-    authFetch('/api/auth/resend-verification', { method: 'POST' }).catch(() => {});
+    // Auto-send a fresh verification code — if DB says already_verified, sync localStorage and redirect
+    authFetch('/api/auth/resend-verification', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => {
+        if (data.already_verified) {
+          // DB says verified but localStorage was stale — fix it and move on
+          const u = JSON.parse(localStorage.getItem('user') || '{}');
+          localStorage.setItem('user', JSON.stringify({ ...u, email_verified: true }));
+          navigate('/onboarding', { replace: true });
+        }
+      })
+      .catch(() => {});
   }, []);
 
   const fullCode = code.join('');
@@ -88,7 +98,15 @@ export default function VerifyEmailPage() {
     setResending(true);
     setError('');
     try {
-      await authFetch('/api/auth/resend-verification', { method: 'POST' });
+      const res = await authFetch('/api/auth/resend-verification', { method: 'POST' });
+      const data = await res.json();
+      if (data.already_verified) {
+        // Already verified in DB — sync and redirect
+        const u = JSON.parse(localStorage.getItem('user') || '{}');
+        localStorage.setItem('user', JSON.stringify({ ...u, email_verified: true }));
+        navigate('/onboarding', { replace: true });
+        return;
+      }
       setResent(true);
       setTimeout(() => setResent(false), 5000);
     } catch {
