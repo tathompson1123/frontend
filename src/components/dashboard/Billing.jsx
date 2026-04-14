@@ -400,7 +400,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
             />
             {chatCostLimit != null ? (
               <UsageMeter
-                label="AI Chat Conversations"
+                label="AI Usage"
                 used={convosUsed}
                 limit={totalConvos}
                 color="green"
@@ -408,7 +408,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
               />
             ) : (
               <UsageMeter
-                label="Chat Agent AI Responses"
+                label="AI Usage"
                 used={chatUsed}
                 limit={chatLimit}
                 color="green"
