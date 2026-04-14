@@ -589,7 +589,8 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
       });
       const data = await r.json();
       if (data.success) {
-        setCampaign(data.campaign);
+        // Merge so annotations (not returned by refine) are preserved
+        setCampaign(prev => ({ ...prev, ...data.campaign }));
         setFeedback('');
         showToast('Campaign updated');
       } else {
