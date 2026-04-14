@@ -217,6 +217,17 @@ export default function OnboardingScreen({ currentView, setCurrentView, onSkip, 
               />
             </div>
           </div>
+          {/* Exit button */}
+          {onSkip && (
+            <button
+              onClick={onSkip}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-gray-500 hover:text-gray-800 hover:bg-gray-100 transition-all"
+              title="Back to dashboard"
+            >
+              <X className="w-4 h-4" />
+              <span className="hidden sm:inline">Exit</span>
+            </button>
+          )}
         </div>
       </div>
 
