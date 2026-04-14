@@ -159,7 +159,7 @@ export default function HelpPage({ setInOnboarding, requestViewChange, setUser }
             <h3 className="text-base font-bold text-gray-900 mb-4">Get Help</h3>
             <div className="space-y-3">
               <a
-                href="mailto:support@sorceintegrations.com"
+                href="mailto:help@sorceintegrations.com"
                 className="flex items-center gap-3 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-all"
               >
                 <div className="w-9 h-9 bg-blue-100 rounded-lg flex items-center justify-center shrink-0">
@@ -167,7 +167,7 @@ export default function HelpPage({ setInOnboarding, requestViewChange, setUser }
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-gray-800">Email Support</p>
-                  <p className="text-xs text-gray-500">support@sorceintegrations.com</p>
+                  <p className="text-xs text-gray-500">help@sorceintegrations.com</p>
                 </div>
                 <ExternalLink className="w-4 h-4 text-gray-400" />
               </a>
