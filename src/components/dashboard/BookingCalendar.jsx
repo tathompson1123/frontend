@@ -1130,7 +1130,6 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               ))}
             </div>
           </div>
-          </div>
           </>
         )}
 
