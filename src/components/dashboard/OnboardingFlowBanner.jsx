@@ -91,7 +91,7 @@ export function isFlowComplete() {
 
 export default function OnboardingFlowBanner({ setCurrentView }) {
   const [flow, setFlow] = useState(getFlowSteps());
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(() => window.innerWidth < 768);
   const [dismissed, setDismissed] = useState(
     localStorage.getItem('onboarding_flow_dismissed') === 'true'
   );

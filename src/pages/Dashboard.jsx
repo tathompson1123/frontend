@@ -70,12 +70,13 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
         <h2 className="text-3xl font-bold text-gray-900">Payment Settings</h2>
         <p className="text-gray-600 mt-1">Manage payment processors, invoices, and transactions</p>
       </div>
-      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+      <div className="overflow-x-auto mb-6">
+      <div className="flex gap-1 bg-gray-100 rounded-xl p-1 min-w-max w-fit">
         {tabs.map(t => (
           <button
             key={t.key}
             onClick={() => setSubTab(t.key)}
-            className={`px-5 py-2.5 rounded-lg text-sm font-semibold transition ${
+            className={`px-4 py-2.5 rounded-lg text-sm font-semibold transition whitespace-nowrap ${
               subTab === t.key
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
@@ -84,6 +85,7 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
             {t.label}
           </button>
         ))}
+      </div>
       </div>
       {subTab === 'processors' && <PaymentProcessors key={`processors-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} justConnected={justConnected} onConnectionChange={() => setRefreshKey(k => k + 1)} />}
       {subTab === 'invoices' && <Invoices key={`invoices-${refreshKey}`} apiUrl={apiUrl} user={user} authFetch={authFetch} />}
@@ -795,9 +797,9 @@ useEffect(() => {
       {/* Main Content */}
      <main className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
         <div className="p-4 md:p-8">
-          {/* Top bar with plan-styled business name */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-3 min-w-0">
+          {/* Top bar */}
+          <div className="flex items-center justify-between mb-6 gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <button
                 className="md:hidden flex-shrink-0 p-2 hover:bg-white/60 rounded-lg transition-colors"
                 onClick={() => setSidebarOpen(true)}
@@ -810,37 +812,32 @@ useEffect(() => {
 
               if (plan === 'scale') {
                 return (
-                  <div className="flex items-center gap-3 relative">
-                    <Flame className="w-6 h-6 text-red-500 animate-pulse" />
-                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-red-600 via-orange-500 to-red-600 bg-clip-text text-transparent drop-shadow-sm" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Flame className="w-5 h-5 text-red-500 animate-pulse flex-shrink-0" />
+                    <h1 className="text-lg md:text-2xl font-extrabold truncate bg-gradient-to-r from-red-600 via-orange-500 to-red-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
                       {name}
                     </h1>
-                    <Sparkles className="w-5 h-5 text-red-400 animate-pulse" style={{ animationDelay: '0.5s' }} />
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-red-100 to-orange-100 text-red-800 border-red-300 shadow-sm shadow-red-200">
-                      <Crown className="w-3 h-3" />
-                      Scale
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border bg-gradient-to-r from-red-100 to-orange-100 text-red-800 border-red-300 flex-shrink-0">
+                      <Crown className="w-3 h-3" />Scale
                     </span>
                   </div>
                 );
               }
 
-              // PRO trial check must come before plain pro check
               const trialEnd = user?.trial_ends_at ? new Date(user.trial_ends_at) : null;
               const onTrial = trialEnd && trialEnd > new Date() && plan === 'pro';
               if (onTrial) {
                 const daysLeft = Math.max(0, Math.ceil((trialEnd - new Date()) / 86400000));
                 return (
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h1 className="text-lg md:text-2xl font-extrabold truncate bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
                       {name}
                     </h1>
-                    <Zap className="w-5 h-5 text-amber-500" />
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 shadow-sm shadow-amber-200">
-                      <Crown className="w-3 h-3" />
-                      PRO
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 flex-shrink-0">
+                      <Crown className="w-3 h-3" />PRO
                     </span>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200">
-                      {daysLeft} day free trial
+                    <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-700 border border-green-200 flex-shrink-0">
+                      {daysLeft}d trial
                     </span>
                   </div>
                 );
@@ -848,14 +845,12 @@ useEffect(() => {
 
               if (plan === 'pro' || plan === 'expert') {
                 return (
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-extrabold bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h1 className="text-lg md:text-2xl font-extrabold truncate bg-gradient-to-r from-amber-600 via-yellow-500 to-amber-600 bg-clip-text text-transparent" style={{ backgroundSize: '200% auto', animation: 'shimmer 3s linear infinite' }}>
                       {name}
                     </h1>
-                    <Zap className="w-5 h-5 text-amber-500" />
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 shadow-sm shadow-amber-200">
-                      <Crown className="w-3 h-3" />
-                      {plan === 'expert' ? 'Expert' : 'Pro'}
+                    <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 border-amber-300 flex-shrink-0">
+                      <Crown className="w-3 h-3" />{plan === 'expert' ? 'Expert' : 'Pro'}
                     </span>
                   </div>
                 );
@@ -863,26 +858,17 @@ useEffect(() => {
 
               if (plan === 'basic') {
                 return (
-                  <div className="flex items-center gap-3">
-                    <h1 className="text-2xl font-bold text-gray-500">
-                      {name}
-                    </h1>
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gray-100 text-gray-500 border-gray-200">
-                      Basic
-                    </span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <h1 className="text-lg md:text-2xl font-bold truncate text-gray-500">{name}</h1>
+                    <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border bg-gray-100 text-gray-500 border-gray-200 flex-shrink-0">Basic</span>
                   </div>
                 );
               }
 
-              // Free / no plan
               return (
-                <div className="flex items-center gap-3">
-                  <h1 className="text-2xl font-bold text-gray-400">
-                    {name}
-                  </h1>
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-gray-50 text-gray-400 border-gray-200">
-                    Free
-                  </span>
+                <div className="flex items-center gap-2 min-w-0">
+                  <h1 className="text-lg md:text-2xl font-bold truncate text-gray-400">{name}</h1>
+                  <span className="hidden sm:inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border bg-gray-50 text-gray-400 border-gray-200 flex-shrink-0">Free</span>
                 </div>
               );
             })()}
@@ -890,10 +876,11 @@ useEffect(() => {
             {!user?.plan && (
               <button
                 onClick={() => requestViewChange('billing')}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all flex-shrink-0"
+                className="flex items-center gap-1.5 px-3 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-xs md:text-sm font-semibold hover:shadow-lg transition-all flex-shrink-0"
               >
                 <Zap className="w-4 h-4" />
-                Upgrade Plan
+                <span className="hidden sm:inline">Upgrade Plan</span>
+                <span className="sm:hidden">Upgrade</span>
               </button>
             )}
           </div>

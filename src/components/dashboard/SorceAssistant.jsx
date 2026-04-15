@@ -115,10 +115,17 @@ export default function SorceAssistant({ apiUrl, authFetch }) {
         )}
       </button>
 
+      {/* Mobile backdrop */}
+      {open && (
+        <div className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setOpen(false)} />
+      )}
+
       {/* Chat panel */}
       {open && (
-        <div className="fixed bottom-24 right-6 z-50 w-96 max-w-[calc(100vw-24px)] bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden"
-          style={{ height: 520 }}>
+        <div className="fixed z-50 bg-white shadow-2xl flex flex-col overflow-hidden
+          bottom-0 left-0 right-0 rounded-t-2xl border-t border-x border-gray-200 max-h-[80dvh]
+          md:bottom-24 md:right-6 md:left-auto md:w-96 md:rounded-2xl md:border md:max-h-none"
+          style={window.innerWidth >= 768 ? { height: 520 } : {}}>
 
           {/* Header */}
           <div className="flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 flex-shrink-0">
