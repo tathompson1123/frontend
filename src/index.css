@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Prevent horizontal scrolling on mobile globally */
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 /* Oakame-style three-bar loader */
 @keyframes oakame-bar {
   0%   { transform: scaleY(1); }

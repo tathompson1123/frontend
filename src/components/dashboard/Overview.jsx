@@ -243,7 +243,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const CardIcon = currentCard.icon;
 
   return (
-    <div className="flex gap-6 items-start">
+    <div className="flex flex-col gap-6 md:flex-row md:items-start">
     {/* Left column — main content */}
     <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
@@ -261,7 +261,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
           <button onClick={() => setWeekOffset(weekOffset - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft className="w-4 h-4 text-gray-600" />
           </button>
-          <span className="font-semibold text-gray-700 text-sm min-w-[180px] text-center">{formatDateRange()}</span>
+          <span className="font-semibold text-gray-700 text-sm text-center">{formatDateRange()}</span>
           {weekOffset < 0 ? (
             <button onClick={() => setWeekOffset(weekOffset + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
               <ArrowRight className="w-4 h-4 text-gray-600" />
@@ -278,7 +278,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
           <CheckCircle2 className="w-5 h-5 text-emerald-600" />
           <h3 className="text-lg font-bold text-gray-900">Week Summary</h3>
         </div>
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <div className="text-sm text-gray-600 mb-1">Total Leads Captured</div>
             <div className="text-3xl font-bold text-gray-900">{totalLeads}</div>
@@ -406,7 +406,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-xl p-4 md:p-8 shadow-sm border border-gray-200">
         <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
           <button
@@ -453,7 +453,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
     </div>{/* end left column */}
 
     {/* Right column — To-Do List */}
-    <div className="w-80 flex-shrink-0 sticky top-6">
+    <div className="w-full md:w-80 md:flex-shrink-0 md:sticky md:top-6">
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 text-amber-600" />

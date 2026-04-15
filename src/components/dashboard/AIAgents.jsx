@@ -70,75 +70,77 @@ const loadDeploymentStatus = async () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center">
-              <Bot className="w-7 h-7 text-white" />
+        <div className="flex items-start justify-between mb-6 gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Bot className="w-5 h-5 md:w-7 md:h-7 text-white" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">AI Agents</h1>
-              <p className="text-gray-600 mt-1">Manage your automated AI assistants</p>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-900">AI Agents</h1>
+              <p className="text-gray-600 mt-0.5 text-sm md:text-base">Manage your automated AI assistants</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-green-100 text-green-700 rounded-lg">
+          <div className="flex items-center gap-2 px-3 py-2 bg-green-100 text-green-700 rounded-lg flex-shrink-0">
             <div className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></div>
-            <span className="font-semibold">{activeAgentsCount} Agent{activeAgentsCount !== 1 ? 's' : ''} Active</span>
+            <span className="font-semibold text-sm">{activeAgentsCount} Active</span>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-gray-200">
-          <button
-            onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all relative ${
-              activeTab === 'chat'
-                ? 'text-primary-600 bg-blue-50'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <MessageCircle className="w-5 h-5" />
-            Website Chat Agent
-            {chatAgentDeployed && (
-              <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-            )}
-            {activeTab === 'chat' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('leadform')}
-            className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all relative ${
-              activeTab === 'leadform'
-                ? 'text-primary-600 bg-blue-50'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <Mail className="w-5 h-5" />
-            Lead Form Agent
-            {leadAgentDeployed && (
-              <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-            )}
-            {activeTab === 'leadform' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
-            )}
-          </button>
-          <button
-            onClick={() => setActiveTab('missedcall')}
-            className={`flex items-center gap-2 px-6 py-3 font-semibold transition-all relative ${
-              activeTab === 'missedcall'
-                ? 'text-primary-600 bg-blue-50'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-            }`}
-          >
-            <Phone className="w-5 h-5" />
-            Missed Call Text-Back
-            {missedCallDeployed && (
-              <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-            )}
-            {activeTab === 'missedcall' && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
-            )}
-          </button>
+        <div className="overflow-x-auto -mx-6 px-6">
+          <div className="flex gap-2 border-b border-gray-200 min-w-max">
+            <button
+              onClick={() => setActiveTab('chat')}
+              className={`flex items-center gap-2 px-4 py-3 font-semibold transition-all relative whitespace-nowrap ${
+                activeTab === 'chat'
+                  ? 'text-primary-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <MessageCircle className="w-5 h-5" />
+              <span className="hidden sm:inline">Website </span>Chat Agent
+              {chatAgentDeployed && (
+                <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+              )}
+              {activeTab === 'chat' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('leadform')}
+              className={`flex items-center gap-2 px-4 py-3 font-semibold transition-all relative whitespace-nowrap ${
+                activeTab === 'leadform'
+                  ? 'text-primary-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Mail className="w-5 h-5" />
+              Lead Form<span className="hidden sm:inline"> Agent</span>
+              {leadAgentDeployed && (
+                <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+              )}
+              {activeTab === 'leadform' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab('missedcall')}
+              className={`flex items-center gap-2 px-4 py-3 font-semibold transition-all relative whitespace-nowrap ${
+                activeTab === 'missedcall'
+                  ? 'text-primary-600 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+              }`}
+            >
+              <Phone className="w-5 h-5" />
+              Missed Call<span className="hidden sm:inline"> Text-Back</span>
+              {missedCallDeployed && (
+                <span className="w-2 h-2 bg-green-600 rounded-full"></span>
+              )}
+              {activeTab === 'missedcall' && (
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
