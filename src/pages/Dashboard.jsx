@@ -119,7 +119,7 @@ const authFetch = async (url, options = {}) => {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [proOpen, setProOpen] = useState(false);
   const [currentView, setCurrentViewRaw] = useState('overview');
   const [viewSubTab, setViewSubTab] = useState(null);
@@ -674,8 +674,13 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
 
+      {/* Mobile overlay backdrop */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 bg-black/40 z-30 md:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+      <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20'}`}>
         {/* Logo & Toggle */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           {sidebarOpen && (
@@ -699,7 +704,7 @@ useEffect(() => {
             return (
               <button
                 key={item.id}
-                onClick={() => requestViewChange(item.id)}
+                onClick={() => { if (window.innerWidth < 768) setSidebarOpen(false); requestViewChange(item.id); }}
                 title={!sidebarOpen ? item.label : undefined}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
@@ -737,7 +742,7 @@ useEffect(() => {
                   return (
                     <button
                       key={item.id}
-                      onClick={() => requestViewChange(item.id)}
+                      onClick={() => { if (window.innerWidth < 768) setSidebarOpen(false); requestViewChange(item.id); }}
                       title={!sidebarOpen ? item.label : undefined}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all ${
                         isActive
@@ -760,7 +765,7 @@ useEffect(() => {
             return (
               <button
                 key={item.id}
-                onClick={() => requestViewChange(item.id)}
+                onClick={() => { if (window.innerWidth < 768) setSidebarOpen(false); requestViewChange(item.id); }}
                 title={!sidebarOpen ? item.label : undefined}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                   isActive
@@ -788,11 +793,18 @@ useEffect(() => {
       </aside>
 
       {/* Main Content */}
-     <main className={`transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
-        <div className="p-8">
+     <main className={`transition-all duration-300 ${sidebarOpen ? 'md:ml-64' : 'md:ml-20'}`}>
+        <div className="p-4 md:p-8">
           {/* Top bar with plan-styled business name */}
           <div className="flex items-center justify-between mb-6">
-            {(() => {
+            <div className="flex items-center gap-3 min-w-0">
+              <button
+                className="md:hidden flex-shrink-0 p-2 hover:bg-white/60 rounded-lg transition-colors"
+                onClick={() => setSidebarOpen(true)}
+              >
+                <Menu className="w-5 h-5 text-gray-700" />
+              </button>
+              {(() => {
               const plan = user?.plan;
               const name = (user?.businessName || 'My Business').toUpperCase();
 
@@ -874,10 +886,11 @@ useEffect(() => {
                 </div>
               );
             })()}
+            </div>
             {!user?.plan && (
               <button
                 onClick={() => requestViewChange('billing')}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all"
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-500 text-white rounded-lg text-sm font-semibold hover:shadow-lg transition-all flex-shrink-0"
               >
                 <Zap className="w-4 h-4" />
                 Upgrade Plan
@@ -898,7 +911,7 @@ useEffect(() => {
         </div>
 
         {/* Dashboard Footer */}
-        <footer className="border-t border-gray-200 bg-white/60 px-8 py-4 flex items-center justify-between text-xs text-gray-400">
+        <footer className="border-t border-gray-200 bg-white/60 px-4 md:px-8 py-4 flex items-center justify-between text-xs text-gray-400">
           <span>© {new Date().getFullYear()} SORCE. All rights reserved.</span>
           <div className="flex items-center gap-4">
             <button

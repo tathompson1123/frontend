@@ -33,11 +33,23 @@ import {
   PhoneCall
 } from 'lucide-react';
 
-// Always parse DB timestamps as UTC (PostgreSQL returns without 'Z')
+// Always parse DB timestamps as UTC (PostgreSQL returns without 'Z', may use space instead of 'T')
 function parseTS(ts) {
   if (!ts) return new Date(0);
-  const s = String(ts);
-  return new Date(/Z$|[+-]\d{2}:?\d{2}$/.test(s) ? s : s + 'Z');
+  const s = String(ts).trim();
+  if (/Z$|[+-]\d{2}:?\d{2}$/.test(s)) return new Date(s);
+  // Normalize space separator to 'T' then treat as UTC
+  return new Date(s.replace(' ', 'T') + 'Z');
+}
+
+function fmtTime(ts) {
+  const d = parseTS(ts);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function fmtDateTime(ts) {
+  const d = parseTS(ts);
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
@@ -90,6 +102,11 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [viewingCustomerEdit, setViewingCustomerEdit] = useState({});
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+
+  // CSV mapper state
+  const [csvMapper, setCsvMapper] = useState(null); // { headers, rows, tab }
+  const [csvMappings, setCsvMappings] = useState({});
+  const [csvImporting, setCsvImporting] = useState(false);
 
   // Rewards state
   const [rewardsConfig, setRewardsConfig] = useState({
@@ -184,189 +201,196 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     window.URL.revokeObjectURL(url);
   };
 
+  // Full RFC-4180 CSV parser — handles quoted fields, embedded commas, CRLF, escaped quotes ("")
+  const parseCSVText = (text) => {
+    const rows = [];
+    let col = '', inQ = false, row = [];
+    // Normalize line endings and strip BOM
+    const s = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    for (let i = 0; i < s.length; i++) {
+      const c = s[i];
+      if (inQ) {
+        if (c === '"') {
+          if (s[i + 1] === '"') { col += '"'; i++; } // escaped quote
+          else inQ = false;
+        } else col += c;
+      } else if (c === '"') {
+        inQ = true;
+      } else if (c === ',') {
+        row.push(col.trim()); col = '';
+      } else if (c === '\n') {
+        row.push(col.trim()); col = '';
+        if (row.some(v => v !== '')) rows.push(row); // skip fully blank lines
+        row = [];
+      } else {
+        col += c;
+      }
+    }
+    if (col || row.length) { row.push(col.trim()); if (row.some(v => v !== '')) rows.push(row); }
+    return rows;
+  };
+
+  // Auto-detect which CSV column index best matches a set of keyword aliases.
+  // Three-pass: exact → substring excluding "type"/"label"/"format" columns → any substring.
+  const detectCol = (headers, ...aliases) => {
+    const norm = s => s.replace(/[\s_\-]/g, '').toLowerCase();
+    const isMetaCol = h => { const n = norm(h); return n.endsWith('type') || n.endsWith('label') || n.endsWith('format') || n.endsWith('category'); };
+    // Pass 1: exact match
+    for (const alias of aliases) {
+      const na = norm(alias);
+      const idx = headers.findIndex(h => norm(h) === na);
+      if (idx !== -1) return idx;
+    }
+    // Pass 2: substring match, skip meta/type columns
+    for (const alias of aliases) {
+      const na = norm(alias);
+      const idx = headers.findIndex(h => {
+        const nh = norm(h);
+        if (!nh || isMetaCol(h)) return false;
+        return nh.includes(na) || na.includes(nh);
+      });
+      if (idx !== -1) return idx;
+    }
+    // Pass 3: any substring match (fallback)
+    for (const alias of aliases) {
+      const na = norm(alias);
+      const idx = headers.findIndex(h => {
+        const nh = norm(h);
+        if (!nh) return false;
+        return nh.includes(na) || na.includes(nh);
+      });
+      if (idx !== -1) return idx;
+    }
+    return -1;
+  };
+
+  // Phase 1: parse CSV, auto-detect columns, open mapping modal
   const importFromCSV = (event) => {
     const file = event.target.files[0];
     if (!file) return;
+    event.target.value = '';
 
     const reader = new FileReader();
-    reader.onload = async (e) => {
+    reader.onload = (e) => {
       try {
-        const text = e.target.result;
+        const allRows = parseCSVText(e.target.result);
+        if (allRows.length < 2) { alert('CSV file is empty or has no data rows.'); return; }
 
-        // Parse CSV properly — handles quoted fields containing commas
-        const parseRow = (row) => {
-          const vals = [];
-          let cur = '', inQuote = false;
-          for (let i = 0; i < row.length; i++) {
-            const ch = row[i];
-            if (ch === '"') { inQuote = !inQuote; }
-            else if (ch === ',' && !inQuote) { vals.push(cur.trim()); cur = ''; }
-            else { cur += ch; }
-          }
-          vals.push(cur.trim());
-          return vals;
-        };
-
-        const lines = text.split('\n').map(r => r.trim()).filter(r => r);
-        if (lines.length < 2) { alert('CSV file is empty or invalid'); return; }
-
-        // Smarter column resolution: normalize headers, then find by substring match (bidirectional)
-        const rawHeaders = parseRow(lines[0]);
-        // Strip BOM if present on first header
-        if (rawHeaders[0]) rawHeaders[0] = rawHeaders[0].replace(/^\uFEFF/, '');
+        const rawHeaders = allRows[0];
         const headers = rawHeaders.map(h => h.toLowerCase().trim());
+        const dataRows = allRows.slice(1);
 
-        // Bidirectional match: header contains term OR term contains header (handles short names like "First", "Last")
-        // Skip empty headers — empty string matches everything via String.includes(''), causing all columns to map to the first empty header
-        const findCol = (...substrings) => {
-          for (const sub of substrings) {
-            const normSub = sub.replace(/[\s_\-]/g, '').toLowerCase();
-            const idx = headers.findIndex(h => {
-              const normH = h.replace(/[\s_\-]/g, '').toLowerCase();
-              if (!normH) return false; // skip empty header cells
-              return normH === normSub || normH.includes(normSub) || normSub.includes(normH);
-            });
-            if (idx !== -1) return idx;
-          }
-          return -1;
+        // Auto-detect common column patterns — more specific aliases listed first
+        const detected = {
+          fullName:    detectCol(headers, 'fullname', 'customername', 'contactname', 'clientname', 'displayname', 'companyname', 'businessname', 'accountname', 'organizationname', 'name', 'customer', 'contact', 'client', 'account', 'company', 'business', 'organization'),
+          firstName:   detectCol(headers, 'firstname', 'givenname', 'fname', 'first'),
+          lastName:    detectCol(headers, 'lastname', 'familyname', 'surname', 'lname', 'last'),
+          email:       detectCol(headers, 'email1value', 'email2value', 'emailaddress', 'primaryemail', 'contactemail', 'email1', 'email', 'e-mail'),
+          phone:       detectCol(headers, 'phone1value', 'phone2value', 'primaryphone', 'mobilephone', 'cellphone', 'homephone', 'workphone', 'phonenumber', 'mobile', 'cell', 'telephone', 'tel', 'phone'),
+          service:     detectCol(headers, 'lastservice', 'servicetype', 'service', 'product'),
+          serviceDate: detectCol(headers, 'lastservicedate', 'servicedate', 'lastvisit', 'visitdate', 'appointmentdate', 'date'),
+          notes:       detectCol(headers, 'notes', 'note', 'comments', 'comment', 'description', 'memo'),
+          // leads-only
+          status:      detectCol(headers, 'leadstatus', 'status'),
+          source:      detectCol(headers, 'leadsource', 'source', 'channel'),
         };
+        console.log('[CSV] Headers:', rawHeaders);
+        console.log('[CSV] Detected mappings:', detected);
 
-        const getVal = (row, idx) => (idx !== -1 && row[idx] != null ? row[idx].trim() : '');
-        // Strip Wix/Excel phone apostrophe prefix and normalize
-        const cleanPhone = (val) => val.replace(/^'+/, '').trim();
-
-        const dataRows = lines.slice(1);
-
-        if (activeTab === 'leads') {
-          // Resolve column indices once for leads
-          // Wix exports: "First Name*", "Last Name", "Email 1 - Value", "Phone 1 - Value"
-          const iFirstName = findCol('firstname', 'first_name', 'first', 'givenname', 'fname', 'given');
-          const iLastName = findCol('lastname', 'last_name', 'last', 'surname', 'familyname', 'lname', 'family');
-          const iName = findCol('fullname', 'customername', 'contactname', 'clientname', 'displayname', 'name');
-          const iPhone = findCol('phone', 'mobile', 'cell');
-          const iEmail = findCol('email');
-          const iStatus = findCol('status');
-          const iSource = findCol('source');
-          const iNotes = findCol('notes', 'comment');
-
-          const leads = dataRows
-            .map(line => {
-              const values = parseRow(line);
-              let name = getVal(values, iName);
-              let email = getVal(values, iEmail);
-              if (!name && iFirstName !== -1) {
-                const fn = getVal(values, iFirstName);
-                const ln = getVal(values, iLastName);
-                // Wix exports sometimes put email in Last Name field when no last name was stored
-                if (ln.includes('@') && !email) {
-                  name = fn;
-                  email = ln;
-                } else {
-                  name = [fn, ln].filter(Boolean).join(' ');
-                }
-              }
-              // Last resort: if name is still empty but email exists, derive from email username
-              if (!name && email) {
-                name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-              }
-              if (!name) return null;
-              return {
-                name,
-                status: getVal(values, iStatus) || 'new',
-                phone: cleanPhone(getVal(values, iPhone)),
-                email,
-                source: getVal(values, iSource) || 'manual',
-                notes: getVal(values, iNotes),
-              };
-            })
-            .filter(Boolean);
-
-          if (leads.length === 0) {
-            const detectedHeaders = rawHeaders.slice(0, 8).join(', ');
-            alert(`No valid leads found in CSV.\nHeaders detected: ${detectedHeaders}\n\nExpected columns like "First Name", "Last Name", "Email", "Phone".`);
-            return;
-          }
-          const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
-            method: 'POST',
-            body: JSON.stringify({ leads })
-          });
-          const data = await response.json();
-          if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-          const lparts = [`Imported: ${data.successCount}`];
-          if (data.duplicateCount > 0) lparts.push(`Duplicates skipped: ${data.duplicateCount}`);
-          if (data.errorCount > 0) lparts.push(`Errors: ${data.errorCount}`);
-          alert('Import complete!\n' + lparts.join('\n'));
-          fetchLeads();
-        } else {
-          // Resolve column indices once for customers
-          // Wix exports: "First Name*", "Last Name", "Email 1 - Value", "Phone 1 - Value"
-          const iFirstName = findCol('firstname', 'first_name', 'first', 'givenname', 'fname', 'given');
-          const iLastName = findCol('lastname', 'last_name', 'last', 'surname', 'familyname', 'lname', 'family');
-          const iName = findCol('fullname', 'customername', 'contactname', 'clientname', 'displayname', 'name');
-          const iPhone = findCol('phone', 'mobile', 'cell');
-          const iEmail = findCol('email');
-          const iService = findCol('lastservice', 'service');
-          const iServiceDate = findCol('servicedate', 'lastvisit', 'visitdate');
-          const iNotes = findCol('notes', 'comment');
-
-          const customers = dataRows
-            .map(line => {
-              const values = parseRow(line);
-              let name = getVal(values, iName);
-              let email = getVal(values, iEmail);
-              if (!name && iFirstName !== -1) {
-                const fn = getVal(values, iFirstName);
-                const ln = getVal(values, iLastName);
-                // Wix exports sometimes put email in Last Name field when no last name was stored
-                if (ln.includes('@') && !email) {
-                  name = fn;
-                  email = ln;
-                } else {
-                  name = [fn, ln].filter(Boolean).join(' ');
-                }
-              }
-              // Last resort: if name is still empty but email exists, use email username as name
-              if (!name && email) {
-                name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-              }
-              if (!name) return null;
-              return {
-                name,
-                phone: cleanPhone(getVal(values, iPhone)),
-                email,
-                last_service: getVal(values, iService),
-                last_service_date: getVal(values, iServiceDate) || null,
-                notes: getVal(values, iNotes),
-              };
-            })
-            .filter(Boolean);
-
-          if (customers.length === 0) {
-            const detectedHeaders = rawHeaders.slice(0, 8).join(', ');
-            alert(`No valid customers found in CSV.\nHeaders detected: ${detectedHeaders}\n\nExpected columns like "First Name", "Last Name", "Email", "Phone".`);
-            return;
-          }
-          const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
-            method: 'POST',
-            body: JSON.stringify({ customers })
-          });
-          const data = await response.json();
-          if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-          const parts = [`Imported: ${data.successCount}`];
-          if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
-          if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
-          alert('Import complete!\n' + parts.join('\n'));
-          fetchCustomers();
-        }
-
-      } catch (error) {
-        console.error('Error parsing CSV:', error);
-        alert('Failed to parse CSV file. Please check the format.');
+        setCsvMappings(detected);
+        setCsvMapper({ headers: rawHeaders, rows: dataRows, tab: activeTab });
+      } catch (err) {
+        console.error('CSV parse error:', err);
+        alert('Failed to read CSV file.');
       }
     };
-
     reader.readAsText(file);
-    event.target.value = '';
+  };
+
+  // Phase 2: user confirmed mappings → build records → call API
+  const confirmCSVImport = async () => {
+    if (!csvMapper) return;
+    setCsvImporting(true);
+    try {
+      const { rows, tab } = csvMapper;
+      const m = csvMappings;
+
+      const getVal = (row, idx) => (idx != null && idx >= 0 && row[idx] != null ? row[idx].trim() : '');
+      const cleanPhone = (v) => v.replace(/^'+/, '').replace(/\D/g, '') ? v.replace(/^'+/, '').trim() : '';
+
+      if (tab === 'leads') {
+        const leads = rows.map(row => {
+          let name = getVal(row, m.fullName);
+          let email = getVal(row, m.email);
+          if (!name && m.firstName >= 0) {
+            const fn = getVal(row, m.firstName);
+            const ln = m.lastName >= 0 ? getVal(row, m.lastName) : '';
+            if (ln.includes('@') && !email) { name = fn; email = ln; }
+            else name = [fn, ln].filter(Boolean).join(' ');
+          }
+          if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          if (!name) name = 'Unknown';
+          return {
+            name,
+            email: email || null,
+            phone: cleanPhone(getVal(row, m.phone)) || null,
+            status: getVal(row, m.status) || 'new',
+            source: getVal(row, m.source) || 'manual',
+            notes: getVal(row, m.notes) || null,
+          };
+        }).filter(r => r.name !== 'Unknown' || r.email || r.phone);
+
+        const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
+          method: 'POST', body: JSON.stringify({ leads })
+        });
+        const data = await response.json();
+        if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
+        const parts = [`Imported: ${data.successCount}`];
+        if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
+        if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
+        alert('Import complete!\n' + parts.join('\n'));
+        setCsvMapper(null);
+        fetchLeads();
+      } else {
+        const customers = rows.map(row => {
+          let name = getVal(row, m.fullName);
+          let email = getVal(row, m.email);
+          if (!name && m.firstName >= 0) {
+            const fn = getVal(row, m.firstName);
+            const ln = m.lastName >= 0 ? getVal(row, m.lastName) : '';
+            if (ln.includes('@') && !email) { name = fn; email = ln; }
+            else name = [fn, ln].filter(Boolean).join(' ');
+          }
+          if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          if (!name) name = 'Unknown';
+          return {
+            name,
+            email: email || null,
+            phone: cleanPhone(getVal(row, m.phone)) || null,
+            last_service: getVal(row, m.service) || null,
+            last_service_date: getVal(row, m.serviceDate) || null,
+            notes: getVal(row, m.notes) || null,
+          };
+        }).filter(r => r.name !== 'Unknown' || r.email || r.phone);
+
+        const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
+          method: 'POST', body: JSON.stringify({ customers })
+        });
+        const data = await response.json();
+        if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
+        const parts = [`Imported: ${data.successCount}`];
+        if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
+        if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
+        alert('Import complete!\n' + parts.join('\n'));
+        setCsvMapper(null);
+        fetchCustomers();
+      }
+    } catch (err) {
+      console.error('CSV import error:', err);
+      alert('Import failed. Please try again.');
+    } finally {
+      setCsvImporting(false);
+    }
   };
 
   useEffect(() => {
@@ -989,8 +1013,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-gray-200 bg-gray-50">
-          <div className="flex">
+        <div className="border-b border-gray-200 bg-gray-50 overflow-x-auto">
+          <div className="flex min-w-max">
             <button
               onClick={() => { setActiveTab('leads'); setSearchTerm(''); setEditingCell(null); }}
               className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'leads' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
@@ -1146,24 +1170,24 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       {(activeTab === 'leads' || activeTab === 'customers') && (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         {/* Toolbar */}
-        <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="relative">
+        <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:flex-none">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Search..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-64"
+                className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64"
               />
             </div>
-            <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2">
+            <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 flex-shrink-0">
               <Filter className="w-4 h-4" />
               Filter
             </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={exportToCSV}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -1198,32 +1222,99 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
 
         {/* Table */}
-        <div className="overflow-x-auto">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-600 mt-4">Loading...</p>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+            <p className="text-gray-600 mt-4">Loading...</p>
+          </div>
+        ) : activeTab === 'leads' ? (
+          <>
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {filteredLeads.length === 0 ? (
+                <div className="text-center py-12">
+                  <FolderOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No leads in this table</h3>
+                  <p className="text-gray-600">Add your first lead to get started</p>
+                </div>
+              ) : filteredLeads.map((lead) => {
+                const ageFlag = getLeadAgeFlag ? getLeadAgeFlag(lead) : null;
+                return (
+                  <div key={lead.id} onClick={() => openViewingLead(lead)} className={`p-4 cursor-pointer active:bg-blue-50 ${ageFlag?.level === 'urgent' ? 'bg-red-50' : ageFlag?.level === 'warn' ? 'bg-amber-50' : ''}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-blue-600 font-semibold text-sm">{lead.name || '—'}</span>
+                          {ageFlag && <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold flex items-center gap-1 ${ageFlag.level === 'urgent' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}><AlertCircle className="w-3 h-3" />{ageFlag.label}</span>}
+                        </div>
+                        <div className="flex items-center gap-3 mt-1 flex-wrap">
+                          <span className={`px-2 py-0.5 rounded-full text-xs ${getStatusColor(lead.status)}`}>{formatLabel(lead.status)}</span>
+                          {lead.phone && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{lead.phone}</span>}
+                          {lead.source && <span className={`px-2 py-0.5 rounded-full text-xs ${getSourceColor(lead.source)}`}>{formatLabel(lead.source)}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={(e) => { e.stopPropagation(); setConvertingLead(lead); setShowConvertModal(true); }} className="p-1.5 text-amber-600 hover:bg-amber-50 rounded" title="Convert"><Users className="w-4 h-4" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); deleteLead(lead.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-          ) : activeTab === 'leads' ? (
-            <LeadsTable
-              leads={filteredLeads}
-              columns={leadColumns}
-              openViewingLead={openViewingLead}
-              deleteLead={deleteLead}
-              setConvertingLead={setConvertingLead}
-              setShowConvertModal={setShowConvertModal}
-              getLeadAgeFlag={getLeadAgeFlag}
-              isFollowUpOverdue={isFollowUpOverdue}
-            />
-          ) : (
-            <CustomersTable
-              customers={filteredCustomers}
-              columns={customerColumns}
-              openViewingCustomer={(c) => { setViewingCustomer(c); setViewingCustomerEditMode(false); setViewingCustomerEdit({ name: c.name, phone: c.phone, email: c.email, last_service: c.last_service, last_service_date: c.last_service_date, left_review: c.left_review, notes: c.notes }); }}
-              deleteCustomer={deleteCustomer}
-            />
-          )}
-        </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <LeadsTable
+                leads={filteredLeads}
+                columns={leadColumns}
+                openViewingLead={openViewingLead}
+                deleteLead={deleteLead}
+                setConvertingLead={setConvertingLead}
+                setShowConvertModal={setShowConvertModal}
+                getLeadAgeFlag={getLeadAgeFlag}
+                isFollowUpOverdue={isFollowUpOverdue}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Mobile card list */}
+            <div className="md:hidden divide-y divide-gray-100">
+              {filteredCustomers.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">No customers yet</h3>
+                  <p className="text-gray-600">Convert leads or add bookings</p>
+                </div>
+              ) : filteredCustomers.map((customer) => (
+                <div key={customer.id} onClick={() => { setViewingCustomer(customer); setViewingCustomerEditMode(false); setViewingCustomerEdit({ name: customer.name, phone: customer.phone, email: customer.email, last_service: customer.last_service, last_service_date: customer.last_service_date, left_review: customer.left_review, notes: customer.notes }); }} className="p-4 cursor-pointer active:bg-blue-50">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <span className="text-blue-600 font-semibold text-sm">{customer.name || '—'}</span>
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        {customer.phone && <span className="text-xs text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{customer.phone}</span>}
+                        {customer.email && <span className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3 h-3" />{customer.email}</span>}
+                        {customer.last_service && <span className="text-xs text-gray-600 truncate">{customer.last_service}</span>}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button onClick={(e) => { e.stopPropagation(); deleteCustomer(customer.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Desktop table */}
+            <div className="hidden md:block overflow-x-auto">
+              <CustomersTable
+                customers={filteredCustomers}
+                columns={customerColumns}
+                openViewingCustomer={(c) => { setViewingCustomer(c); setViewingCustomerEditMode(false); setViewingCustomerEdit({ name: c.name, phone: c.phone, email: c.email, last_service: c.last_service, last_service_date: c.last_service_date, left_review: c.left_review, notes: c.notes }); }}
+                deleteCustomer={deleteCustomer}
+              />
+            </div>
+          </>
+        )}
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 text-sm text-gray-600">
@@ -1298,7 +1389,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                       </div>
                       <p className="text-xs text-gray-500 truncate">{conv.first_message || 'No messages'}</p>
                       <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-400">{parseTS(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {parseTS(conv.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</span>
+                        <span className="text-xs text-gray-400">{parseTS(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} {fmtTime(conv.created_at)}</span>
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${
                           conv.outcome === 'booked' ? 'bg-green-100 text-green-700' :
                           conv.outcome === 'callback' ? 'bg-amber-100 text-amber-700' :
@@ -1382,7 +1473,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                              "Didn't book"}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">{parseTS(selectedConversation.created_at).toLocaleString('en-US', { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })} &middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{fmtDateTime(selectedConversation.created_at)} &middot; {selectedConversation.source === 'embed' ? 'Website Chat Agent' : 'SMS Text Agent'}</p>
                       </div>
                       <div className="flex items-center gap-1.5 flex-shrink-0">
                         {selectedConversation.outcome !== 'callback' && (
@@ -1434,7 +1525,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                           <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.role === 'user' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-blue-600 text-white'}`}>
                             <div className={`text-xs font-medium mb-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-100'}`}>{msg.role === 'user' ? 'Customer' : 'AI Agent'}</div>
                             <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                            <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{parseTS(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                            <p className={`text-xs mt-2 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{fmtTime(msg.created_at)}</p>
                           </div>
                         </div>
                       ))
@@ -1493,7 +1584,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                             <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.direction === 'incoming' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-green-600 text-white'}`}>
                               <div className={`text-xs font-medium mb-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-100'}`}>{msg.direction === 'incoming' ? 'Customer' : 'AI Agent'}</div>
                               <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                              <p className={`text-xs mt-2 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{parseTS(msg.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}</p>
+                              <p className={`text-xs mt-2 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{fmtTime(msg.created_at)}</p>
                             </div>
                           </div>
                         ))
@@ -2009,7 +2100,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(viewingLead.status)}`}>{formatLabel(viewingLead.status)}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs ${getSourceColor(viewingLead.source)}`}>{formatLabel(viewingLead.source)}</span>
-                  {viewingLead.created_at && <span className="text-xs text-gray-400">{parseTS(viewingLead.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</span>}
+                  {viewingLead.created_at && <span className="text-xs text-gray-400">{fmtDateTime(viewingLead.created_at)}</span>}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -2142,7 +2233,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                         <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gray-100 text-gray-900' : 'bg-blue-600 text-white'}`}>
                           <p className={`text-xs font-medium mb-0.5 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{msg.role === 'user' ? 'Customer' : 'AI Agent'}</p>
                           <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{parseTS(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                          <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{fmtDateTime(msg.created_at)}</p>
                         </div>
                       </div>
                     ))}
@@ -2161,7 +2252,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                       <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
                         <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.direction === 'incoming' ? 'bg-gray-100 text-gray-900' : 'bg-green-600 text-white'}`}>
                           <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                          <p className={`text-xs mt-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{parseTS(msg.created_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</p>
+                          <p className={`text-xs mt-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{fmtDateTime(msg.created_at)}</p>
                         </div>
                       </div>
                     ))}
@@ -2251,10 +2342,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
       {/* SMS Modal */}
       {showSmsModal && selectedLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-end md:items-center justify-center z-50 md:p-4">
+          <div className="bg-white md:rounded-2xl shadow-2xl max-w-2xl w-full flex flex-col" style={{ maxHeight: '100dvh' }}>
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-t-2xl">
+            <div className="p-4 md:p-6 border-b border-gray-200 flex items-center justify-between bg-gradient-to-r from-green-500 to-emerald-600 text-white md:rounded-t-2xl flex-shrink-0">
               <div>
                 <h2 className="text-2xl font-bold">SMS Conversation</h2>
                 <p className="text-green-100 mt-1">{selectedLead.name} • {selectedLead.phone}</p>
@@ -2272,7 +2363,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+            <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-gray-50">
               {smsConversation.length === 0 ? (
                 <div className="text-center py-12">
                   <MessageCircle className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -2298,7 +2389,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                             msg.direction === 'outgoing' ? 'text-green-100' : 'text-gray-500'
                           }`}
                         >
-                          {parseTS(msg.created_at).toLocaleString()}
+                          {fmtDateTime(msg.created_at)}
                         </p>
                       </div>
                     </div>
@@ -2308,7 +2399,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             </div>
 
             {/* Input */}
-            <div className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
+            <div className="p-3 md:p-4 border-t border-gray-200 bg-white md:rounded-b-2xl flex-shrink-0" style={{ paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))' }}>
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -2391,6 +2482,113 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     Convert
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CSV Column Mapper Modal */}
+      {csvMapper && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-amber-600 to-amber-500 text-white p-5 rounded-t-2xl flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold">Map CSV Columns</h2>
+                <p className="text-amber-100 text-sm mt-0.5">{csvMapper.rows.length} rows detected — confirm which columns hold which data</p>
+              </div>
+              <button onClick={() => setCsvMapper(null)} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto flex-1 p-5 space-y-5">
+              {/* Column mapping grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {(csvMapper.tab === 'leads' ? [
+                  { key: 'fullName',  label: 'Full Name' },
+                  { key: 'firstName', label: 'First Name' },
+                  { key: 'lastName',  label: 'Last Name' },
+                  { key: 'email',     label: 'Email' },
+                  { key: 'phone',     label: 'Phone' },
+                  { key: 'status',    label: 'Status' },
+                  { key: 'source',    label: 'Source' },
+                  { key: 'notes',     label: 'Notes' },
+                ] : [
+                  { key: 'fullName',    label: 'Full Name' },
+                  { key: 'firstName',   label: 'First Name' },
+                  { key: 'lastName',    label: 'Last Name' },
+                  { key: 'email',       label: 'Email' },
+                  { key: 'phone',       label: 'Phone' },
+                  { key: 'service',     label: 'Last Service' },
+                  { key: 'serviceDate', label: 'Service Date' },
+                  { key: 'notes',       label: 'Notes' },
+                ]).map(field => (
+                  <div key={field.key}>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1">{field.label}</label>
+                    <select
+                      value={csvMappings[field.key] ?? -1}
+                      onChange={e => setCsvMappings(prev => ({ ...prev, [field.key]: parseInt(e.target.value, 10) }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
+                    >
+                      <option value={-1}>— Not in CSV —</option>
+                      {csvMapper.headers.map((h, i) => (
+                        <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              {/* Preview table */}
+              <div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Preview (first 3 rows)</p>
+                <div className="overflow-x-auto border border-gray-200 rounded-lg">
+                  <table className="w-full text-xs">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        {csvMapper.headers.map((h, i) => (
+                          <th key={i} className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap border-r border-gray-200 last:border-r-0">
+                            {h || `Col ${i + 1}`}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {csvMapper.rows.slice(0, 3).map((row, ri) => (
+                        <tr key={ri} className="border-t border-gray-100">
+                          {csvMapper.headers.map((_, ci) => (
+                            <td key={ci} className="px-3 py-2 text-gray-700 whitespace-nowrap max-w-[160px] truncate border-r border-gray-100 last:border-r-0">
+                              {row[ci] || ''}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+                <strong>Tip:</strong> Only "Full Name" or "First Name" is required. All other fields are optional — rows missing email or phone will still be imported.
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-5 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={() => setCsvMapper(null)}
+                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmCSVImport}
+                disabled={csvImporting}
+                className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+              >
+                {csvImporting ? 'Importing...' : `Import ${csvMapper.rows.length} Rows`}
               </button>
             </div>
           </div>

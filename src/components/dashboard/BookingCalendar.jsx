@@ -58,7 +58,10 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [existingCustomers, setExistingCustomers] = useState([]);
   const [existingLeads, setExistingLeads] = useState([]);
   const [loadingPicker, setLoadingPicker] = useState(false);
-  const [calendarView, setCalendarView] = useState(() => localStorage.getItem('calendarDefaultView') || 'week');
+  const [calendarView, setCalendarView] = useState(() => {
+    if (window.innerWidth < 768) return 'day';
+    return localStorage.getItem('calendarDefaultView') || 'week';
+  });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [allBookings, setAllBookings] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
@@ -711,8 +714,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   };
 
   return (
-    <div className="h-full flex gap-6">
-      <div className="w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-140px)]">
+    <div className="h-full flex flex-col gap-4 md:flex-row md:gap-6">
+      <div className="hidden md:flex w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex-col h-[calc(100vh-140px)]">
         <div className="p-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-900 mb-1">
             {calendarView === 'month' ? "This Month's Bookings" : "This Week's Bookings"}
@@ -775,8 +778,54 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6 flex flex-col h-[calc(100vh-140px)]">
-        <div className="flex items-center justify-between mb-6 flex-shrink-0">
+      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-140px)] overflow-hidden">
+        {/* Mobile-only navigation strip */}
+        <div className="md:hidden flex-shrink-0 p-4 border-b border-gray-200 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => { const d = new Date(currentDate); if (calendarView === 'month') d.setMonth(d.getMonth()-1); else if (calendarView === 'day') d.setDate(d.getDate()-1); else d.setDate(d.getDate()-7); setCurrentDate(d); }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <ChevronLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <span className="text-sm font-bold text-gray-900 text-center flex-1">
+              {calendarView === 'day'
+                ? currentDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+                : calendarView === 'month'
+                ? currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                : (() => { const s = new Date(currentDate); s.setDate(s.getDate() - s.getDay()); const e = new Date(s); e.setDate(e.getDate()+6); return `${s.toLocaleDateString('en-US',{month:'short',day:'numeric'})} – ${e.toLocaleDateString('en-US',{month:'short',day:'numeric'})}`; })()}
+            </span>
+            <button
+              type="button"
+              onClick={() => { const d = new Date(currentDate); if (calendarView === 'month') d.setMonth(d.getMonth()+1); else if (calendarView === 'day') d.setDate(d.getDate()+1); else d.setDate(d.getDate()+7); setCurrentDate(d); }}
+              className="p-2 hover:bg-gray-100 rounded-lg transition"
+            >
+              <ChevronRight className="w-5 h-5 text-gray-600" />
+            </button>
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex bg-gray-100 rounded-lg p-1 gap-0.5">
+              {['day','week','month'].map(v => (
+                <button key={v} type="button" onClick={() => setCalendarView(v)}
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition ${calendarView===v ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'}`}>
+                  {v.charAt(0).toUpperCase()+v.slice(1)}
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => { setBookingFormSnapshot(JSON.stringify(newBooking)); setShowCreateBookingModal(true); }}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-amber-600 text-white rounded-lg text-xs font-semibold hover:shadow-md transition-all"
+            >
+              <Plus className="w-4 h-4" />
+              Booking
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop controls */}
+        <div className="hidden md:flex items-center justify-between mb-0 flex-shrink-0 p-6 pb-0">
           <div className="flex items-center gap-4">
             <div className="relative" ref={datePickerRef}>
               <button
@@ -796,6 +845,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   const newDate = new Date(currentDate);
                   if (calendarView === 'month') {
                     newDate.setMonth(currentDate.getMonth() - 1);
+                  } else if (calendarView === 'day') {
+                    newDate.setDate(currentDate.getDate() - 1);
                   } else {
                     newDate.setDate(currentDate.getDate() - 7);
                   }
@@ -818,6 +869,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   const newDate = new Date(currentDate);
                   if (calendarView === 'month') {
                     newDate.setMonth(currentDate.getMonth() + 1);
+                  } else if (calendarView === 'day') {
+                    newDate.setDate(currentDate.getDate() + 1);
                   } else {
                     newDate.setDate(currentDate.getDate() + 7);
                   }
@@ -870,6 +923,17 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 <div className="flex bg-gray-100 rounded-lg p-1">
                   <button
                     type="button"
+                    onClick={() => setCalendarView('day')}
+                    className={`md:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
+                      calendarView === 'day'
+                        ? 'bg-white text-gray-900 shadow-sm'
+                        : 'text-gray-600 hover:text-gray-900'
+                    }`}
+                  >
+                    Day
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setCalendarView('week')}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition ${
                       calendarView === 'week'
@@ -914,8 +978,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
 
         {calendarView === 'week' && (
           <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
-            <div className="flex-1 overflow-y-auto time-slots-container scroll-smooth">
-              <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-20">
+            <div className="flex-1 overflow-auto time-slots-container scroll-smooth">
+              <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-20 min-w-[640px]">
                 <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
                   Time
                 </div>
@@ -952,7 +1016,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               </div>
 
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((hour) => (
-                <div key={hour} className="grid grid-cols-8 border-b border-gray-100">
+                <div key={hour} className="grid grid-cols-8 border-b border-gray-100 min-w-[640px]">
                   <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
                     {hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`}
                   </div>
@@ -1043,7 +1107,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
 
         {calendarView === 'month' && (
           <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
-            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+            <div className="overflow-x-auto flex-1 flex flex-col">
+            <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 min-w-[420px]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                 <div key={day} className={`p-3 text-center text-sm font-medium text-gray-600 ${day !== 'Sat' ? 'border-r border-gray-200' : ''}`}>
                   {day}
@@ -1051,7 +1116,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               ))}
             </div>
             <div className="flex-1 overflow-y-auto">
-              <div className="grid grid-cols-7 auto-rows-fr" style={{ minHeight: '100%' }}>
+              <div className="grid grid-cols-7 auto-rows-fr min-w-[420px]" style={{ minHeight: '100%' }}>
                 {getMonthGridDays().map((day, idx) => {
                   const isCurrentMonth = day.getMonth() === currentDate.getMonth();
                   const today = new Date();
@@ -1125,8 +1190,28 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 })}
               </div>
             </div>
+            </div>
           </div>
         )}
+
+        {calendarView === 'day' && (() => {
+          const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2,'0')}-${String(currentDate.getDate()).padStart(2,'0')}`;
+          const dayBookings = allBookings
+            .filter(b => b.booking_date.split('T')[0] === dateStr)
+            .sort((a, b) => a.start_time.localeCompare(b.start_time));
+          return (
+            <div className="flex-1 overflow-y-auto p-3 space-y-2">
+              {dayBookings.length === 0 ? (
+                <div className="p-8 text-center text-gray-500">
+                  <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                  <p className="text-sm">No bookings for {currentDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+                </div>
+              ) : dayBookings.map(booking => (
+                <BookingCard key={booking.id} booking={booking} selectedBooking={selectedBooking} setSelectedBooking={setSelectedBooking} setBookingNotes={setBookingNotes} setShowBookingModal={setShowBookingModal} setEditingNotes={setEditingNotes} formatTime={formatTime} handleCompleteBooking={handleCompleteBooking} setIsEditingBooking={setIsEditingBooking} setEditingBookingId={setEditingBookingId} setNewBooking={setNewBooking} setShowCreateBookingModal={setShowCreateBookingModal} compact={false} />
+              ))}
+            </div>
+          );
+        })()}
       </div>
 
       {showBookingModal && selectedBooking && (
