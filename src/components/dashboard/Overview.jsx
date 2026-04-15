@@ -248,58 +248,60 @@ export default function Overview({ bookings, services, employees, setCurrentView
     <div className="flex-1 min-w-0 space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Overview Dashboard</h1>
-        <p className="text-gray-600 mt-1">Weekly stats with navigation</p>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">Overview</h1>
+        <p className="text-gray-600 mt-1 text-sm">Weekly stats with navigation</p>
       </div>
 
       {/* Week Navigation */}
-      <div className="flex items-center justify-between bg-white rounded-xl px-6 py-3 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900">
-          {weekOffset === 0 ? "This Week's Performance" : `Week of ${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
-        </h2>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setWeekOffset(weekOffset - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-            <ArrowLeft className="w-4 h-4 text-gray-600" />
-          </button>
-          <span className="font-semibold text-gray-700 text-sm text-center">{formatDateRange()}</span>
-          {weekOffset < 0 ? (
-            <button onClick={() => setWeekOffset(weekOffset + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
-              <ArrowRight className="w-4 h-4 text-gray-600" />
+      <div className="bg-white rounded-xl px-4 md:px-6 py-3 shadow-sm border border-gray-200">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <h2 className="text-base md:text-lg font-bold text-gray-900">
+            {weekOffset === 0 ? "This Week's Performance" : `Week of ${startOfWeek.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+          </h2>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setWeekOffset(weekOffset - 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+              <ArrowLeft className="w-4 h-4 text-gray-600" />
             </button>
-          ) : (
-            <div className="w-7 h-7" />
-          )}
+            <span className="font-semibold text-gray-700 text-xs sm:text-sm">{formatDateRange()}</span>
+            {weekOffset < 0 ? (
+              <button onClick={() => setWeekOffset(weekOffset + 1)} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">
+                <ArrowRight className="w-4 h-4 text-gray-600" />
+              </button>
+            ) : (
+              <div className="w-7 h-7" />
+            )}
+          </div>
         </div>
       </div>
 
       {/* Week Summary Banner */}
-      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-5 border-l-4 border-emerald-500">
+      <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-4 md:p-5 border-l-4 border-emerald-500">
         <div className="flex items-center gap-2 mb-3">
           <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-          <h3 className="text-lg font-bold text-gray-900">Week Summary</h3>
+          <h3 className="text-base md:text-lg font-bold text-gray-900">Week Summary</h3>
         </div>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <div>
-            <div className="text-sm text-gray-600 mb-1">Total Leads Captured</div>
-            <div className="text-3xl font-bold text-gray-900">{totalLeads}</div>
-            <div className="text-xs text-gray-500 mt-1">+{weekCustomers.length} new customers</div>
+            <div className="text-xs md:text-sm text-gray-600 mb-1">Total Leads</div>
+            <div className="text-2xl md:text-3xl font-bold text-gray-900">{totalLeads}</div>
+            <div className="text-xs text-gray-500 mt-1">+{weekCustomers.length} customers</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Lead Conversion Rate</div>
-            <div className="text-3xl font-bold text-gray-900">
+            <div className="text-xs md:text-sm text-gray-600 mb-1">Conversion Rate</div>
+            <div className="text-2xl md:text-3xl font-bold text-gray-900">
               {totalLeads > 0 ? ((weekBookings.length / totalLeads) * 100).toFixed(1) : '0'}%
             </div>
-            <div className="text-xs text-gray-500 mt-1">{weekBookings.length} bookings from {totalLeads} leads</div>
+            <div className="text-xs text-gray-500 mt-1">{weekBookings.length} bookings</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">Revenue This Week</div>
-            <div className="text-3xl font-bold text-gray-900">${weekRevenue.toFixed(0)}</div>
+            <div className="text-xs md:text-sm text-gray-600 mb-1">Revenue</div>
+            <div className="text-2xl md:text-3xl font-bold text-gray-900">${weekRevenue.toFixed(0)}</div>
             <div className="text-xs text-gray-500 mt-1">from {weekBookings.length} bookings</div>
           </div>
           <div>
-            <div className="text-sm text-gray-600 mb-1">AI Cost Savings</div>
-            <div className="text-3xl font-bold text-gray-900">${weekStats.leadForms.costSavings}</div>
-            <div className="text-xs text-gray-500 mt-1">automated lead qualification</div>
+            <div className="text-xs md:text-sm text-gray-600 mb-1">AI Savings</div>
+            <div className="text-2xl md:text-3xl font-bold text-gray-900">${weekStats.leadForms.costSavings}</div>
+            <div className="text-xs text-gray-500 mt-1">automated</div>
           </div>
         </div>
       </div>
@@ -307,7 +309,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
       {/* Main 2-Column Layout: Booked Today (left) + Revolving Performance Cards (right) */}
       <div className="grid lg:grid-cols-2 gap-6">
         {/* LEFT: Booked Today */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+        <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
           <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
             <Calendar className="w-5 h-5 text-blue-600" />
             Booked Today
@@ -348,7 +350,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
         </div>
 
         {/* RIGHT: Revolving Performance Cards */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 relative">
+        <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 relative">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900">Performance</h2>
             <div className="flex items-center gap-2">
@@ -406,47 +408,47 @@ export default function Overview({ bookings, services, employees, setCurrentView
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl p-4 md:p-8 shadow-sm border border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Quick Actions</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
+        <h2 className="text-base md:text-xl font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <button
             type="button"
             onClick={() => setCurrentView('customers-leads')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-left group"
+            className="p-4 border-2 border-gray-200 rounded-xl hover:border-amber-500 hover:bg-amber-50 transition-all text-left group"
           >
-            <Users className="w-8 h-8 text-amber-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Customers & Leads</h3>
-            <p className="text-sm text-gray-600">{customers.length} customers, {leads.length} leads</p>
+            <Users className="w-6 h-6 md:w-8 md:h-8 text-amber-600 mb-2 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Customers & Leads</h3>
+            <p className="text-xs text-gray-600">{customers.length} customers</p>
           </button>
 
           <button
             type="button"
             onClick={() => setCurrentView('ai-agents')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
+            className="p-4 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left group"
           >
-            <Bot className="w-8 h-8 text-blue-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">AI Agents</h3>
-            <p className="text-sm text-gray-600">Deploy automation</p>
+            <Bot className="w-6 h-6 md:w-8 md:h-8 text-blue-600 mb-2 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 text-sm mb-0.5">AI Agents</h3>
+            <p className="text-xs text-gray-600">Deploy automation</p>
           </button>
 
           <button
             type="button"
             onClick={() => setCurrentView('google-business')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
+            className="p-4 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all text-left group"
           >
-            <Globe className="w-8 h-8 text-green-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Google Business</h3>
-            <p className="text-sm text-gray-600">Manage profile & reviews</p>
+            <Globe className="w-6 h-6 md:w-8 md:h-8 text-green-600 mb-2 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Google Business</h3>
+            <p className="text-xs text-gray-600">Profile & reviews</p>
           </button>
 
           <button
             type="button"
             onClick={() => setCurrentView('business-settings')}
-            className="p-6 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
+            className="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition-all text-left group"
           >
-            <Building2 className="w-8 h-8 text-indigo-600 mb-3 group-hover:scale-110 transition-transform" />
-            <h3 className="font-semibold text-gray-900 mb-1">Business Info</h3>
-            <p className="text-sm text-gray-600">Settings & details</p>
+            <Building2 className="w-6 h-6 md:w-8 md:h-8 text-indigo-600 mb-2 group-hover:scale-110 transition-transform" />
+            <h3 className="font-semibold text-gray-900 text-sm mb-0.5">Business Info</h3>
+            <p className="text-xs text-gray-600">Settings & details</p>
           </button>
         </div>
       </div>
@@ -454,7 +456,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
 
     {/* Right column — To-Do List */}
     <div className="w-full md:w-80 md:flex-shrink-0 md:sticky md:top-6">
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+      <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
         <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 text-amber-600" />
           To-Do List
