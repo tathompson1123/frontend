@@ -778,7 +778,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col h-[calc(100vh-140px)] overflow-hidden">
+      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden min-h-[70vh] md:h-[calc(100vh-140px)]">
         {/* Mobile-only navigation strip */}
         <div className="md:hidden flex-shrink-0 p-4 border-b border-gray-200 space-y-3">
           <div className="flex items-center justify-between gap-2">
@@ -977,7 +977,34 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         </div>
 
         {calendarView === 'week' && (
-          <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
+          <>
+          {/* Mobile: vertical day-by-day agenda for the week */}
+          <div className="md:hidden flex-1 overflow-y-auto p-3 space-y-4">
+            {[0,1,2,3,4,5,6].map(offset => {
+              const base = new Date(currentDate);
+              base.setDate(base.getDate() - base.getDay() + offset);
+              const dateStr = `${base.getFullYear()}-${String(base.getMonth()+1).padStart(2,'0')}-${String(base.getDate()).padStart(2,'0')}`;
+              const today = new Date();
+              const isToday = base.toDateString() === today.toDateString();
+              const dayBookings = allBookings.filter(b => b.booking_date.split('T')[0] === dateStr).sort((a,b) => a.start_time.localeCompare(b.start_time));
+              return (
+                <div key={offset}>
+                  <div className={`text-xs font-bold uppercase mb-2 px-1 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
+                    {base.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                    {isToday && <span className="ml-2 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full normal-case">Today</span>}
+                  </div>
+                  {dayBookings.length === 0
+                    ? <p className="text-xs text-gray-400 px-1 pb-2">No bookings</p>
+                    : dayBookings.map(booking => (
+                      <BookingCard key={booking.id} booking={booking} selectedBooking={selectedBooking} setSelectedBooking={setSelectedBooking} setBookingNotes={setBookingNotes} setShowBookingModal={setShowBookingModal} setEditingNotes={setEditingNotes} formatTime={formatTime} handleCompleteBooking={handleCompleteBooking} setIsEditingBooking={setIsEditingBooking} setEditingBookingId={setEditingBookingId} setNewBooking={setNewBooking} setShowCreateBookingModal={setShowCreateBookingModal} compact={false} />
+                    ))
+                  }
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop: time grid */}
+          <div className="hidden md:flex border border-gray-200 rounded-lg flex-1 flex-col overflow-hidden">
             <div className="flex-1 overflow-auto time-slots-container scroll-smooth">
               <div className="grid grid-cols-8 border-b border-gray-200 sticky top-0 bg-white z-20 min-w-[640px]">
                 <div className="bg-gray-50 p-3 text-sm font-medium text-gray-500 border-r border-gray-200">
@@ -1103,10 +1130,46 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               ))}
             </div>
           </div>
+          </div>
+          </>
         )}
 
         {calendarView === 'month' && (
-          <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
+          <>
+          {/* Mobile: vertical list — days with bookings only */}
+          {(() => {
+            const monthDays = getMonthGridDays().filter(d => d.getMonth() === currentDate.getMonth());
+            const daysWithBookings = monthDays.map(day => {
+              const dateStr = `${day.getFullYear()}-${String(day.getMonth()+1).padStart(2,'0')}-${String(day.getDate()).padStart(2,'0')}`;
+              return { day, dateStr, bookings: allBookings.filter(b => b.booking_date.split('T')[0] === dateStr).sort((a,b) => a.start_time.localeCompare(b.start_time)) };
+            }).filter(d => d.bookings.length > 0);
+            const today = new Date();
+            return (
+              <div className="md:hidden flex-1 overflow-y-auto p-3 space-y-4">
+                {daysWithBookings.length === 0 ? (
+                  <div className="p-8 text-center text-gray-500">
+                    <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                    <p className="text-sm">No bookings this month</p>
+                  </div>
+                ) : daysWithBookings.map(({ day, bookings }) => {
+                  const isToday = day.toDateString() === today.toDateString();
+                  return (
+                    <div key={day.toISOString()}>
+                      <div className={`text-xs font-bold uppercase mb-2 px-1 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
+                        {day.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+                        {isToday && <span className="ml-2 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full normal-case">Today</span>}
+                      </div>
+                      {bookings.map(booking => (
+                        <BookingCard key={booking.id} booking={booking} selectedBooking={selectedBooking} setSelectedBooking={setSelectedBooking} setBookingNotes={setBookingNotes} setShowBookingModal={setShowBookingModal} setEditingNotes={setEditingNotes} formatTime={formatTime} handleCompleteBooking={handleCompleteBooking} setIsEditingBooking={setIsEditingBooking} setEditingBookingId={setEditingBookingId} setNewBooking={setNewBooking} setShowCreateBookingModal={setShowCreateBookingModal} compact={false} />
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+          {/* Desktop: month grid */}
+          <div className="hidden md:flex border border-gray-200 rounded-lg flex-1 flex-col overflow-hidden">
             <div className="overflow-x-auto flex-1 flex flex-col">
             <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50 min-w-[420px]">
               {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -1192,6 +1255,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             </div>
             </div>
           </div>
+          </div>
+          </>
         )}
 
         {calendarView === 'day' && (() => {
