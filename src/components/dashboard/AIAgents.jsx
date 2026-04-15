@@ -87,60 +87,52 @@ const loadDeploymentStatus = async () => {
         </div>
 
         {/* Tabs */}
-        <div className="overflow-x-auto -mx-6 px-6">
-          <div className="flex gap-2 border-b border-gray-200 min-w-max">
-            <button
-              onClick={() => setActiveTab('chat')}
-              className={`flex items-center gap-2 px-4 py-3 font-semibold transition-all relative whitespace-nowrap ${
-                activeTab === 'chat'
-                  ? 'text-primary-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
+        <div className="flex border-b border-gray-200 -mx-6">
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 font-semibold transition-all relative ${
+              activeTab === 'chat'
+                ? 'text-primary-600 bg-blue-50'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <div className="relative">
               <MessageCircle className="w-5 h-5" />
-              <span className="hidden sm:inline">Website </span>Chat Agent
-              {chatAgentDeployed && (
-                <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-              )}
-              {activeTab === 'chat' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('leadform')}
-              className={`flex items-center gap-2 px-4 py-3 font-semibold transition-all relative whitespace-nowrap ${
-                activeTab === 'leadform'
-                  ? 'text-primary-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
+              {chatAgentDeployed && <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" />}
+            </div>
+            <span className="text-xs sm:text-sm leading-tight text-center">Chat Agent</span>
+            {activeTab === 'chat' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('leadform')}
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 font-semibold transition-all relative border-x border-gray-200 ${
+              activeTab === 'leadform'
+                ? 'text-primary-600 bg-blue-50'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <div className="relative">
               <Mail className="w-5 h-5" />
-              Lead Form<span className="hidden sm:inline"> Agent</span>
-              {leadAgentDeployed && (
-                <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-              )}
-              {activeTab === 'leadform' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('missedcall')}
-              className={`flex items-center gap-2 px-4 py-3 font-semibold transition-all relative whitespace-nowrap ${
-                activeTab === 'missedcall'
-                  ? 'text-primary-600 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
+              {leadAgentDeployed && <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" />}
+            </div>
+            <span className="text-xs sm:text-sm leading-tight text-center">Lead Form</span>
+            {activeTab === 'leadform' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />}
+          </button>
+          <button
+            onClick={() => setActiveTab('missedcall')}
+            className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-2 py-2.5 font-semibold transition-all relative ${
+              activeTab === 'missedcall'
+                ? 'text-primary-600 bg-blue-50'
+                : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+            }`}
+          >
+            <div className="relative">
               <Phone className="w-5 h-5" />
-              Missed Call<span className="hidden sm:inline"> Text-Back</span>
-              {missedCallDeployed && (
-                <span className="w-2 h-2 bg-green-600 rounded-full"></span>
-              )}
-              {activeTab === 'missedcall' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600"></div>
-              )}
-            </button>
-          </div>
+              {missedCallDeployed && <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full" />}
+            </div>
+            <span className="text-xs sm:text-sm leading-tight text-center">Missed Call</span>
+            {activeTab === 'missedcall' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-600" />}
+          </button>
         </div>
       </div>
 
