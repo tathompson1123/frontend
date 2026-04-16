@@ -703,7 +703,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
   const rightAnnotations = campaignAnnotations.filter((_, i) => i % 2 === 1);
 
   return (
-    <div className="flex flex-col bg-gray-50" style={inOnboarding ? {} : { height: 'calc(100vh - 112px)' }}>
+    <div className="flex flex-col bg-gray-50" style={inOnboarding ? {} : { minHeight: 'calc(100vh - 112px)' }}>
 
       {/* Toast */}
       {toast && (
@@ -795,10 +795,10 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
               className="mx-auto flex items-start gap-3"
               style={{ maxWidth: hasAnnotations ? 980 : 672 }}
             >
-              {/* Left annotation column — floats beside the card, NOT inside it */}
+              {/* Left annotation column — hidden on mobile */}
               {hasAnnotations && leftAnnotations.length > 0 && (
                 <div
-                  className="w-40 flex-shrink-0 relative"
+                  className="hidden md:block w-40 flex-shrink-0 relative"
                   style={{ height: emailHeight, marginTop: 86 }}
                 >
                   {leftAnnotations.map((a, i) => {
@@ -910,10 +910,10 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
                 </div>
               </div>
 
-              {/* Right annotation column — floats beside the card, NOT inside it */}
+              {/* Right annotation column — hidden on mobile */}
               {hasAnnotations && rightAnnotations.length > 0 && (
                 <div
-                  className="w-40 flex-shrink-0 relative"
+                  className="hidden md:block w-40 flex-shrink-0 relative"
                   style={{ height: emailHeight, marginTop: 86 }}
                 >
                   {rightAnnotations.map((a, i) => {

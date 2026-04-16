@@ -682,7 +682,7 @@ useEffect(() => {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20'}`}>
+      <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 flex flex-col ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20'}`}>
         {/* Logo & Toggle */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           {sidebarOpen && (
@@ -699,7 +699,7 @@ useEffect(() => {
         </div>
 
         {/* Navigation Menu */}
-        <nav className="p-4 space-y-1 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 140px)' }}>
+        <nav className="flex-1 p-4 space-y-1 overflow-y-auto min-h-0">
           {topMenuItems.map((item) => {
             const Icon = item.icon;
             const isActive = currentView === item.id;
@@ -783,7 +783,7 @@ useEffect(() => {
         </nav>
 
         {/* Logout Button */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
+        <div className="flex-shrink-0 p-4 border-t border-gray-200">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-all"

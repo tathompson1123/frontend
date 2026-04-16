@@ -248,47 +248,41 @@ const saveReviewConfig = async () => {
       {/* Tabs - Profile Analyzer first, Review Requests second, AI Reply Generator third */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
-          <div className="flex">
+          <div className={`flex ${!inOnboarding ? '' : ''}`}>
             <button
               onClick={() => setActiveTab('analyzer')}
-              className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+              className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-3 py-3 font-semibold transition-all relative border-b-2 ${
                 activeTab === 'analyzer'
                   ? 'border-amber-600 text-amber-600 bg-amber-50'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-center gap-2">
-                <Search className="w-5 h-5" />
-                <span>Profile Analyzer</span>
-              </div>
+              <Search className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+              <span className="text-xs sm:text-sm">Profile Analyzer</span>
             </button>
             {!inOnboarding && (
               <>
                 <button
                   onClick={() => setActiveTab('review-requests')}
-                  className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-3 py-3 font-semibold transition-all relative border-b-2 border-x border-gray-100 ${
                     activeTab === 'review-requests'
-                      ? 'border-amber-600 text-amber-600 bg-amber-50'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      ? 'border-b-amber-600 text-amber-600 bg-amber-50'
+                      : 'border-b-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Send className="w-5 h-5" />
-                    <span>Review Requests</span>
-                  </div>
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm">Review Requests</span>
                 </button>
                 <button
                   onClick={() => setActiveTab('reply-generator')}
-                  className={`px-6 py-4 font-semibold transition-all border-b-2 ${
+                  className={`flex-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 px-3 py-3 font-semibold transition-all relative border-b-2 ${
                     activeTab === 'reply-generator'
                       ? 'border-amber-600 text-amber-600 bg-amber-50'
-                      : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                      : 'border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-5 h-5" />
-                    <span>AI Reply Generator</span>
-                  </div>
+                  <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm">AI Reply</span>
                 </button>
               </>
             )}
