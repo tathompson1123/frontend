@@ -421,7 +421,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
         {/* Upgrade to Scale */}
         {isProOrBelow && (
           <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 mb-6">
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="w-5 h-5 text-purple-600" />
@@ -444,7 +444,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
               <button
                 onClick={() => handleUpgrade('scale')}
                 disabled={loading}
-                className="flex-shrink-0 flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50"
+                className="self-start flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50"
               >
                 <ArrowUpRight className="w-4 h-4" />
                 Upgrade to Scale

@@ -2942,26 +2942,26 @@ export default function BusinessInformation({
           ) : (
             <div className="grid md:grid-cols-2 gap-4">
               {employees.map((employee) => (
-                <div key={employee.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200">
+                <div key={employee.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-200 overflow-hidden">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: employee.color }}>
+                    <div className="w-12 h-12 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold" style={{ backgroundColor: employee.color }}>
                       {employee.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <h3 className="font-bold text-gray-900">{employee.name}</h3>
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${employee.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                           {employee.active ? 'Active' : 'Inactive'}
                         </span>
                       </div>
-                      <p className="text-sm text-gray-600">{employee.email || <span className="text-gray-400 italic">No email</span>}</p>
+                      <p className="text-sm text-gray-600 break-all">{employee.email || <span className="text-gray-400 italic">No email</span>}</p>
                       <p className="text-sm text-gray-600">{employee.phone || <span className="text-gray-400 italic">No phone</span>}</p>
                       {employee.work_hours && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
                           <p className="text-xs font-semibold text-gray-700 mb-2">Work Schedule:</p>
                           <p className="text-sm text-gray-600">{employee.work_hours.startTime} - {employee.work_hours.endTime}</p>
                           {employee.work_days && (
-                            <div className="flex gap-1 mt-2">
+                            <div className="flex flex-wrap gap-1 mt-2">
                               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => {
                                 const dayKey = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'][i];
                                 const isWorking = employee.work_days[dayKey];
@@ -2976,7 +2976,7 @@ export default function BusinessInformation({
                         </div>
                       )}
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1 flex-shrink-0">
                       {employee.invite_status === 'accepted' && (
                         <button type="button" onClick={() => openPermissionsModal(employee)} className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Configure Permissions">
                           <Shield className="w-5 h-5" />
@@ -2989,7 +2989,7 @@ export default function BusinessInformation({
                   </div>
 
                   {/* Admin Access */}
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
                       <span className="text-xs font-medium text-gray-500">Admin Access</span>
@@ -3008,7 +3008,7 @@ export default function BusinessInformation({
                   </div>
 
                   {/* Mobile App Access */}
-                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                  <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2">
                       <Smartphone className="w-4 h-4 text-gray-400" />
                       <span className="text-xs font-medium text-gray-500">

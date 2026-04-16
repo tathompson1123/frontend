@@ -697,7 +697,7 @@ useEffect(() => {
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed top-0 left-0 h-full bg-white shadow-xl transition-all duration-300 z-40 flex flex-col ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20'}`}>
+      <aside className={`fixed top-0 left-0 h-screen bg-white shadow-xl transition-all duration-300 z-40 flex flex-col ${sidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full md:translate-x-0 md:w-20'}`}>
         {/* Logo & Toggle */}
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           {sidebarOpen && (

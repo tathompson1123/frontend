@@ -469,9 +469,9 @@ export default function Invoices({ apiUrl, user, authFetch }) {
           { label: 'Paid', value: invoices.filter(i => i.status === 'paid').reduce((s, i) => s + parseFloat(i.total_amount || 0), 0).toFixed(2), prefix: '$', color: 'text-green-600' },
           { label: 'Overdue', value: invoices.filter(i => i.status === 'overdue').length, color: 'text-red-600' },
         ].map((stat, i) => (
-          <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-            <p className="text-sm text-gray-500">{stat.label}</p>
-            <p className={`text-2xl font-bold ${stat.color}`}>{stat.prefix || ''}{stat.value}</p>
+          <div key={i} className="bg-white rounded-xl p-4 shadow-sm border border-gray-200 overflow-hidden">
+            <p className="text-sm text-gray-500 truncate">{stat.label}</p>
+            <p className={`text-xl sm:text-2xl font-bold truncate ${stat.color}`}>{stat.prefix || ''}{stat.value}</p>
           </div>
         ))}
       </div>
