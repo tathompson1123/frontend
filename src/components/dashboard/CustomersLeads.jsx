@@ -54,7 +54,6 @@ function fmtDateTime(ts) {
 
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
   const [activeTab, setActiveTab] = useState('leads');
-  const [showTabDropdown, setShowTabDropdown] = useState(false);
   const [leadTables, setLeadTables] = useState([
     { id: 'default', name: 'All Leads', leads: [] }
   ]);
@@ -1014,36 +1013,25 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
 
         {/* Tabs */}
-        {/* Mobile: dropdown */}
-        <div className="md:hidden border-b border-gray-200 bg-gray-50 px-4 py-2 relative">
-          <button
-            onClick={() => setShowTabDropdown(prev => !prev)}
-            className="w-full flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+        {/* Mobile: native select dropdown */}
+        <div className="md:hidden border-b border-gray-200 bg-gray-50 px-4 py-3">
+          <select
+            value={activeTab}
+            onChange={e => {
+              const val = e.target.value;
+              setSearchTerm('');
+              setEditingCell(null);
+              setActiveTab(val);
+              if (val === 'conversations') { fetchConversations(); fetchSmsLeadConversations(); }
+              if (val === 'rewards') fetchRewardsData();
+            }}
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
           >
-            <div className="flex items-center gap-2 text-blue-600">
-              {activeTab === 'leads' && <><Sparkles className="w-4 h-4" />Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})</>}
-              {activeTab === 'customers' && <><Users className="w-4 h-4" />Customers ({customerStats.total})</>}
-              {activeTab === 'conversations' && <><MessageCircle className="w-4 h-4" />Conversations</>}
-              {activeTab === 'rewards' && <><Gift className="w-4 h-4" />Rewards</>}
-            </div>
-            <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showTabDropdown ? 'rotate-180' : ''}`} />
-          </button>
-          {showTabDropdown && (
-            <div className="absolute left-4 right-4 top-full z-50 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 overflow-hidden">
-              <button onClick={() => { setActiveTab('leads'); setSearchTerm(''); setEditingCell(null); setShowTabDropdown(false); }} className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'leads' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}>
-                <Sparkles className="w-4 h-4" />Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})
-              </button>
-              <button onClick={() => { setActiveTab('customers'); setSearchTerm(''); setEditingCell(null); setShowTabDropdown(false); }} className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'customers' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}>
-                <Users className="w-4 h-4" />Customers ({customerStats.total})
-              </button>
-              <button onClick={() => { setActiveTab('conversations'); setSearchTerm(''); setEditingCell(null); fetchConversations(); fetchSmsLeadConversations(); setShowTabDropdown(false); }} className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'conversations' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}>
-                <MessageCircle className="w-4 h-4" />Conversations
-              </button>
-              <button onClick={() => { setActiveTab('rewards'); setSearchTerm(''); setEditingCell(null); fetchRewardsData(); setShowTabDropdown(false); }} className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'rewards' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}>
-                <Gift className="w-4 h-4" />Rewards
-              </button>
-            </div>
-          )}
+            <option value="leads">Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})</option>
+            <option value="customers">Customers ({customerStats.total})</option>
+            <option value="conversations">Conversations</option>
+            <option value="rewards">Rewards</option>
+          </select>
         </div>
         {/* Desktop: horizontal tabs */}
         <div className="hidden md:block border-b border-gray-200 bg-gray-50 overflow-x-auto">
