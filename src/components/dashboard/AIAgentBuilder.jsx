@@ -954,9 +954,9 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
 
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-blue-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-amber-600 to-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
               <Bot className="w-6 h-6 text-white" />
             </div>
             <div>
@@ -967,7 +967,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
 
           {/* Agent Toggle */}
           {/* Mobile dropdown */}
-          <div className="md:hidden mb-4">
+          <div className="md:hidden w-full">
             <select
               value={activeAgent}
               onChange={e => {
@@ -1102,10 +1102,10 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
             )}
           </div>
 
-          {/* Content Area — two-column: main setup | booking integration sidebar */}
-          <div className="flex-1 flex min-h-0">
+          {/* Content Area — stack vertically on mobile, side-by-side on desktop */}
+          <div className="flex-1 flex flex-col md:flex-row min-h-0">
             {/* Main setup column */}
-            <div className="flex-1 overflow-y-auto border-r border-gray-100">
+            <div className="flex-1 overflow-y-auto md:border-r border-gray-100">
             {activeAgent === 'missedcall' && setupMode === 'manual' ? (
               /* Missed Call Manual Setup */
               <MissedCallTextBack
@@ -1219,7 +1219,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
 
             {/* Booking Integration — persistent right sidebar inside the panel */}
             {activeAgent !== 'missedcall' && (
-              <div className="w-64 flex-shrink-0 overflow-y-auto border-l border-gray-100 bg-gray-50">
+              <div className="w-full md:w-64 md:flex-shrink-0 overflow-y-auto border-t md:border-t-0 md:border-l border-gray-100 bg-gray-50">
                 <div className="p-4">
                   <div className="flex items-center gap-2 mb-3">
                     <Calendar className="w-4 h-4 text-amber-600" />

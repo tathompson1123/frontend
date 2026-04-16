@@ -596,8 +596,8 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
           {/* Score overview */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h4 className="font-semibold text-gray-900 mb-4">Optimization Score</h4>
-            <div className="overflow-x-auto -mx-2 px-2">
-            <div className="grid grid-cols-5 gap-2 min-w-[320px]">
+            <div className="overflow-x-auto">
+            <div className="flex gap-2 min-w-max pb-1">
               <div className="relative flex flex-col items-center">
                 <ScoreCircle score={audit.overallScore} label="Overall" size={90} />
               </div>

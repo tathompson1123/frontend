@@ -847,7 +847,7 @@ const saveReviewConfig = async () => {
             const msgEndsWithPunct = /[.!?]$/.test(previewMsg.trimEnd());
             const msgWithPunct = msgEndsWithPunct ? previewMsg : previewMsg.trimEnd() + '.';
             return (
-              <div className="flex gap-4">
+              <div className="flex flex-col sm:flex-row gap-4">
                 {/* SMS iPhone */}
                 <div className="flex-1">
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">SMS Preview</p>
@@ -1053,7 +1053,7 @@ const saveReviewConfig = async () => {
     {/* Metrics sub-tab */}
     {reviewSettingsTab === 'metrics' && (
       <div className="space-y-6">
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
             <div className="flex items-center gap-2 mb-2">
               <Send className="w-5 h-5 text-blue-600" />
