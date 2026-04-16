@@ -462,7 +462,7 @@ export default function Invoices({ apiUrl, user, authFetch }) {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         {[
           { label: 'Total', value: invoices.length, color: 'text-gray-900' },
           { label: 'Outstanding', value: invoices.filter(i => ['sent', 'viewed', 'overdue'].includes(i.status)).reduce((s, i) => s + parseFloat(i.amount_due || 0), 0).toFixed(2), prefix: '$', color: 'text-amber-600' },

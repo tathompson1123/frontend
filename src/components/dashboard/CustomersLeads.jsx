@@ -1029,7 +1029,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <ChevronDown className={`w-4 h-4 text-gray-500 transition-transform ${showTabDropdown ? 'rotate-180' : ''}`} />
           </button>
           {showTabDropdown && (
-            <div className="absolute left-4 right-4 top-full z-30 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 overflow-hidden">
+            <div className="absolute left-4 right-4 top-full z-50 bg-white border border-gray-200 rounded-lg shadow-lg mt-1 overflow-hidden">
               <button onClick={() => { setActiveTab('leads'); setSearchTerm(''); setEditingCell(null); setShowTabDropdown(false); }} className={`w-full flex items-center gap-2 px-4 py-3 text-sm font-medium transition-colors ${activeTab === 'leads' ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-50'}`}>
                 <Sparkles className="w-4 h-4" />Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})
               </button>

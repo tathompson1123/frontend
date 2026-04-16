@@ -202,18 +202,18 @@ export default function MarketResearch({ apiUrl, authFetch, user }) {
           {/* Upsell Cards */}
           {(upsellAnalysis.upsells || []).map((upsell, i) => (
             <div key={i} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-start justify-between mb-4">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-4 gap-3">
+                <div className="min-w-0">
                   <p className="text-xs text-gray-400 font-medium mb-1">
                     For: {upsell.forService} {upsell.forServicePrice ? `($${upsell.forServicePrice})` : ''}
                   </p>
-                  <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                  <h4 className="text-lg font-bold text-gray-900 flex items-center gap-2 flex-wrap">
                     {upsell.upsellName}
                     <ArrowRight className="w-4 h-4 text-gray-400" />
                     <span className="text-green-600">${upsell.suggestedPrice}</span>
                   </h4>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
                     {upsell.estimatedConversion} conversion
                   </span>

@@ -596,7 +596,8 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
           {/* Score overview */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h4 className="font-semibold text-gray-900 mb-4">Optimization Score</h4>
-            <div className="grid grid-cols-5 gap-4">
+            <div className="overflow-x-auto -mx-2 px-2">
+            <div className="grid grid-cols-5 gap-2 min-w-[320px]">
               <div className="relative flex flex-col items-center">
                 <ScoreCircle score={audit.overallScore} label="Overall" size={90} />
               </div>
@@ -613,6 +614,7 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
                 <ScoreCircle score={audit.categoryScores?.engagement || 0} label="Engagement" size={80} />
               </div>
             </div>
+            </div>
           </div>
 
           {/* Good vs Needs Improvement */}
@@ -626,14 +628,14 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
               </div>
               <div className="space-y-3">
                 {(audit.goodItems || []).map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                  <div key={i} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100 overflow-hidden">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1 overflow-hidden">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-gray-900">{item.title}</span>
-                        <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full">{item.value}</span>
+                        <span className="text-sm font-semibold text-gray-900 break-words">{item.title}</span>
+                        <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full break-all">{item.value}</span>
                       </div>
-                      <p className="text-xs text-gray-600 mt-0.5">{item.note}</p>
+                      <p className="text-xs text-gray-600 mt-0.5 break-words">{item.note}</p>
                     </div>
                   </div>
                 ))}

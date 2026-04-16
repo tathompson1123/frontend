@@ -1022,14 +1022,14 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
       </div>
 
       {/* Main Content - Split Panel */}
-      <div className="flex-1 flex gap-4 min-h-0">
+      <div className="flex-1 flex flex-col md:flex-row gap-4 min-h-0">
         {/* Left Side - Configuration (2/3 width) */}
-        <div className="w-2/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
+        <div className="w-full md:w-2/3 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col min-h-0">
           {/* Setup Mode Toggle + Actions */}
-          <div className="p-4 border-b border-gray-200 flex items-center justify-between">
+          <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row md:items-center gap-3 md:justify-between">
             {/* Setup Mode Dropdown */}
             {/* Mobile dropdown */}
-            <div className="md:hidden mb-0">
+            <div className="md:hidden">
               <select
                 value={setupMode}
                 onChange={e => setSetupMode(e.target.value)}
@@ -1272,7 +1272,7 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
         </div>
 
         {/* Right Side */}
-        <div className="w-1/3 flex flex-col gap-4 min-h-0 self-start sticky top-4">
+        <div className="w-full md:w-1/3 flex flex-col gap-4 min-h-0 self-start md:sticky md:top-4">
           {activeAgent === 'missedcall' ? (
             /* Missed Call — tips panel instead of chat widget */
             <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">

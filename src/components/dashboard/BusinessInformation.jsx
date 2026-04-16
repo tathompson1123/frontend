@@ -1679,15 +1679,15 @@ export default function BusinessInformation({
             </h3>
             {days.map((day) => (
               <div key={day} className="border-b border-gray-200 last:border-b-0 py-4">
-                <div className="flex items-center gap-6">
-                  <div className="w-32">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6">
+                  <div className="w-full sm:w-32">
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input type="checkbox" checked={hours[day].open} onChange={(e) => setHours({ ...hours, [day]: { ...hours[day], open: e.target.checked } })} className="w-5 h-5 rounded border-gray-300 text-amber-600 focus:ring-amber-500" />
                       <span className="font-semibold text-gray-900">{dayLabels[day]}</span>
                     </label>
                   </div>
                   {hours[day].open ? (
-                    <div className="flex items-center gap-2 flex-1">
+                    <div className="flex items-center gap-2 flex-1 flex-wrap">
                       <div className="flex items-center gap-1">
                         <TimeInput value={hours[day].start} onChange={(v) => setHours({ ...hours, [day]: { ...hours[day], start: v } })} className="w-28 px-3 py-2 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none text-center" />
                         <button
@@ -1777,7 +1777,7 @@ export default function BusinessInformation({
             <p className="text-gray-600 mt-1">Manage your service offerings</p>
           </div>
 
-          <div className="flex gap-6">
+          <div className="flex flex-col lg:flex-row gap-6">
           {/* Left side — Management */}
           <div className="flex-1 min-w-0 space-y-6">
 
@@ -2729,7 +2729,7 @@ export default function BusinessInformation({
 
           {/* Right side — Booking Preview */}
           {serviceSubTab !== 'booking-times' && (<>
-          <div className="w-[380px] flex-shrink-0">
+          <div className="w-full lg:w-[380px] lg:flex-shrink-0">
             <div className="sticky top-6">
               <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
                 {/* Phone frame header */}

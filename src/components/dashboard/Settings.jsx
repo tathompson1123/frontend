@@ -228,11 +228,11 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate, onDirt
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">Current Plan</label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <input type="text" value={user?.plan || 'No plan selected'} disabled
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600 capitalize" />
+                    className="flex-1 min-w-0 px-4 py-3 border-2 border-gray-200 rounded-lg bg-gray-50 text-gray-600 capitalize" />
                   <a href="#billing" onClick={(e) => { e.preventDefault(); window.dispatchEvent(new CustomEvent('navigate-to-view', { detail: { view: 'billing' } })); }}
-                    className="px-4 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors">
+                    className="flex-shrink-0 px-4 py-3 bg-amber-600 text-white rounded-lg font-medium hover:bg-amber-700 transition-colors">
                     {user?.plan ? 'Upgrade' : 'Choose Plan'}
                   </a>
                 </div>

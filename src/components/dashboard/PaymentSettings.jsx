@@ -125,11 +125,11 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
               const info = processorInfo[conn.processor];
               return (
                 <div key={conn.id} className={`rounded-xl p-6 border-2 ${info.color}`}>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-4">
                       <span className="text-3xl">{info.icon}</span>
                       <div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="text-lg font-bold text-gray-900">{info.name}</h4>
                           <CheckCircle className="w-5 h-5 text-green-600" />
                           {conn.is_primary && (
@@ -139,7 +139,7 @@ export default function PaymentSettings({ apiUrl, user, authFetch, justConnected
                         <p className="text-sm text-gray-600">Connected {new Date(conn.connected_at).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {!conn.is_primary && (
                         <button onClick={() => handleSetPrimary(conn.id)} className="flex items-center gap-1 px-3 py-2 text-sm font-medium text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition">
                           <Star className="w-4 h-4" /> Set Primary
