@@ -2894,9 +2894,9 @@ export default function BusinessInformation({
               <button
                 type="button"
                 onClick={() => setShowGroupsModal(true)}
-                className="bg-gradient-to-r from-indigo-600 to-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                className="bg-gradient-to-r from-indigo-600 to-amber-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all flex items-center gap-1.5"
               >
-                <Users className="w-5 h-5" />
+                <Users className="w-4 h-4" />
                 Groups
               </button>
               <button
@@ -2910,9 +2910,9 @@ export default function BusinessInformation({
                     serviceIds: []
                   });
                 }}
-                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:shadow-lg transition-all flex items-center gap-2"
+                className="bg-gradient-to-r from-amber-600 to-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:shadow-lg transition-all flex items-center gap-1.5"
               >
-                <Plus className="w-5 h-5" />
+                <Plus className="w-4 h-4" />
                 Add Employee
               </button>
             </div>
