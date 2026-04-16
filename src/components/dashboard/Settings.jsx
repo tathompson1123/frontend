@@ -174,7 +174,20 @@ export default function Settings({ user, apiUrl, authFetch, onUserUpdate, onDirt
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200">
         <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
+          {/* Mobile dropdown */}
+          <div className="md:hidden mb-4 px-4 pt-4">
+            <select
+              value={activeTab}
+              onChange={e => setActiveTab(e.target.value)}
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+            >
+              <option value="account">Account</option>
+              <option value="security">Security</option>
+              <option value="notifications">Notifications</option>
+            </select>
+          </div>
+          {/* Desktop tabs */}
+          <nav className="hidden md:flex -mb-px">
             {tabs.map(tab => {
               const Icon = tab.icon;
               return (

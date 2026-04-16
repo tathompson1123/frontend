@@ -70,7 +70,22 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
         <h2 className="text-3xl font-bold text-gray-900">Payment Settings</h2>
         <p className="text-gray-600 mt-1">Manage payment processors, invoices, and transactions</p>
       </div>
-      <div className="overflow-x-auto mb-6">
+      {/* Mobile dropdown */}
+      <div className="md:hidden mb-4">
+        <select
+          value={subTab}
+          onChange={e => setSubTab(e.target.value)}
+          className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+        >
+          <option value="processors">Payment Processors</option>
+          <option value="invoices">Invoices</option>
+          <option value="estimates">Estimates</option>
+          <option value="transactions">Transactions</option>
+          <option value="tax-fees">Taxes &amp; Fees</option>
+        </select>
+      </div>
+      {/* Desktop tabs */}
+      <div className="hidden md:block overflow-x-auto mb-6">
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 min-w-max w-fit">
         {tabs.map(t => (
           <button

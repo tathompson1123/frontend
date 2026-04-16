@@ -68,6 +68,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [searchQuery, setSearchQuery] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
   const datePickerRef = useRef(null);
+  const mobileTodayRef = useRef(null);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
   const [showCreateBookingModal, setShowCreateBookingModal] = useState(false);
   const [isEditingBooking, setIsEditingBooking] = useState(false);
@@ -154,6 +155,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     };
     setTimeout(scrollToBusinessHours, 100);
   }, []);
+
+  useEffect(() => {
+    if (calendarView === 'week' && window.innerWidth < 768) {
+      setTimeout(() => {
+        mobileTodayRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 150);
+    }
+  }, [calendarView, currentDate]);
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -988,7 +997,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               const isToday = base.toDateString() === today.toDateString();
               const dayBookings = allBookings.filter(b => b.booking_date.split('T')[0] === dateStr).sort((a,b) => a.start_time.localeCompare(b.start_time));
               return (
-                <div key={offset}>
+                <div key={offset} ref={isToday ? mobileTodayRef : null}>
                   <div className={`text-xs font-bold uppercase mb-2 px-1 ${isToday ? 'text-blue-600' : 'text-gray-500'}`}>
                     {base.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
                     {isToday && <span className="ml-2 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-full normal-case">Today</span>}

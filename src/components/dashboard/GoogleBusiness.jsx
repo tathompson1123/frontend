@@ -719,7 +719,20 @@ const saveReviewConfig = async () => {
     </div>
 
     {/* Sub-tabs within Review Request Settings */}
-    <div className="flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
+    {/* Mobile dropdown */}
+    <div className="md:hidden mb-4">
+      <select
+        value={reviewSettingsTab}
+        onChange={e => setReviewSettingsTab(e.target.value)}
+        className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+      >
+        <option value="customization">Customization</option>
+        <option value="timeline">Timeline</option>
+        <option value="metrics">Metrics</option>
+      </select>
+    </div>
+    {/* Desktop tabs */}
+    <div className="hidden md:flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
       {[
         { id: 'customization', label: 'Customization' },
         { id: 'timeline', label: 'Timeline' },

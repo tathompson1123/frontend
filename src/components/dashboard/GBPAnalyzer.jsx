@@ -550,7 +550,20 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
 
       {/* Step Navigation */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex border-b border-gray-100">
+        {/* Mobile dropdown */}
+        <div className="md:hidden mb-4 px-4 pt-4">
+          <select
+            value={subTab}
+            onChange={e => setSubTab(e.target.value)}
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+          >
+            <option value="audit">Audit Results</option>
+            <option value="rankings">Map Rankings</option>
+            <option value="actions">Action Plan</option>
+          </select>
+        </div>
+        {/* Desktop tabs */}
+        <div className="hidden md:flex border-b border-gray-100">
           {[
             { id: 'audit', label: 'Audit Results' },
             { id: 'rankings', label: 'Map Rankings' },

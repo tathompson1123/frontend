@@ -69,19 +69,19 @@ function SortableServiceCard({ service, isAddon, categories, allServices, onEdit
       style={style}
       className={`bg-white rounded-xl p-6 shadow-sm border border-gray-200 ${isAddon ? 'border-l-4 border-l-violet-400' : ''} hover:shadow-md transition-shadow`}
     >
-      <div className="flex gap-6">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-6">
         {service.media_url && (
           <div className="flex-shrink-0">
             {service.media_type === 'image' ? (
-              <img src={service.media_url} alt={service.name} className="w-32 h-32 object-cover rounded-lg" />
+              <img src={service.media_url} alt={service.name} className="w-full h-40 sm:w-32 sm:h-32 object-cover rounded-lg" />
             ) : (
-              <video src={service.media_url} className="w-32 h-32 object-cover rounded-lg" controls />
+              <video src={service.media_url} className="w-full h-40 sm:w-32 sm:h-32 object-cover rounded-lg" controls />
             )}
           </div>
         )}
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-2 flex-wrap">
-            <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
+            <h3 className="text-lg sm:text-xl font-bold text-gray-900">{service.name}</h3>
             <button type="button" onClick={() => onEdit(service)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
               <Edit className="w-4 h-4" />
             </button>
@@ -95,8 +95,8 @@ function SortableServiceCard({ service, isAddon, categories, allServices, onEdit
               )
             )}
           </div>
-          {service.description && <p className="text-gray-600 mb-4">{service.description}</p>}
-          <div className="flex gap-6 text-sm flex-wrap">
+          {service.description && <p className="text-gray-600 mb-3 text-sm sm:text-base break-words">{service.description}</p>}
+          <div className="flex gap-4 sm:gap-6 text-sm flex-wrap">
             <div className="flex items-center gap-2 text-gray-700">
               <Clock className="w-4 h-4" />
               <span>{service.duration_hours} {service.duration_hours === 1 ? 'hour' : 'hours'}</span>
@@ -118,7 +118,7 @@ function SortableServiceCard({ service, isAddon, categories, allServices, onEdit
             </button>
           )}
         </div>
-        <div className="flex flex-col gap-2 items-center">
+        <div className="flex sm:flex-col flex-row gap-2 items-center justify-end sm:justify-start">
           <button
             type="button"
             {...attributes}
@@ -1409,7 +1409,21 @@ export default function BusinessInformation({
 
         {/* Tabs */}
         <div className="border-b border-gray-200 bg-gray-50">
-          <div className="flex">
+          {/* Mobile dropdown */}
+          <div className="md:hidden px-4 py-3">
+            <select
+              value={activeTab}
+              onChange={e => setActiveTab(e.target.value)}
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+            >
+              <option value="info">Business Info</option>
+              <option value="services">Services & Book Online ({services.length})</option>
+              <option value="team">Team ({employees.length})</option>
+              <option value="app-settings">Reminders</option>
+            </select>
+          </div>
+          {/* Desktop tabs */}
+          <div className="hidden md:flex">
             <button
               onClick={() => setActiveTab('info')}
               className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'info' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
@@ -1768,7 +1782,21 @@ export default function BusinessInformation({
           <div className="flex-1 min-w-0 space-y-6">
 
           {/* Categories / Main Services / Add-ons Sub-tabs */}
-          <div className="flex border-b border-gray-200">
+          {/* Mobile dropdown */}
+          <div className="md:hidden px-4 py-3 border-b border-gray-200">
+            <select
+              value={serviceSubTab}
+              onChange={e => { const v = e.target.value; setServiceSubTab(v); if (v === 'booking-times') fetchBookingSlots(); }}
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+            >
+              <option value="categories">Categories</option>
+              <option value="main">Main Services</option>
+              <option value="addons">Add-ons / Upsells</option>
+              <option value="booking-times">Online Booking</option>
+            </select>
+          </div>
+          {/* Desktop tabs */}
+          <div className="hidden md:flex border-b border-gray-200">
             <button
               type="button"
               onClick={() => setServiceSubTab('categories')}

@@ -2090,7 +2090,20 @@ function AuditSteps({ audit, plan, loadingPlan, planError, onCreatePlan, onRerun
     <div className="space-y-4">
       {/* Step Nav */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex border-b border-gray-100">
+        {/* Mobile dropdown */}
+        <div className="md:hidden mb-4 px-4 pt-4">
+          <select
+            value={activeStep}
+            onChange={e => setActiveStep(e.target.value)}
+            className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+          >
+            {steps.map(s => (
+              <option key={s.id} value={s.id}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+        {/* Desktop tabs */}
+        <div className="hidden md:flex border-b border-gray-100">
           {steps.map((s, i) => (
             <button
               key={s.id}

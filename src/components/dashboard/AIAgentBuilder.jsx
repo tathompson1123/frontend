@@ -966,7 +966,22 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           </div>
 
           {/* Agent Toggle */}
-          <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+          {/* Mobile dropdown */}
+          <div className="md:hidden mb-4">
+            <select
+              value={activeAgent}
+              onChange={e => {
+                if (isAgentDirty() && !confirm('You have unsaved changes. Switch agent tab anyway? Your changes will be lost.')) return;
+                setActiveAgent(e.target.value);
+              }}
+              className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+            >
+              <option value="chat">Website Chat</option>
+              <option value="leadform">SMS Lead Agent</option>
+            </select>
+          </div>
+          {/* Desktop tabs */}
+          <div className="hidden md:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
             <button
               onClick={() => {
                 if (isAgentDirty() && !confirm('You have unsaved changes. Switch agent tab anyway? Your changes will be lost.')) return;
@@ -1013,7 +1028,19 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
           {/* Setup Mode Toggle + Actions */}
           <div className="p-4 border-b border-gray-200 flex items-center justify-between">
             {/* Setup Mode Dropdown */}
-            <div className="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+            {/* Mobile dropdown */}
+            <div className="md:hidden mb-0">
+              <select
+                value={setupMode}
+                onChange={e => setSetupMode(e.target.value)}
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
+              >
+                <option value="ai">SORCE AI Setup</option>
+                <option value="manual">Manual Setup</option>
+              </select>
+            </div>
+            {/* Desktop tabs */}
+            <div className="hidden md:flex items-center gap-2 bg-gray-100 rounded-lg p-1">
               <button
                 onClick={() => setSetupMode('ai')}
                 className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
