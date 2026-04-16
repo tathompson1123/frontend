@@ -714,7 +714,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   };
 
   return (
-    <div className="h-full flex flex-col gap-4 md:flex-row md:gap-6">
+    <div className="flex flex-col gap-4 md:flex-row md:gap-6">
       <div className="hidden md:flex w-80 bg-white rounded-xl shadow-sm border border-gray-200 flex-col h-[calc(100vh-140px)]">
         <div className="p-4 border-b border-gray-200">
           <h3 className="font-bold text-gray-900 mb-1">
@@ -778,7 +778,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         </div>
       </div>
 
-      <div className="flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden h-[75vh] md:h-[calc(100vh-140px)]">
+      <div className="w-full md:flex-1 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden h-[75vh] md:h-[calc(100vh-140px)]">
         {/* Mobile-only navigation strip */}
         <div className="md:hidden flex-shrink-0 p-4 border-b border-gray-200 space-y-3">
           <div className="flex items-center justify-between gap-2">
