@@ -8,24 +8,47 @@ import {
 import { APIProvider, Map, AdvancedMarker, InfoWindow, Pin } from '@vis.gl/react-google-maps';
 
 // ─── Score Circle Component ───────────────────────────────
+function scoreColor(score) {
+  return score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : score >= 25 ? '#f97316' : '#ef4444';
+}
+
 function ScoreCircle({ score, label, size = 100, color }) {
   const radius = (size - 10) / 2;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (score / 100) * circumference;
-  const strokeColor = color || (score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : score >= 25 ? '#f97316' : '#ef4444');
+  const strokeColor = color || scoreColor(score);
 
   return (
     <div className="flex flex-col items-center">
-      <svg width={size} height={size} className="transform -rotate-90">
-        <circle cx={size/2} cy={size/2} r={radius} stroke="#e5e7eb" strokeWidth="6" fill="none" />
-        <circle cx={size/2} cy={size/2} r={radius} stroke={strokeColor} strokeWidth="6" fill="none"
-          strokeDasharray={circumference} strokeDashoffset={offset}
-          strokeLinecap="round" className="transition-all duration-1000" />
-      </svg>
-      <div className="absolute flex flex-col items-center justify-center" style={{ width: size, height: size }}>
-        <span className="text-2xl font-bold text-gray-900">{score}</span>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="transform -rotate-90">
+          <circle cx={size/2} cy={size/2} r={radius} stroke="#e5e7eb" strokeWidth="6" fill="none" />
+          <circle cx={size/2} cy={size/2} r={radius} stroke={strokeColor} strokeWidth="6" fill="none"
+            strokeDasharray={circumference} strokeDashoffset={offset}
+            strokeLinecap="round" className="transition-all duration-1000" />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-2xl font-bold text-gray-900">{score}</span>
+        </div>
       </div>
       <span className="text-xs font-medium text-gray-600 mt-1 text-center">{label}</span>
+    </div>
+  );
+}
+
+function ScoreBar({ score, label }) {
+  const color = scoreColor(score);
+  const textColor = score >= 75 ? 'text-green-600' : score >= 50 ? 'text-yellow-600' : score >= 25 ? 'text-orange-500' : 'text-red-500';
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-xs font-medium text-gray-600 w-24 flex-shrink-0">{label}</span>
+      <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-1000"
+          style={{ width: `${score}%`, backgroundColor: color }}
+        />
+      </div>
+      <span className={`text-xs font-bold w-7 text-right flex-shrink-0 ${textColor}`}>{score}</span>
     </div>
   );
 }
@@ -596,44 +619,47 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
           {/* Score overview */}
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h4 className="font-semibold text-gray-900 mb-4">Optimization Score</h4>
-            <div className="overflow-x-auto">
-            <div className="flex gap-2 min-w-max pb-1">
-              <div className="relative flex flex-col items-center">
-                <ScoreCircle score={audit.overallScore} label="Overall" size={90} />
-              </div>
-              <div className="relative flex flex-col items-center">
-                <ScoreCircle score={audit.categoryScores?.completeness || 0} label="Completeness" size={80} />
-              </div>
-              <div className="relative flex flex-col items-center">
-                <ScoreCircle score={audit.categoryScores?.contentMedia || 0} label="Content" size={80} />
-              </div>
-              <div className="relative flex flex-col items-center">
-                <ScoreCircle score={audit.categoryScores?.reviews || 0} label="Reviews" size={80} />
-              </div>
-              <div className="relative flex flex-col items-center">
-                <ScoreCircle score={audit.categoryScores?.engagement || 0} label="Engagement" size={80} />
-              </div>
+
+            {/* Desktop: rings */}
+            <div className="hidden sm:flex gap-4 items-end">
+              <ScoreCircle score={audit.overallScore} label="Overall" size={90} />
+              <ScoreCircle score={audit.categoryScores?.completeness || 0} label="Completeness" size={80} />
+              <ScoreCircle score={audit.categoryScores?.contentMedia || 0} label="Content" size={80} />
+              <ScoreCircle score={audit.categoryScores?.reviews || 0} label="Reviews" size={80} />
+              <ScoreCircle score={audit.categoryScores?.engagement || 0} label="Engagement" size={80} />
             </div>
+
+            {/* Mobile: big circle + progress bars */}
+            <div className="sm:hidden">
+              <div className="flex justify-center mb-5">
+                <ScoreCircle score={audit.overallScore} label="Overall Score" size={110} />
+              </div>
+              <div className="space-y-3">
+                <ScoreBar score={audit.categoryScores?.completeness || 0} label="Completeness" />
+                <ScoreBar score={audit.categoryScores?.contentMedia || 0} label="Content" />
+                <ScoreBar score={audit.categoryScores?.reviews || 0} label="Reviews" />
+                <ScoreBar score={audit.categoryScores?.engagement || 0} label="Engagement" />
+              </div>
             </div>
           </div>
 
           {/* Good vs Needs Improvement */}
           <div className="grid lg:grid-cols-2 gap-6">
             {/* What's Good */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
+            <div className="bg-white rounded-xl border border-gray-200 p-6 overflow-hidden min-w-0">
               <div className="flex items-center gap-2 mb-4">
                 <CheckCircle2 className="w-5 h-5 text-green-600" />
                 <h4 className="font-semibold text-gray-900">What&apos;s Good</h4>
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">{audit.goodItems?.length || 0}</span>
               </div>
-              <div className="space-y-3">
+              <div className="space-y-3 w-full">
                 {(audit.goodItems || []).map((item, i) => (
-                  <div key={i} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100 overflow-hidden">
+                  <div key={i} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100 overflow-hidden w-full">
                     <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <div className="min-w-0 flex-1 overflow-hidden">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-gray-900 break-words">{item.title}</span>
-                        <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full break-all">{item.value}</span>
+                        <span className="text-sm font-semibold text-gray-900 break-words min-w-0">{item.title}</span>
+                        <span className="text-xs text-green-700 bg-green-100 px-2 py-0.5 rounded-full break-all min-w-0">{item.value}</span>
                       </div>
                       <p className="text-xs text-gray-600 mt-0.5 break-words">{item.note}</p>
                     </div>
