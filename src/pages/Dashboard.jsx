@@ -487,7 +487,7 @@ useEffect(() => {
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'Embed Website' },
     { id: 'booking-calendar', icon: Calendar, label: 'Booking Calendar' },
-    { id: 'customers-leads', icon: Users, label: 'Customers & Leads' },
+    { id: 'customers-leads', icon: Users, label: 'CRM Management' },
   ];
 
   const bottomMenuItems = [

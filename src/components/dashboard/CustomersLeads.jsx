@@ -36,10 +36,15 @@ import {
 // Always parse DB timestamps as UTC (PostgreSQL returns without 'Z', may use space instead of 'T')
 function parseTS(ts) {
   if (!ts) return new Date(0);
+  // Already a Date object
+  if (ts instanceof Date) return ts;
   const s = String(ts).trim();
+  // Already has timezone indicator — parse as-is
   if (/Z$|[+-]\d{2}:?\d{2}$/.test(s)) return new Date(s);
-  // Normalize space separator to 'T' then treat as UTC
-  return new Date(s.replace(' ', 'T') + 'Z');
+  // ISO-like with T separator but no zone — treat as UTC
+  if (s.includes('T')) return new Date(s + 'Z');
+  // Space-separated (PostgreSQL default) — normalize to T then treat as UTC
+  return new Date(s.replace(' ', 'T').replace(/\.\d+$/, '') + 'Z');
 }
 
 function fmtTime(ts) {
@@ -102,6 +107,20 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [viewingCustomerEdit, setViewingCustomerEdit] = useState({});
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
+
+  // Enhanced lead detail
+  const [viewingLeadDetail, setViewingLeadDetail] = useState(null);
+  const [viewingLeadDetailLoading, setViewingLeadDetailLoading] = useState(false);
+
+  // Source filter for leads
+  const [sourceFilter, setSourceFilter] = useState('all');
+
+  // Analytics tab
+  const [analyticsData, setAnalyticsData] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [adSpendEntries, setAdSpendEntries] = useState([]);
+  const [showAdSpendModal, setShowAdSpendModal] = useState(false);
+  const [adSpendForm, setAdSpendForm] = useState({ source: '', amount: '', month: new Date().toISOString().slice(0, 7), notes: '' });
 
   // CSV mapper state
   const [csvMapper, setCsvMapper] = useState(null); // { headers, rows, tab }
@@ -400,12 +419,21 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
   const openViewingLead = (lead) => {
     setViewingLead(lead);
+    setViewingLeadDetail(null);
+    setViewingLeadDetailLoading(true);
     setViewingLeadEditMode(false);
     setViewingLeadEdit({ status: lead.status || 'new', notes: lead.notes || '', priority: lead.priority || '', follow_up_date: lead.follow_up_date || '' });
     setViewingLeadSmsMessages([]);
     setViewingLeadChatMessages([]);
     const isChatLead = lead.source === 'ai_chat_agent';
     setViewingLeadConvTab(isChatLead ? 'chat' : 'sms');
+
+    // Fetch enhanced detail (bookings, spending, etc.)
+    authFetch(`${apiUrl}/api/leads/${lead.id}/detail`)
+      .then(r => r.json())
+      .then(d => setViewingLeadDetail(d))
+      .catch(() => setViewingLeadDetail(null))
+      .finally(() => setViewingLeadDetailLoading(false));
 
     if (lead.phone) {
       setViewingLeadSmsLoading(true);
@@ -424,6 +452,39 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         .catch(() => setViewingLeadChatMessages([]))
         .finally(() => setViewingLeadChatLoading(false));
     }
+  };
+
+  const fetchAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const [srcRes, spendRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/leads/analytics/sources`).then(r => r.json()),
+        authFetch(`${apiUrl}/api/leads/ad-spend`).then(r => r.json()),
+      ]);
+      setAnalyticsData(srcRes.sources || []);
+      setAdSpendEntries(spendRes.entries || []);
+    } catch { setAnalyticsData([]); }
+    finally { setAnalyticsLoading(false); }
+  };
+
+  const saveAdSpend = async () => {
+    if (!adSpendForm.source || !adSpendForm.amount || !adSpendForm.month) return;
+    try {
+      await authFetch(`${apiUrl}/api/leads/ad-spend`, {
+        method: 'POST',
+        body: JSON.stringify({ ...adSpendForm, amount: parseFloat(adSpendForm.amount) }),
+      });
+      setShowAdSpendModal(false);
+      setAdSpendForm({ source: '', amount: '', month: new Date().toISOString().slice(0, 7), notes: '' });
+      fetchAnalytics();
+    } catch (err) { console.error(err); }
+  };
+
+  const deleteAdSpend = async (id) => {
+    try {
+      await authFetch(`${apiUrl}/api/leads/ad-spend/${id}`, { method: 'DELETE' });
+      fetchAnalytics();
+    } catch (err) { console.error(err); }
   };
 
   const saveViewingLeadEdit = async () => {
@@ -935,12 +996,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   };
 
   const currentLeads = getCurrentLeads();
-  const filteredLeads = currentLeads.filter(lead =>
-    lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lead.phone?.includes(searchTerm) ||
-    lead.status?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const allLeadsForSources = leadTables.flatMap(t => t.leads);
+  const availableSources = [...new Set(allLeadsForSources.map(l => l.source).filter(Boolean))].sort();
+
+  const filteredLeads = currentLeads.filter(lead => {
+    const matchesSearch = lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lead.phone?.includes(searchTerm) ||
+      lead.status?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSource = sourceFilter === 'all' || lead.source === sourceFilter;
+    return matchesSearch && matchesSource;
+  });
 
   const filteredCustomers = customers.filter(customer =>
     customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1007,8 +1073,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Customers & Leads</h1>
-            <p className="text-gray-600 mt-1">Manage your customer relationships</p>
+            <h1 className="text-3xl font-bold text-gray-900">CRM Management</h1>
+            <p className="text-gray-600 mt-1">Leads, customers, analytics and source ROI</p>
           </div>
         </div>
 
@@ -1024,6 +1090,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               setActiveTab(val);
               if (val === 'conversations') { fetchConversations(); fetchSmsLeadConversations(); }
               if (val === 'rewards') fetchRewardsData();
+              if (val === 'analytics') fetchAnalytics();
             }}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
           >
@@ -1031,6 +1098,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <option value="customers">Customers ({customerStats.total})</option>
             <option value="conversations">Conversations</option>
             <option value="rewards">Rewards</option>
+            <option value="analytics">Analytics</option>
           </select>
         </div>
         {/* Desktop: horizontal tabs */}
@@ -1075,6 +1143,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 Rewards
               </div>
               {activeTab === 'rewards' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => { setActiveTab('analytics'); setSearchTerm(''); setEditingCell(null); fetchAnalytics(); }}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'analytics' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Flag className="w-4 h-4" />
+                Analytics
+              </div>
+              {activeTab === 'analytics' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
           </div>
         </div>
@@ -1203,10 +1281,18 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64"
               />
             </div>
-            <button className="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 flex-shrink-0">
-              <Filter className="w-4 h-4" />
-              Filter
-            </button>
+            {activeTab === 'leads' && (
+              <select
+                value={sourceFilter}
+                onChange={e => setSourceFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white flex-shrink-0 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="all">All Sources</option>
+                {availableSources.map(s => (
+                  <option key={s} value={s}>{formatLabel(s)}</option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <button
@@ -2107,91 +2193,187 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
       )}
 
-      {/* Lead Detail Slide-Over */}
+      {/* Lead Detail — full page overlay */}
       {viewingLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-end" onClick={() => { setViewingLead(null); setViewingLeadEditMode(false); }}>
-          <div
-            className="bg-white w-full max-w-xl h-full shadow-2xl flex flex-col overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="p-5 border-b border-gray-200 flex items-start justify-between bg-gray-50">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{viewingLead.name}</h2>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(viewingLead.status)}`}>{formatLabel(viewingLead.status)}</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs ${getSourceColor(viewingLead.source)}`}>{formatLabel(viewingLead.source)}</span>
-                  {viewingLead.created_at && <span className="text-xs text-gray-400">{fmtDateTime(viewingLead.created_at)}</span>}
+        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+          {/* Sticky Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 z-10 px-6 py-4 flex items-start justify-between shadow-sm">
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h2 className="text-2xl font-bold text-gray-900">{viewingLead.name || 'Unnamed Lead'}</h2>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(viewingLead.status)}`}>{formatLabel(viewingLead.status)}</span>
+                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getSourceColor(viewingLead.source)}`}>{formatLabel(viewingLead.source)}</span>
+                {viewingLeadDetail?.isRecurring && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700">Recurring</span>
+                )}
+                {viewingLeadDetail?.lead?.left_review === 'Y' && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-700">⭐ Left Review</span>
+                )}
+              </div>
+              {viewingLead.created_at && (
+                <p className="text-sm text-gray-500 mt-1">Inquired {fmtDateTime(viewingLead.created_at)}</p>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+              <button
+                onClick={() => setViewingLeadEditMode(!viewingLeadEditMode)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewingLeadEditMode ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Edit
+              </button>
+              <button
+                onClick={() => { setConvertingLead(viewingLead); setShowConvertModal(true); setViewingLead(null); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition"
+              >
+                <Users className="w-3.5 h-3.5" />
+                Convert
+              </button>
+              <button onClick={() => { setViewingLead(null); setViewingLeadDetail(null); setViewingLeadEditMode(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="max-w-6xl mx-auto px-6 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* LEFT COLUMN */}
+            <div className="lg:col-span-1 space-y-5">
+
+              {/* Revenue & Booking Summary */}
+              <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl border border-blue-100 p-5">
+                <h3 className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-4">Revenue Summary</h3>
+                {viewingLeadDetailLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>Loading...</div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                      <p className="text-2xl font-bold text-gray-900">${(viewingLeadDetail?.totalSpent || 0).toLocaleString('en-US', { minimumFractionDigits: 0 })}</p>
+                      <p className="text-xs text-gray-500 mt-1">Total Spent</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                      <p className="text-2xl font-bold text-gray-900">{viewingLeadDetail?.totalBookings || 0}</p>
+                      <p className="text-xs text-gray-500 mt-1">Total Bookings</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                      <p className="text-2xl font-bold text-gray-900">{viewingLeadDetail?.completedBookings || 0}</p>
+                      <p className="text-xs text-gray-500 mt-1">Completed Jobs</p>
+                    </div>
+                    <div className="bg-white rounded-lg p-3 text-center shadow-sm">
+                      <p className={`text-sm font-bold ${viewingLeadDetail?.isRecurring ? 'text-purple-600' : 'text-gray-500'}`}>
+                        {viewingLeadDetail?.isRecurring ? 'Yes' : 'No'}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">Recurring</p>
+                    </div>
+                  </div>
+                )}
+                {viewingLeadDetail?.lastBookingDate && (
+                  <div className="mt-3 pt-3 border-t border-blue-100">
+                    <p className="text-xs text-gray-500">Last booking</p>
+                    <p className="text-sm font-semibold text-gray-800 mt-0.5">
+                      {new Date(viewingLeadDetail.lastBookingDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    </p>
+                    {viewingLeadDetail.lastBookingServices && (
+                      <p className="text-xs text-gray-500 mt-0.5">{viewingLeadDetail.lastBookingServices}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Contact Info */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact Info</h3>
+                <div className="space-y-2.5">
+                  {viewingLead.email && (
+                    <div className="flex items-center gap-3">
+                      <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <a href={`mailto:${viewingLead.email}`} className="text-blue-600 hover:underline text-sm">{viewingLead.email}</a>
+                    </div>
+                  )}
+                  {viewingLead.phone && (
+                    <div className="flex items-center gap-3">
+                      <Phone className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <a href={`tel:${viewingLead.phone}`} className="text-blue-600 hover:underline text-sm">{viewingLead.phone}</a>
+                    </div>
+                  )}
+                  {viewingLead.created_at && (
+                    <div className="flex items-center gap-3">
+                      <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-700">Inquired {fmtDateTime(viewingLead.created_at)}</span>
+                    </div>
+                  )}
+                  {viewingLead.follow_up_date && (
+                    <div className="flex items-center gap-3">
+                      <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-700">Follow-up: {new Date(viewingLead.follow_up_date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                    </div>
+                  )}
+                  {viewingLead.sms_consent !== undefined && (
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className={`w-4 h-4 rounded flex items-center justify-center ${viewingLead.sms_consent ? 'bg-green-500' : 'bg-gray-300'}`}>
+                        {viewingLead.sms_consent && <span className="text-white text-[10px] font-bold">✓</span>}
+                      </div>
+                      <p className="text-xs text-gray-500">SMS consent {viewingLead.sms_consent ? 'given' : 'not given'}</p>
+                    </div>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setViewingLeadEditMode(!viewingLeadEditMode)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewingLeadEditMode ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-                >
-                  <Edit2 className="w-3.5 h-3.5" />
-                  Edit
-                </button>
-                <button onClick={() => { setViewingLead(null); setViewingLeadEditMode(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition">
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
 
-            {/* Contact Info */}
-            <div className="p-5 border-b border-gray-100">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Contact</h3>
-              <div className="space-y-2">
-                {viewingLead.email && <div className="flex items-center gap-3"><Mail className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`mailto:${viewingLead.email}`} className="text-blue-600 hover:underline text-sm">{viewingLead.email}</a></div>}
-                {viewingLead.phone && <div className="flex items-center gap-3"><Phone className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`tel:${viewingLead.phone}`} className="text-blue-600 hover:underline text-sm">{viewingLead.phone}</a></div>}
-              </div>
-            </div>
-
-            {/* Form Submission */}
-            <div className="p-5 border-b border-gray-100">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Form Submission</h3>
-              <div className="space-y-3">
-                {viewingLead.service && <div><p className="text-xs text-gray-400 mb-1">Service Requested</p><p className="text-sm text-gray-900 font-medium">{viewingLead.service}</p></div>}
-                {viewingLead.message && (() => {
-                  // Parse pipe-delimited "Key: Value | Key: Value" format from lead magnets
-                  const parts = viewingLead.message.split(' | ').map(p => p.trim()).filter(Boolean);
-                  const isParseable = parts.length > 1 && parts.every(p => p.includes(': '));
-                  if (isParseable) {
-                    return (
-                      <div className="bg-gray-50 border border-gray-100 rounded-lg overflow-hidden">
-                        {parts.map((part, i) => {
-                          const colonIdx = part.indexOf(': ');
-                          const key = part.slice(0, colonIdx);
-                          const val = part.slice(colonIdx + 2);
-                          return (
-                            <div key={i} className={`flex gap-3 px-3 py-2 ${i < parts.length - 1 ? 'border-b border-gray-100' : ''}`}>
-                              <p className="text-xs text-gray-400 w-36 flex-shrink-0 pt-0.5">{key}</p>
-                              <p className="text-sm text-gray-900 font-medium">{val}</p>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    );
-                  }
-                  return <div><p className="text-xs text-gray-400 mb-1">Message</p><p className="text-sm text-gray-900 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3">{viewingLead.message}</p></div>;
-                })()}
-                {!viewingLead.service && !viewingLead.message && <p className="text-sm text-gray-400 italic">No form message was submitted.</p>}
-                {viewingLead.sms_consent !== undefined && (
-                  <div className="flex items-center gap-2">
-                    <div className={`w-4 h-4 rounded flex items-center justify-center flex-shrink-0 ${viewingLead.sms_consent ? 'bg-green-500' : 'bg-gray-300'}`}>
-                      {viewingLead.sms_consent && <span className="text-white text-[10px] font-bold">✓</span>}
+              {/* Lead Source & Status */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Lead Details</h3>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">Source</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getSourceColor(viewingLead.source)}`}>{formatLabel(viewingLead.source)}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500">Status</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(viewingLead.status)}`}>{formatLabel(viewingLead.status)}</span>
+                  </div>
+                  {viewingLead.priority && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Priority</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${viewingLead.priority === 'urgent' ? 'bg-red-100 text-red-700' : viewingLead.priority === 'high' ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-600'}`}>{formatLabel(viewingLead.priority)}</span>
                     </div>
-                    <p className="text-xs text-gray-500">SMS consent {viewingLead.sms_consent ? 'given' : 'not given'}</p>
+                  )}
+                  {viewingLeadDetail?.lead?.left_review && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Google Review</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${viewingLeadDetail.lead.left_review === 'Y' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {viewingLeadDetail.lead.left_review === 'Y' ? '⭐ Yes' : 'No'}
+                      </span>
+                    </div>
+                  )}
+                  {viewingLead.google_lsa_lead_id && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Google LSA</span>
+                      <span className="text-xs text-gray-700 font-mono">{viewingLead.google_lsa_lead_id}</span>
+                    </div>
+                  )}
+                  {viewingLead.call_duration > 0 && (
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-gray-500">Call Duration</span>
+                      <span className="text-xs text-gray-700">{Math.floor(viewingLead.call_duration / 60)}m {viewingLead.call_duration % 60}s</span>
+                    </div>
+                  )}
+                </div>
+                {viewingLead.notes && (
+                  <div className="mt-3 pt-3 border-t border-gray-100">
+                    <p className="text-xs text-gray-400 mb-1">Notes</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingLead.notes}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Edit Panel */}
-            {viewingLeadEditMode && (
-              <div className="p-5 border-b border-blue-100 bg-blue-50">
-                <h3 className="text-xs font-semibold text-blue-500 uppercase tracking-wide mb-4">Edit Lead</h3>
-                <div className="space-y-3">
+            {/* RIGHT COLUMN */}
+            <div className="lg:col-span-2 space-y-5">
+
+              {/* Edit Panel */}
+              {viewingLeadEditMode && (
+                <div className="bg-blue-50 rounded-xl border border-blue-200 p-5">
+                  <h3 className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-4">Edit Lead</h3>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">Status</label>
@@ -2213,84 +2395,396 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                         <option value="urgent">Urgent</option>
                       </select>
                     </div>
+                    <div>
+                      <label className="text-xs text-gray-500 mb-1 block">Follow-Up Date</label>
+                      <input type="date" value={viewingLeadEdit.follow_up_date || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, follow_up_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs text-gray-500 mb-1 block">Notes</label>
+                      <textarea value={viewingLeadEdit.notes || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, notes: e.target.value }))} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Add notes..." />
+                    </div>
                   </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Follow-Up Date</label>
-                    <input type="date" value={viewingLeadEdit.follow_up_date || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, follow_up_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Notes</label>
-                    <textarea value={viewingLeadEdit.notes || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, notes: e.target.value }))} rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 resize-none" placeholder="Add notes..." />
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={saveViewingLeadEdit} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Save Changes</button>
+                  <div className="flex gap-2 mt-3">
+                    <button onClick={saveViewingLeadEdit} className="px-5 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Save Changes</button>
                     <button onClick={() => setViewingLeadEditMode(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Conversation History */}
-            <div className="p-5 border-b border-gray-100">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Conversation</h3>
-                {viewingLead.source === 'ai_chat_agent' && (
-                  <div className="flex gap-1">
-                    <button onClick={() => setViewingLeadConvTab('chat')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${viewingLeadConvTab === 'chat' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Chat Agent</button>
-                    <button onClick={() => setViewingLeadConvTab('sms')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${viewingLeadConvTab === 'sms' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>SMS</button>
+              {/* What They Inquired About */}
+              {(viewingLead.service || viewingLead.message) && (
+                <div className="bg-white rounded-xl border border-gray-200 p-5">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">What They Inquired About</h3>
+                  <div className="space-y-3">
+                    {viewingLead.service && (
+                      <div className="flex items-start gap-3">
+                        <span className="text-xs font-medium text-gray-400 w-28 flex-shrink-0 pt-0.5">Service</span>
+                        <span className="text-sm font-semibold text-gray-900">{viewingLead.service}</span>
+                      </div>
+                    )}
+                    {viewingLead.message && (() => {
+                      const parts = viewingLead.message.split(' | ').map(p => p.trim()).filter(Boolean);
+                      const isParseable = parts.length > 1 && parts.every(p => p.includes(': '));
+                      if (isParseable) {
+                        return (
+                          <div className="bg-gray-50 border border-gray-100 rounded-lg overflow-hidden">
+                            {parts.map((part, i) => {
+                              const colonIdx = part.indexOf(': ');
+                              const key = part.slice(0, colonIdx);
+                              const val = part.slice(colonIdx + 2);
+                              return (
+                                <div key={i} className={`flex gap-3 px-4 py-2.5 ${i < parts.length - 1 ? 'border-b border-gray-100' : ''}`}>
+                                  <p className="text-xs text-gray-400 w-36 flex-shrink-0 pt-0.5">{key}</p>
+                                  <p className="text-sm text-gray-900 font-medium">{val}</p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      return <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3">{viewingLead.message}</p>;
+                    })()}
+                    {viewingLead.call_transcript && (
+                      <div>
+                        <p className="text-xs text-gray-400 mb-1">Call Transcript</p>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 border border-gray-100 rounded-lg p-3 max-h-48 overflow-y-auto">{viewingLead.call_transcript}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Booking History */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Booking History</h3>
+                {viewingLeadDetailLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>Loading...</div>
+                ) : !viewingLeadDetail?.bookings?.length ? (
+                  <p className="text-sm text-gray-400 italic">No bookings found for this lead.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {viewingLeadDetail.bookings.map((b, idx) => (
+                      <div key={b.id || idx} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-100">
+                        <div className="flex-shrink-0 w-2 h-2 rounded-full bg-blue-500 mt-1" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-gray-900">
+                              {new Date((b.booking_date || '').toString().slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            </span>
+                            {b.start_time && <span className="text-xs text-gray-500">{fmtTime(b.start_time)}</span>}
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${b.status === 'completed' ? 'bg-green-100 text-green-700' : b.status === 'confirmed' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {formatLabel(b.status)}
+                            </span>
+                          </div>
+                          {b.services && <p className="text-xs text-gray-500 mt-0.5 truncate">{b.services}</p>}
+                        </div>
+                        <div className="text-right flex-shrink-0">
+                          <p className="text-sm font-bold text-gray-900">${parseFloat(b.total_amount || 0).toFixed(0)}</p>
+                          {b.payment_status && <p className="text-xs text-gray-400">{formatLabel(b.payment_status)}</p>}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
 
-              {viewingLeadConvTab === 'chat' ? (
-                viewingLeadChatLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>Loading...</div>
-                ) : viewingLeadChatMessages.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic">No chat messages found for this lead.</p>
-                ) : (
-                  <div className="space-y-2 max-h-72 overflow-y-auto">
-                    {viewingLeadChatMessages.map((msg, idx) => (
-                      <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
-                        <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gray-100 text-gray-900' : 'bg-blue-600 text-white'}`}>
-                          <p className={`text-xs font-medium mb-0.5 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{msg.role === 'user' ? 'Customer' : 'AI Agent'}</p>
-                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-                          <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{fmtDateTime(msg.created_at)}</p>
-                        </div>
-                      </div>
-                    ))}
+              {/* Conversation History */}
+              <div className="bg-white rounded-xl border border-gray-200 p-5">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Conversations</h3>
+                  <div className="flex gap-1">
+                    <button onClick={() => setViewingLeadConvTab('sms')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${viewingLeadConvTab === 'sms' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>SMS</button>
+                    <button onClick={() => setViewingLeadConvTab('chat')} className={`px-2.5 py-1 rounded-md text-xs font-medium transition ${viewingLeadConvTab === 'chat' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Chat Agent</button>
                   </div>
-                )
-              ) : (
-                !viewingLead.phone ? (
-                  <p className="text-sm text-gray-400 italic">No phone number — no SMS conversation available.</p>
-                ) : viewingLeadSmsLoading ? (
-                  <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>Loading...</div>
-                ) : viewingLeadSmsMessages.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic">No SMS messages yet.</p>
-                ) : (
-                  <div className="space-y-2 max-h-72 overflow-y-auto">
-                    {viewingLeadSmsMessages.map((msg, idx) => (
-                      <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
-                        <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.direction === 'incoming' ? 'bg-gray-100 text-gray-900' : 'bg-green-600 text-white'}`}>
-                          <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                          <p className={`text-xs mt-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{fmtDateTime(msg.created_at)}</p>
+                </div>
+                {viewingLeadConvTab === 'chat' ? (
+                  viewingLeadChatLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>Loading...</div>
+                  ) : viewingLeadChatMessages.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic">No chat messages found for this lead.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {viewingLeadChatMessages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-start' : 'justify-end'}`}>
+                          <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.role === 'user' ? 'bg-gray-100 text-gray-900' : 'bg-blue-600 text-white'}`}>
+                            <p className={`text-xs font-medium mb-0.5 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{msg.role === 'user' ? 'Customer' : 'AI Agent'}</p>
+                            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                            <p className={`text-xs mt-1 ${msg.role === 'user' ? 'text-gray-400' : 'text-blue-200'}`}>{fmtDateTime(msg.created_at)}</p>
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              )}
-            </div>
+                      ))}
+                    </div>
+                  )
+                ) : (
+                  !viewingLead.phone ? (
+                    <p className="text-sm text-gray-400 italic">No phone number — no SMS conversation available.</p>
+                  ) : viewingLeadSmsLoading ? (
+                    <div className="flex items-center gap-2 text-sm text-gray-400"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-400"></div>Loading...</div>
+                  ) : viewingLeadSmsMessages.length === 0 ? (
+                    <p className="text-sm text-gray-400 italic">No SMS messages yet.</p>
+                  ) : (
+                    <div className="space-y-2 max-h-80 overflow-y-auto">
+                      {viewingLeadSmsMessages.map((msg, idx) => (
+                        <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
+                          <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.direction === 'incoming' ? 'bg-gray-100 text-gray-900' : 'bg-green-600 text-white'}`}>
+                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            <p className={`text-xs mt-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{fmtDateTime(msg.created_at)}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
 
-            {/* Actions */}
-            <div className="p-5 flex gap-3 flex-wrap">
-              <button
-                onClick={() => { setConvertingLead(viewingLead); setShowConvertModal(true); setViewingLead(null); }}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition"
-              >
-                <Users className="w-4 h-4" />
-                Convert to Customer
-              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Analytics Tab ─────────────────────────────────────────────── */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          {/* Header row */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">Lead Source Analytics</h2>
+              <p className="text-sm text-gray-500 mt-0.5">Revenue, conversion, and ROI by acquisition channel</p>
+            </div>
+            <button
+              onClick={() => setShowAdSpendModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+            >
+              <Plus className="w-4 h-4" />
+              Log Ad Spend
+            </button>
+          </div>
+
+          {analyticsLoading ? (
+            <div className="text-center py-16"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div><p className="text-gray-500 mt-3">Loading analytics...</p></div>
+          ) : !analyticsData ? (
+            <div className="text-center py-16 text-gray-400">Click the Analytics tab again to load data.</div>
+          ) : analyticsData.length === 0 ? (
+            <div className="text-center py-16 text-gray-400">No lead data yet.</div>
+          ) : (() => {
+            const totalLeads = analyticsData.reduce((s, r) => s + r.lead_count, 0);
+            const totalRevenue = analyticsData.reduce((s, r) => s + r.revenue, 0);
+            const totalSpend = analyticsData.reduce((s, r) => s + r.ad_spend, 0);
+            const overallRoi = totalSpend > 0 ? (((totalRevenue - totalSpend) / totalSpend) * 100).toFixed(1) : null;
+
+            // Pie chart helpers
+            const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
+            const pieData = analyticsData.map((r, i) => ({ label: formatLabel(r.source), value: r.lead_count, color: COLORS[i % COLORS.length] }));
+            const total = pieData.reduce((s, d) => s + d.value, 0);
+            let cumAngle = -Math.PI / 2;
+            const slices = pieData.map(d => {
+              const angle = (d.value / Math.max(total, 1)) * 2 * Math.PI;
+              const start = cumAngle;
+              cumAngle += angle;
+              const r = 80;
+              const cx = 100, cy = 100;
+              const x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+              const x2 = cx + r * Math.cos(start + angle), y2 = cy + r * Math.sin(start + angle);
+              const large = angle > Math.PI ? 1 : 0;
+              return { ...d, path: `M${cx},${cy} L${x1},${y1} A${r},${r} 0 ${large},1 ${x2},${y2} Z` };
+            });
+
+            return (
+              <>
+                {/* KPI cards */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Total Leads', value: totalLeads, color: 'blue' },
+                    { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'green' },
+                    { label: 'Total Ad Spend', value: `$${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'orange' },
+                    { label: 'Overall ROI', value: overallRoi !== null ? `${overallRoi}%` : 'N/A', color: overallRoi > 0 ? 'green' : 'red' },
+                  ].map(kpi => (
+                    <div key={kpi.label} className={`bg-white rounded-xl border border-gray-200 p-5 border-l-4 ${kpi.color === 'green' ? 'border-l-green-500' : kpi.color === 'blue' ? 'border-l-blue-500' : kpi.color === 'orange' ? 'border-l-amber-500' : 'border-l-red-500'}`}>
+                      <p className="text-xs text-gray-500 font-medium">{kpi.label}</p>
+                      <p className={`text-2xl font-bold mt-1 ${kpi.color === 'green' ? 'text-green-700' : kpi.color === 'blue' ? 'text-blue-700' : kpi.color === 'orange' ? 'text-amber-600' : 'text-red-600'}`}>{kpi.value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Pie chart + source table */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Pie chart */}
+                  <div className="bg-white rounded-xl border border-gray-200 p-5 flex flex-col items-center">
+                    <h3 className="text-sm font-semibold text-gray-700 mb-4 self-start">Leads by Source</h3>
+                    <svg viewBox="0 0 200 200" className="w-44 h-44">
+                      {slices.map((s, i) => (
+                        <path key={i} d={s.path} fill={s.color} stroke="#fff" strokeWidth="2" />
+                      ))}
+                    </svg>
+                    <div className="mt-4 space-y-1.5 w-full">
+                      {slices.map((s, i) => (
+                        <div key={i} className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: s.color }} />
+                          <span className="text-xs text-gray-600 truncate flex-1">{s.label}</span>
+                          <span className="text-xs font-semibold text-gray-700">{s.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Source table */}
+                  <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100">
+                      <h3 className="text-sm font-semibold text-gray-700">ROI by Source</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-medium">Source</th>
+                            <th className="px-4 py-3 text-right font-medium">Leads</th>
+                            <th className="px-4 py-3 text-right font-medium">Converted</th>
+                            <th className="px-4 py-3 text-right font-medium">Revenue</th>
+                            <th className="px-4 py-3 text-right font-medium">Ad Spend</th>
+                            <th className="px-4 py-3 text-right font-medium">Cost/Lead</th>
+                            <th className="px-4 py-3 text-right font-medium">ROI</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {analyticsData.map((row, i) => (
+                            <tr key={row.source || i} className="hover:bg-gray-50 transition">
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+                                  <span className="font-medium text-gray-900">{formatLabel(row.source)}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-right text-gray-700">{row.lead_count}</td>
+                              <td className="px-4 py-3 text-right text-gray-700">{row.converted_count}</td>
+                              <td className="px-4 py-3 text-right font-semibold text-green-700">${Number(row.revenue).toLocaleString('en-US', { minimumFractionDigits: 0 })}</td>
+                              <td className="px-4 py-3 text-right text-gray-600">
+                                {row.ad_spend > 0 ? `$${Number(row.ad_spend).toLocaleString('en-US', { minimumFractionDigits: 0 })}` : <span className="text-gray-300">—</span>}
+                              </td>
+                              <td className="px-4 py-3 text-right text-gray-600">
+                                {row.cost_per_lead ? `$${row.cost_per_lead}` : <span className="text-gray-300">—</span>}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                {row.roi !== null ? (
+                                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${parseFloat(row.roi) >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                    {parseFloat(row.roi) >= 0 ? '+' : ''}{row.roi}%
+                                  </span>
+                                ) : <span className="text-gray-300 text-xs">No spend logged</span>}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ad Spend Log */}
+                {adSpendEntries.length > 0 && (
+                  <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-700">Ad Spend Log</h3>
+                      <button onClick={() => setShowAdSpendModal(true)} className="text-xs text-blue-600 hover:underline">+ Add Entry</button>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-50 text-xs text-gray-500 uppercase">
+                          <tr>
+                            <th className="px-4 py-3 text-left font-medium">Source</th>
+                            <th className="px-4 py-3 text-left font-medium">Month</th>
+                            <th className="px-4 py-3 text-right font-medium">Amount</th>
+                            <th className="px-4 py-3 text-left font-medium">Notes</th>
+                            <th className="px-4 py-3" />
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {adSpendEntries.map(e => (
+                            <tr key={e.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 font-medium text-gray-900">{formatLabel(e.source)}</td>
+                              <td className="px-4 py-3 text-gray-600">{e.month}</td>
+                              <td className="px-4 py-3 text-right font-semibold text-gray-900">${Number(e.amount).toFixed(2)}</td>
+                              <td className="px-4 py-3 text-gray-500 text-xs">{e.notes || '—'}</td>
+                              <td className="px-4 py-3 text-right">
+                                <button onClick={() => deleteAdSpend(e.id)} className="text-xs text-red-500 hover:text-red-700 transition">Remove</button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* Ad Spend Modal */}
+      {showAdSpendModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowAdSpendModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="text-lg font-bold text-gray-900">Log Ad Spend</h3>
+              <button onClick={() => setShowAdSpendModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Source / Platform</label>
+                <input
+                  list="ad-sources"
+                  value={adSpendForm.source}
+                  onChange={e => setAdSpendForm(f => ({ ...f, source: e.target.value }))}
+                  placeholder="e.g. google_ads, google_lsa, meta, yelp..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                />
+                <datalist id="ad-sources">
+                  <option value="google_ads" />
+                  <option value="google_lsa" />
+                  <option value="meta" />
+                  <option value="yelp" />
+                  <option value="nextdoor" />
+                  <option value="thumbtack" />
+                  <option value="angi" />
+                  <option value="homeadvisor" />
+                </datalist>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1.5 block">Amount ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={adSpendForm.amount}
+                    onChange={e => setAdSpendForm(f => ({ ...f, amount: e.target.value }))}
+                    placeholder="0.00"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-600 mb-1.5 block">Month</label>
+                  <input
+                    type="month"
+                    value={adSpendForm.month}
+                    onChange={e => setAdSpendForm(f => ({ ...f, month: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1.5 block">Notes (optional)</label>
+                <input
+                  type="text"
+                  value={adSpendForm.notes}
+                  onChange={e => setAdSpendForm(f => ({ ...f, notes: e.target.value }))}
+                  placeholder="Campaign name, notes..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button onClick={saveAdSpend} className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Save Entry</button>
+              <button onClick={() => setShowAdSpendModal(false)} className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
             </div>
           </div>
         </div>
