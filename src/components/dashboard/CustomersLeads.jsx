@@ -129,9 +129,24 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [showAdSpendModal, setShowAdSpendModal] = useState(false);
   const [adSpendForm, setAdSpendForm] = useState({ source: '', amount: '', month: new Date().toISOString().slice(0, 7), notes: '' });
 
-  // Board drag-and-drop
+  // Board drag-and-drop (cards)
   const [draggingLeadId, setDraggingLeadId] = useState(null);
   const [dragOverStage, setDragOverStage] = useState(null);
+
+  // Board drag-to-reorder columns
+  const [draggingStageKey, setDraggingStageKey] = useState(null);
+  const [dragOverStageKey, setDragOverStageKey] = useState(null);
+
+  // Board column order (persisted)
+  const [stageOrder, setStageOrder] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sorce_stageOrder') || 'null') || ['new','needs_callback','contacted','converted','not_interested']; }
+    catch { return ['new','needs_callback','contacted','converted','not_interested']; }
+  });
+
+  // Board column custom colors (persisted)
+  const [stageColors, setStageColors] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sorce_stageColors') || '{}'); } catch { return {}; }
+  });
 
   // Board column rename
   const [stageLabels, setStageLabels] = useState(() => {
@@ -440,6 +455,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   useEffect(() => {
     fetchLeads();
     fetchCustomers();
+    fetchAnalytics(); // analytics is default tab, fetch on mount
   }, []);
 
   const openViewingLead = (lead) => {
@@ -1467,13 +1483,34 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
         {/* ── Pipeline Board View ── */}
         {!loading && activeTab === 'leads' && leadViewMode === 'board' && (() => {
-          const STAGES = [
-            { key: 'new',            label: 'New',            color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
-            { key: 'needs_callback', label: 'Needs Callback', color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
-            { key: 'contacted',      label: 'Contacted',      color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe' },
-            { key: 'converted',      label: 'Converted',      color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
-            { key: 'not_interested', label: 'Not Interested', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
-          ];
+          // Default stage definitions — order + colors can be overridden via state
+          const STAGE_DEFAULTS = {
+            new:            { label: 'New',            color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
+            needs_callback: { label: 'Needs Callback', color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+            contacted:      { label: 'Contacted',      color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe' },
+            converted:      { label: 'Converted',      color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+            not_interested: { label: 'Not Interested', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+          };
+
+          const hexToRgba = (hex, a) => {
+            const h = hex.replace('#','');
+            const r = parseInt(h.slice(0,2),16), g = parseInt(h.slice(2,4),16), b = parseInt(h.slice(4,6),16);
+            return `rgba(${r},${g},${b},${a})`;
+          };
+
+          const STAGES = stageOrder.map(key => {
+            const def = STAGE_DEFAULTS[key];
+            if (!def) return null;
+            const customColor = stageColors[key];
+            const color = customColor || def.color;
+            return {
+              key,
+              label: def.label,
+              color,
+              bg: customColor ? hexToRgba(color, 0.08) : def.bg,
+              border: customColor ? hexToRgba(color, 0.35) : def.border,
+            };
+          }).filter(Boolean);
 
           // normalise multi-variant statuses into board buckets
           const normaliseStage = s => {
@@ -1505,32 +1542,101 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           };
           const srcStyle = s => getTagStyle(s) || defaultSourceColors[s] || { bg: '#f3f4f6', text: '#374151' };
 
+          const addCustomStage = () => {
+            const key = `custom_${Date.now()}`;
+            const newOrder = [...stageOrder, key];
+            setStageOrder(newOrder);
+            localStorage.setItem('sorce_stageOrder', JSON.stringify(newOrder));
+            // Set a default color + label for the new stage
+            const updated = { ...stageColors, [key]: '#6366f1' };
+            setStageColors(updated);
+            localStorage.setItem('sorce_stageColors', JSON.stringify(updated));
+            const labelUpdated = { ...stageLabels, [key]: 'New Stage' };
+            setStageLabels(labelUpdated);
+            localStorage.setItem('sorce_stageLabels', JSON.stringify(labelUpdated));
+            // Open rename immediately
+            setTimeout(() => { setEditingStageKey(key); setEditingStageLabel('New Stage'); }, 50);
+          };
+
           return (
             <div className="overflow-x-auto pb-4">
-              <div className="flex gap-4 min-w-max px-1 pt-2">
+              <div className="flex gap-4 min-w-max px-1 pt-2 items-start">
                 {STAGES.map(stage => {
                   const cards = byStage[stage.key] || [];
-                  const isDropTarget = dragOverStage === stage.key;
+                  const isCardDropTarget = dragOverStage === stage.key && !draggingStageKey;
+                  const isColumnDropTarget = dragOverStageKey === stage.key && draggingStageKey && draggingStageKey !== stage.key;
                   return (
                     <div
                       key={stage.key}
-                      className="w-72 flex-shrink-0 flex flex-col"
-                      onDragOver={e => { e.preventDefault(); setDragOverStage(stage.key); }}
-                      onDragLeave={() => setDragOverStage(null)}
+                      className={`w-72 flex-shrink-0 flex flex-col transition-all ${isColumnDropTarget ? 'scale-[1.02]' : ''} ${draggingStageKey === stage.key ? 'opacity-50' : ''}`}
+                      onDragOver={e => {
+                        e.preventDefault();
+                        if (draggingStageKey) setDragOverStageKey(stage.key);
+                        else setDragOverStage(stage.key);
+                      }}
+                      onDragLeave={() => { setDragOverStage(null); setDragOverStageKey(null); }}
                       onDrop={e => {
                         e.preventDefault();
                         setDragOverStage(null);
-                        if (draggingLeadId) moveLeadToStage(draggingLeadId, stage.key);
-                        setDraggingLeadId(null);
+                        setDragOverStageKey(null);
+                        if (draggingStageKey && draggingStageKey !== stage.key) {
+                          // Reorder columns
+                          const from = stageOrder.indexOf(draggingStageKey);
+                          const to = stageOrder.indexOf(stage.key);
+                          if (from !== -1 && to !== -1) {
+                            const next = [...stageOrder];
+                            next.splice(from, 1);
+                            next.splice(to, 0, draggingStageKey);
+                            setStageOrder(next);
+                            localStorage.setItem('sorce_stageOrder', JSON.stringify(next));
+                          }
+                          setDraggingStageKey(null);
+                        } else if (draggingLeadId) {
+                          moveLeadToStage(draggingLeadId, stage.key);
+                          setDraggingLeadId(null);
+                        }
                       }}
                     >
-                      {/* Column header — double-click label to rename */}
+                      {/* Column header — drag grip to reorder, dot to change color, double-click label to rename */}
                       <div
-                        className={`flex items-center justify-between px-3 py-2.5 rounded-t-xl mb-0.5 transition-all ${isDropTarget ? 'ring-2 ring-offset-1' : ''}`}
-                        style={{ backgroundColor: stage.bg, border: `1px solid ${stage.border}`, ringColor: stage.color }}
+                        className={`flex items-center gap-1.5 px-2 py-2.5 rounded-t-xl mb-0.5 transition-all ${isColumnDropTarget ? 'ring-2 ring-offset-1 ring-blue-400' : ''}`}
+                        style={{ backgroundColor: stage.bg, border: `1px solid ${stage.border}` }}
                       >
-                        <div className="flex items-center gap-2 flex-1 min-w-0">
-                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: stage.color }} />
+                        {/* Grip — drag to reorder column */}
+                        <div
+                          draggable
+                          onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; setDraggingStageKey(stage.key); }}
+                          onDragEnd={() => { setDraggingStageKey(null); setDragOverStageKey(null); }}
+                          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 flex-shrink-0 -ml-0.5"
+                          title="Drag to reorder"
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </div>
+
+                        {/* Color dot — click to open color picker */}
+                        <div className="relative flex-shrink-0">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full cursor-pointer hover:scale-150 transition-transform ring-1 ring-white"
+                            style={{ backgroundColor: stage.color }}
+                            title="Click to change color"
+                            onClick={() => document.getElementById(`cp-${stage.key}`)?.click()}
+                          />
+                          <input
+                            id={`cp-${stage.key}`}
+                            type="color"
+                            value={stage.color}
+                            onChange={e => {
+                              const c = e.target.value;
+                              const updated = { ...stageColors, [stage.key]: c };
+                              setStageColors(updated);
+                              localStorage.setItem('sorce_stageColors', JSON.stringify(updated));
+                            }}
+                            className="absolute opacity-0 w-0 h-0 pointer-events-none"
+                          />
+                        </div>
+
+                        {/* Label — double-click to rename */}
+                        <div className="flex-1 min-w-0">
                           {editingStageKey === stage.key ? (
                             <input
                               autoFocus
@@ -1546,7 +1652,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                             />
                           ) : (
                             <span
-                              className="text-sm font-bold cursor-text select-none"
+                              className="text-sm font-bold cursor-text select-none truncate block"
                               style={{ color: stage.color }}
                               title="Double-click to rename"
                               onDoubleClick={() => { setEditingStageKey(stage.key); setEditingStageLabel(stageLabels[stage.key] || stage.label); }}
@@ -1555,17 +1661,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                             </span>
                           )}
                         </div>
-                        <span className="font-semibold bg-white px-1.5 py-0.5 rounded-full border text-xs text-gray-500 ml-2 flex-shrink-0" style={{ borderColor: stage.border }}>{cards.length}</span>
+
+                        <span className="font-semibold bg-white px-1.5 py-0.5 rounded-full border text-xs text-gray-500 flex-shrink-0" style={{ borderColor: stage.border }}>{cards.length}</span>
                       </div>
 
                       {/* Cards drop zone */}
                       <div
-                        className={`flex flex-col gap-2 flex-1 min-h-[120px] rounded-b-xl transition-all ${isDropTarget ? 'bg-blue-50 ring-2 ring-blue-300 ring-offset-0' : ''}`}
-                        style={{ background: isDropTarget ? undefined : 'transparent' }}
+                        className={`flex flex-col gap-2 flex-1 min-h-[120px] rounded-b-xl p-1 transition-all ${isCardDropTarget ? 'bg-blue-50 ring-2 ring-blue-300' : ''}`}
                       >
                         {cards.length === 0 ? (
-                          <div className={`border-2 border-dashed rounded-xl h-20 flex items-center justify-center ${isDropTarget ? 'border-blue-400' : 'border-gray-200'}`}>
-                            <span className="text-xs text-gray-300">{isDropTarget ? 'Drop here' : 'No leads'}</span>
+                          <div className={`border-2 border-dashed rounded-xl h-20 flex items-center justify-center ${isCardDropTarget ? 'border-blue-400' : 'border-gray-200'}`}>
+                            <span className="text-xs text-gray-300">{isCardDropTarget ? 'Drop here' : 'No leads'}</span>
                           </div>
                         ) : cards.map(lead => {
                           const ss = srcStyle(lead.source);
@@ -1575,7 +1681,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                             <div
                               key={lead.id}
                               draggable
-                              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDraggingLeadId(lead.id); }}
+                              onDragStart={e => { e.stopPropagation(); e.dataTransfer.effectAllowed = 'move'; setDraggingLeadId(lead.id); }}
                               onDragEnd={() => { setDraggingLeadId(null); setDragOverStage(null); }}
                               onClick={() => openViewingLead(lead)}
                               className={`bg-white rounded-xl border border-gray-200 p-3.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-blue-300 transition-all group ${draggingLeadId === lead.id ? 'opacity-50' : ''}`}
@@ -1648,6 +1754,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     </div>
                   );
                 })}
+
+                {/* Add Section column */}
+                <div className="w-52 flex-shrink-0 flex flex-col">
+                  <button
+                    onClick={addCustomStage}
+                    className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border-2 border-dashed border-gray-200 text-sm text-gray-400 hover:border-blue-400 hover:text-blue-500 hover:bg-blue-50 transition-all h-16 w-full"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Section
+                  </button>
+                </div>
               </div>
             </div>
           );
