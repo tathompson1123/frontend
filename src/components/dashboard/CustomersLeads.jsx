@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Users,
   Mail,
@@ -61,7 +62,7 @@ function fmtDateTime(ts) {
 }
 
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
-  const [activeTab, setActiveTab] = useState('leads');
+  const [activeTab, setActiveTab] = useState('analytics');
   const [leadTables, setLeadTables] = useState([
     { id: 'default', name: 'All Leads', leads: [] }
   ]);
@@ -1211,6 +1212,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         <div className="hidden md:block border-b border-gray-200 bg-gray-50 overflow-x-auto">
           <div className="flex min-w-max">
             <button
+              onClick={() => { setActiveTab('analytics'); setSearchTerm(''); setEditingCell(null); fetchAnalytics(); }}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'analytics' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Flag className="w-4 h-4" />
+                Analytics
+              </div>
+              {activeTab === 'analytics' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
               onClick={() => { setActiveTab('leads'); setSearchTerm(''); setEditingCell(null); }}
               className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'leads' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
             >
@@ -1249,16 +1260,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 Rewards
               </div>
               {activeTab === 'rewards' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
-            </button>
-            <button
-              onClick={() => { setActiveTab('analytics'); setSearchTerm(''); setEditingCell(null); fetchAnalytics(); }}
-              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'analytics' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-            >
-              <div className="flex items-center gap-2">
-                <Flag className="w-4 h-4" />
-                Analytics
-              </div>
-              {activeTab === 'analytics' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
           </div>
         </div>
@@ -2517,8 +2518,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
       )}
 
-      {/* Lead Detail — full page overlay */}
-      {viewingLead && (
+      {/* Lead Detail — full page overlay (portal so parent CSS transforms don't clip it) */}
+      {viewingLead && createPortal(
         <div className="fixed inset-0 bg-white z-[60] overflow-y-auto">
           {/* Sticky Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 z-10 px-6 py-4 flex items-start justify-between shadow-sm">
@@ -2863,7 +2864,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* ── Analytics Tab ─────────────────────────────────────────────── */}
