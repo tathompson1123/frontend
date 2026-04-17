@@ -125,6 +125,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   // Analytics tab
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [totalBookingRevenue, setTotalBookingRevenue] = useState(0);
   const [adSpendEntries, setAdSpendEntries] = useState([]);
   const [showAdSpendModal, setShowAdSpendModal] = useState(false);
   const [adSpendForm, setAdSpendForm] = useState({ source: '', amount: '', month: new Date().toISOString().slice(0, 7), notes: '' });
@@ -577,6 +578,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     try {
       const srcRes = await authFetch(`${apiUrl}/api/leads/analytics/sources`).then(r => r.json());
       setAnalyticsData(srcRes.sources || []);
+      setTotalBookingRevenue(parseFloat(srcRes.total_booking_revenue || 0));
     } catch (e) {
       console.error('Analytics fetch error:', e);
       setAnalyticsData([]);
@@ -3011,9 +3013,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <div className="text-center py-16 text-gray-400">No lead data yet.</div>
           ) : (() => {
             const totalLeads = analyticsData.reduce((s, r) => s + r.lead_count, 0);
-            const totalRevenue = analyticsData.reduce((s, r) => s + r.revenue, 0);
             const totalSpend = analyticsData.reduce((s, r) => s + r.ad_spend, 0);
-            const overallRoi = totalSpend > 0 ? (((totalRevenue - totalSpend) / totalSpend) * 100).toFixed(1) : null;
+            // Revenue comes directly from booking calendar (not per-source estimate)
+            const overallRoi = totalSpend > 0 ? (((totalBookingRevenue - totalSpend) / totalSpend) * 100).toFixed(1) : null;
 
             // Pie chart helpers
             const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
@@ -3038,9 +3040,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                   {[
                     { label: 'Total Leads', value: totalLeads, color: 'blue' },
-                    { label: 'Total Revenue', value: `$${totalRevenue.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'green' },
+                    { label: 'Booking Revenue', value: `$${totalBookingRevenue.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'green' },
                     { label: 'Total Ad Spend', value: `$${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'orange' },
-                    { label: 'Overall ROI', value: overallRoi !== null ? `${overallRoi}%` : 'N/A', color: overallRoi > 0 ? 'green' : 'red' },
+                    { label: 'Overall ROI', value: overallRoi !== null ? `${overallRoi}%` : 'N/A', color: overallRoi !== null && overallRoi > 0 ? 'green' : 'red' },
                   ].map(kpi => (
                     <div key={kpi.label} className={`bg-white rounded-xl border border-gray-200 p-5 border-l-4 ${kpi.color === 'green' ? 'border-l-green-500' : kpi.color === 'blue' ? 'border-l-blue-500' : kpi.color === 'orange' ? 'border-l-amber-500' : 'border-l-red-500'}`}>
                       <p className="text-xs text-gray-500 font-medium">{kpi.label}</p>
