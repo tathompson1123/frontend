@@ -30,7 +30,10 @@ import {
   Calendar,
   Flag,
   CheckCircle,
-  PhoneCall
+  PhoneCall,
+  LayoutGrid,
+  List,
+  DollarSign,
 } from 'lucide-react';
 
 // Always parse DB timestamps as UTC (PostgreSQL returns without 'Z', may use space instead of 'T')
@@ -115,12 +118,33 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   // Source filter for leads
   const [sourceFilter, setSourceFilter] = useState('all');
 
+  // Board vs table view for leads
+  const [leadViewMode, setLeadViewMode] = useState('board');
+
   // Analytics tab
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [adSpendEntries, setAdSpendEntries] = useState([]);
   const [showAdSpendModal, setShowAdSpendModal] = useState(false);
   const [adSpendForm, setAdSpendForm] = useState({ source: '', amount: '', month: new Date().toISOString().slice(0, 7), notes: '' });
+
+  // Board drag-and-drop
+  const [draggingLeadId, setDraggingLeadId] = useState(null);
+  const [dragOverStage, setDragOverStage] = useState(null);
+
+  // Board column rename
+  const [stageLabels, setStageLabels] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sorce_stageLabels') || '{}'); } catch { return {}; }
+  });
+  const [editingStageKey, setEditingStageKey] = useState(null);
+  const [editingStageLabel, setEditingStageLabel] = useState('');
+
+  // Source tag rules: [{ source, tag, color }]
+  const [sourceTagRules, setSourceTagRules] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('sorce_sourceTagRules') || '[]'); } catch { return []; }
+  });
+  const [showTagRulesModal, setShowTagRulesModal] = useState(false);
+  const [tagRuleForm, setTagRuleForm] = useState({ source: '', tag: '', color: '#3b82f6' });
 
   // CSV mapper state
   const [csvMapper, setCsvMapper] = useState(null); // { headers, rows, tab }
@@ -454,17 +478,99 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
+  // Lock body scroll when lead detail overlay is open (prevents background scrolling + top gap)
+  useEffect(() => {
+    if (viewingLead) {
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      return () => {
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [viewingLead]);
+
+  // Move a lead to a new stage via drag-and-drop
+  const moveLeadToStage = async (leadId, newStatus) => {
+    setLeadTables(prev => prev.map(t => ({
+      ...t,
+      leads: t.leads.map(l => l.id === leadId ? { ...l, status: newStatus } : l)
+    })));
+    try {
+      await authFetch(`${apiUrl}/api/leads/${leadId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch {
+      fetchLeads();
+    }
+  };
+
+  // Save a custom stage label
+  const saveStageLabel = (key, label) => {
+    const trimmed = (label || '').trim();
+    const updated = { ...stageLabels };
+    if (trimmed) updated[key] = trimmed;
+    else delete updated[key];
+    setStageLabels(updated);
+    localStorage.setItem('sorce_stageLabels', JSON.stringify(updated));
+    setEditingStageKey(null);
+  };
+
+  // Save / update source tag rules
+  const saveTagRule = () => {
+    if (!tagRuleForm.source || !tagRuleForm.tag) return;
+    const updated = sourceTagRules.filter(r => r.source !== tagRuleForm.source);
+    updated.push({ ...tagRuleForm });
+    setSourceTagRules(updated);
+    localStorage.setItem('sorce_sourceTagRules', JSON.stringify(updated));
+    setTagRuleForm({ source: '', tag: '', color: '#3b82f6' });
+  };
+
+  const deleteTagRule = (source) => {
+    const updated = sourceTagRules.filter(r => r.source !== source);
+    setSourceTagRules(updated);
+    localStorage.setItem('sorce_sourceTagRules', JSON.stringify(updated));
+  };
+
+  // Get tag label for a source (falls back to formatLabel)
+  const getTagLabel = (source) => {
+    const rule = sourceTagRules.find(r => r.source === source);
+    return rule ? rule.tag : formatLabel(source || 'unknown');
+  };
+
+  const getTagStyle = (source) => {
+    const rule = sourceTagRules.find(r => r.source === source);
+    if (rule) {
+      const hex = rule.color.replace('#', '');
+      const r = parseInt(hex.slice(0,2),16), g = parseInt(hex.slice(2,4),16), b = parseInt(hex.slice(4,6),16);
+      return { bg: `rgba(${r},${g},${b},0.12)`, text: rule.color };
+    }
+    return null;
+  };
+
   const fetchAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
-      const [srcRes, spendRes] = await Promise.all([
-        authFetch(`${apiUrl}/api/leads/analytics/sources`).then(r => r.json()),
-        authFetch(`${apiUrl}/api/leads/ad-spend`).then(r => r.json()),
-      ]);
+      const srcRes = await authFetch(`${apiUrl}/api/leads/analytics/sources`).then(r => r.json());
       setAnalyticsData(srcRes.sources || []);
+    } catch (e) {
+      console.error('Analytics fetch error:', e);
+      setAnalyticsData([]);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+    // Ad spend is optional — fetch separately so it doesn't block analytics
+    try {
+      const spendRes = await authFetch(`${apiUrl}/api/leads/ad-spend`).then(r => r.json());
       setAdSpendEntries(spendRes.entries || []);
-    } catch { setAnalyticsData([]); }
-    finally { setAnalyticsLoading(false); }
+    } catch { setAdSpendEntries([]); }
   };
 
   const saveAdSpend = async () => {
@@ -1295,6 +1401,36 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {activeTab === 'leads' && (
+              <div className="flex rounded-lg border border-gray-300 overflow-hidden">
+                <button
+                  onClick={() => setLeadViewMode('board')}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition ${leadViewMode === 'board' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  title="Pipeline board"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                  <span className="hidden md:inline">Board</span>
+                </button>
+                <button
+                  onClick={() => setLeadViewMode('table')}
+                  className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium transition border-l border-gray-300 ${leadViewMode === 'table' ? 'bg-blue-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                  title="Table view"
+                >
+                  <List className="w-4 h-4" />
+                  <span className="hidden md:inline">Table</span>
+                </button>
+              </div>
+            )}
+            {activeTab === 'leads' && (
+              <button
+                onClick={() => setShowTagRulesModal(true)}
+                className="px-3 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-1.5"
+                title="Configure source tag labels"
+              >
+                <Flag className="w-4 h-4" />
+                <span className="hidden md:inline">Tags</span>
+              </button>
+            )}
             <button
               onClick={exportToCSV}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -1328,13 +1464,201 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           </div>
         </div>
 
+        {/* ── Pipeline Board View ── */}
+        {!loading && activeTab === 'leads' && leadViewMode === 'board' && (() => {
+          const STAGES = [
+            { key: 'new',            label: 'New',            color: '#3b82f6', bg: '#eff6ff', border: '#bfdbfe' },
+            { key: 'needs_callback', label: 'Needs Callback', color: '#ef4444', bg: '#fef2f2', border: '#fecaca' },
+            { key: 'contacted',      label: 'Contacted',      color: '#8b5cf6', bg: '#f5f3ff', border: '#ddd6fe' },
+            { key: 'converted',      label: 'Converted',      color: '#10b981', bg: '#ecfdf5', border: '#a7f3d0' },
+            { key: 'not_interested', label: 'Not Interested', color: '#6b7280', bg: '#f9fafb', border: '#e5e7eb' },
+          ];
+
+          // normalise multi-variant statuses into board buckets
+          const normaliseStage = s => {
+            if (!s || s === 'new') return 'new';
+            if (s === 'needs_callback') return 'needs_callback';
+            if (s === 'qualified') return 'needs_callback'; // migrate old "qualified" leads
+            if (s.startsWith('contacted')) return 'contacted';
+            if (s === 'converted') return 'converted';
+            if (s === 'not_interested') return 'not_interested';
+            return 'new';
+          };
+
+          const allLeads = leadTables.flatMap(t => t.leads);
+          const leadsToShow = sourceFilter === 'all' ? allLeads : allLeads.filter(l => l.source === sourceFilter);
+          const byStage = {};
+          STAGES.forEach(s => { byStage[s.key] = []; });
+          leadsToShow.forEach(l => {
+            const bucket = normaliseStage(l.status);
+            if (byStage[bucket]) byStage[bucket].push(l);
+          });
+
+          const fmt$ = v => v ? `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 0 })}` : '';
+          const defaultSourceColors = {
+            ai_chat_agent: { bg: '#ede9fe', text: '#6d28d9' },
+            lead_form:      { bg: '#dbeafe', text: '#1d4ed8' },
+            google_lsa:     { bg: '#dcfce7', text: '#15803d' },
+            inbound_call:   { bg: '#fef3c7', text: '#b45309' },
+            manual:         { bg: '#f3f4f6', text: '#374151' },
+          };
+          const srcStyle = s => getTagStyle(s) || defaultSourceColors[s] || { bg: '#f3f4f6', text: '#374151' };
+
+          return (
+            <div className="overflow-x-auto pb-4">
+              <div className="flex gap-4 min-w-max px-1 pt-2">
+                {STAGES.map(stage => {
+                  const cards = byStage[stage.key] || [];
+                  const isDropTarget = dragOverStage === stage.key;
+                  return (
+                    <div
+                      key={stage.key}
+                      className="w-72 flex-shrink-0 flex flex-col"
+                      onDragOver={e => { e.preventDefault(); setDragOverStage(stage.key); }}
+                      onDragLeave={() => setDragOverStage(null)}
+                      onDrop={e => {
+                        e.preventDefault();
+                        setDragOverStage(null);
+                        if (draggingLeadId) moveLeadToStage(draggingLeadId, stage.key);
+                        setDraggingLeadId(null);
+                      }}
+                    >
+                      {/* Column header — double-click label to rename */}
+                      <div
+                        className={`flex items-center justify-between px-3 py-2.5 rounded-t-xl mb-0.5 transition-all ${isDropTarget ? 'ring-2 ring-offset-1' : ''}`}
+                        style={{ backgroundColor: stage.bg, border: `1px solid ${stage.border}`, ringColor: stage.color }}
+                      >
+                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                          <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: stage.color }} />
+                          {editingStageKey === stage.key ? (
+                            <input
+                              autoFocus
+                              value={editingStageLabel}
+                              onChange={e => setEditingStageLabel(e.target.value)}
+                              onBlur={() => saveStageLabel(stage.key, editingStageLabel)}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter') saveStageLabel(stage.key, editingStageLabel);
+                                if (e.key === 'Escape') setEditingStageKey(null);
+                              }}
+                              className="text-sm font-bold bg-transparent border-b outline-none w-full"
+                              style={{ color: stage.color, borderColor: stage.color }}
+                            />
+                          ) : (
+                            <span
+                              className="text-sm font-bold cursor-text select-none"
+                              style={{ color: stage.color }}
+                              title="Double-click to rename"
+                              onDoubleClick={() => { setEditingStageKey(stage.key); setEditingStageLabel(stageLabels[stage.key] || stage.label); }}
+                            >
+                              {stageLabels[stage.key] || stage.label}
+                            </span>
+                          )}
+                        </div>
+                        <span className="font-semibold bg-white px-1.5 py-0.5 rounded-full border text-xs text-gray-500 ml-2 flex-shrink-0" style={{ borderColor: stage.border }}>{cards.length}</span>
+                      </div>
+
+                      {/* Cards drop zone */}
+                      <div
+                        className={`flex flex-col gap-2 flex-1 min-h-[120px] rounded-b-xl transition-all ${isDropTarget ? 'bg-blue-50 ring-2 ring-blue-300 ring-offset-0' : ''}`}
+                        style={{ background: isDropTarget ? undefined : 'transparent' }}
+                      >
+                        {cards.length === 0 ? (
+                          <div className={`border-2 border-dashed rounded-xl h-20 flex items-center justify-center ${isDropTarget ? 'border-blue-400' : 'border-gray-200'}`}>
+                            <span className="text-xs text-gray-300">{isDropTarget ? 'Drop here' : 'No leads'}</span>
+                          </div>
+                        ) : cards.map(lead => {
+                          const ss = srcStyle(lead.source);
+                          const ageFlag = getLeadAgeFlag(lead);
+                          const overdue = isFollowUpOverdue(lead);
+                          return (
+                            <div
+                              key={lead.id}
+                              draggable
+                              onDragStart={e => { e.dataTransfer.effectAllowed = 'move'; setDraggingLeadId(lead.id); }}
+                              onDragEnd={() => { setDraggingLeadId(null); setDragOverStage(null); }}
+                              onClick={() => openViewingLead(lead)}
+                              className={`bg-white rounded-xl border border-gray-200 p-3.5 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-blue-300 transition-all group ${draggingLeadId === lead.id ? 'opacity-50' : ''}`}
+                            >
+                              {/* Name row */}
+                              <div className="flex items-start justify-between gap-2 mb-2">
+                                <p className="text-sm font-bold text-gray-900 leading-snug group-hover:text-blue-700 transition-colors">{lead.name || 'Unnamed'}</p>
+                                <div className="flex gap-1 flex-shrink-0">
+                                  {stage.key === 'needs_callback' && <PhoneCall className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" title="Needs callback" />}
+                                  {ageFlag?.level === 'urgent' && <span className="w-2 h-2 rounded-full bg-red-500 mt-1 flex-shrink-0" title={ageFlag.label} />}
+                                  {ageFlag?.level === 'warn' && <span className="w-2 h-2 rounded-full bg-amber-400 mt-1 flex-shrink-0" title={ageFlag.label} />}
+                                  {overdue && <span className="w-2 h-2 rounded-full bg-orange-500 mt-1 flex-shrink-0" title="Follow-up overdue" />}
+                                </div>
+                              </div>
+
+                              {/* Contact */}
+                              <div className="space-y-1 mb-2.5">
+                                {lead.email && (
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <Mail className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                    <span className="truncate">{lead.email}</span>
+                                  </div>
+                                )}
+                                {lead.phone && (
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <Phone className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                    <span>{lead.phone}</span>
+                                  </div>
+                                )}
+                                {lead.service && (
+                                  <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                    <CheckCircle className="w-3 h-3 text-gray-400 flex-shrink-0" />
+                                    <span className="truncate">{lead.service}</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Footer */}
+                              <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: ss.bg, color: ss.text }}>
+                                  {getTagLabel(lead.source)}
+                                </span>
+                                <div className="flex items-center gap-2">
+                                  {lead.estimated_value > 0 && (
+                                    <span className="text-xs font-bold text-gray-700">{fmt$(lead.estimated_value)}</span>
+                                  )}
+                                  <span className="text-xs text-gray-400">{lead.created_at ? fmtDateTime(lead.created_at).split(',')[0] : ''}</span>
+                                </div>
+                              </div>
+
+                              {lead.priority === 'urgent' && (
+                                <div className="mt-2 px-2 py-0.5 bg-red-50 border border-red-200 rounded text-xs text-red-600 font-semibold">🔥 Urgent</div>
+                              )}
+                              {lead.priority === 'high' && (
+                                <div className="mt-2 px-2 py-0.5 bg-orange-50 border border-orange-200 rounded text-xs text-orange-600 font-semibold">⚡ High Priority</div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Add lead button at bottom of column */}
+                        <button
+                          onClick={() => { setShowAddModal(true); setNewRecord({ status: stage.key }); }}
+                          className="flex items-center justify-center gap-1.5 py-2 rounded-xl border-2 border-dashed border-gray-200 text-xs text-gray-400 hover:border-blue-400 hover:text-blue-500 transition-all mt-1"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Add lead
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Table */}
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-gray-600 mt-4">Loading...</p>
           </div>
-        ) : activeTab === 'leads' ? (
+        ) : activeTab === 'leads' && leadViewMode === 'table' ? (
           <>
             {/* Mobile card list */}
             <div className="md:hidden divide-y divide-gray-100">
@@ -2195,7 +2519,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
       {/* Lead Detail — full page overlay */}
       {viewingLead && (
-        <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+        <div className="fixed inset-0 bg-white z-[60] overflow-y-auto">
           {/* Sticky Header */}
           <div className="sticky top-0 bg-white border-b border-gray-200 z-10 px-6 py-4 flex items-start justify-between shadow-sm">
             <div>
@@ -2379,9 +2703,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                       <label className="text-xs text-gray-500 mb-1 block">Status</label>
                       <select value={viewingLeadEdit.status || ''} onChange={e => setViewingLeadEdit(v => ({ ...v, status: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500">
                         <option value="new">New</option>
+                        <option value="needs_callback">Needs Callback</option>
                         <option value="contacted">Contacted</option>
                         <option value="contacted_sms">Contacted (SMS)</option>
-                        <option value="qualified">Qualified</option>
                         <option value="converted">Converted</option>
                         <option value="not_interested">Not Interested</option>
                       </select>
@@ -2785,6 +3109,83 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <div className="flex gap-3 mt-6">
               <button onClick={saveAdSpend} className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition">Save Entry</button>
               <button onClick={() => setShowAdSpendModal(false)} className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Source Tag Rules Modal */}
+      {showTagRulesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowTagRulesModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Source Tag Labels</h3>
+                <p className="text-xs text-gray-400 mt-0.5">Customize how source names appear on lead cards</p>
+              </div>
+              <button onClick={() => setShowTagRulesModal(false)} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg transition"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Existing rules */}
+            {sourceTagRules.length > 0 && (
+              <div className="mb-5 space-y-2">
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Active Tags</p>
+                {sourceTagRules.map(rule => (
+                  <div key={rule.source} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <span className="text-xs text-gray-500 w-28 flex-shrink-0">{formatLabel(rule.source)}</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full flex-1" style={{ backgroundColor: rule.color + '20', color: rule.color }}>{rule.tag}</span>
+                    <div className="w-4 h-4 rounded-full flex-shrink-0 border border-gray-300" style={{ backgroundColor: rule.color }} />
+                    <button onClick={() => deleteTagRule(rule.source)} className="p-1 text-gray-400 hover:text-red-500 transition flex-shrink-0"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Add new rule */}
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Add / Update Tag</p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Source</label>
+                  <select
+                    value={tagRuleForm.source}
+                    onChange={e => setTagRuleForm(f => ({ ...f, source: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select source…</option>
+                    <option value="lead_form">lead_form</option>
+                    <option value="ai_chat_agent">ai_chat_agent</option>
+                    <option value="google_lsa">google_lsa</option>
+                    <option value="inbound_call">inbound_call</option>
+                    <option value="manual">manual</option>
+                    {leadTables.flatMap(t => t.leads).map(l => l.source).filter((s, i, arr) => s && arr.indexOf(s) === i && !['lead_form','ai_chat_agent','google_lsa','inbound_call','manual'].includes(s)).map(s => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1 block">Tag Label</label>
+                  <input
+                    type="text"
+                    value={tagRuleForm.tag}
+                    onChange={e => setTagRuleForm(f => ({ ...f, tag: e.target.value }))}
+                    placeholder="e.g. Website Lead"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+              <div className="flex items-center gap-3 mb-3">
+                <label className="text-xs text-gray-500">Badge Color</label>
+                <input type="color" value={tagRuleForm.color} onChange={e => setTagRuleForm(f => ({ ...f, color: e.target.value }))} className="w-8 h-8 rounded cursor-pointer border border-gray-300" />
+                <span className="text-xs px-2 py-0.5 rounded-full font-semibold" style={{ backgroundColor: tagRuleForm.color + '20', color: tagRuleForm.color }}>{tagRuleForm.tag || 'Preview'}</span>
+              </div>
+              <button
+                onClick={saveTagRule}
+                disabled={!tagRuleForm.source || !tagRuleForm.tag}
+                className="w-full py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-40"
+              >
+                Save Tag
+              </button>
             </div>
           </div>
         </div>
@@ -3250,6 +3651,7 @@ function CustomersTable({ customers, columns, openViewingCustomer, deleteCustome
 function getStatusColor(status) {
   const colors = {
     new: 'bg-yellow-100 text-yellow-700',
+    needs_callback: 'bg-red-100 text-red-700',
     contacted_email: 'bg-blue-100 text-blue-700',
     contacted_sms: 'bg-green-100 text-green-700',
     qualified: 'bg-amber-100 text-amber-700',
