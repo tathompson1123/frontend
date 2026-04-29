@@ -96,9 +96,10 @@ ${paras}
   </div>`;
 
     case 'footer':
+      // href="#unsubscribe" is a marker the backend swaps for a per-recipient signed unsubscribe URL at send time
       return `  <div style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:20px 28px;text-align:center">
     <p style="margin:0 0 8px;font-size:12px;color:#6b7280">${esc(c.text || '')}</p>
-    <a href="#" style="font-size:12px;color:#6b7280;text-decoration:underline">${esc(c.unsubscribeText || 'Unsubscribe')}</a>
+    <a href="#unsubscribe" style="font-size:12px;color:#6b7280;text-decoration:underline">${esc(c.unsubscribeText || 'Unsubscribe')}</a>
   </div>`;
 
     default:
