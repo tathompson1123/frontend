@@ -495,9 +495,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [showTagRulesModal, setShowTagRulesModal] = useState(false);
   const [tagRuleForm, setTagRuleForm] = useState({ source: '', tag: '', color: '#3b82f6' });
 
-  // CSV mapper state
-  const [csvMapper, setCsvMapper] = useState(null); // { headers, rows, tab }
-  const [csvMappings, setCsvMappings] = useState({});
+  // CSV import in-flight flag (used by upload button to show spinner)
   const [csvImporting, setCsvImporting] = useState(false);
 
   // Rewards state
@@ -629,23 +627,21 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     return -1;
   };
 
-  // Phase 1: parse CSV with PapaParse → auto-detect columns → open mapping modal
+  // Parse CSV with PapaParse → auto-detect columns → import directly (no manual mapping step)
   const importFromCSV = (event) => {
     const file = event.target.files[0];
     if (!file) return;
     event.target.value = '';
+    const tab = activeTab;
 
+    setCsvImporting(true);
     Papa.parse(file, {
-      // Treat first row as data (we extract headers ourselves so detectCol can match raw values)
       header: false,
-      // Drop rows that are entirely empty — but keep rows that have any non-empty cell
       skipEmptyLines: 'greedy',
-      // Trim whitespace; PapaParse handles quoted fields, embedded commas, CRLF, escaped quotes
       transform: (value) => (typeof value === 'string' ? value.trim() : value),
-      complete: (results) => {
+      complete: async (results) => {
         try {
           const allRows = results.data;
-          // Surface non-fatal parse warnings but don't block — papaparse recovers from most issues
           if (results.errors && results.errors.length > 0) {
             console.warn('[CSV] PapaParse warnings:', results.errors.slice(0, 5));
           }
@@ -656,10 +652,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
           const rawHeaders = allRows[0].map(h => (h == null ? '' : String(h)));
           const headers = rawHeaders.map(h => h.toLowerCase().trim());
-          const dataRows = allRows.slice(1);
+          const rows = allRows.slice(1);
 
-          // Auto-detect common column patterns — more specific aliases listed first
-          const detected = {
+          const m = {
             fullName:    detectCol(headers, 'fullname', 'customername', 'contactname', 'clientname', 'displayname', 'companyname', 'businessname', 'accountname', 'organizationname', 'name', 'customer', 'contact', 'client', 'account', 'company', 'business', 'organization'),
             firstName:   detectCol(headers, 'firstname', 'givenname', 'fname', 'first'),
             lastName:    detectCol(headers, 'lastname', 'familyname', 'surname', 'lname', 'last'),
@@ -668,103 +663,74 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             service:     detectCol(headers, 'lastservice', 'servicetype', 'service', 'product'),
             serviceDate: detectCol(headers, 'lastservicedate', 'servicedate', 'lastvisit', 'visitdate', 'appointmentdate', 'date'),
             notes:       detectCol(headers, 'notes', 'note', 'comments', 'comment', 'description', 'memo'),
-            // leads-only
             status:      detectCol(headers, 'leadstatus', 'status'),
             source:      detectCol(headers, 'leadsource', 'source', 'channel'),
           };
-          console.log(`[CSV] Parsed ${dataRows.length} data rows from ${rawHeaders.length} columns`);
+          console.log(`[CSV] Parsed ${rows.length} data rows from ${rawHeaders.length} columns`);
           console.log('[CSV] Headers:', rawHeaders);
-          console.log('[CSV] Detected mappings:', detected);
+          console.log('[CSV] Detected mappings:', m);
 
-          setCsvMappings(detected);
-          setCsvMapper({ headers: rawHeaders, rows: dataRows, tab: activeTab });
+          const getVal = (row, idx) => (idx != null && idx >= 0 && row[idx] != null ? String(row[idx]).trim() : '');
+          const cleanPhone = (v) => v.replace(/^'+/, '').replace(/\D/g, '') ? v.replace(/^'+/, '').trim() : '';
+
+          const buildRecord = (row, isLead) => {
+            let name = getVal(row, m.fullName);
+            let email = getVal(row, m.email);
+            if (!name && m.firstName >= 0) {
+              const fn = getVal(row, m.firstName);
+              const ln = m.lastName >= 0 ? getVal(row, m.lastName) : '';
+              if (ln.includes('@') && !email) { name = fn; email = ln; }
+              else name = [fn, ln].filter(Boolean).join(' ');
+            }
+            if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+            if (!name) name = 'Unknown';
+            const base = {
+              name,
+              email: email || null,
+              phone: cleanPhone(getVal(row, m.phone)) || null,
+              notes: getVal(row, m.notes) || null,
+            };
+            return isLead
+              ? { ...base, status: getVal(row, m.status) || 'new', source: getVal(row, m.source) || 'manual' }
+              : { ...base, last_service: getVal(row, m.service) || null, last_service_date: getVal(row, m.serviceDate) || null };
+          };
+
+          const totalParsed = rows.length;
+          const all = rows.map(r => buildRecord(r, tab === 'leads'));
+          const records = all.filter(r => r.name !== 'Unknown' || r.email || r.phone);
+          const droppedNoIdentity = all.length - records.length;
+
+          const endpoint = tab === 'leads' ? '/api/leads/bulk-import' : '/api/customers/bulk-import';
+          const payload = tab === 'leads' ? { leads: records } : { customers: records };
+          const response = await authFetch(`${apiUrl}${endpoint}`, {
+            method: 'POST', body: JSON.stringify(payload)
+          });
+          const data = await response.json();
+          if (!response.ok) {
+            alert('Import failed: ' + (data.error || 'Unknown error'));
+            return;
+          }
+
+          const parts = [`Parsed from CSV: ${totalParsed}`, `Imported: ${data.successCount}`];
+          if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
+          if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
+          if (droppedNoIdentity > 0) parts.push(`Dropped (no name/email/phone): ${droppedNoIdentity}`);
+          alert('Import complete!\n' + parts.join('\n'));
+
+          if (tab === 'leads') fetchLeads(); else fetchCustomers();
         } catch (err) {
-          console.error('CSV parse error:', err);
-          alert('Failed to read CSV file.');
+          console.error('CSV import error:', err);
+          alert('Import failed. Please try again.');
+        } finally {
+          setCsvImporting(false);
         }
       },
       error: (err) => {
         console.error('CSV read error:', err);
         alert('Failed to read CSV file.');
+        setCsvImporting(false);
       },
     });
-  };
-
-  // Phase 2: user confirmed mappings → build records → call API
-  const confirmCSVImport = async () => {
-    if (!csvMapper) return;
-    setCsvImporting(true);
-    try {
-      const { rows, tab } = csvMapper;
-      const m = csvMappings;
-
-      const getVal = (row, idx) => (idx != null && idx >= 0 && row[idx] != null ? row[idx].trim() : '');
-      const cleanPhone = (v) => v.replace(/^'+/, '').replace(/\D/g, '') ? v.replace(/^'+/, '').trim() : '';
-
-      const totalParsed = rows.length;
-      const buildRecord = (row, isLead) => {
-        let name = getVal(row, m.fullName);
-        let email = getVal(row, m.email);
-        if (!name && m.firstName >= 0) {
-          const fn = getVal(row, m.firstName);
-          const ln = m.lastName >= 0 ? getVal(row, m.lastName) : '';
-          if (ln.includes('@') && !email) { name = fn; email = ln; }
-          else name = [fn, ln].filter(Boolean).join(' ');
-        }
-        if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-        if (!name) name = 'Unknown';
-        const base = {
-          name,
-          email: email || null,
-          phone: cleanPhone(getVal(row, m.phone)) || null,
-          notes: getVal(row, m.notes) || null,
-        };
-        return isLead
-          ? { ...base, status: getVal(row, m.status) || 'new', source: getVal(row, m.source) || 'manual' }
-          : { ...base, last_service: getVal(row, m.service) || null, last_service_date: getVal(row, m.serviceDate) || null };
-      };
-
-      if (tab === 'leads') {
-        const all = rows.map(r => buildRecord(r, true));
-        const leads = all.filter(r => r.name !== 'Unknown' || r.email || r.phone);
-        const droppedNoIdentity = all.length - leads.length;
-
-        const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
-          method: 'POST', body: JSON.stringify({ leads })
-        });
-        const data = await response.json();
-        if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-        const parts = [`Parsed from CSV: ${totalParsed}`, `Imported: ${data.successCount}`];
-        if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
-        if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
-        if (droppedNoIdentity > 0) parts.push(`Dropped (no name/email/phone): ${droppedNoIdentity}`);
-        alert('Import complete!\n' + parts.join('\n'));
-        setCsvMapper(null);
-        fetchLeads();
-      } else {
-        const all = rows.map(r => buildRecord(r, false));
-        const customers = all.filter(r => r.name !== 'Unknown' || r.email || r.phone);
-        const droppedNoIdentity = all.length - customers.length;
-
-        const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
-          method: 'POST', body: JSON.stringify({ customers })
-        });
-        const data = await response.json();
-        if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-        const parts = [`Parsed from CSV: ${totalParsed}`, `Imported: ${data.successCount}`];
-        if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
-        if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
-        if (droppedNoIdentity > 0) parts.push(`Dropped (no name/email/phone): ${droppedNoIdentity}`);
-        alert('Import complete!\n' + parts.join('\n'));
-        setCsvMapper(null);
-        fetchCustomers();
-      }
-    } catch (err) {
-      console.error('CSV import error:', err);
-      alert('Import failed. Please try again.');
-    } finally {
-      setCsvImporting(false);
-    }
   };
 
   const fetchAdConnections = async () => {
@@ -4232,112 +4198,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         </div>
       )}
 
-      {/* CSV Column Mapper Modal */}
-      {csvMapper && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-            {/* Header */}
-            <div className="bg-gradient-to-r from-amber-600 to-amber-500 text-white p-5 rounded-t-2xl flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold">Map CSV Columns</h2>
-                <p className="text-amber-100 text-sm mt-0.5">{csvMapper.rows.length} rows detected — confirm which columns hold which data</p>
-              </div>
-              <button onClick={() => setCsvMapper(null)} className="p-2 hover:bg-white/20 rounded-lg transition-colors">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="overflow-y-auto flex-1 p-5 space-y-5">
-              {/* Column mapping grid */}
-              <div className="grid grid-cols-2 gap-3">
-                {(csvMapper.tab === 'leads' ? [
-                  { key: 'fullName',  label: 'Full Name' },
-                  { key: 'firstName', label: 'First Name' },
-                  { key: 'lastName',  label: 'Last Name' },
-                  { key: 'email',     label: 'Email' },
-                  { key: 'phone',     label: 'Phone' },
-                  { key: 'status',    label: 'Status' },
-                  { key: 'source',    label: 'Source' },
-                  { key: 'notes',     label: 'Notes' },
-                ] : [
-                  { key: 'fullName',    label: 'Full Name' },
-                  { key: 'firstName',   label: 'First Name' },
-                  { key: 'lastName',    label: 'Last Name' },
-                  { key: 'email',       label: 'Email' },
-                  { key: 'phone',       label: 'Phone' },
-                  { key: 'service',     label: 'Last Service' },
-                  { key: 'serviceDate', label: 'Service Date' },
-                  { key: 'notes',       label: 'Notes' },
-                ]).map(field => (
-                  <div key={field.key}>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1">{field.label}</label>
-                    <select
-                      value={csvMappings[field.key] ?? -1}
-                      onChange={e => setCsvMappings(prev => ({ ...prev, [field.key]: parseInt(e.target.value, 10) }))}
-                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 bg-white"
-                    >
-                      <option value={-1}>— Not in CSV —</option>
-                      {csvMapper.headers.map((h, i) => (
-                        <option key={i} value={i}>{h || `Column ${i + 1}`}</option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-              </div>
-
-              {/* Preview table */}
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Preview (first 3 rows)</p>
-                <div className="overflow-x-auto border border-gray-200 rounded-lg">
-                  <table className="w-full text-xs">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        {csvMapper.headers.map((h, i) => (
-                          <th key={i} className="px-3 py-2 text-left font-semibold text-gray-600 whitespace-nowrap border-r border-gray-200 last:border-r-0">
-                            {h || `Col ${i + 1}`}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {csvMapper.rows.slice(0, 3).map((row, ri) => (
-                        <tr key={ri} className="border-t border-gray-100">
-                          {csvMapper.headers.map((_, ci) => (
-                            <td key={ci} className="px-3 py-2 text-gray-700 whitespace-nowrap max-w-[160px] truncate border-r border-gray-100 last:border-r-0">
-                              {row[ci] || ''}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
-                <strong>Tip:</strong> Only "Full Name" or "First Name" is required. All other fields are optional — rows missing email or phone will still be imported.
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-5 border-t border-gray-200 flex gap-3">
-              <button
-                onClick={() => setCsvMapper(null)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmCSVImport}
-                disabled={csvImporting}
-                className="flex-1 px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {csvImporting ? 'Importing...' : `Import ${csvMapper.rows.length} Rows`}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
