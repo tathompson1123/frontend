@@ -53,8 +53,10 @@ function renderBlock(block) {
   </div>`;
 
     case 'hero_image':
+      // No height attribute / max-height — desktop Outlook/Apple Mail ignore object-fit, so a fixed
+      // height squashes the image. Letting height be intrinsic preserves the aspect ratio everywhere.
       return c.src
-        ? `  <img src="${esc(c.src)}" alt="${esc(c.alt || '')}" width="600" height="280" border="0" style="display:block;width:100%;max-width:600px;height:auto;max-height:280px;object-fit:cover;border:0;outline:none;text-decoration:none;vertical-align:middle" />`
+        ? `  <img src="${esc(c.src)}" alt="${esc(c.alt || '')}" width="600" border="0" style="display:block;width:100%;max-width:600px;height:auto;border:0;outline:none;text-decoration:none;vertical-align:middle" />`
         : `  <!-- hero image placeholder -->`;
 
     case 'urgency_bar':
