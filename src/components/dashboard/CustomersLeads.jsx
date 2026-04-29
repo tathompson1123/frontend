@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import Papa from 'papaparse';
 import {
   Users,
   Mail,
@@ -61,8 +62,224 @@ function fmtDateTime(ts) {
   return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
+// Wraps horizontally-scrollable content and shows a floating scrollbar pinned to the
+// viewport bottom when the content's native scrollbar is below the fold. Once the
+// container's bottom scrolls into view, the floating bar hides and the native
+// scrollbar at the bottom of the cards list takes over.
+function StickyHorizontalScroller({ children, className = '' }) {
+  const containerRef = useRef(null);
+  const floatingRef = useRef(null);
+  const [bar, setBar] = useState({ visible: false, contentWidth: 0, clientWidth: 0, left: 0, width: 0 });
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    let syncing = false;
+
+    const measure = () => {
+      const rect = container.getBoundingClientRect();
+      const viewH = window.innerHeight;
+      const overflowing = container.scrollWidth > container.clientWidth + 1;
+      const visible = overflowing && rect.bottom > viewH + 4 && rect.top < viewH;
+      setBar({
+        visible,
+        contentWidth: container.scrollWidth,
+        clientWidth: container.clientWidth,
+        left: rect.left,
+        width: rect.width,
+      });
+    };
+
+    const onContainerScroll = () => {
+      if (syncing) return;
+      const f = floatingRef.current;
+      if (!f) return;
+      syncing = true;
+      f.scrollLeft = container.scrollLeft;
+      syncing = false;
+    };
+
+    measure();
+    window.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', measure);
+    const ro = new ResizeObserver(measure);
+    ro.observe(container);
+    container.addEventListener('scroll', onContainerScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', measure);
+      ro.disconnect();
+      container.removeEventListener('scroll', onContainerScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    const f = floatingRef.current;
+    const c = containerRef.current;
+    if (!f || !c) return;
+    const onScroll = () => {
+      if (c.scrollLeft !== f.scrollLeft) c.scrollLeft = f.scrollLeft;
+    };
+    f.addEventListener('scroll', onScroll, { passive: true });
+    // Seed the floating bar's position to match the container
+    f.scrollLeft = c.scrollLeft;
+    return () => f.removeEventListener('scroll', onScroll);
+  }, [bar.visible, bar.contentWidth]);
+
+  return (
+    <>
+      <div ref={containerRef} className={`overflow-x-auto ${className}`}>
+        {children}
+      </div>
+      {bar.visible && (
+        <div
+          ref={floatingRef}
+          className="fixed z-30 overflow-x-auto bg-white/90 backdrop-blur-sm border-t border-gray-200 shadow-[0_-2px_6px_rgba(0,0,0,0.05)]"
+          style={{ bottom: 0, left: bar.left, width: bar.width, height: 14 }}
+        >
+          <div style={{ width: bar.contentWidth, height: 1 }} />
+        </div>
+      )}
+    </>
+  );
+}
+
+// Card renderer for the Booking Revenue / Transaction Revenue drill-down modal.
+// Shows the customer + service/transaction info and an editable notes field that
+// saves on blur (or debounced on change for snappier feedback).
+function DrilldownCard({ item, kind, onSaveNote }) {
+  const initialNote = kind === 'bookings' ? (item.job_notes || '') : (item.notes || '');
+  const [note, setNote] = useState(initialNote);
+  const [saveState, setSaveState] = useState('idle'); // idle | saving | saved
+  const saveTimer = useRef(null);
+
+  const scheduleSave = (value) => {
+    setNote(value);
+    setSaveState('saving');
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      await onSaveNote(value);
+      setSaveState('saved');
+      setTimeout(() => setSaveState('idle'), 1200);
+    }, 700);
+  };
+
+  if (kind === 'bookings') {
+    const dateStr = item.booking_date
+      ? new Date(item.booking_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : '—';
+    const statusColor = item.status === 'completed' ? 'bg-green-100 text-green-700'
+      : item.status === 'cancelled' ? 'bg-red-100 text-red-700'
+      : item.status === 'confirmed' ? 'bg-blue-100 text-blue-700'
+      : 'bg-gray-100 text-gray-700';
+    return (
+      <div className="border border-gray-200 rounded-xl p-4 hover:shadow-sm transition bg-white">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-gray-900 truncate">{item.customer_name || '—'}</p>
+            <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-0.5 text-xs text-gray-500">
+              {item.customer_email && <span className="truncate">{item.customer_email}</span>}
+              {item.customer_phone && <span>{item.customer_phone}</span>}
+            </div>
+          </div>
+          <div className="text-right flex-shrink-0">
+            <p className="text-lg font-bold text-green-700">${parseFloat(item.total_amount || 0).toFixed(2)}</p>
+            <span className={`inline-block mt-1 text-[10px] uppercase font-semibold px-2 py-0.5 rounded-full ${statusColor}`}>
+              {item.status || 'booked'}
+            </span>
+          </div>
+        </div>
+        <div className="mt-3 pt-3 border-t border-gray-100 space-y-1 text-xs">
+          <div className="flex items-center gap-2 text-gray-600">
+            <Calendar className="w-3.5 h-3.5 text-gray-400" />
+            <span>{dateStr}{item.start_time ? ` · ${item.start_time}` : ''}</span>
+          </div>
+          {item.services && (
+            <div className="flex items-start gap-2 text-gray-600">
+              <Sparkles className="w-3.5 h-3.5 text-gray-400 mt-0.5" />
+              <span className="flex-1">{item.services}</span>
+            </div>
+          )}
+          {item.source && <div className="text-[11px] text-gray-400">Source: {item.source}</div>}
+        </div>
+        <div className="mt-3">
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Notes</label>
+            {saveState === 'saving' && <span className="text-[10px] text-gray-400">Saving...</span>}
+            {saveState === 'saved' && <span className="text-[10px] text-green-600">Saved ✓</span>}
+          </div>
+          <textarea
+            value={note}
+            onChange={e => scheduleSave(e.target.value)}
+            placeholder="Add a note about this booking..."
+            rows={2}
+            className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // transactions
+  const dateStr = item.created_at
+    ? new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+    : '—';
+  const net = parseFloat(item.amount || 0) - parseFloat(item.refund_amount || 0);
+  const customer = item.customer_name || item.booking_customer_name || '—';
+  return (
+    <div className="border border-gray-200 rounded-xl p-4 hover:shadow-sm transition bg-white">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold text-gray-900 truncate">{customer}</p>
+          <div className="flex items-center flex-wrap gap-x-3 gap-y-1 mt-0.5 text-xs text-gray-500">
+            {item.customer_email && <span className="truncate">{item.customer_email}</span>}
+            {item.customer_phone && <span>{item.customer_phone}</span>}
+          </div>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <p className="text-lg font-bold text-green-700">${net.toFixed(2)}</p>
+          {parseFloat(item.refund_amount || 0) > 0 && (
+            <p className="text-[10px] text-red-500">refund ${parseFloat(item.refund_amount).toFixed(2)}</p>
+          )}
+        </div>
+      </div>
+      <div className="mt-3 pt-3 border-t border-gray-100 space-y-1 text-xs text-gray-600">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-3.5 h-3.5 text-gray-400" />
+          <span>{dateStr}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+          <span className="capitalize">{item.processor || 'payment'}</span>
+          {item.card_brand && <span>· {item.card_brand}{item.card_last_four ? ` ****${item.card_last_four}` : ''}</span>}
+        </div>
+        {item.invoice_number && <div className="text-[11px] text-gray-400">Invoice #{item.invoice_number}</div>}
+      </div>
+      <div className="mt-3">
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Notes</label>
+          {saveState === 'saving' && <span className="text-[10px] text-gray-400">Saving...</span>}
+          {saveState === 'saved' && <span className="text-[10px] text-green-600">Saved ✓</span>}
+        </div>
+        <textarea
+          value={note}
+          onChange={e => scheduleSave(e.target.value)}
+          placeholder="Add a note about this transaction..."
+          rows={2}
+          className="w-full px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTabRaw] = useState(() => localStorage.getItem('crmActiveTab') || 'analytics');
+  const setActiveTab = (t) => {
+    setActiveTabRaw(t);
+    if (t) localStorage.setItem('crmActiveTab', t);
+  };
   const [leadTables, setLeadTables] = useState([
     { id: 'default', name: 'All Leads', leads: [] }
   ]);
@@ -126,9 +343,124 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [analyticsData, setAnalyticsData] = useState(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [totalBookingRevenue, setTotalBookingRevenue] = useState(0);
+  const [totalTransactionRevenue, setTotalTransactionRevenue] = useState(0);
+  const [totalTransactionTax, setTotalTransactionTax] = useState(0);
+
+  // Analytics date range
+  const [analyticsRange, setAnalyticsRange] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('analyticsRange') || 'null');
+      if (saved && saved.preset) return saved;
+    } catch {}
+    const now = new Date();
+    const first = new Date(now.getFullYear(), now.getMonth(), 1);
+    const iso = (d) => d.toISOString().slice(0, 10);
+    return { preset: 'this_month', startDate: iso(first), endDate: iso(now) };
+  });
+  const [showRangeMenu, setShowRangeMenu] = useState(false);
+
+  const applyRangePreset = (preset) => {
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const now = new Date();
+    let startDate = null, endDate = null;
+    if (preset === 'this_month') {
+      startDate = iso(new Date(now.getFullYear(), now.getMonth(), 1));
+      endDate = iso(now);
+    } else if (preset === 'last_month') {
+      const first = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const last = new Date(now.getFullYear(), now.getMonth(), 0);
+      startDate = iso(first); endDate = iso(last);
+    } else if (preset === 'last_3_months') {
+      const s = new Date(now); s.setMonth(s.getMonth() - 3);
+      startDate = iso(s); endDate = iso(now);
+    } else if (preset === 'last_6_months') {
+      const s = new Date(now); s.setMonth(s.getMonth() - 6);
+      startDate = iso(s); endDate = iso(now);
+    } else if (preset === 'this_year') {
+      startDate = iso(new Date(now.getFullYear(), 0, 1)); endDate = iso(now);
+    } else if (preset === 'all_time') {
+      startDate = null; endDate = null;
+    }
+    const next = { preset, startDate, endDate };
+    setAnalyticsRange(next);
+    localStorage.setItem('analyticsRange', JSON.stringify(next));
+    setShowRangeMenu(false);
+  };
+
+  const setCustomRange = (field, value) => {
+    const next = { ...analyticsRange, preset: 'custom', [field]: value };
+    setAnalyticsRange(next);
+    localStorage.setItem('analyticsRange', JSON.stringify(next));
+  };
+
+  const rangeLabel = (() => {
+    const map = {
+      this_month: 'This Month',
+      last_month: 'Last Month',
+      last_3_months: 'Last 3 Months',
+      last_6_months: 'Last 6 Months',
+      this_year: 'This Year',
+      all_time: 'All Time',
+      custom: 'Custom',
+    };
+    return map[analyticsRange.preset] || 'This Month';
+  })();
   const [adSpendEntries, setAdSpendEntries] = useState([]);
   const [showAdSpendModal, setShowAdSpendModal] = useState(false);
+
+  // Revenue drill-down modal ('bookings' | 'transactions' | null)
+  const [revenueDrilldown, setRevenueDrilldown] = useState(null);
+  const [drilldownLoading, setDrilldownLoading] = useState(false);
+  const [drilldownItems, setDrilldownItems] = useState([]);
+  const [drilldownSearch, setDrilldownSearch] = useState('');
+
+  const openRevenueDrilldown = async (kind) => {
+    setRevenueDrilldown(kind);
+    setDrilldownSearch('');
+    setDrilldownItems([]);
+    setDrilldownLoading(true);
+    try {
+      const qs = new URLSearchParams();
+      if (analyticsRange.startDate) qs.set('startDate', analyticsRange.startDate);
+      if (analyticsRange.endDate) qs.set('endDate', analyticsRange.endDate);
+      const endpoint = kind === 'bookings' ? 'bookings' : 'transactions';
+      const url = `${apiUrl}/api/leads/analytics/${endpoint}${qs.toString() ? '?' + qs.toString() : ''}`;
+      const res = await authFetch(url).then(r => r.json());
+      setDrilldownItems(kind === 'bookings' ? (res.bookings || []) : (res.transactions || []));
+    } catch (e) {
+      console.error('Drill-down fetch failed:', e);
+    } finally {
+      setDrilldownLoading(false);
+    }
+  };
+
+  const closeRevenueDrilldown = () => {
+    setRevenueDrilldown(null);
+    setDrilldownItems([]);
+  };
+
+  const saveDrilldownNote = async (id, note) => {
+    const endpoint = revenueDrilldown === 'bookings' ? 'bookings' : 'transactions';
+    try {
+      await authFetch(`${apiUrl}/api/leads/analytics/${endpoint}/${id}/note`, {
+        method: 'PUT',
+        body: JSON.stringify({ note })
+      });
+    } catch (e) {
+      console.error('Save note failed:', e);
+    }
+  };
   const [adSpendForm, setAdSpendForm] = useState({ source: '', amount: '', month: new Date().toISOString().slice(0, 7), notes: '' });
+
+  // Ad platform connections
+  const [adConnections, setAdConnections] = useState([]);
+  const [adConnecting, setAdConnecting] = useState(null); // platform being connected
+  const [adSyncing, setAdSyncing] = useState(null); // platform being synced
+  const [adConnectToast, setAdConnectToast] = useState(null); // { type: 'success'|'error', platform }
+  const [adVerifications, setAdVerifications] = useState([]); // [{ platform, email, status }]
+  const [showVerifyModal, setShowVerifyModal] = useState(null); // platform key
+  const [verifyEmail, setVerifyEmail] = useState('');
+  const [submittingVerify, setSubmittingVerify] = useState(false);
 
   // Board drag-and-drop (cards)
   const [draggingLeadId, setDraggingLeadId] = useState(null);
@@ -261,34 +593,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     window.URL.revokeObjectURL(url);
   };
 
-  // Full RFC-4180 CSV parser — handles quoted fields, embedded commas, CRLF, escaped quotes ("")
-  const parseCSVText = (text) => {
-    const rows = [];
-    let col = '', inQ = false, row = [];
-    // Normalize line endings and strip BOM
-    const s = text.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    for (let i = 0; i < s.length; i++) {
-      const c = s[i];
-      if (inQ) {
-        if (c === '"') {
-          if (s[i + 1] === '"') { col += '"'; i++; } // escaped quote
-          else inQ = false;
-        } else col += c;
-      } else if (c === '"') {
-        inQ = true;
-      } else if (c === ',') {
-        row.push(col.trim()); col = '';
-      } else if (c === '\n') {
-        row.push(col.trim()); col = '';
-        if (row.some(v => v !== '')) rows.push(row); // skip fully blank lines
-        row = [];
-      } else {
-        col += c;
-      }
-    }
-    if (col || row.length) { row.push(col.trim()); if (row.some(v => v !== '')) rows.push(row); }
-    return rows;
-  };
+  // CSV parsing is handled by PapaParse in importFromCSV below.
 
   // Auto-detect which CSV column index best matches a set of keyword aliases.
   // Three-pass: exact → substring excluding "type"/"label"/"format" columns → any substring.
@@ -324,47 +629,65 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     return -1;
   };
 
-  // Phase 1: parse CSV, auto-detect columns, open mapping modal
+  // Phase 1: parse CSV with PapaParse → auto-detect columns → open mapping modal
   const importFromCSV = (event) => {
     const file = event.target.files[0];
     if (!file) return;
     event.target.value = '';
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const allRows = parseCSVText(e.target.result);
-        if (allRows.length < 2) { alert('CSV file is empty or has no data rows.'); return; }
+    Papa.parse(file, {
+      // Treat first row as data (we extract headers ourselves so detectCol can match raw values)
+      header: false,
+      // Drop rows that are entirely empty — but keep rows that have any non-empty cell
+      skipEmptyLines: 'greedy',
+      // Trim whitespace; PapaParse handles quoted fields, embedded commas, CRLF, escaped quotes
+      transform: (value) => (typeof value === 'string' ? value.trim() : value),
+      complete: (results) => {
+        try {
+          const allRows = results.data;
+          // Surface non-fatal parse warnings but don't block — papaparse recovers from most issues
+          if (results.errors && results.errors.length > 0) {
+            console.warn('[CSV] PapaParse warnings:', results.errors.slice(0, 5));
+          }
+          if (!allRows || allRows.length < 2) {
+            alert('CSV file is empty or has no data rows.');
+            return;
+          }
 
-        const rawHeaders = allRows[0];
-        const headers = rawHeaders.map(h => h.toLowerCase().trim());
-        const dataRows = allRows.slice(1);
+          const rawHeaders = allRows[0].map(h => (h == null ? '' : String(h)));
+          const headers = rawHeaders.map(h => h.toLowerCase().trim());
+          const dataRows = allRows.slice(1);
 
-        // Auto-detect common column patterns — more specific aliases listed first
-        const detected = {
-          fullName:    detectCol(headers, 'fullname', 'customername', 'contactname', 'clientname', 'displayname', 'companyname', 'businessname', 'accountname', 'organizationname', 'name', 'customer', 'contact', 'client', 'account', 'company', 'business', 'organization'),
-          firstName:   detectCol(headers, 'firstname', 'givenname', 'fname', 'first'),
-          lastName:    detectCol(headers, 'lastname', 'familyname', 'surname', 'lname', 'last'),
-          email:       detectCol(headers, 'email1value', 'email2value', 'emailaddress', 'primaryemail', 'contactemail', 'email1', 'email', 'e-mail'),
-          phone:       detectCol(headers, 'phone1value', 'phone2value', 'primaryphone', 'mobilephone', 'cellphone', 'homephone', 'workphone', 'phonenumber', 'mobile', 'cell', 'telephone', 'tel', 'phone'),
-          service:     detectCol(headers, 'lastservice', 'servicetype', 'service', 'product'),
-          serviceDate: detectCol(headers, 'lastservicedate', 'servicedate', 'lastvisit', 'visitdate', 'appointmentdate', 'date'),
-          notes:       detectCol(headers, 'notes', 'note', 'comments', 'comment', 'description', 'memo'),
-          // leads-only
-          status:      detectCol(headers, 'leadstatus', 'status'),
-          source:      detectCol(headers, 'leadsource', 'source', 'channel'),
-        };
-        console.log('[CSV] Headers:', rawHeaders);
-        console.log('[CSV] Detected mappings:', detected);
+          // Auto-detect common column patterns — more specific aliases listed first
+          const detected = {
+            fullName:    detectCol(headers, 'fullname', 'customername', 'contactname', 'clientname', 'displayname', 'companyname', 'businessname', 'accountname', 'organizationname', 'name', 'customer', 'contact', 'client', 'account', 'company', 'business', 'organization'),
+            firstName:   detectCol(headers, 'firstname', 'givenname', 'fname', 'first'),
+            lastName:    detectCol(headers, 'lastname', 'familyname', 'surname', 'lname', 'last'),
+            email:       detectCol(headers, 'email1value', 'email2value', 'emailaddress', 'primaryemail', 'contactemail', 'email1', 'email', 'e-mail'),
+            phone:       detectCol(headers, 'phone1value', 'phone2value', 'primaryphone', 'mobilephone', 'cellphone', 'homephone', 'workphone', 'phonenumber', 'mobile', 'cell', 'telephone', 'tel', 'phone'),
+            service:     detectCol(headers, 'lastservice', 'servicetype', 'service', 'product'),
+            serviceDate: detectCol(headers, 'lastservicedate', 'servicedate', 'lastvisit', 'visitdate', 'appointmentdate', 'date'),
+            notes:       detectCol(headers, 'notes', 'note', 'comments', 'comment', 'description', 'memo'),
+            // leads-only
+            status:      detectCol(headers, 'leadstatus', 'status'),
+            source:      detectCol(headers, 'leadsource', 'source', 'channel'),
+          };
+          console.log(`[CSV] Parsed ${dataRows.length} data rows from ${rawHeaders.length} columns`);
+          console.log('[CSV] Headers:', rawHeaders);
+          console.log('[CSV] Detected mappings:', detected);
 
-        setCsvMappings(detected);
-        setCsvMapper({ headers: rawHeaders, rows: dataRows, tab: activeTab });
-      } catch (err) {
-        console.error('CSV parse error:', err);
+          setCsvMappings(detected);
+          setCsvMapper({ headers: rawHeaders, rows: dataRows, tab: activeTab });
+        } catch (err) {
+          console.error('CSV parse error:', err);
+          alert('Failed to read CSV file.');
+        }
+      },
+      error: (err) => {
+        console.error('CSV read error:', err);
         alert('Failed to read CSV file.');
-      }
-    };
-    reader.readAsText(file);
+      },
+    });
   };
 
   // Phase 2: user confirmed mappings → build records → call API
@@ -378,69 +701,60 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       const getVal = (row, idx) => (idx != null && idx >= 0 && row[idx] != null ? row[idx].trim() : '');
       const cleanPhone = (v) => v.replace(/^'+/, '').replace(/\D/g, '') ? v.replace(/^'+/, '').trim() : '';
 
+      const totalParsed = rows.length;
+      const buildRecord = (row, isLead) => {
+        let name = getVal(row, m.fullName);
+        let email = getVal(row, m.email);
+        if (!name && m.firstName >= 0) {
+          const fn = getVal(row, m.firstName);
+          const ln = m.lastName >= 0 ? getVal(row, m.lastName) : '';
+          if (ln.includes('@') && !email) { name = fn; email = ln; }
+          else name = [fn, ln].filter(Boolean).join(' ');
+        }
+        if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+        if (!name) name = 'Unknown';
+        const base = {
+          name,
+          email: email || null,
+          phone: cleanPhone(getVal(row, m.phone)) || null,
+          notes: getVal(row, m.notes) || null,
+        };
+        return isLead
+          ? { ...base, status: getVal(row, m.status) || 'new', source: getVal(row, m.source) || 'manual' }
+          : { ...base, last_service: getVal(row, m.service) || null, last_service_date: getVal(row, m.serviceDate) || null };
+      };
+
       if (tab === 'leads') {
-        const leads = rows.map(row => {
-          let name = getVal(row, m.fullName);
-          let email = getVal(row, m.email);
-          if (!name && m.firstName >= 0) {
-            const fn = getVal(row, m.firstName);
-            const ln = m.lastName >= 0 ? getVal(row, m.lastName) : '';
-            if (ln.includes('@') && !email) { name = fn; email = ln; }
-            else name = [fn, ln].filter(Boolean).join(' ');
-          }
-          if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-          if (!name) name = 'Unknown';
-          return {
-            name,
-            email: email || null,
-            phone: cleanPhone(getVal(row, m.phone)) || null,
-            status: getVal(row, m.status) || 'new',
-            source: getVal(row, m.source) || 'manual',
-            notes: getVal(row, m.notes) || null,
-          };
-        }).filter(r => r.name !== 'Unknown' || r.email || r.phone);
+        const all = rows.map(r => buildRecord(r, true));
+        const leads = all.filter(r => r.name !== 'Unknown' || r.email || r.phone);
+        const droppedNoIdentity = all.length - leads.length;
 
         const response = await authFetch(`${apiUrl}/api/leads/bulk-import`, {
           method: 'POST', body: JSON.stringify({ leads })
         });
         const data = await response.json();
         if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-        const parts = [`Imported: ${data.successCount}`];
+        const parts = [`Parsed from CSV: ${totalParsed}`, `Imported: ${data.successCount}`];
         if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
         if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
+        if (droppedNoIdentity > 0) parts.push(`Dropped (no name/email/phone): ${droppedNoIdentity}`);
         alert('Import complete!\n' + parts.join('\n'));
         setCsvMapper(null);
         fetchLeads();
       } else {
-        const customers = rows.map(row => {
-          let name = getVal(row, m.fullName);
-          let email = getVal(row, m.email);
-          if (!name && m.firstName >= 0) {
-            const fn = getVal(row, m.firstName);
-            const ln = m.lastName >= 0 ? getVal(row, m.lastName) : '';
-            if (ln.includes('@') && !email) { name = fn; email = ln; }
-            else name = [fn, ln].filter(Boolean).join(' ');
-          }
-          if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-          if (!name) name = 'Unknown';
-          return {
-            name,
-            email: email || null,
-            phone: cleanPhone(getVal(row, m.phone)) || null,
-            last_service: getVal(row, m.service) || null,
-            last_service_date: getVal(row, m.serviceDate) || null,
-            notes: getVal(row, m.notes) || null,
-          };
-        }).filter(r => r.name !== 'Unknown' || r.email || r.phone);
+        const all = rows.map(r => buildRecord(r, false));
+        const customers = all.filter(r => r.name !== 'Unknown' || r.email || r.phone);
+        const droppedNoIdentity = all.length - customers.length;
 
         const response = await authFetch(`${apiUrl}/api/customers/bulk-import`, {
           method: 'POST', body: JSON.stringify({ customers })
         });
         const data = await response.json();
         if (!response.ok) { alert('Import failed: ' + (data.error || 'Unknown error')); return; }
-        const parts = [`Imported: ${data.successCount}`];
+        const parts = [`Parsed from CSV: ${totalParsed}`, `Imported: ${data.successCount}`];
         if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
         if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
+        if (droppedNoIdentity > 0) parts.push(`Dropped (no name/email/phone): ${droppedNoIdentity}`);
         alert('Import complete!\n' + parts.join('\n'));
         setCsvMapper(null);
         fetchCustomers();
@@ -453,11 +767,111 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
+  const fetchAdConnections = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/ad-platforms/connections`).then(r => r.json());
+      setAdConnections(res.connections || []);
+    } catch { setAdConnections([]); }
+    try {
+      const vres = await authFetch(`${apiUrl}/api/ad-platforms/verification-requests`).then(r => r.json());
+      setAdVerifications(vres.requests || []);
+    } catch { setAdVerifications([]); }
+  };
+
+  const submitVerification = async () => {
+    if (!showVerifyModal || !verifyEmail) return;
+    setSubmittingVerify(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/ad-platforms/verification-requests`, {
+        method: 'POST',
+        body: JSON.stringify({ platform: showVerifyModal, email: verifyEmail }),
+      }).then(r => r.json());
+      if (res.error) throw new Error(res.error);
+      setShowVerifyModal(null);
+      setVerifyEmail('');
+      fetchAdConnections();
+      setAdConnectToast({ type: 'success', msg: 'Request submitted! You\'ll get an email when approved.' });
+      setTimeout(() => setAdConnectToast(null), 5000);
+    } catch (e) {
+      setAdConnectToast({ type: 'error', msg: e.message || 'Failed to submit' });
+      setTimeout(() => setAdConnectToast(null), 4000);
+    } finally {
+      setSubmittingVerify(false);
+    }
+  };
+
+  // Backend URL paths use hyphens (google-ads), DB/state keys use underscores (google_ads)
+  const toPath = (p) => p.replace(/_/g, '-');
+
+  const connectAdPlatform = async (platform) => {
+    setAdConnecting(platform);
+    try {
+      const res = await authFetch(`${apiUrl}/api/ad-platforms/${toPath(platform)}/auth`).then(r => r.json());
+      if (res.url) window.location.href = res.url;
+    } catch {
+      setAdConnecting(null);
+    }
+  };
+
+  const disconnectAdPlatform = async (platform) => {
+    if (!confirm(`Disconnect ${platformLabel(platform)}? Synced spend data will remain.`)) return;
+    await authFetch(`${apiUrl}/api/ad-platforms/${toPath(platform)}`, { method: 'DELETE' });
+    fetchAdConnections();
+  };
+
+  const syncAdPlatform = async (platform) => {
+    setAdSyncing(platform);
+    try {
+      const r = await authFetch(`${apiUrl}/api/ad-platforms/${toPath(platform)}/sync`, { method: 'POST' });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || `HTTP ${r.status}`);
+      fetchAnalytics();
+      const months = data.synced_months ?? 0;
+      setAdConnectToast({
+        type: 'success',
+        msg: months > 0
+          ? `${platformLabel(platform)} synced (${months} month${months === 1 ? '' : 's'})`
+          : `${platformLabel(platform)}: no spend data returned`,
+      });
+    } catch (e) {
+      setAdConnectToast({ type: 'error', msg: `${platformLabel(platform)} sync failed: ${e.message}` });
+    } finally {
+      setAdSyncing(null);
+      setTimeout(() => setAdConnectToast(null), 8000);
+    }
+  };
+
+  const platformLabel = (p) => ({ google_ads: 'Google Ads', google_lsa: 'Google LSA', meta: 'Meta Ads' }[p] || p);
+
   useEffect(() => {
     fetchLeads();
     fetchCustomers();
-    fetchAnalytics(); // analytics is default tab, fetch on mount
+    fetchAnalytics();
+    fetchAdConnections();
+
+    // Handle OAuth callback redirect
+    const params = new URLSearchParams(window.location.search);
+    const adConnect = params.get('ad_connect');
+    const platform = params.get('platform');
+    if (adConnect && platform) {
+      setActiveTab('analytics');
+      setAdConnectToast({
+        type: adConnect === 'success' ? 'success' : 'error',
+        msg: adConnect === 'success'
+          ? `${platformLabel(platform)} connected! Spend data synced.`
+          : `Failed to connect ${platformLabel(platform)}. Please try again.`,
+      });
+      // Clean up URL without re-rendering
+      window.history.replaceState({}, '', window.location.pathname);
+      setTimeout(() => setAdConnectToast(null), 5000);
+    }
   }, []);
+
+  // Re-fetch analytics when the date range changes
+  useEffect(() => {
+    if (activeTab === 'analytics') fetchAnalytics();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [analyticsRange.startDate, analyticsRange.endDate]);
 
   const openViewingLead = (lead) => {
     setViewingLead(lead);
@@ -576,9 +990,15 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const fetchAnalytics = async () => {
     setAnalyticsLoading(true);
     try {
-      const srcRes = await authFetch(`${apiUrl}/api/leads/analytics/sources`).then(r => r.json());
+      const qs = new URLSearchParams();
+      if (analyticsRange.startDate) qs.set('startDate', analyticsRange.startDate);
+      if (analyticsRange.endDate) qs.set('endDate', analyticsRange.endDate);
+      const url = `${apiUrl}/api/leads/analytics/sources${qs.toString() ? '?' + qs.toString() : ''}`;
+      const srcRes = await authFetch(url).then(r => r.json());
       setAnalyticsData(srcRes.sources || []);
       setTotalBookingRevenue(parseFloat(srcRes.total_booking_revenue || 0));
+      setTotalTransactionRevenue(parseFloat(srcRes.total_transaction_revenue || 0));
+      setTotalTransactionTax(parseFloat(srcRes.total_transaction_tax || 0));
     } catch (e) {
       console.error('Analytics fetch error:', e);
       setAnalyticsData([]);
@@ -590,6 +1010,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       const spendRes = await authFetch(`${apiUrl}/api/leads/ad-spend`).then(r => r.json());
       setAdSpendEntries(spendRes.entries || []);
     } catch { setAdSpendEntries([]); }
+    fetchAdConnections();
   };
 
   const saveAdSpend = async () => {
@@ -1561,7 +1982,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           };
 
           return (
-            <div className="overflow-x-auto pb-4">
+            <StickyHorizontalScroller className="pb-4">
               <div className="flex gap-4 min-w-max px-1 pt-2 items-start">
                 {STAGES.map(stage => {
                   const cards = byStage[stage.key] || [];
@@ -1768,7 +2189,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   </button>
                 </div>
               </div>
-            </div>
+            </StickyHorizontalScroller>
           );
         })()}
 
@@ -2991,19 +3412,120 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       {activeTab === 'analytics' && (
         <div className="space-y-6">
           {/* Header row */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
               <h2 className="text-xl font-bold text-gray-900">Lead Source Analytics</h2>
               <p className="text-sm text-gray-500 mt-0.5">Revenue, conversion, and ROI by acquisition channel</p>
             </div>
-            <button
-              onClick={() => setShowAdSpendModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
-            >
-              <Plus className="w-4 h-4" />
-              Log Ad Spend
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Date range selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowRangeMenu(v => !v)}
+                  className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+                >
+                  <Clock className="w-4 h-4 text-gray-500" />
+                  {rangeLabel}
+                  {analyticsRange.preset !== 'all_time' && analyticsRange.startDate && (
+                    <span className="text-xs text-gray-500">
+                      ({analyticsRange.startDate}{analyticsRange.endDate ? ` → ${analyticsRange.endDate}` : ''})
+                    </span>
+                  )}
+                  <ChevronDown className="w-4 h-4 text-gray-400" />
+                </button>
+                {showRangeMenu && (
+                  <>
+                    <div className="fixed inset-0 z-10" onClick={() => setShowRangeMenu(false)} />
+                    <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-lg z-20 p-2">
+                      {[
+                        ['this_month', 'This Month'],
+                        ['last_month', 'Last Month'],
+                        ['last_3_months', 'Last 3 Months'],
+                        ['last_6_months', 'Last 6 Months'],
+                        ['this_year', 'This Year'],
+                        ['all_time', 'All Time'],
+                      ].map(([key, label]) => (
+                        <button
+                          key={key}
+                          onClick={() => applyRangePreset(key)}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition ${analyticsRange.preset === key ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <div className="mt-2 pt-2 border-t border-gray-100">
+                        <p className="text-xs text-gray-500 px-3 mb-1 font-semibold">Custom</p>
+                        <div className="flex items-center gap-2 px-3 py-1">
+                          <input
+                            type="date"
+                            value={analyticsRange.startDate || ''}
+                            onChange={e => setCustomRange('startDate', e.target.value)}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                          />
+                          <span className="text-xs text-gray-400">→</span>
+                          <input
+                            type="date"
+                            value={analyticsRange.endDate || ''}
+                            onChange={e => setCustomRange('endDate', e.target.value)}
+                            className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+              <button
+                onClick={() => setShowAdSpendModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition"
+              >
+                <Plus className="w-4 h-4" />
+                Log Ad Spend
+              </button>
+            </div>
           </div>
+
+          {/* Verification request modal (always rendered, controlled by state) */}
+          {showVerifyModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowVerifyModal(null)}>
+              <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900">Submit {platformLabel(showVerifyModal)} Account</h3>
+                  <button onClick={() => setShowVerifyModal(null)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+                </div>
+                <p className="text-sm text-gray-600 mb-4">
+                  Enter the Google account email associated with your {platformLabel(showVerifyModal)} account. We'll verify access and email you when you're approved to connect (usually within 24 hours).
+                </p>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Account Email</label>
+                <input
+                  type="email"
+                  value={verifyEmail}
+                  onChange={e => setVerifyEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm mb-5 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={submitVerification}
+                    disabled={!verifyEmail || submittingVerify}
+                    className="flex-1 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submittingVerify ? 'Submitting…' : 'Submit Request'}
+                  </button>
+                  <button onClick={() => setShowVerifyModal(null)} className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition">
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Toast notification */}
+          {adConnectToast && (
+            <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${adConnectToast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+              {adConnectToast.type === 'success' ? '✓' : '✕'} {adConnectToast.msg}
+            </div>
+          )}
 
           {analyticsLoading ? (
             <div className="text-center py-16"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div><p className="text-gray-500 mt-3">Loading analytics...</p></div>
@@ -3014,8 +3536,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           ) : (() => {
             const totalLeads = analyticsData.reduce((s, r) => s + r.lead_count, 0);
             const totalSpend = analyticsData.reduce((s, r) => s + r.ad_spend, 0);
-            // Revenue comes directly from booking calendar (not per-source estimate)
-            const overallRoi = totalSpend > 0 ? (((totalBookingRevenue - totalSpend) / totalSpend) * 100).toFixed(1) : null;
+            // Backend already returns transaction revenue minus the user's default tax rate
+            const transactionRevenueNoTax = Math.max(0, totalTransactionRevenue);
+            // ROI uses real transaction revenue minus tax (non-tax number)
+            const overallRoi = totalSpend > 0 ? (((transactionRevenueNoTax - totalSpend) / totalSpend) * 100).toFixed(1) : null;
 
             // Pie chart helpers
             const COLORS = ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4','#f97316','#84cc16'];
@@ -3037,16 +3561,31 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             return (
               <>
                 {/* KPI cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                   {[
                     { label: 'Total Leads', value: totalLeads, color: 'blue' },
-                    { label: 'Booking Revenue', value: `$${totalBookingRevenue.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'green' },
+                    { label: 'Booking Revenue', value: `$${totalBookingRevenue.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'green', onClick: () => openRevenueDrilldown('bookings') },
+                    {
+                      label: 'Transaction Revenue',
+                      value: `$${transactionRevenueNoTax.toLocaleString('en-US', { minimumFractionDigits: 0 })}`,
+                      subValue: `+tax $${totalTransactionTax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                      color: 'green',
+                      onClick: () => openRevenueDrilldown('transactions'),
+                    },
                     { label: 'Total Ad Spend', value: `$${totalSpend.toLocaleString('en-US', { minimumFractionDigits: 0 })}`, color: 'orange' },
                     { label: 'Overall ROI', value: overallRoi !== null ? `${overallRoi}%` : 'N/A', color: overallRoi !== null && overallRoi > 0 ? 'green' : 'red' },
                   ].map(kpi => (
-                    <div key={kpi.label} className={`bg-white rounded-xl border border-gray-200 p-5 border-l-4 ${kpi.color === 'green' ? 'border-l-green-500' : kpi.color === 'blue' ? 'border-l-blue-500' : kpi.color === 'orange' ? 'border-l-amber-500' : 'border-l-red-500'}`}>
-                      <p className="text-xs text-gray-500 font-medium">{kpi.label}</p>
+                    <div
+                      key={kpi.label}
+                      onClick={kpi.onClick}
+                      className={`bg-white rounded-xl border border-gray-200 p-5 border-l-4 ${kpi.color === 'green' ? 'border-l-green-500' : kpi.color === 'blue' ? 'border-l-blue-500' : kpi.color === 'orange' ? 'border-l-amber-500' : 'border-l-red-500'} ${kpi.onClick ? 'cursor-pointer hover:shadow-md hover:border-gray-300 transition' : ''}`}
+                    >
+                      <p className="text-xs text-gray-500 font-medium flex items-center justify-between">
+                        {kpi.label}
+                        {kpi.onClick && <span className="text-[10px] text-blue-600 font-semibold">View →</span>}
+                      </p>
                       <p className={`text-2xl font-bold mt-1 ${kpi.color === 'green' ? 'text-green-700' : kpi.color === 'blue' ? 'text-blue-700' : kpi.color === 'orange' ? 'text-amber-600' : 'text-red-600'}`}>{kpi.value}</p>
+                      {kpi.subValue && <p className="text-xs text-gray-500 mt-1">{kpi.subValue}</p>}
                     </div>
                   ))}
                 </div>
@@ -3161,6 +3700,174 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               </>
             );
           })()}
+
+          {/* Ad Platform Connections — always rendered, regardless of analyticsData */}
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700">Ad Platform Connections</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Auto-sync ad spend from Google Ads and Google Local Services</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {[
+                { key: 'google_ads', label: 'Google Ads', icon: '🔵', color: 'blue', needsVerify: true },
+                { key: 'google_lsa', label: 'Google LSA', icon: '🟢', color: 'green', needsVerify: true },
+              ].map(card => {
+                const conn = adConnections.find(c => c.platform === card.key);
+                const verif = adVerifications.find(v => v.platform === card.key);
+                const isConnected = !!conn;
+                const isConnecting = adConnecting === card.key;
+                const isSyncing = adSyncing === card.key;
+                const verifStatus = verif?.status;
+
+                return (
+                  <div key={card.key} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-xl">{card.icon}</span>
+                        <div>
+                          <p className="font-semibold text-sm text-gray-900">{card.label}</p>
+                          {isConnected ? (
+                            <p className="text-xs text-green-600 font-medium mt-0.5">✓ Connected</p>
+                          ) : verifStatus === 'pending' ? (
+                            <p className="text-xs text-amber-600 font-medium mt-0.5">⏳ Pending verification</p>
+                          ) : verifStatus === 'verified' ? (
+                            <p className="text-xs text-blue-600 font-medium mt-0.5">✓ Verified — ready to connect</p>
+                          ) : verifStatus === 'rejected' ? (
+                            <p className="text-xs text-red-600 font-medium mt-0.5">✕ Verification rejected</p>
+                          ) : card.needsVerify ? (
+                            <p className="text-xs text-gray-500 mt-0.5">Not verified</p>
+                          ) : (
+                            <p className="text-xs text-gray-500 mt-0.5">Not connected</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {isConnected ? (
+                      <div className="space-y-2">
+                        {conn.last_synced_at && (
+                          <p className="text-xs text-gray-500">Last synced: {new Date(conn.last_synced_at).toLocaleString()}</p>
+                        )}
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => syncAdPlatform(card.key)}
+                            disabled={isSyncing}
+                            className="flex-1 py-1.5 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition disabled:opacity-50"
+                          >
+                            {isSyncing ? 'Syncing…' : 'Sync now'}
+                          </button>
+                          <button
+                            onClick={() => disconnectAdPlatform(card.key)}
+                            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md text-xs font-medium transition"
+                          >
+                            Disconnect
+                          </button>
+                        </div>
+                      </div>
+                    ) : verifStatus === 'verified' ? (
+                      <button
+                        onClick={() => connectAdPlatform(card.key)}
+                        disabled={isConnecting}
+                        className="w-full py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {isConnecting ? 'Connecting…' : `Connect ${card.label}`}
+                      </button>
+                    ) : verifStatus === 'pending' ? (
+                      <div className="text-xs text-gray-500 italic py-2 text-center bg-amber-50 rounded-md">
+                        Awaiting admin approval. Check your email soon.
+                      </div>
+                    ) : verifStatus === 'rejected' ? (
+                      <button
+                        onClick={() => { setVerifyEmail(''); setShowVerifyModal(card.key); }}
+                        className="w-full py-2 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition"
+                      >
+                        Resubmit for verification
+                      </button>
+                    ) : card.needsVerify ? (
+                      <button
+                        onClick={() => { setVerifyEmail(''); setShowVerifyModal(card.key); }}
+                        className="w-full py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition"
+                      >
+                        Submit for verification
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => connectAdPlatform(card.key)}
+                        disabled={isConnecting}
+                        className="w-full py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition disabled:opacity-50"
+                      >
+                        {isConnecting ? 'Connecting…' : `Connect ${card.label}`}
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Revenue Drill-down Modal (Bookings / Transactions) */}
+      {revenueDrilldown && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={closeRevenueDrilldown}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl my-8" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">
+                  {revenueDrilldown === 'bookings' ? 'Booking Revenue — All Bookings' : 'Transaction Revenue — All Transactions'}
+                </h3>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {analyticsRange.startDate ? `${analyticsRange.startDate}${analyticsRange.endDate ? ` → ${analyticsRange.endDate}` : ''}` : 'All time'}
+                  {` · ${drilldownItems.length} item${drilldownItems.length === 1 ? '' : 's'}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={drilldownSearch}
+                    onChange={e => setDrilldownSearch(e.target.value)}
+                    placeholder="Search name, service..."
+                    className="pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 w-56"
+                  />
+                </div>
+                <button onClick={closeRevenueDrilldown} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {drilldownLoading ? (
+                <div className="text-center py-16"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mx-auto"></div><p className="text-gray-500 mt-3">Loading...</p></div>
+              ) : (() => {
+                const q = drilldownSearch.trim().toLowerCase();
+                const filtered = drilldownItems.filter(item => {
+                  if (!q) return true;
+                  const hay = revenueDrilldown === 'bookings'
+                    ? `${item.customer_name || ''} ${item.customer_email || ''} ${item.services || ''} ${item.source || ''}`
+                    : `${item.customer_name || item.booking_customer_name || ''} ${item.customer_email || ''} ${item.processor || ''} ${item.invoice_number || ''}`;
+                  return hay.toLowerCase().includes(q);
+                });
+                if (filtered.length === 0) {
+                  return <div className="text-center py-12 text-gray-400 text-sm">No {revenueDrilldown} in this range.</div>;
+                }
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filtered.map(item => (
+                      <DrilldownCard
+                        key={item.id}
+                        item={item}
+                        kind={revenueDrilldown}
+                        onSaveNote={(note) => saveDrilldownNote(item.id, note)}
+                      />
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
         </div>
       )}
 
