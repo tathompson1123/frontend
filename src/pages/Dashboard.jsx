@@ -138,16 +138,24 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [proOpen, setProOpen] = useState(false);
-  const [currentView, setCurrentViewRaw] = useState('overview');
-  const [viewSubTab, setViewSubTab] = useState(null);
+  const [currentView, setCurrentViewRaw] = useState(() => {
+    return localStorage.getItem('dashboardView') || 'overview';
+  });
+  const [viewSubTab, setViewSubTab] = useState(() => {
+    return localStorage.getItem('dashboardSubTab') || null;
+  });
   const setCurrentView = (v) => {
     if (v && v.includes(':')) {
       const [view, sub] = v.split(':');
       setCurrentViewRaw(view);
       setViewSubTab(sub);
+      localStorage.setItem('dashboardView', view);
+      localStorage.setItem('dashboardSubTab', sub);
     } else {
       setCurrentViewRaw(v);
       setViewSubTab(null);
+      if (v) localStorage.setItem('dashboardView', v);
+      localStorage.removeItem('dashboardSubTab');
     }
   };
   const [inOnboarding, setInOnboarding] = useState(() => {
@@ -167,6 +175,15 @@ export default function Dashboard() {
 const [user, setUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
   const [widgetMinimized, setWidgetMinimized] = useState(false);
 const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+  // Ad platform OAuth callback — if URL has ?ad_connect=..., jump to CRM view so
+  // CustomersLeads can render the success/error toast from its own useEffect.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('ad_connect')) {
+      setCurrentViewRaw('customers-leads');
+    }
+  }, []);
 
   // Guard: redirect if not authenticated or not verified
   useEffect(() => {

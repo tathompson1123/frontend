@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Mail, Send, CheckCircle, AlertCircle, Loader, Sparkles,
   Settings, Users, Clock, ChevronDown, ChevronUp, FlaskConical,
-  History, X, Zap, Upload, ArrowRight,
+  History, X, Zap, Upload, ArrowRight, FolderOpen, BookmarkPlus, Trash2,
 } from 'lucide-react';
 import OakameLoader from '../OakameLoader';
 
@@ -503,6 +503,96 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
   const [showSettings, setShowSettings] = useState(false);
   const [toast, setToast] = useState(null);
 
+  // Templates
+  const [templates, setTemplates] = useState([]);
+  const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [savingTemplate, setSavingTemplate] = useState(false);
+  const [applyingTemplateId, setApplyingTemplateId] = useState(null);
+
+  const loadTemplates = async () => {
+    try {
+      const r = await authFetch(`${apiUrl}/api/email-campaigns/templates`);
+      const data = await r.json();
+      setTemplates(data.templates || []);
+    } catch {
+      setTemplates([]);
+    }
+  };
+
+  const openTemplatesModal = async () => {
+    setShowTemplatesModal(true);
+    await loadTemplates();
+  };
+
+  const handleSaveAsTemplate = async () => {
+    if (!campaign) return;
+    const name = templateName.trim();
+    if (!name) return;
+    setSavingTemplate(true);
+    try {
+      const r = await authFetch(`${apiUrl}/api/email-campaigns/templates`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          subject: campaign.subject || '',
+          preview_text: campaign.preview_text || '',
+          blocks: campaign.blocks || [],
+          body_html: campaign.body_html || '',
+          body_text: campaign.body_text || '',
+        }),
+      });
+      const data = await r.json();
+      if (data.success) {
+        showToast(`Saved template "${name}"`);
+        setShowSaveTemplateModal(false);
+        setTemplateName('');
+      } else {
+        showToast(data.error || 'Could not save template', 'error');
+      }
+    } catch (e) {
+      showToast('Could not save template', 'error');
+    } finally {
+      setSavingTemplate(false);
+    }
+  };
+
+  const handleApplyTemplate = async (tplId) => {
+    setApplyingTemplateId(tplId);
+    try {
+      const r = await authFetch(`${apiUrl}/api/email-campaigns/templates/${tplId}/apply`, { method: 'POST' });
+      const data = await r.json();
+      if (data.success && data.campaign) {
+        setCampaign(data.campaign);
+        setDraftId(data.campaign.id);
+        setShowTemplatesModal(false);
+        showToast('Template loaded into draft');
+      } else {
+        showToast(data.error || 'Could not load template', 'error');
+      }
+    } catch {
+      showToast('Could not load template', 'error');
+    } finally {
+      setApplyingTemplateId(null);
+    }
+  };
+
+  const handleDeleteTemplate = async (tplId, name) => {
+    if (!confirm(`Delete template "${name}"?`)) return;
+    try {
+      const r = await authFetch(`${apiUrl}/api/email-campaigns/templates/${tplId}`, { method: 'DELETE' });
+      const data = await r.json();
+      if (data.success) {
+        setTemplates(ts => ts.filter(t => t.id !== tplId));
+        showToast('Template deleted');
+      }
+    } catch {
+      showToast('Could not delete template', 'error');
+    }
+  };
+
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 4000);
@@ -718,6 +808,98 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
         <SettingsModal config={config} onSave={saveSettings} onClose={() => setShowSettings(false)} />
       )}
 
+      {/* Templates picker modal */}
+      {showTemplatesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center p-4 overflow-y-auto" onClick={() => setShowTemplatesModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl my-8" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Email Templates</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Load a saved design into your current draft</p>
+              </div>
+              <button onClick={() => setShowTemplatesModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5">
+              {templates.length === 0 ? (
+                <div className="text-center py-10 text-gray-400 text-sm">
+                  <FolderOpen className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                  <p>No saved templates yet.</p>
+                  <p className="text-xs mt-1">Use "Save as Template" on any campaign to start your library.</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                  {templates.map(t => (
+                    <div key={t.id} className="flex items-start gap-3 p-3 border border-gray-200 rounded-xl hover:bg-gray-50 transition">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900 truncate">{t.name}</p>
+                        {t.subject && <p className="text-xs text-gray-500 truncate">Subject: {t.subject}</p>}
+                        <p className="text-[11px] text-gray-400 mt-0.5">
+                          Saved {new Date(t.updated_at || t.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </p>
+                      </div>
+                      <div className="flex-shrink-0 flex gap-2">
+                        <button
+                          onClick={() => handleApplyTemplate(t.id)}
+                          disabled={applyingTemplateId === t.id}
+                          className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-semibold hover:bg-blue-700 disabled:opacity-50 transition"
+                        >
+                          {applyingTemplateId === t.id ? 'Loading…' : 'Use'}
+                        </button>
+                        <button
+                          onClick={() => handleDeleteTemplate(t.id, t.name)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                          title="Delete template"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save as template modal */}
+      {showSaveTemplateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4" onClick={() => setShowSaveTemplateModal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Save as Template</h3>
+              <button onClick={() => setShowSaveTemplateModal(false)} className="p-1.5 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg"><X className="w-4 h-4" /></button>
+            </div>
+            <p className="text-xs text-gray-500 mb-4">Saves the current subject, preview text, and all content blocks so you can reuse this campaign later.</p>
+            <label className="text-xs font-semibold text-gray-600 mb-1.5 block">Template name</label>
+            <input
+              type="text"
+              value={templateName}
+              onChange={e => setTemplateName(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && templateName.trim()) handleSaveAsTemplate(); }}
+              placeholder="e.g. Spring Promo, Monthly Newsletter, Review Request"
+              autoFocus
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <div className="flex gap-2 mt-5">
+              <button
+                onClick={handleSaveAsTemplate}
+                disabled={!templateName.trim() || savingTemplate}
+                className="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 transition"
+              >
+                {savingTemplate ? 'Saving…' : 'Save Template'}
+              </button>
+              <button
+                onClick={() => setShowSaveTemplateModal(false)}
+                className="px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scrollable content area */}
       <div className={inOnboarding ? '' : 'flex-1 overflow-y-auto min-h-0'}>
 
@@ -890,11 +1072,27 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
                 </div>
 
                 {/* Actions */}
-                <div className="flex gap-3 px-5 pb-5">
+                <div className="flex flex-wrap gap-2 px-5 pb-5">
+                  <button
+                    onClick={openTemplatesModal}
+                    className="flex items-center gap-2 px-3 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
+                    title="Load a saved template"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    Templates
+                  </button>
+                  <button
+                    onClick={() => { setTemplateName(campaign?.subject || ''); setShowSaveTemplateModal(true); }}
+                    className="flex items-center gap-2 px-3 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 transition-all"
+                    title="Save the current campaign as a reusable template"
+                  >
+                    <BookmarkPlus className="w-4 h-4" />
+                    Save as Template
+                  </button>
                   <button
                     onClick={handleTestSend}
                     disabled={sendingTest}
-                    className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 transition-all"
+                    className="flex items-center gap-2 px-3 py-2.5 border border-gray-300 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50 disabled:opacity-50 transition-all"
                   >
                     {sendingTest ? <Loader className="w-4 h-4 animate-spin" /> : <FlaskConical className="w-4 h-4" />}
                     {sendingTest ? 'Sending…' : 'Send Test to Me'}
@@ -902,7 +1100,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
                   <button
                     onClick={handleApprove}
                     disabled={sending}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-all shadow-sm shadow-green-200"
+                    className="flex-1 min-w-[220px] flex items-center justify-center gap-2 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-all shadow-sm shadow-green-200"
                   >
                     {sending ? <Loader className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     {sending ? 'Sending…' : `Approve & Send to ${stats?.subscriberCount ?? 'All'} Customers`}

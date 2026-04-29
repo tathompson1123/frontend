@@ -12,26 +12,17 @@ function scoreColor(score) {
   return score >= 75 ? '#22c55e' : score >= 50 ? '#eab308' : score >= 25 ? '#f97316' : '#ef4444';
 }
 
-function ScoreCircle({ score, label, size = 100, color }) {
-  const radius = (size - 10) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (score / 100) * circumference;
-  const strokeColor = color || scoreColor(score);
-
+function ScoreCircle({ score, label, color, emphasis = false }) {
+  const c = color || scoreColor(score);
   return (
-    <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="transform -rotate-90">
-          <circle cx={size/2} cy={size/2} r={radius} stroke="#e5e7eb" strokeWidth="6" fill="none" />
-          <circle cx={size/2} cy={size/2} r={radius} stroke={strokeColor} strokeWidth="6" fill="none"
-            strokeDasharray={circumference} strokeDashoffset={offset}
-            strokeLinecap="round" className="transition-all duration-1000" />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-2xl font-bold text-gray-900">{score}</span>
-        </div>
-      </div>
-      <span className="text-xs font-medium text-gray-600 mt-1 text-center">{label}</span>
+    <div className="flex flex-col items-center justify-center w-full min-w-0 p-3 rounded-lg bg-gray-50 border border-gray-100">
+      <span
+        className={emphasis ? 'text-4xl font-bold leading-none' : 'text-3xl font-bold leading-none'}
+        style={{ color: c }}
+      >
+        {score}
+      </span>
+      <span className="text-xs font-medium text-gray-600 mt-2 text-center truncate w-full">{label}</span>
     </div>
   );
 }
@@ -620,19 +611,19 @@ export default function GBPAnalyzer({ apiUrl, user, authFetch, inOnboarding }) {
           <div className="bg-white rounded-xl border border-gray-200 p-6">
             <h4 className="font-semibold text-gray-900 mb-4">Optimization Score</h4>
 
-            {/* Desktop: rings */}
-            <div className="hidden sm:flex gap-4 items-end">
-              <ScoreCircle score={audit.overallScore} label="Overall" size={90} />
-              <ScoreCircle score={audit.categoryScores?.completeness || 0} label="Completeness" size={80} />
-              <ScoreCircle score={audit.categoryScores?.contentMedia || 0} label="Content" size={80} />
-              <ScoreCircle score={audit.categoryScores?.reviews || 0} label="Reviews" size={80} />
-              <ScoreCircle score={audit.categoryScores?.engagement || 0} label="Engagement" size={80} />
+            {/* Desktop: score cards */}
+            <div className="hidden sm:grid grid-cols-5 gap-3 lg:gap-4">
+              <ScoreCircle score={audit.overallScore} label="Overall" emphasis />
+              <ScoreCircle score={audit.categoryScores?.completeness || 0} label="Completeness" />
+              <ScoreCircle score={audit.categoryScores?.contentMedia || 0} label="Content" />
+              <ScoreCircle score={audit.categoryScores?.reviews || 0} label="Reviews" />
+              <ScoreCircle score={audit.categoryScores?.engagement || 0} label="Engagement" />
             </div>
 
-            {/* Mobile: big circle + progress bars */}
+            {/* Mobile: overall + progress bars */}
             <div className="sm:hidden">
               <div className="flex justify-center mb-5">
-                <ScoreCircle score={audit.overallScore} label="Overall Score" size={110} />
+                <ScoreCircle score={audit.overallScore} label="Overall Score" emphasis />
               </div>
               <div className="space-y-3">
                 <ScoreBar score={audit.categoryScores?.completeness || 0} label="Completeness" />

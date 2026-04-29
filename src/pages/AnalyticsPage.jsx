@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Users, DollarSign, TrendingDown, TrendingUp,
-  LogOut, RefreshCw, Search, MessageCircle, Phone, ChevronUp, ChevronDown, Minus
+  LogOut, RefreshCw, Search, MessageCircle, Phone, ChevronUp, ChevronDown, Minus,
+  CheckCircle, XCircle, ShieldCheck
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -48,6 +49,8 @@ export default function AnalyticsPage() {
   const [planFilter, setPlanFilter] = useState('all');
   const [sortField, setSortField]   = useState('created_at');
   const [sortDir, setSortDir]       = useState('desc');
+  const [verifyRequests, setVerifyRequests] = useState([]);
+  const [actioningId, setActioningId] = useState(null);
 
   const token = sessionStorage.getItem('analyticsToken');
 
@@ -71,7 +74,39 @@ export default function AnalyticsPage() {
     } finally {
       setLoading(false);
     }
+    // Fetch verification requests in parallel (non-blocking)
+    try {
+      const vr = await fetch(`${API_URL}/api/analytics/verification-requests`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then(r => r.json());
+      setVerifyRequests(vr.requests || []);
+    } catch { /* ignore */ }
   }, [token, navigate]);
+
+  const approveVerification = async (id) => {
+    setActioningId(id);
+    try {
+      await fetch(`${API_URL}/api/analytics/verification-requests/${id}/approve`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      fetchData();
+    } finally { setActioningId(null); }
+  };
+
+  const rejectVerification = async (id) => {
+    const notes = prompt('Rejection reason (optional):');
+    if (notes === null) return;
+    setActioningId(id);
+    try {
+      await fetch(`${API_URL}/api/analytics/verification-requests/${id}/reject`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes }),
+      });
+      fetchData();
+    } finally { setActioningId(null); }
+  };
 
   useEffect(() => {
     if (!token) { navigate('/analytics/login'); return; }
@@ -218,6 +253,86 @@ export default function AnalyticsPage() {
                 />
               </div>
             </div>
+
+            {/* Ad Platform Verification Requests */}
+            {verifyRequests.length > 0 && (
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+                <div className="flex items-center gap-2 mb-4">
+                  <ShieldCheck className="w-5 h-5 text-blue-400" />
+                  <h2 className="text-lg font-bold text-white">Ad Platform Verification Requests</h2>
+                  <span className="ml-auto text-xs text-gray-500">
+                    {verifyRequests.filter(r => r.status === 'pending').length} pending
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead className="border-b border-gray-800">
+                      <tr className="text-left text-xs font-medium text-gray-400 uppercase tracking-wide">
+                        <th className="px-3 py-2">User</th>
+                        <th className="px-3 py-2">Platform</th>
+                        <th className="px-3 py-2">Account Email</th>
+                        <th className="px-3 py-2">Requested</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-800">
+                      {verifyRequests.map(r => (
+                        <tr key={r.id} className="hover:bg-gray-800/50">
+                          <td className="px-3 py-3">
+                            <div className="text-white font-medium">{r.business_name || r.user_name || '—'}</div>
+                            <div className="text-gray-500 text-xs">{r.user_email}</div>
+                          </td>
+                          <td className="px-3 py-3 text-gray-300">
+                            {r.platform === 'google_ads' ? 'Google Ads' : r.platform === 'google_lsa' ? 'Google LSA' : r.platform}
+                          </td>
+                          <td className="px-3 py-3 text-gray-300 font-mono text-xs">{r.email}</td>
+                          <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">
+                            {new Date(r.requested_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                          </td>
+                          <td className="px-3 py-3">
+                            {r.status === 'pending' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30">Pending</span>
+                            )}
+                            {r.status === 'verified' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Verified</span>
+                            )}
+                            {r.status === 'rejected' && (
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/15 text-red-300 border border-red-500/30">Rejected</span>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-right">
+                            {r.status === 'pending' && (
+                              <div className="flex items-center justify-end gap-2">
+                                <button
+                                  onClick={() => approveVerification(r.id)}
+                                  disabled={actioningId === r.id}
+                                  className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium disabled:opacity-50"
+                                >
+                                  <CheckCircle className="w-3.5 h-3.5" />
+                                  {actioningId === r.id ? 'Working…' : 'Mark Verified'}
+                                </button>
+                                <button
+                                  onClick={() => rejectVerification(r.id)}
+                                  disabled={actioningId === r.id}
+                                  className="flex items-center gap-1 px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 rounded-lg text-xs font-medium disabled:opacity-50"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  Reject
+                                </button>
+                              </div>
+                            )}
+                            {r.status === 'verified' && r.verified_at && (
+                              <span className="text-xs text-gray-500">{new Date(r.verified_at).toLocaleDateString()}</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* User Table */}
             <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">

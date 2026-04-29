@@ -26,7 +26,8 @@ import {
   List,
   Trash2,
   CreditCard,
-  Palette
+  Palette,
+  Target
 } from 'lucide-react';
 
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
@@ -87,7 +88,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     groupId: '',
     bookingDate: '',
     startTime: '',
-    notes: ''
+    notes: '',
+    referralSource: ''
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingFormSnapshot, setBookingFormSnapshot] = useState(null);
@@ -107,7 +109,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     setNewBooking({
       customerId: '', customerName: '', customerEmail: '', customerPhone: '',
       customerAddress: '', serviceId: '', additionalServices: [],
-      employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: ''
+      employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: '',
+      referralSource: ''
     });
     setBookingFormSnapshot(null);
   };
@@ -375,7 +378,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               phone: newBooking.customerPhone,
               address: newBooking.customerAddress
             },
-            customerNotes: newBooking.notes
+            customerNotes: newBooking.notes,
+            referralSource: newBooking.referralSource?.trim() || null
           })
         });
         const data = await response.json();
@@ -2147,6 +2151,23 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 resize-none"
                 />
               </div>
+
+              {!isEditingBooking && (
+                <div className="bg-indigo-50 rounded-xl p-4">
+                  <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <Target className="w-5 h-5 text-indigo-600" />
+                    How did they find you? (optional)
+                  </h3>
+                  <p className="text-xs text-gray-600 mb-3">For ROI tracking on manual bookings — e.g. Google, Instagram, Referral</p>
+                  <input
+                    type="text"
+                    value={newBooking.referralSource}
+                    onChange={(e) => setNewBooking({ ...newBooking, referralSource: e.target.value })}
+                    placeholder="Google, Instagram, Word of mouth..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              )}
 
               {isEditingBooking && (
                 <label className="flex items-center gap-2 cursor-pointer select-none">

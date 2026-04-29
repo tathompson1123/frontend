@@ -407,7 +407,7 @@ export default function WebsiteChatAgent({ user, apiUrl, authFetch, setCurrentVi
                     </p>
                   </div>
                   <div className="flex-shrink-0 text-right">
-                    <p className="text-xs text-gray-400">{new Date(conv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                    <p className="text-xs text-gray-400">{new Date(conv.created_at.endsWith('Z') ? conv.created_at : conv.created_at + 'Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
                     {expandedConv === conv.id ? <ChevronUp className="w-4 h-4 text-gray-400 ml-auto mt-1" /> : <ChevronDown className="w-4 h-4 text-gray-400 ml-auto mt-1" />}
                   </div>
                 </button>

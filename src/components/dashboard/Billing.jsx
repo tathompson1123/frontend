@@ -263,17 +263,25 @@ export default function Billing({ user, apiUrl, authFetch }) {
   const [contactSuccess, setContactSuccess] = useState(false);
   const [showEnterprise, setShowEnterprise] = useState(false);
 
+  // Depend on primitive fields, not the user object reference. The Dashboard re-creates
+  // `user` on every `user-updated` event, which previously caused an infinite fetch loop.
+  const userPlan = user?.plan || null;
+  const userBasePlan = user?.base_plan || userPlan;
+  const step5Done = !!user?.onboarding_steps_completed?.step5;
+
   useEffect(() => {
-    const plan = user?.plan || null;
-    const bp = user?.base_plan || plan;
-    setCurrentPlan(plan);
-    setBasePlan(bp);
-    if (plan && plan !== 'free') {
-      window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 5 } }));
+    setCurrentPlan(userPlan);
+    setBasePlan(userBasePlan);
+    if (userPlan && userPlan !== 'free') {
+      // Only announce step 5 once — otherwise the onboarding handler re-writes user,
+      // which comes back here as a new ref and loops.
+      if (!step5Done) {
+        window.dispatchEvent(new CustomEvent('onboarding-step-complete', { detail: { step: 5 } }));
+      }
       fetchUsage();
       fetchSubscription();
     }
-  }, [user]);
+  }, [userPlan, userBasePlan, step5Done]);
 
   const fetchUsage = async () => {
     try {

@@ -54,7 +54,7 @@ function renderBlock(block) {
 
     case 'hero_image':
       return c.src
-        ? `  <img src="${esc(c.src)}" alt="${esc(c.alt || '')}" style="width:100%;display:block;max-height:280px;object-fit:cover" />`
+        ? `  <img src="${esc(c.src)}" alt="${esc(c.alt || '')}" width="600" height="280" border="0" style="display:block;width:100%;max-width:600px;height:auto;max-height:280px;object-fit:cover;border:0;outline:none;text-decoration:none;vertical-align:middle" />`
         : `  <!-- hero image placeholder -->`;
 
     case 'urgency_bar':
