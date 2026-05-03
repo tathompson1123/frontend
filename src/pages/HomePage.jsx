@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart, Calendar, Globe, Brain, LineChart } from 'lucide-react';
+import { Wand2, MessageCircle, TrendingUp, Zap, ArrowRight, Check, Sparkles, Star, Users, Target, Rocket, BarChart, Calendar, Globe, Brain, LineChart, Menu, X } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Auto-redirect if already signed in
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function HomePage() {
                 SORCE
               </span>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="hidden md:flex items-center gap-4">
               <button onClick={handleLogin} className="text-gray-700 hover:text-primary-600 font-medium transition">
                 Login
               </button>
@@ -71,7 +72,37 @@ export default function HomePage() {
                 Get Started
               </button>
             </div>
+            <button
+              onClick={() => setMobileMenuOpen(v => !v)}
+              className="md:hidden p-2 -mr-2 text-gray-700 hover:text-primary-600 transition"
+              aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
+          {mobileMenuOpen && (
+            <div className="md:hidden border-t border-gray-100 py-3 flex flex-col gap-1">
+              <button
+                onClick={() => { setMobileMenuOpen(false); handleLogin(); }}
+                className="text-left px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 font-medium rounded-lg transition"
+              >
+                Login
+              </button>
+              <button
+                onClick={() => { setMobileMenuOpen(false); handleNavigateToPricing(); }}
+                className="text-left px-3 py-3 text-gray-700 hover:bg-gray-50 hover:text-primary-600 font-medium rounded-lg transition"
+              >
+                Pricing
+              </button>
+              <button
+                onClick={() => { setMobileMenuOpen(false); handleGetStarted(); }}
+                className="mt-1 px-4 py-3 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-lg hover:shadow-lg transition font-semibold text-center"
+              >
+                Get Started
+              </button>
+            </div>
+          )}
         </div>
       </nav>
 
