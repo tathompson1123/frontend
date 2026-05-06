@@ -1251,6 +1251,36 @@ export default function BusinessInformation({
           body: JSON.stringify(payload)
         });
         if (!res.ok) throw new Error('Failed to save variant');
+        if (applyVariantToAll) {
+          // Sync to all OTHER main services: match by the original variant name
+          // (case-insensitive). Update existing matches; create where missing.
+          const originalName = (editingVariant.name || '').trim().toLowerCase();
+          const otherServices = (services || []).filter(s => !s.is_addon && s.id !== editingService.id);
+          await Promise.all(
+            otherServices.map(async (svc) => {
+              try {
+                const listRes = await authFetch(`${apiUrl}/api/services/${svc.id}/variants`);
+                const listData = await listRes.json();
+                const match = (listData.variants || []).find(
+                  vv => (vv.name || '').trim().toLowerCase() === originalName
+                );
+                if (match) {
+                  await authFetch(`${apiUrl}/api/services/variants/${match.id}`, {
+                    method: 'PUT',
+                    body: JSON.stringify(payload)
+                  });
+                } else {
+                  await authFetch(`${apiUrl}/api/services/${svc.id}/variants`, {
+                    method: 'POST',
+                    body: JSON.stringify(payload)
+                  });
+                }
+              } catch (e) {
+                // continue with the rest; don't fail the whole sync on one service
+              }
+            })
+          );
+        }
       } else if (applyVariantToAll) {
         const targets = (services || []).filter(s => !s.is_addon).map(s => s.id);
         if (!targets.includes(editingService.id)) targets.push(editingService.id);
@@ -2343,52 +2373,70 @@ export default function BusinessInformation({
                       {editingService && serviceVariants.length > 0 && (
                         <div className="space-y-2 mb-3">
                           {serviceVariants.map(v => (
-                            <div key={v.id} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-blue-200">
+                            <div key={v.id} className="bg-white rounded-lg px-3 py-2 border border-blue-200">
                               {editingVariant?.id === v.id ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                  <input
-                                    type="text"
-                                    value={variantForm.name}
-                                    onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
-                                    placeholder="Name"
-                                    className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded"
-                                  />
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={variantForm.price}
-                                    onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
-                                    placeholder="Price"
-                                    className="w-20 text-xs px-2 py-1 border border-gray-300 rounded"
-                                  />
-                                  <input
-                                    type="number"
-                                    step="0.5"
-                                    min="0.5"
-                                    value={variantForm.durationHours}
-                                    onChange={e => setVariantForm({ ...variantForm, durationHours: e.target.value })}
-                                    placeholder="Hrs"
-                                    className="w-14 text-xs px-2 py-1 border border-gray-300 rounded"
-                                  />
-                                  <button type="button" disabled={isSavingVariant} onClick={() => handleSaveVariant({ preventDefault: () => {} })} className="text-xs font-semibold text-green-600 hover:text-green-800">Save</button>
-                                  <button type="button" onClick={() => { setEditingVariant(null); setVariantForm({ name: '', price: '', durationHours: '' }); }} className="text-xs text-gray-500">Cancel</button>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={variantForm.name}
+                                      onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
+                                      placeholder="Name"
+                                      className="flex-1 text-xs px-2 py-1 border border-gray-300 rounded"
+                                    />
+                                    <input
+                                      type="number"
+                                      step="0.01"
+                                      min="0"
+                                      value={variantForm.price}
+                                      onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
+                                      placeholder="Price"
+                                      className="w-20 text-xs px-2 py-1 border border-gray-300 rounded"
+                                    />
+                                    <input
+                                      type="number"
+                                      step="0.5"
+                                      min="0.5"
+                                      value={variantForm.durationHours}
+                                      onChange={e => setVariantForm({ ...variantForm, durationHours: e.target.value })}
+                                      placeholder="Hrs"
+                                      className="w-14 text-xs px-2 py-1 border border-gray-300 rounded"
+                                    />
+                                    <button type="button" disabled={isSavingVariant} onClick={() => handleSaveVariant({ preventDefault: () => {} })} className="text-xs font-semibold text-green-600 hover:text-green-800">Save</button>
+                                    <button type="button" onClick={() => { setEditingVariant(null); setVariantForm({ name: '', price: '', durationHours: '' }); setApplyVariantToAll(false); }} className="text-xs text-gray-500">Cancel</button>
+                                  </div>
+                                  {services.filter(s => !s.is_addon).length > 1 && (
+                                    <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer pl-1">
+                                      <input
+                                        type="checkbox"
+                                        checked={applyVariantToAll}
+                                        onChange={e => setApplyVariantToAll(e.target.checked)}
+                                        className="accent-blue-600"
+                                      />
+                                      <span>
+                                        Apply to all main services
+                                        <span className="text-gray-400 ml-1">
+                                          (updates "{editingVariant.name}" on every main service that has it; creates it where missing)
+                                        </span>
+                                      </span>
+                                    </label>
+                                  )}
                                 </div>
                               ) : (
-                                <>
+                                <div className="flex items-center justify-between">
                                   <div className="flex-1">
                                     <span className="text-sm font-semibold text-gray-900">{v.name}</span>
                                     <span className="text-xs text-gray-500 ml-2">${parseFloat(v.price).toFixed(2)}{v.duration_hours ? ` · ${v.duration_hours}h` : ''}</span>
                                   </div>
                                   <div className="flex items-center gap-2">
-                                    <button type="button" onClick={() => { setEditingVariant(v); setVariantForm({ name: v.name, price: v.price, durationHours: v.duration_hours || '' }); setShowVariantForm(false); }} className="p-1 text-blue-500 hover:bg-blue-100 rounded">
+                                    <button type="button" onClick={() => { setEditingVariant(v); setVariantForm({ name: v.name, price: v.price, durationHours: v.duration_hours || '' }); setShowVariantForm(false); setApplyVariantToAll(false); }} className="p-1 text-blue-500 hover:bg-blue-100 rounded">
                                       <Edit className="w-3.5 h-3.5" />
                                     </button>
                                     <button type="button" onClick={() => handleDeleteVariant(v.id)} className="p-1 text-red-400 hover:bg-red-50 rounded">
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </button>
                                   </div>
-                                </>
+                                </div>
                               )}
                             </div>
                           ))}
