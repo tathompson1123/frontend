@@ -814,6 +814,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     fetchCustomers();
     fetchAnalytics();
     fetchAdConnections();
+    // Conversations tab lazy-loads on click; on refresh, the persisted tab is
+    // already 'conversations' and the click handler never fires — fetch here.
+    if (activeTab === 'conversations') {
+      fetchConversations();
+      fetchSmsLeadConversations();
+    }
 
     // Handle OAuth callback redirect
     const params = new URLSearchParams(window.location.search);

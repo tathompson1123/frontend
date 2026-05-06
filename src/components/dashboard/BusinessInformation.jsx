@@ -314,6 +314,7 @@ export default function BusinessInformation({
   const [editingVariant, setEditingVariant] = useState(null);
   const [isSavingVariant, setIsSavingVariant] = useState(false);
   const [showVariantForm, setShowVariantForm] = useState(false);
+  const [applyVariantToAll, setApplyVariantToAll] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [serviceSubTab, setServiceSubTab] = useState('categories');
 
@@ -1220,6 +1221,7 @@ export default function BusinessInformation({
     setShowVariantForm(false);
     setEditingVariant(null);
     setVariantForm({ name: '', price: '', durationHours: '' });
+    setApplyVariantToAll(false);
     setShowAddService(true);
   };
 
@@ -1238,22 +1240,40 @@ export default function BusinessInformation({
     if (!editingService) return;
     setIsSavingVariant(true);
     try {
-      const url = editingVariant
-        ? `${apiUrl}/api/services/variants/${editingVariant.id}`
-        : `${apiUrl}/api/services/${editingService.id}/variants`;
-      const method = editingVariant ? 'PUT' : 'POST';
-      const res = await authFetch(url, {
-        method,
-        body: JSON.stringify({
-          name: variantForm.name,
-          price: parseFloat(variantForm.price),
-          durationHours: variantForm.durationHours ? parseFloat(variantForm.durationHours) : null
-        })
-      });
-      if (!res.ok) throw new Error('Failed to save variant');
+      const payload = {
+        name: variantForm.name,
+        price: parseFloat(variantForm.price),
+        durationHours: variantForm.durationHours ? parseFloat(variantForm.durationHours) : null
+      };
+      if (editingVariant) {
+        const res = await authFetch(`${apiUrl}/api/services/variants/${editingVariant.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to save variant');
+      } else if (applyVariantToAll) {
+        const targets = (services || []).filter(s => !s.is_addon).map(s => s.id);
+        if (!targets.includes(editingService.id)) targets.push(editingService.id);
+        const results = await Promise.all(
+          targets.map(id =>
+            authFetch(`${apiUrl}/api/services/${id}/variants`, {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            })
+          )
+        );
+        if (results.some(r => !r.ok)) throw new Error('One or more variant creations failed');
+      } else {
+        const res = await authFetch(`${apiUrl}/api/services/${editingService.id}/variants`, {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Failed to save variant');
+      }
       setVariantForm({ name: '', price: '', durationHours: '' });
       setEditingVariant(null);
       setShowVariantForm(false);
+      setApplyVariantToAll(false);
       fetchServiceVariants(editingService.id);
     } catch (e) {
       // silent
@@ -2304,7 +2324,7 @@ export default function BusinessInformation({
                         {editingService && (
                           <button
                             type="button"
-                            onClick={() => { setShowVariantForm(true); setEditingVariant(null); setVariantForm({ name: '', price: '', durationHours: '' }); }}
+                            onClick={() => { setShowVariantForm(true); setEditingVariant(null); setVariantForm({ name: '', price: '', durationHours: '' }); setApplyVariantToAll(false); }}
                             className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-100 px-3 py-1.5 rounded-lg"
                           >
                             <Plus className="w-3.5 h-3.5" /> Add Type
@@ -2376,38 +2396,56 @@ export default function BusinessInformation({
                       )}
 
                       {editingService && showVariantForm && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <input
-                            type="text"
-                            value={variantForm.name}
-                            onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
-                            placeholder="Type name (e.g. Sedan)"
-                            className="flex-1 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-                          />
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={variantForm.price}
-                            onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
-                            placeholder="Price"
-                            className="w-20 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-                          />
-                          <input
-                            type="number"
-                            step="0.5"
-                            min="0.5"
-                            value={variantForm.durationHours}
-                            onChange={e => setVariantForm({ ...variantForm, durationHours: e.target.value })}
-                            placeholder="Hrs"
-                            className="w-14 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
-                          />
-                          <button type="button" disabled={isSavingVariant} onClick={() => handleSaveVariant({ preventDefault: () => {} })} className="text-xs font-semibold text-green-600 hover:text-green-800 whitespace-nowrap">
-                            {isSavingVariant ? '...' : 'Add'}
-                          </button>
-                          <button type="button" onClick={() => setShowVariantForm(false)} className="text-xs text-gray-500">
-                            Cancel
-                          </button>
+                        <div className="mt-2 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={variantForm.name}
+                              onChange={e => setVariantForm({ ...variantForm, name: e.target.value })}
+                              placeholder="Type name (e.g. Sedan)"
+                              className="flex-1 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                            />
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={variantForm.price}
+                              onChange={e => setVariantForm({ ...variantForm, price: e.target.value })}
+                              placeholder="Price"
+                              className="w-20 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                            />
+                            <input
+                              type="number"
+                              step="0.5"
+                              min="0.5"
+                              value={variantForm.durationHours}
+                              onChange={e => setVariantForm({ ...variantForm, durationHours: e.target.value })}
+                              placeholder="Hrs"
+                              className="w-14 text-xs px-2 py-1.5 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-400"
+                            />
+                            <button type="button" disabled={isSavingVariant} onClick={() => handleSaveVariant({ preventDefault: () => {} })} className="text-xs font-semibold text-green-600 hover:text-green-800 whitespace-nowrap">
+                              {isSavingVariant ? '...' : 'Add'}
+                            </button>
+                            <button type="button" onClick={() => { setShowVariantForm(false); setApplyVariantToAll(false); }} className="text-xs text-gray-500">
+                              Cancel
+                            </button>
+                          </div>
+                          {services.filter(s => !s.is_addon).length > 1 && (
+                            <label className="flex items-center gap-2 text-xs text-gray-700 cursor-pointer pl-1">
+                              <input
+                                type="checkbox"
+                                checked={applyVariantToAll}
+                                onChange={e => setApplyVariantToAll(e.target.checked)}
+                                className="accent-blue-600"
+                              />
+                              <span>
+                                Apply to all main services
+                                <span className="text-gray-400 ml-1">
+                                  (creates this type on all {services.filter(s => !s.is_addon).length} main services)
+                                </span>
+                              </span>
+                            </label>
+                          )}
                         </div>
                       )}
                     </div>
