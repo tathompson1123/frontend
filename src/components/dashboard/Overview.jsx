@@ -7,11 +7,20 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const [leads, setLeads] = useState([]);
   const [activeCard, setActiveCard] = useState(0);
   const autoPlayRef = useRef(null);
-  const [todos, setTodos] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('sorce_todos') || '[]'); } catch { return []; }
-  });
+  const [todos, setTodos] = useState([]);
   const [todoInput, setTodoInput] = useState('');
   const [todoPriority, setTodoPriority] = useState('medium');
+
+  // Load todos from backend (shared with employee admin app)
+  useEffect(() => {
+    if (!authFetch || !apiUrl) return;
+    authFetch(`${apiUrl}/api/todos`)
+      .then(r => r.ok ? r.json() : { todos: [] })
+      .then(d => setTodos((d.todos || []).map(t => ({
+        id: t.id, text: t.text, done: t.done, priority: t.priority, createdAt: t.created_at,
+      }))))
+      .catch(() => {});
+  }, [apiUrl, authFetch]);
 
   const PRIORITY_CONFIG = {
     high:   { label: 'High',   color: 'text-red-600',    bg: 'bg-red-50',   border: 'border-red-200',   icon: <AlertTriangle className="w-3 h-3" /> },
@@ -19,18 +28,37 @@ export default function Overview({ bookings, services, employees, setCurrentView
     low:    { label: 'Low',    color: 'text-gray-400',   bg: 'bg-gray-50',  border: 'border-gray-200',  icon: <ChevronDown className="w-3 h-3" /> },
   };
 
-  const saveTodos = (updated) => {
-    setTodos(updated);
-    localStorage.setItem('sorce_todos', JSON.stringify(updated));
-  };
-  const addTodo = () => {
+  const addTodo = async () => {
     const text = todoInput.trim();
     if (!text) return;
-    saveTodos([...todos, { id: Date.now(), text, done: false, priority: todoPriority, createdAt: new Date().toISOString() }]);
     setTodoInput('');
+    try {
+      const r = await authFetch(`${apiUrl}/api/todos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, priority: todoPriority }),
+      });
+      const d = await r.json();
+      if (d.todo) setTodos(ts => [...ts, { id: d.todo.id, text: d.todo.text, done: d.todo.done, priority: d.todo.priority, createdAt: d.todo.created_at }]);
+    } catch {}
   };
-  const toggleTodo = (id) => saveTodos(todos.map(t => t.id === id ? { ...t, done: !t.done } : t));
-  const deleteTodo = (id) => saveTodos(todos.filter(t => t.id !== id));
+  const toggleTodo = async (id) => {
+    const target = todos.find(t => t.id === id);
+    if (!target) return;
+    const nextDone = !target.done;
+    setTodos(ts => ts.map(t => t.id === id ? { ...t, done: nextDone } : t));
+    try {
+      await authFetch(`${apiUrl}/api/todos/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ done: nextDone }),
+      });
+    } catch {}
+  };
+  const deleteTodo = async (id) => {
+    setTodos(ts => ts.filter(t => t.id !== id));
+    try { await authFetch(`${apiUrl}/api/todos/${id}`, { method: 'DELETE' }); } catch {}
+  };
 
   const priorityOrder = { high: 0, medium: 1, low: 2 };
   const sortedTodos = [...todos].sort((a, b) => {
