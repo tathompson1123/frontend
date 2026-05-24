@@ -18,6 +18,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
       .then(r => r.ok ? r.json() : { todos: [] })
       .then(d => setTodos((d.todos || []).map(t => ({
         id: t.id, text: t.text, done: t.done, priority: t.priority, createdAt: t.created_at,
+        creatorName: t.creator_name, creatorColor: t.creator_color,
       }))))
       .catch(() => {});
   }, [apiUrl, authFetch]);
@@ -39,7 +40,10 @@ export default function Overview({ bookings, services, employees, setCurrentView
         body: JSON.stringify({ text, priority: todoPriority }),
       });
       const d = await r.json();
-      if (d.todo) setTodos(ts => [...ts, { id: d.todo.id, text: d.todo.text, done: d.todo.done, priority: d.todo.priority, createdAt: d.todo.created_at }]);
+      if (d.todo) setTodos(ts => [...ts, {
+        id: d.todo.id, text: d.todo.text, done: d.todo.done, priority: d.todo.priority, createdAt: d.todo.created_at,
+        creatorName: d.todo.creator_name, creatorColor: d.todo.creator_color,
+      }]);
     } catch {}
   };
   const toggleTodo = async (id) => {
@@ -537,8 +541,12 @@ export default function Overview({ bookings, services, employees, setCurrentView
                     </button>
                     <div className="flex-1 min-w-0">
                       <span className={`text-sm block ${todo.done ? 'line-through text-gray-400' : 'text-gray-800'}`}>{todo.text}</span>
-                      <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         <span className={`flex items-center gap-0.5 text-xs font-semibold ${cfg.color}`}>{cfg.icon}{cfg.label}</span>
+                        <span className="flex items-center gap-1 text-xs text-gray-500 font-semibold">
+                          <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: todo.creatorColor || '#9ca3af' }} />
+                          {todo.creatorName || 'Admin'}
+                        </span>
                         {todo.createdAt && (
                           <span className="text-xs text-gray-400">{formatTodoDate(todo.createdAt)}</span>
                         )}
