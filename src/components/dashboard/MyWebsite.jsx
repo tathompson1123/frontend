@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Globe, RefreshCw, Edit, ArrowRight, Eye, EyeOff, Send, Link, Check, AlertCircle, Loader, X, ExternalLink, Upload, Code } from 'lucide-react';
 import PublishWizard from './PublishWizard';
 import EmbedCode from './EmbedCode';
+import EmbedForms from './EmbedForms';
 import FeatureGate from './FeatureGate';
 import GenerateModal from '../GenerateModal';
 
@@ -250,6 +251,24 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
       {/* Sub-tabs — Sorce Website hidden; Integrate Website is the active focus */}
       {/* <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit"> ... </div> */}
 
+      {/* Embed Website sub-tabs: site widget vs standalone embed forms */}
+      {(subTab === 'integrate' || subTab === 'forms') && (
+        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit mb-5">
+          <button
+            onClick={() => setSubTab('integrate')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${subTab === 'integrate' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Website Widget
+          </button>
+          <button
+            onClick={() => setSubTab('forms')}
+            className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${subTab === 'forms' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'}`}
+          >
+            Embed Forms
+          </button>
+        </div>
+      )}
+
       {/* Header with action buttons */}
       <div className={`flex justify-between items-center ${subTab === 'integrate' ? 'hidden' : ''}`}>
         <div>
@@ -376,6 +395,8 @@ export default function MyWebsite({ apiUrl, user, navigate, websiteData, authFet
         </div>
       ) : subTab === 'integrate' ? (
         <EmbedCode apiUrl={apiUrl} authFetch={authFetch} setCurrentView={setCurrentView} inOnboarding={inOnboarding} />
+      ) : subTab === 'forms' ? (
+        <EmbedForms apiUrl={apiUrl} authFetch={authFetch} />
       ) : subTab === 'website' ? (
         <div className="bg-white rounded-xl p-12 text-center border-2 border-dashed border-gray-300">
           <Globe className="w-16 h-16 text-gray-400 mx-auto mb-4" />
