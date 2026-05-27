@@ -749,6 +749,16 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
         }).catch(() => {});
       } else {
         showToast(data.error || 'Send failed', 'error');
+        // A stale / already-sent draft can't be sent again — drop it and pull a fresh one so
+        // the user isn't stuck staring at a dead draft that keeps 404/409-ing.
+        if (data.stale || r.status === 404 || r.status === 409) {
+          setCampaign(null);
+          setDraftId(null);
+          authFetch(`${apiUrl}/api/email-campaigns/current-draft`)
+            .then(res => res.json())
+            .then(d => { if (d.campaign) { setCampaign(d.campaign); setDraftId(d.campaign.id); } })
+            .catch(() => {});
+        }
       }
     } finally {
       setSending(false);
