@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import {
   Bot, MessageCircle, Sparkles, ChevronDown, ChevronRight, Save, Rocket,
   Crown, Settings, User, Brain, Phone, PhoneOff, Send, RefreshCw,
-  BookOpen, Target, MessageSquare, Loader2, Calendar, Wrench, CheckCircle, Star
+  BookOpen, Target, MessageSquare, Loader2, Calendar, Wrench, CheckCircle, Star, Power
 } from 'lucide-react';
 import MissedCallTextBack from './MissedCallTextBack';
 
@@ -379,6 +379,33 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
     } catch (error) {
       console.error('Error deploying:', error);
       alert('Failed to deploy agent');
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  // Turn an agent on/off without re-running the full deploy (chat + lead form).
+  const setAgentActive = async (active) => {
+    if (activeAgent === 'missedcall') return;
+    setIsDeploying(true);
+    try {
+      const endpoint = activeAgent === 'chat'
+        ? `${apiUrl}/api/agents/website`
+        : `${apiUrl}/api/agents/lead-form`;
+      const response = await authFetch(endpoint, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: active }),
+      });
+      if (response.ok) {
+        loadDeploymentStatus();
+      } else {
+        const data = await response.json().catch(() => ({}));
+        alert(data.error || 'Failed to update agent');
+      }
+    } catch (error) {
+      console.error('Error toggling agent:', error);
+      alert('Failed to update agent');
     } finally {
       setIsDeploying(false);
     }
@@ -1077,18 +1104,36 @@ export default function AIAgentBuilder({ user, setCurrentView, apiUrl, authFetch
                   {isSaving ? 'Saving...' : 'Save'}
                 </button>
                 {canDeploy ? (
-                  <button
-                    onClick={deployAgent}
-                    disabled={isDeploying || isDeployed}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                      isDeployed
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gradient-to-r from-amber-600 to-blue-600 text-white hover:shadow-lg'
-                    }`}
-                  >
-                    <Rocket className="w-4 h-4" />
-                    {isDeployed ? 'Deployed' : isDeploying ? 'Deploying...' : 'Deploy'}
-                  </button>
+                  isDeployed ? (
+                    activeAgent === 'missedcall' ? (
+                      <span className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-green-100 text-green-700">
+                        <Rocket className="w-4 h-4" /> Deployed
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-green-100 text-green-700 font-medium text-sm">
+                          <span className="w-2 h-2 bg-green-500 rounded-full" /> Live
+                        </span>
+                        <button
+                          onClick={() => setAgentActive(false)}
+                          disabled={isDeploying}
+                          className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 transition-all disabled:opacity-50"
+                        >
+                          <Power className="w-4 h-4" />
+                          {isDeploying ? 'Turning Off…' : 'Turn Off'}
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <button
+                      onClick={deployAgent}
+                      disabled={isDeploying}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium bg-gradient-to-r from-amber-600 to-blue-600 text-white hover:shadow-lg transition-all disabled:opacity-50"
+                    >
+                      <Rocket className="w-4 h-4" />
+                      {isDeploying ? 'Deploying...' : 'Deploy'}
+                    </button>
+                  )
                 ) : (
                   <button
                     onClick={() => setCurrentView('billing')}
