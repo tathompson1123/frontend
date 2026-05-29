@@ -89,7 +89,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     bookingDate: '',
     startTime: '',
     notes: '',
-    referralSource: ''
+    referralSource: '',
+    // Per-booking price override. Auto-fills from the selected service unless the user
+    // has edited it manually (priceTouched). The service catalog price isn't affected.
+    price: '',
+    priceTouched: false
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingFormSnapshot, setBookingFormSnapshot] = useState(null);
@@ -110,7 +114,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       customerId: '', customerName: '', customerEmail: '', customerPhone: '',
       customerAddress: '', serviceId: '', additionalServices: [],
       employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: '',
-      referralSource: ''
+      referralSource: '', price: '', priceTouched: false
     });
     setBookingFormSnapshot(null);
   };
@@ -364,6 +368,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
           showToast(data.error || 'Failed to update booking', 'error');
         }
       } else {
+        // Only send price when it parses to a valid non-negative number; otherwise let the
+        // backend fall back to the service's catalog price.
+        const parsedPrice = parseFloat(newBooking.price);
+        const priceField = (newBooking.price !== '' && Number.isFinite(parsedPrice) && parsedPrice >= 0)
+          ? parsedPrice : undefined;
+
         const response = await authFetch(`${apiUrl}/api/bookings/create`, {
           method: 'POST',
           body: JSON.stringify({
@@ -379,7 +389,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               address: newBooking.customerAddress
             },
             customerNotes: newBooking.notes,
-            referralSource: newBooking.referralSource?.trim() || null
+            referralSource: newBooking.referralSource?.trim() || null,
+            price: priceField
           })
         });
         const data = await response.json();
@@ -1882,7 +1893,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     </label>
                     <select
                       value={newBooking.serviceId}
-                      onChange={(e) => setNewBooking({ ...newBooking, serviceId: Number(e.target.value) || e.target.value })}
+                      onChange={(e) => {
+                        const newId = Number(e.target.value) || e.target.value;
+                        // Auto-fill the price from the newly-selected service unless the
+                        // user already typed a custom one.
+                        const svc = services.find(s => s.id == newId);
+                        const autoPrice = svc && !newBooking.priceTouched
+                          ? parseFloat(svc.price).toFixed(2)
+                          : newBooking.price;
+                        setNewBooking({ ...newBooking, serviceId: newId, price: autoPrice });
+                      }}
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 mb-4"
                       required
                     >
@@ -1893,26 +1913,60 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                         </option>
                       ))}
                     </select>
-                    {newBooking.serviceId && (
-                      <div className="bg-white rounded-lg p-4 border border-green-200">
-                        <div className="flex items-start gap-3">
-                          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                            <Calendar className="w-5 h-5 text-green-700" />
-                          </div>
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-1">
-                              {services.find(s => s.id == newBooking.serviceId)?.name}
-                            </h4>
-                            <div className="text-sm text-gray-600 space-y-1">
-                              <div>Duration: {services.find(s => s.id == newBooking.serviceId)?.duration_hours}h</div>
-                              <div className="font-semibold text-green-700">
-                                ${services.find(s => s.id == newBooking.serviceId)?.price}
+                    {newBooking.serviceId && (() => {
+                      const svc = services.find(s => s.id == newBooking.serviceId);
+                      const listed = svc ? parseFloat(svc.price) : 0;
+                      const current = parseFloat(newBooking.price || '0');
+                      const isCustom = newBooking.priceTouched && Number.isFinite(current) && current !== listed;
+                      return (
+                        <div className="bg-white rounded-lg p-4 border border-green-200">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                              <Calendar className="w-5 h-5 text-green-700" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-semibold text-gray-900 mb-1">{svc?.name}</h4>
+                              <div className="text-sm text-gray-600 mb-3">Duration: {svc?.duration_hours}h</div>
+                              <label className="block text-xs font-medium text-gray-700 mb-1">
+                                Price for this booking
+                              </label>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 flex items-center bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 focus-within:border-green-500">
+                                  <span className="text-base font-semibold text-gray-500 mr-1">$</span>
+                                  <input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={newBooking.price}
+                                    onChange={(e) => {
+                                      // Digits + a single decimal, max 2 decimals.
+                                      const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                                      const parts = cleaned.split('.');
+                                      const limited = parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : cleaned;
+                                      setNewBooking({ ...newBooking, price: limited, priceTouched: true });
+                                    }}
+                                    placeholder="0.00"
+                                    className="flex-1 bg-transparent outline-none text-base font-semibold text-gray-900"
+                                  />
+                                </div>
+                                {isCustom && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setNewBooking({ ...newBooking, price: listed.toFixed(2), priceTouched: false })}
+                                    className="px-3 py-2 text-xs font-semibold text-green-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                    title="Reset to the service's listed price"
+                                  >
+                                    Reset
+                                  </button>
+                                )}
                               </div>
+                              <p className="mt-1.5 text-xs text-gray-500">
+                                Listed at ${listed.toFixed(2)}. Edit for one-off adjustments — the service price itself isn't affected.
+                              </p>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
                 )}
 
