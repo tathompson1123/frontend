@@ -340,6 +340,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     setCreatingBooking(true);
     try {
       if (isEditingBooking && editingBookingId) {
+        // Only send price when it parses to a valid non-negative number; otherwise let the
+        // backend fall back to the service's catalog price.
+        const parsedEditPrice = parseFloat(newBooking.price);
+        const editPriceField = (newBooking.price !== '' && Number.isFinite(parsedEditPrice) && parsedEditPrice >= 0)
+          ? parsedEditPrice : undefined;
+
         const response = await authFetch(`${apiUrl}/api/bookings/${editingBookingId}`, {
           method: 'PUT',
           body: JSON.stringify({
@@ -356,7 +362,8 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               address: newBooking.customerAddress
             },
             notes: newBooking.notes,
-            sendEmail: sendUpdateEmail
+            sendEmail: sendUpdateEmail,
+            price: editPriceField
           })
         });
         const data = await response.json();
@@ -607,6 +614,15 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   setIsEditingBooking(true);
                   setEditingBookingId(booking.id);
                   setSendUpdateEmail(false);
+                  // Pre-fill the price input from the booking's primary line so what's shown
+                  // reflects what's actually saved (which may already be a custom price). If
+                  // the saved price differs from the service's catalog price, treat as "touched"
+                  // so the Reset chip shows.
+                  const primaryItem = booking.items?.[0];
+                  const itemPrice = primaryItem ? parseFloat(primaryItem.service_price || 0) : 0;
+                  const svcForPrice = services.find(s => s.id == primaryItem?.service_id);
+                  const listedForPrice = svcForPrice ? parseFloat(svcForPrice.price) : itemPrice;
+                  const isCustomPrice = Number.isFinite(itemPrice) && Math.abs(itemPrice - listedForPrice) > 0.001;
                   const editForm = {
                     customerId: booking.customer_id,
                     customerName: booking.customer_name,
@@ -619,7 +635,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     groupId: booking.group_id ? String(booking.group_id) : '',
                     bookingDate: booking.booking_date.split('T')[0],
                     startTime: (booking.start_time || '').slice(0, 5),
-                    notes: booking.job_notes || booking.customer_notes || ''
+                    notes: booking.job_notes || booking.customer_notes || '',
+                    price: itemPrice > 0 ? itemPrice.toFixed(2) : '',
+                    priceTouched: isCustomPrice
                   };
                   setNewBooking(editForm);
                   setBookingFormSnapshot(JSON.stringify(editForm));
@@ -1344,6 +1362,12 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     setIsEditingBooking(true);
                     setEditingBookingId(selectedBooking.id);
                     setSendUpdateEmail(false);
+                    // Same price pre-fill as the calendar-event Edit button above.
+                    const primaryItem = selectedBooking.items?.[0];
+                    const itemPrice = primaryItem ? parseFloat(primaryItem.service_price || 0) : 0;
+                    const svcForPrice = services.find(s => s.id == primaryItem?.service_id);
+                    const listedForPrice = svcForPrice ? parseFloat(svcForPrice.price) : itemPrice;
+                    const isCustomPrice = Number.isFinite(itemPrice) && Math.abs(itemPrice - listedForPrice) > 0.001;
                     const editForm = {
                       customerId: selectedBooking.customer_id,
                       customerName: selectedBooking.customer_name,
@@ -1356,7 +1380,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                       groupId: selectedBooking.group_id ? String(selectedBooking.group_id) : '',
                       bookingDate: selectedBooking.booking_date.split('T')[0],
                       startTime: (selectedBooking.start_time || '').slice(0, 5),
-                      notes: selectedBooking.job_notes || selectedBooking.customer_notes || ''
+                      notes: selectedBooking.job_notes || selectedBooking.customer_notes || '',
+                      price: itemPrice > 0 ? itemPrice.toFixed(2) : '',
+                      priceTouched: isCustomPrice
                     };
                     setNewBooking(editForm);
                     setBookingFormSnapshot(JSON.stringify(editForm));
