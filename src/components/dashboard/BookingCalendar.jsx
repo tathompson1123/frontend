@@ -632,9 +632,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   // they predate add-on splitting; the user can re-categorize on save.
                   const items = booking.items || [];
                   const mains = items.filter(i => !i.is_addon)
-                    .map(i => buildServiceLine(i.service_id, i.service_price));
+                    .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
                   const addons = items.filter(i => i.is_addon)
-                    .map(i => buildServiceLine(i.service_id, i.service_price));
+                    .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
                   const editForm = {
                     customerId: booking.customer_id,
                     customerName: booking.customer_name,
@@ -1377,9 +1377,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     // is_addon=true go in the Additional Services tab, the rest are mains.
                     const items = selectedBooking.items || [];
                     const mains = items.filter(i => !i.is_addon)
-                      .map(i => buildServiceLine(i.service_id, i.service_price));
+                      .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
                     const addons = items.filter(i => i.is_addon)
-                      .map(i => buildServiceLine(i.service_id, i.service_price));
+                      .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
                     const editForm = {
                       customerId: selectedBooking.customer_id,
                       customerName: selectedBooking.customer_name,
