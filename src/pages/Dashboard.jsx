@@ -42,7 +42,7 @@ import SEOAudit from '../components/dashboard/SEOAudit';
 import BacklinksPage from '../components/dashboard/BacklinksPage';
 import SorceAssistant from '../components/dashboard/SorceAssistant';
 import Billing from '../components/dashboard/Billing';
-import EmailCampaigns from '../components/dashboard/EmailCampaigns';
+import MarketingHub from '../components/dashboard/MarketingHub';
 import SettingsPage from '../components/dashboard/Settings';
 import FeatureGate from '../components/dashboard/FeatureGate';
 import Invoices from '../components/dashboard/Invoices';
@@ -572,7 +572,7 @@ useEffect(() => {
         />
       )}
       {currentView === 'email-campaigns' && (
-        <EmailCampaigns
+        <MarketingHub
           user={user}
           apiUrl={apiUrl}
           authFetch={authFetch}

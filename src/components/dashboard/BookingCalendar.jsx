@@ -76,13 +76,17 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [editingBookingId, setEditingBookingId] = useState(null);
   const [sendUpdateEmail, setSendUpdateEmail] = useState(false);
   const [serviceTab, setServiceTab] = useState('main');
+  // mainServices / additionalServices are the unified per-line model: each entry is
+  // { id, price, priceTouched }. price is a string (user-typed) that auto-fills from the
+  // service's catalog price unless the user edits it (priceTouched=true). Service catalog
+  // rows are never affected by per-booking edits.
   const [newBooking, setNewBooking] = useState({
     customerId: '',
     customerName: '',
     customerEmail: '',
     customerPhone: '',
     customerAddress: '',
-    serviceId: '',
+    mainServices: [],
     additionalServices: [],
     employeeId: '',
     groupId: '',
@@ -90,15 +94,32 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     startTime: '',
     notes: '',
     referralSource: '',
-    // Per-booking price override. Auto-fills from the selected service unless the user
-    // has edited it manually (priceTouched). The service catalog price isn't affected.
-    price: '',
-    priceTouched: false
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingFormSnapshot, setBookingFormSnapshot] = useState(null);
 
   const isBookingDirty = () => bookingFormSnapshot && JSON.stringify(newBooking) !== bookingFormSnapshot;
+
+  // Build a service line for the form from a catalog row (or a booking_items row on edit).
+  // priceTouched flags "user overrode the price" so the Reset chip can show.
+  const buildServiceLine = (serviceId, priceOverride) => {
+    const svc = services.find(s => s.id == serviceId);
+    const listed = svc ? parseFloat(svc.price) : 0;
+    const hasOverride = priceOverride !== undefined && priceOverride !== null && priceOverride !== '';
+    const overridePrice = hasOverride ? parseFloat(priceOverride) : NaN;
+    const isCustom = hasOverride && Number.isFinite(overridePrice) && Math.abs(overridePrice - listed) > 0.001;
+    const price = (hasOverride && Number.isFinite(overridePrice) ? overridePrice : listed).toFixed(2);
+    return { id: Number(serviceId), price, priceTouched: isCustom };
+  };
+
+  // Parse a per-line price field into the wire shape. Empty / NaN / negative omits the
+  // override so the backend falls back to the catalog price.
+  const linePriceForApi = (line) => {
+    if (!line.priceTouched) return undefined;
+    const parsed = parseFloat(line.price);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : undefined;
+  };
+
 
   const closeBookingModal = (force = false) => {
     if (!force && isBookingDirty()) {
@@ -112,9 +133,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     setCustomerPickerSearch('');
     setNewBooking({
       customerId: '', customerName: '', customerEmail: '', customerPhone: '',
-      customerAddress: '', serviceId: '', additionalServices: [],
+      customerAddress: '', mainServices: [], additionalServices: [],
       employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: '',
-      referralSource: '', price: '', priceTouched: false
+      referralSource: '',
     });
     setBookingFormSnapshot(null);
   };
@@ -333,37 +354,37 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   };
 
   const handleCreateBooking = async () => {
-    if (!newBooking.customerName || !newBooking.serviceId || !newBooking.bookingDate || !newBooking.startTime) {
+    if (!newBooking.customerName || newBooking.mainServices.length === 0
+        || !newBooking.bookingDate || !newBooking.startTime) {
       showToast('Please fill in all required fields', 'error');
       return;
     }
     setCreatingBooking(true);
+    // Per-line price override on each main + add-on. The backend re-applies the catalog
+    // price when a line omits its price, so untouched lines round-trip safely.
+    const toWire = (line) => ({ id: line.id, price: linePriceForApi(line) });
+    const mainServices = newBooking.mainServices.map(toWire);
+    const additionalServices = newBooking.additionalServices.map(toWire);
     try {
+      const customerInfo = {
+        name: newBooking.customerName,
+        email: newBooking.customerEmail,
+        phone: newBooking.customerPhone,
+        address: newBooking.customerAddress,
+      };
       if (isEditingBooking && editingBookingId) {
-        // Only send price when it parses to a valid non-negative number; otherwise let the
-        // backend fall back to the service's catalog price.
-        const parsedEditPrice = parseFloat(newBooking.price);
-        const editPriceField = (newBooking.price !== '' && Number.isFinite(parsedEditPrice) && parsedEditPrice >= 0)
-          ? parsedEditPrice : undefined;
-
         const response = await authFetch(`${apiUrl}/api/bookings/${editingBookingId}`, {
           method: 'PUT',
           body: JSON.stringify({
-            serviceId: newBooking.serviceId,
-            additionalServiceIds: newBooking.additionalServices,
+            mainServices,
+            additionalServices,
             bookingDate: newBooking.bookingDate,
             startTime: newBooking.startTime,
             employeeId: newBooking.employeeId || null,
             groupId: newBooking.groupId || null,
-            customerInfo: {
-              name: newBooking.customerName,
-              email: newBooking.customerEmail,
-              phone: newBooking.customerPhone,
-              address: newBooking.customerAddress
-            },
+            customerInfo,
             notes: newBooking.notes,
             sendEmail: sendUpdateEmail,
-            price: editPriceField
           })
         });
         const data = await response.json();
@@ -375,29 +396,18 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
           showToast(data.error || 'Failed to update booking', 'error');
         }
       } else {
-        // Only send price when it parses to a valid non-negative number; otherwise let the
-        // backend fall back to the service's catalog price.
-        const parsedPrice = parseFloat(newBooking.price);
-        const priceField = (newBooking.price !== '' && Number.isFinite(parsedPrice) && parsedPrice >= 0)
-          ? parsedPrice : undefined;
-
         const response = await authFetch(`${apiUrl}/api/bookings/create`, {
           method: 'POST',
           body: JSON.stringify({
-            serviceId: newBooking.serviceId,
+            mainServices,
+            additionalServices,
             bookingDate: newBooking.bookingDate,
             startTime: newBooking.startTime,
             employeeId: newBooking.employeeId || null,
             groupId: newBooking.groupId || null,
-            customerInfo: {
-              name: newBooking.customerName,
-              email: newBooking.customerEmail,
-              phone: newBooking.customerPhone,
-              address: newBooking.customerAddress
-            },
+            customerInfo,
             customerNotes: newBooking.notes,
             referralSource: newBooking.referralSource?.trim() || null,
-            price: priceField
           })
         });
         const data = await response.json();
@@ -617,27 +627,28 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   // Pre-fill the price input from the booking's primary line so what's shown
                   // reflects what's actually saved (which may already be a custom price). If
                   // the saved price differs from the service's catalog price, treat as "touched"
-                  // so the Reset chip shows.
-                  const primaryItem = booking.items?.[0];
-                  const itemPrice = primaryItem ? parseFloat(primaryItem.service_price || 0) : 0;
-                  const svcForPrice = services.find(s => s.id == primaryItem?.service_id);
-                  const listedForPrice = svcForPrice ? parseFloat(svcForPrice.price) : itemPrice;
-                  const isCustomPrice = Number.isFinite(itemPrice) && Math.abs(itemPrice - listedForPrice) > 0.001;
+                  // Split saved items by the is_addon flag the backend now persists. Legacy
+                  // rows (is_addon null/missing) fall through to the "main" bucket since
+                  // they predate add-on splitting; the user can re-categorize on save.
+                  const items = booking.items || [];
+                  const mains = items.filter(i => !i.is_addon)
+                    .map(i => buildServiceLine(i.service_id, i.service_price));
+                  const addons = items.filter(i => i.is_addon)
+                    .map(i => buildServiceLine(i.service_id, i.service_price));
                   const editForm = {
                     customerId: booking.customer_id,
                     customerName: booking.customer_name,
                     customerEmail: booking.customer_email || '',
                     customerPhone: booking.customer_phone || '',
                     customerAddress: booking.customer_address || '',
-                    serviceId: booking.items?.[0]?.service_id ? Number(booking.items[0].service_id) : '',
-                    additionalServices: (booking.items || []).slice(1).map(i => Number(i.service_id)),
+                    mainServices: mains,
+                    additionalServices: addons,
                     employeeId: booking.employee_id ? String(booking.employee_id) : '',
                     groupId: booking.group_id ? String(booking.group_id) : '',
                     bookingDate: booking.booking_date.split('T')[0],
                     startTime: (booking.start_time || '').slice(0, 5),
                     notes: booking.job_notes || booking.customer_notes || '',
-                    price: itemPrice > 0 ? itemPrice.toFixed(2) : '',
-                    priceTouched: isCustomPrice
+                    referralSource: '',
                   };
                   setNewBooking(editForm);
                   setBookingFormSnapshot(JSON.stringify(editForm));
@@ -1362,27 +1373,27 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     setIsEditingBooking(true);
                     setEditingBookingId(selectedBooking.id);
                     setSendUpdateEmail(false);
-                    // Same price pre-fill as the calendar-event Edit button above.
-                    const primaryItem = selectedBooking.items?.[0];
-                    const itemPrice = primaryItem ? parseFloat(primaryItem.service_price || 0) : 0;
-                    const svcForPrice = services.find(s => s.id == primaryItem?.service_id);
-                    const listedForPrice = svcForPrice ? parseFloat(svcForPrice.price) : itemPrice;
-                    const isCustomPrice = Number.isFinite(itemPrice) && Math.abs(itemPrice - listedForPrice) > 0.001;
+                    // Same split as the calendar-event Edit button above: items with
+                    // is_addon=true go in the Additional Services tab, the rest are mains.
+                    const items = selectedBooking.items || [];
+                    const mains = items.filter(i => !i.is_addon)
+                      .map(i => buildServiceLine(i.service_id, i.service_price));
+                    const addons = items.filter(i => i.is_addon)
+                      .map(i => buildServiceLine(i.service_id, i.service_price));
                     const editForm = {
                       customerId: selectedBooking.customer_id,
                       customerName: selectedBooking.customer_name,
                       customerEmail: selectedBooking.customer_email || '',
                       customerPhone: selectedBooking.customer_phone || '',
                       customerAddress: selectedBooking.customer_address || '',
-                      serviceId: selectedBooking.items?.[0]?.service_id ? Number(selectedBooking.items[0].service_id) : '',
-                      additionalServices: (selectedBooking.items || []).slice(1).map(i => Number(i.service_id)),
+                      mainServices: mains,
+                      additionalServices: addons,
                       employeeId: selectedBooking.employee_id ? String(selectedBooking.employee_id) : '',
                       groupId: selectedBooking.group_id ? String(selectedBooking.group_id) : '',
                       bookingDate: selectedBooking.booking_date.split('T')[0],
                       startTime: (selectedBooking.start_time || '').slice(0, 5),
                       notes: selectedBooking.job_notes || selectedBooking.customer_notes || '',
-                      price: itemPrice > 0 ? itemPrice.toFixed(2) : '',
-                      priceTouched: isCustomPrice
+                      referralSource: '',
                     };
                     setNewBooking(editForm);
                     setBookingFormSnapshot(JSON.stringify(editForm));
@@ -1879,252 +1890,248 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   <Calendar className="w-5 h-5 text-green-600" />
                   Services
                 </h3>
-                <div className="flex gap-2 mb-4 border-b border-gray-300">
-                  <button
-                    type="button"
-                    onClick={() => setServiceTab('main')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${
-                      serviceTab === 'main'
-                        ? 'text-green-700 border-b-2 border-green-700'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Main Service
-                    {newBooking.serviceId && (
-                      <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">1</span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setServiceTab('additional')}
-                    className={`px-4 py-2 font-medium text-sm transition-colors relative ${
-                      serviceTab === 'additional'
-                        ? 'text-green-700 border-b-2 border-green-700'
-                        : 'text-gray-600 hover:text-gray-900'
-                    }`}
-                  >
-                    Additional Services
-                    {newBooking.additionalServices.length > 0 && (
-                      <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
-                        {newBooking.additionalServices.length}
-                      </span>
-                    )}
-                  </button>
-                </div>
-
-                {serviceTab === 'main' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Main Service <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      value={newBooking.serviceId}
-                      onChange={(e) => {
-                        const newId = Number(e.target.value) || e.target.value;
-                        // Auto-fill the price from the newly-selected service unless the
-                        // user already typed a custom one.
-                        const svc = services.find(s => s.id == newId);
-                        const autoPrice = svc && !newBooking.priceTouched
-                          ? parseFloat(svc.price).toFixed(2)
-                          : newBooking.price;
-                        setNewBooking({ ...newBooking, serviceId: newId, price: autoPrice });
-                      }}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 mb-4"
-                      required
-                    >
-                      <option value="">Select main service</option>
-                      {services.map(service => (
-                        <option key={service.id} value={service.id}>
-                          {service.name} - ${service.price} ({service.duration_hours}h)
-                        </option>
-                      ))}
-                    </select>
-                    {newBooking.serviceId && (() => {
-                      const svc = services.find(s => s.id == newBooking.serviceId);
-                      const listed = svc ? parseFloat(svc.price) : 0;
-                      const current = parseFloat(newBooking.price || '0');
-                      const isCustom = newBooking.priceTouched && Number.isFinite(current) && current !== listed;
-                      return (
-                        <div className="bg-white rounded-lg p-4 border border-green-200">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-                              <Calendar className="w-5 h-5 text-green-700" />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-semibold text-gray-900 mb-1">{svc?.name}</h4>
-                              <div className="text-sm text-gray-600 mb-3">Duration: {svc?.duration_hours}h</div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1">
-                                Price for this booking
-                              </label>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 flex items-center bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 focus-within:border-green-500">
-                                  <span className="text-base font-semibold text-gray-500 mr-1">$</span>
-                                  <input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={newBooking.price}
-                                    onChange={(e) => {
-                                      // Digits + a single decimal, max 2 decimals.
-                                      const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
-                                      const parts = cleaned.split('.');
-                                      const limited = parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : cleaned;
-                                      setNewBooking({ ...newBooking, price: limited, priceTouched: true });
-                                    }}
-                                    placeholder="0.00"
-                                    className="flex-1 bg-transparent outline-none text-base font-semibold text-gray-900"
-                                  />
-                                </div>
-                                {isCustom && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setNewBooking({ ...newBooking, price: listed.toFixed(2), priceTouched: false })}
-                                    className="px-3 py-2 text-xs font-semibold text-green-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
-                                    title="Reset to the service's listed price"
-                                  >
-                                    Reset
-                                  </button>
-                                )}
-                              </div>
-                              <p className="mt-1.5 text-xs text-gray-500">
-                                Listed at ${listed.toFixed(2)}. Edit for one-off adjustments — the service price itself isn't affected.
-                              </p>
-                            </div>
+                {/* One renderer for both buckets: each line is a card with editable
+                    price + Reset. Both tabs share this component so the price-edit UX
+                    matches between mains and add-ons. */}
+                {(() => {
+                  const renderServiceLineCard = (line, bucketKey, idx) => {
+                    const svc = services.find(s => s.id == line.id);
+                    const listed = svc ? parseFloat(svc.price) : 0;
+                    const current = parseFloat(line.price || '0');
+                    const isCustom = line.priceTouched && Number.isFinite(current) && Math.abs(current - listed) > 0.001;
+                    const updateLine = (patch) => {
+                      const next = [...newBooking[bucketKey]];
+                      next[idx] = { ...next[idx], ...patch };
+                      setNewBooking({ ...newBooking, [bucketKey]: next });
+                    };
+                    const removeLine = () => {
+                      setNewBooking({
+                        ...newBooking,
+                        [bucketKey]: newBooking[bucketKey].filter((_, i) => i !== idx),
+                      });
+                    };
+                    return (
+                      <div key={`${bucketKey}-${idx}-${line.id}`} className="bg-white rounded-lg p-4 border border-green-200">
+                        <div className="flex items-start gap-3">
+                          <div className="flex-shrink-0 w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                            <Calendar className="w-5 h-5 text-green-700" />
                           </div>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                )}
-
-                {serviceTab === 'additional' && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Select Additional Services (Optional)
-                    </label>
-                    <div className="border border-gray-300 rounded-lg bg-gray-50 max-h-64 overflow-y-auto">
-                      {!services || services.length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">No services available</div>
-                      ) : services.filter(s => s.id != newBooking.serviceId).length === 0 ? (
-                        <div className="p-4 text-center text-gray-500 text-sm">
-                          {newBooking.serviceId ? 'No other services available' : 'Please select a main service first'}
-                        </div>
-                      ) : (
-                        services.filter(s => s.id != newBooking.serviceId).map(service => (
-                          <label
-                            key={service.id}
-                            className="flex items-center gap-3 p-3 bg-white hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0 transition-colors"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={newBooking.additionalServices && newBooking.additionalServices.some(id => id == service.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setNewBooking({
-                                    ...newBooking,
-                                    additionalServices: [...(newBooking.additionalServices || []), service.id]
-                                  });
-                                } else {
-                                  setNewBooking({
-                                    ...newBooking,
-                                    additionalServices: (newBooking.additionalServices || []).filter(id => id != service.id)
-                                  });
-                                }
-                              }}
-                              className="w-4 h-4 text-green-600 rounded focus:ring-2 focus:ring-green-500"
-                            />
-                            <div className="flex-1">
-                              <div className="font-medium text-gray-900">{service.name}</div>
-                              <div className="text-xs text-gray-600">${service.price} • {service.duration_hours}h</div>
-                            </div>
-                          </label>
-                        ))
-                      )}
-                    </div>
-                    {newBooking.additionalServices.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        <div className="text-xs font-medium text-gray-700 mb-1">
-                          Selected ({newBooking.additionalServices.length}):
-                        </div>
-                        {newBooking.additionalServices.map(serviceId => {
-                          const service = services.find(s => s.id == serviceId);
-                          return (
-                            <div key={serviceId} className="flex items-center justify-between bg-green-50 rounded-lg p-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2">
                               <div>
-                                <div className="font-medium text-sm text-gray-900">{service?.name}</div>
-                                <div className="text-xs text-gray-600">${service?.price} • {service?.duration_hours}h</div>
+                                <h4 className="font-semibold text-gray-900 mb-1">{svc?.name || 'Service'}</h4>
+                                <div className="text-sm text-gray-600 mb-3">Duration: {svc?.duration_hours || 0}h</div>
                               </div>
                               <button
                                 type="button"
-                                onClick={() => {
-                                  setNewBooking({
-                                    ...newBooking,
-                                    additionalServices: newBooking.additionalServices.filter(id => id != serviceId)
-                                  });
-                                }}
+                                onClick={removeLine}
                                 className="text-red-600 hover:text-red-700 p-1"
+                                title="Remove this service"
                               >
                                 <X className="w-4 h-4" />
                               </button>
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {newBooking.serviceId && (
-                  <div className="mt-4 bg-green-100 rounded-lg p-3">
-                    <div className="flex justify-between items-center text-sm mb-2">
-                      <span className="font-medium text-gray-700">Total Services:</span>
-                      <span className="font-bold text-gray-900">{1 + newBooking.additionalServices.length}</span>
-                    </div>
-                    <div className="flex justify-between items-center text-sm mb-2">
-                      <span className="font-medium text-gray-700">Total Duration:</span>
-                      <span className="font-bold text-gray-900">
-                        {(() => {
-                          const mainService = services.find(s => s.id == newBooking.serviceId);
-                          const mainDuration = parseFloat(mainService?.duration_hours) || 0;
-                          const additionalDuration = newBooking.additionalServices.reduce((total, id) => {
-                            const service = services.find(s => s.id == id);
-                            return total + (parseFloat(service?.duration_hours) || 0);
-                          }, 0);
-                          return (mainDuration + additionalDuration).toFixed(1);
-                        })()}h
-                      </span>
-                    </div>
-                    {(() => {
-                      const mainService = services.find(s => s.id == newBooking.serviceId);
-                      const mainPrice = parseFloat(mainService?.price) || 0;
-                      const additionalPrice = newBooking.additionalServices.reduce((total, id) => {
-                        const service = services.find(s => s.id == id);
-                        return total + (parseFloat(service?.price) || 0);
-                      }, 0);
-                      const subtotal = mainPrice + additionalPrice;
-                      const taxRate = parseFloat(user?.default_tax_rate) || 0;
-                      const taxAmount = subtotal * taxRate;
-                      const total = subtotal + taxAmount;
-                      return (
-                        <div className="pt-2 border-t border-green-200 space-y-1">
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="text-gray-500">Subtotal:</span>
-                            <span className="text-gray-700">${subtotal.toFixed(2)}</span>
-                          </div>
-                          {taxRate > 0 && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-gray-500">Tax ({(taxRate * 100).toFixed(1)}%):</span>
-                              <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
+                            <label className="block text-xs font-medium text-gray-700 mb-1">
+                              Price for this booking
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <div className="flex-1 flex items-center bg-gray-50 border border-gray-300 rounded-lg px-3 py-2 focus-within:border-green-500">
+                                <span className="text-base font-semibold text-gray-500 mr-1">$</span>
+                                <input
+                                  type="text"
+                                  inputMode="decimal"
+                                  value={line.price}
+                                  onChange={(e) => {
+                                    // Digits + a single decimal, max 2 decimals.
+                                    const cleaned = e.target.value.replace(/[^0-9.]/g, '').replace(/(\..*)\./g, '$1');
+                                    const parts = cleaned.split('.');
+                                    const limited = parts.length === 2 ? `${parts[0]}.${parts[1].slice(0, 2)}` : cleaned;
+                                    updateLine({ price: limited, priceTouched: true });
+                                  }}
+                                  placeholder="0.00"
+                                  className="flex-1 bg-transparent outline-none text-base font-semibold text-gray-900"
+                                />
+                              </div>
+                              {isCustom && (
+                                <button
+                                  type="button"
+                                  onClick={() => updateLine({ price: listed.toFixed(2), priceTouched: false })}
+                                  className="px-3 py-2 text-xs font-semibold text-green-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                                  title="Reset to the service's listed price"
+                                >
+                                  Reset
+                                </button>
+                              )}
                             </div>
-                          )}
-                          <div className="flex justify-between items-center text-sm">
-                            <span className="font-bold text-gray-700">Total:</span>
-                            <span className="font-bold text-green-700 text-lg">${total.toFixed(2)}</span>
+                            <p className="mt-1.5 text-xs text-gray-500">
+                              Listed at ${listed.toFixed(2)}. Edit for one-off adjustments — the service price itself isn't affected.
+                            </p>
                           </div>
                         </div>
-                      );
-                    })()}
-                  </div>
-                )}
+                      </div>
+                    );
+                  };
+
+                  // Selected-IDs across both buckets so the "add" dropdowns can hide them.
+                  const usedIds = new Set([
+                    ...newBooking.mainServices.map(l => Number(l.id)),
+                    ...newBooking.additionalServices.map(l => Number(l.id)),
+                  ]);
+                  const availableServices = (services || []).filter(s => !usedIds.has(Number(s.id)));
+
+                  // "Add a service" dropdown — appears in both tabs, writes to the right bucket.
+                  const renderAddPicker = (bucketKey, label) => {
+                    if (availableServices.length === 0) return null;
+                    return (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          const id = Number(e.target.value);
+                          if (!id) return;
+                          setNewBooking({
+                            ...newBooking,
+                            [bucketKey]: [...newBooking[bucketKey], buildServiceLine(id)],
+                          });
+                        }}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 mb-4"
+                      >
+                        <option value="">{label}</option>
+                        {availableServices.map(service => (
+                          <option key={service.id} value={service.id}>
+                            {service.name} - ${service.price} ({service.duration_hours}h)
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  };
+
+                  return (
+                    <>
+                      <div className="flex gap-2 mb-4 border-b border-gray-300">
+                        <button
+                          type="button"
+                          onClick={() => setServiceTab('main')}
+                          className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                            serviceTab === 'main'
+                              ? 'text-green-700 border-b-2 border-green-700'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          Main Services
+                          {newBooking.mainServices.length > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
+                              {newBooking.mainServices.length}
+                            </span>
+                          )}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setServiceTab('additional')}
+                          className={`px-4 py-2 font-medium text-sm transition-colors relative ${
+                            serviceTab === 'additional'
+                              ? 'text-green-700 border-b-2 border-green-700'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          Additional Services
+                          {newBooking.additionalServices.length > 0 && (
+                            <span className="ml-2 inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-green-600 rounded-full">
+                              {newBooking.additionalServices.length}
+                            </span>
+                          )}
+                        </button>
+                      </div>
+
+                      {serviceTab === 'main' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Main Services <span className="text-red-500">*</span>
+                          </label>
+                          {renderAddPicker(
+                            'mainServices',
+                            newBooking.mainServices.length === 0 ? 'Select a main service' : 'Add another main service'
+                          )}
+                          <div className="space-y-3">
+                            {newBooking.mainServices.map((line, idx) =>
+                              renderServiceLineCard(line, 'mainServices', idx)
+                            )}
+                          </div>
+                          {newBooking.mainServices.length === 0 && (
+                            <p className="text-sm text-gray-500 italic">Pick at least one main service.</p>
+                          )}
+                        </div>
+                      )}
+
+                      {serviceTab === 'additional' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Additional Services (Optional)
+                          </label>
+                          {newBooking.mainServices.length === 0 ? (
+                            <p className="text-sm text-gray-500 italic">Select a main service first.</p>
+                          ) : (
+                            <>
+                              {renderAddPicker('additionalServices', 'Add an additional service')}
+                              <div className="space-y-3">
+                                {newBooking.additionalServices.map((line, idx) =>
+                                  renderServiceLineCard(line, 'additionalServices', idx)
+                                )}
+                              </div>
+                              {availableServices.length === 0 && newBooking.additionalServices.length === 0 && (
+                                <p className="text-sm text-gray-500 italic">No other services available.</p>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                {newBooking.mainServices.length > 0 && (() => {
+                  const allLines = [...newBooking.mainServices, ...newBooking.additionalServices];
+                  const totalDuration = allLines.reduce((sum, line) => {
+                    const svc = services.find(s => s.id == line.id);
+                    return sum + (parseFloat(svc?.duration_hours) || 0);
+                  }, 0);
+                  // Subtotal uses the user-typed per-line prices, not the catalog price, so
+                  // the displayed total matches what the backend will charge.
+                  const subtotal = allLines.reduce((sum, line) => {
+                    const parsed = parseFloat(line.price);
+                    return sum + (Number.isFinite(parsed) ? parsed : 0);
+                  }, 0);
+                  const taxRate = parseFloat(user?.default_tax_rate) || 0;
+                  const taxAmount = subtotal * taxRate;
+                  const total = subtotal + taxAmount;
+                  return (
+                    <div className="mt-4 bg-green-100 rounded-lg p-3">
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span className="font-medium text-gray-700">Total Services:</span>
+                        <span className="font-bold text-gray-900">{allLines.length}</span>
+                      </div>
+                      <div className="flex justify-between items-center text-sm mb-2">
+                        <span className="font-medium text-gray-700">Total Duration:</span>
+                        <span className="font-bold text-gray-900">{totalDuration.toFixed(1)}h</span>
+                      </div>
+                      <div className="pt-2 border-t border-green-200 space-y-1">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="text-gray-500">Subtotal:</span>
+                          <span className="text-gray-700">${subtotal.toFixed(2)}</span>
+                        </div>
+                        {taxRate > 0 && (
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">Tax ({(taxRate * 100).toFixed(1)}%):</span>
+                            <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-bold text-gray-700">Total:</span>
+                          <span className="font-bold text-green-700 text-lg">${total.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div className="bg-green-50 rounded-xl p-4">

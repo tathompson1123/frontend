@@ -1023,6 +1023,28 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
+  // Manually flip a customer's marketing opt-out flag from the detail panel.
+  // Field is 'sms_unsubscribed' or 'email_unsubscribed'.
+  const toggleCustomerUnsub = async (field, value) => {
+    if (!viewingCustomer) return;
+    const prev = viewingCustomer[field];
+    // Optimistic update in both the panel and the list
+    setViewingCustomer(c => ({ ...c, [field]: value }));
+    setCustomers(cs => cs.map(c => c.id === viewingCustomer.id ? { ...c, [field]: value } : c));
+    try {
+      const response = await authFetch(`${apiUrl}/api/customers/${viewingCustomer.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ [field]: value }),
+      });
+      if (!response.ok) throw new Error('save failed');
+    } catch (err) {
+      console.error('Error updating subscription:', err);
+      // Roll back on failure
+      setViewingCustomer(c => ({ ...c, [field]: prev }));
+      setCustomers(cs => cs.map(c => c.id === viewingCustomer.id ? { ...c, [field]: prev } : c));
+    }
+  };
+
   const saveViewingCustomerEdit = async () => {
     if (!viewingCustomer) return;
     try {
@@ -1517,19 +1539,31 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const allLeadsForSources = leadTables.flatMap(t => t.leads);
   const availableSources = [...new Set(allLeadsForSources.map(l => l.source).filter(Boolean))].sort();
 
+  // Phone search that ignores formatting — compares digits-only on both sides so
+  // "5551234567" matches a stored "(555) 123-4567". Only kicks in when the query
+  // actually contains digits, so a name/email search isn't affected.
+  const term = searchTerm.toLowerCase().trim();
+  const termDigits = searchTerm.replace(/\D/g, '');
+  const phoneMatches = (phone) => {
+    if (!termDigits) return false;
+    return String(phone || '').replace(/\D/g, '').includes(termDigits);
+  };
+
   const filteredLeads = currentLeads.filter(lead => {
-    const matchesSearch = lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone?.includes(searchTerm) ||
-      lead.status?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = !term ||
+      lead.name?.toLowerCase().includes(term) ||
+      lead.email?.toLowerCase().includes(term) ||
+      phoneMatches(lead.phone) ||
+      lead.status?.toLowerCase().includes(term);
     const matchesSource = sourceFilter === 'all' || lead.source === sourceFilter;
     return matchesSearch && matchesSource;
   });
 
   const filteredCustomers = customers.filter(customer =>
-    customer.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone?.includes(searchTerm)
+    !term ||
+    customer.name?.toLowerCase().includes(term) ||
+    customer.email?.toLowerCase().includes(term) ||
+    phoneMatches(customer.phone)
   );
 
   const leadStats = {
@@ -1793,7 +1827,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search name, email, or phone…"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-64"
@@ -4028,6 +4062,49 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 {viewingCustomer.left_review && <div><p className="text-xs text-gray-400 mb-1">Left Review</p><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${viewingCustomer.left_review === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{viewingCustomer.left_review === 'Y' ? 'Yes' : 'No'}</span></div>}
               </div>
               {viewingCustomer.notes && <div className="mt-3"><p className="text-xs text-gray-400 mb-1">Notes</p><p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingCustomer.notes}</p></div>}
+            </div>
+
+            {/* Marketing subscriptions — manual opt-out controls */}
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Marketing Subscriptions</h3>
+              <div className="space-y-2.5">
+                {/* SMS */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <MessageCircle className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800">Text messages</p>
+                      <p className={`text-xs ${viewingCustomer.sms_unsubscribed ? 'text-red-500' : 'text-green-600'}`}>
+                        {viewingCustomer.sms_unsubscribed ? 'Unsubscribed' : 'Subscribed'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleCustomerUnsub('sms_unsubscribed', !viewingCustomer.sms_unsubscribed)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex-shrink-0 ${viewingCustomer.sms_unsubscribed ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700'}`}
+                  >
+                    {viewingCustomer.sms_unsubscribed ? 'Resubscribe' : 'Unsubscribe'}
+                  </button>
+                </div>
+                {/* Email */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Mail className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800">Email marketing</p>
+                      <p className={`text-xs ${viewingCustomer.email_unsubscribed ? 'text-red-500' : 'text-green-600'}`}>
+                        {viewingCustomer.email_unsubscribed ? 'Unsubscribed' : 'Subscribed'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleCustomerUnsub('email_unsubscribed', !viewingCustomer.email_unsubscribed)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex-shrink-0 ${viewingCustomer.email_unsubscribed ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700'}`}
+                  >
+                    {viewingCustomer.email_unsubscribed ? 'Resubscribe' : 'Unsubscribe'}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Edit Panel */}
