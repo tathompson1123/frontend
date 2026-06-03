@@ -391,11 +391,13 @@ export default function BusinessInformation({
     { key: 'send_messages', label: 'Send Messages', desc: 'Send SMS to customers' },
     { key: 'process_payments', label: 'Process Payments', desc: 'Use tap-to-pay, create invoices' },
     { key: 'view_reports', label: 'View Reports', desc: 'Access business reports & analytics' },
+    { key: 'manage_budgeted_hours', label: 'Manage Budgeted Hours', desc: 'Set/override job budgeted hours in the app (manager only)' },
   ];
 
   const DEFAULT_PERMS = {
     view_bookings: true, manage_bookings: true, view_customers: true,
-    view_all_bookings: false, send_messages: true, process_payments: false, view_reports: false
+    view_all_bookings: false, send_messages: true, process_payments: false, view_reports: false,
+    manage_budgeted_hours: false
   };
 
   const openPermissionsModal = async (employee) => {

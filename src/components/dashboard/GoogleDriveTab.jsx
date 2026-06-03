@@ -3,6 +3,7 @@ import {
   FileSpreadsheet, Plus, Share2, Trash2, ExternalLink, RefreshCw, Loader,
   CheckCircle, AlertCircle, Link2, DollarSign, Users, TrendingUp, X,
 } from 'lucide-react';
+import PayrollPanel from './PayrollPanel';
 
 const fmt$ = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
@@ -422,6 +423,9 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
           </div>
         </>
       )}
+
+      {/* Native payroll & efficiency — works whether or not Google is connected */}
+      <PayrollPanel apiUrl={apiUrl} authFetch={authFetch} />
     </div>
   );
 }
