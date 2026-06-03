@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Sparkles, ArrowLeft } from 'lucide-react';
+import { Zap, ArrowLeft } from 'lucide-react';
 
 export default function PrivacyPolicy() {
   return (
@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
           </Link>
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-gradient-to-br from-primary-600 to-accent-600 rounded-lg flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-white" />
+              <Zap className="w-5 h-5 text-white" fill="currentColor" />
             </div>
             <span className="text-xl font-bold">SORCE</span>
           </div>

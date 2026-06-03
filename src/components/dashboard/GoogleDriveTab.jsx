@@ -24,6 +24,10 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
   const [newKind, setNewKind] = useState('tips');
   const [creating, setCreating] = useState(false);
 
+  const [importUrl, setImportUrl] = useState('');
+  const [importKind, setImportKind] = useState('tips');
+  const [importing, setImporting] = useState(false);
+
   const [shareFor, setShareFor] = useState(null); // sheet id being shared
   const [shareEmail, setShareEmail] = useState('');
   const [sharing, setSharing] = useState(false);
@@ -103,6 +107,29 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
       }
     } finally {
       setCreating(false);
+    }
+  };
+
+  const importSheet = async () => {
+    if (!importUrl.trim()) { showToast('Paste your Google Sheet link', 'error'); return; }
+    setImporting(true);
+    try {
+      const r = await authFetch(`${apiUrl}/api/google-drive/sheets/import`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: importUrl.trim(), kind: importKind }),
+      });
+      const d = await r.json();
+      if (d.success) {
+        setSheets(s => [d.sheet, ...s.filter(x => x.id !== d.sheet.id)]);
+        setImportUrl('');
+        showToast(d.updated ? `Updated "${d.sheet.title}"` : `Imported "${d.sheet.title}"`);
+        setWeekStart(w => w); // refresh summary
+      } else {
+        showToast(d.error || 'Could not import sheet', 'error');
+      }
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -251,13 +278,13 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
 
                 {/* Revenue compare */}
                 <div className="rounded-xl border border-gray-100 bg-blue-50/50 p-4">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1"><TrendingUp className="w-3.5 h-3.5" /> Revenue (SORCE)</div>
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-blue-700 uppercase tracking-wide mb-1"><TrendingUp className="w-3.5 h-3.5" /> Revenue (Square)</div>
                   <p className="text-2xl font-bold text-gray-900">{fmt$(summary.revenue)}</p>
                   {summary.payrollPctOfRevenue != null ? (
                     <p className="text-xs mt-2 text-gray-600">
-                      Payroll is <span className={`font-bold ${summary.payrollPctOfRevenue > 40 ? 'text-red-600' : 'text-gray-900'}`}>{summary.payrollPctOfRevenue}%</span> of revenue this week.
+                      Payroll is <span className={`font-bold ${summary.payrollPctOfRevenue > 40 ? 'text-red-600' : 'text-gray-900'}`}>{summary.payrollPctOfRevenue}%</span> of Square revenue this week.
                     </p>
-                  ) : <p className="text-xs text-gray-400 mt-2">No bookings this week to compare against.</p>}
+                  ) : <p className="text-xs text-gray-400 mt-2">No Square transactions this week to compare against.</p>}
                 </div>
               </div>
             ) : (
@@ -300,6 +327,47 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
             </p>
           </div>
 
+          {/* Import an existing sheet */}
+          <div className="bg-white border border-gray-200 rounded-2xl p-5">
+            <h4 className="font-bold text-gray-900 mb-1">Import a sheet you already made</h4>
+            <p className="text-xs text-gray-500 mb-3">
+              Paste the link to one of your existing Google Sheets and tell SORCE whether it's tips or payroll. Make sure you're signed in with the Google account that owns it.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <select
+                value={importKind}
+                onChange={e => setImportKind(e.target.value)}
+                className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm sm:w-44"
+              >
+                <option value="tips">Tips (auto-summed)</option>
+                <option value="payroll">Payroll</option>
+                <option value="general">Other</option>
+              </select>
+              <input
+                type="url"
+                value={importUrl}
+                onChange={e => setImportUrl(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') importSheet(); }}
+                placeholder="https://docs.google.com/spreadsheets/d/…"
+                className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              />
+              <button
+                onClick={importSheet}
+                disabled={importing}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-all"
+              >
+                {importing ? <Loader className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />}
+                Import
+              </button>
+            </div>
+            <p className="text-xs text-amber-600 mt-2">
+              Importing existing sheets needs an extra permission. If it fails, click <strong>Disconnect</strong> above and <strong>Connect Google</strong> again to grant it.
+            </p>
+            <p className="text-xs text-gray-400 mt-1">
+              For the auto-sum to work, the imported sheet's first tab should follow the same columns shown above.
+            </p>
+          </div>
+
           {/* Sheet list */}
           <div className="bg-white border border-gray-200 rounded-2xl p-5">
             <h4 className="font-bold text-gray-900 mb-3">Your sheets</h4>
@@ -314,15 +382,18 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
                       <div className="flex items-center gap-3">
                         <FileSpreadsheet className="w-5 h-5 text-green-600 flex-shrink-0" />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <p className="font-semibold text-gray-900 truncate">{s.title}</p>
                             <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded ${badge.cls}`}>{badge.label}</span>
+                            {s.imported && <span className="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded bg-blue-100 text-blue-700">Imported</span>}
                           </div>
-                          <p className="text-[11px] text-gray-400">Created {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                          <p className="text-[11px] text-gray-400">{s.imported ? 'Imported' : 'Created'} {new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                         </div>
                         <div className="flex items-center gap-1 flex-shrink-0">
                           <a href={s.url} target="_blank" rel="noreferrer" className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Open in Google Sheets"><ExternalLink className="w-4 h-4" /></a>
-                          <button onClick={() => { setShareFor(shareFor === s.id ? null : s.id); setShareEmail(''); }} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Share"><Share2 className="w-4 h-4" /></button>
+                          {!s.imported && (
+                            <button onClick={() => { setShareFor(shareFor === s.id ? null : s.id); setShareEmail(''); }} className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg" title="Share"><Share2 className="w-4 h-4" /></button>
+                          )}
                           <button onClick={() => removeSheet(s.id, s.title)} className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg" title="Remove from SORCE"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
