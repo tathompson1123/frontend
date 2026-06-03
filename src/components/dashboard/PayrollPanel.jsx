@@ -48,6 +48,17 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
     if (r.ok) { showToast(`Saved ${emp.name}'s rate`); load(); } else showToast('Could not save rate', 'error');
   };
 
+  const saveHours = async (emp) => {
+    const v = edits[`hours_${emp.id}`];
+    if (v === undefined) return; // untouched
+    const r = await authFetch(`${apiUrl}/api/payroll/hours`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId: emp.id, weekStart, hours: v }),
+    });
+    if (r.ok) { showToast(v === '' ? `Reset ${emp.name}'s hours` : `Saved ${emp.name}'s hours`); load(); }
+    else showToast('Could not save hours', 'error');
+  };
+
   const saveActual = async (emp) => {
     const v = edits[`actual_${emp.id}`];
     if (v === undefined || v === '') return;
@@ -145,7 +156,20 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
                         className="w-16 border border-gray-200 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-purple-400 outline-none"
                       />
                     </td>
-                    <td className="py-2.5 px-2 text-gray-700">{emp.clockedHours}h</td>
+                    <td className="py-2.5 px-2">
+                      <span className="inline-flex items-center gap-1">
+                        <input
+                          type="number" step="0.25"
+                          defaultValue={emp.clockedHours}
+                          onChange={e => setEdits(s => ({ ...s, [`hours_${emp.id}`]: e.target.value }))}
+                          onBlur={() => saveHours(emp)}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                          title={emp.clockedOverridden ? `Edited (auto: ${emp.computedHours}h)` : 'Auto from time clock'}
+                          className={`w-16 border rounded-lg px-2 py-1 text-sm outline-none focus:ring-2 focus:ring-purple-400 ${emp.clockedOverridden ? 'border-amber-300 bg-amber-50' : 'border-gray-200'}`}
+                        />
+                        <span className="text-gray-400 text-xs">h</span>
+                      </span>
+                    </td>
                     <td className="py-2.5 px-2 text-gray-700">{emp.budgetedEarned}h</td>
                     <td className="py-2.5 px-2">
                       {emp.efficiency != null
@@ -171,7 +195,7 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
             </table>
           </div>
           <p className="text-[11px] text-gray-400 mt-2">
-            Efficiency = budgeted hours of completed jobs ÷ hours clocked. "Adj $/hr" applies your efficiency scale. The Actual pay placeholder is the efficiency-adjusted suggestion — type your real pay-for-performance number to override.
+            Clocked hours come from the time clock — edit any value to correct it (amber = manually adjusted; clear it to revert). Budgeted = hours of jobs assigned this week. Efficiency = budgeted ÷ clocked, applied via your scale to "Adj $/hr". The Actual pay placeholder is the efficiency-adjusted suggestion — type your real pay-for-performance number to override.
           </p>
 
           {/* Efficiency scale editor */}
