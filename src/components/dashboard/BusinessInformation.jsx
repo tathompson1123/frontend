@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical, Calendar, ToggleLeft, ToggleRight, CheckCircle, AlertCircle, ChevronRight } from 'lucide-react';
+import { FileSpreadsheet } from 'lucide-react';
+import GoogleDriveTab from './GoogleDriveTab';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
@@ -1470,6 +1472,7 @@ export default function BusinessInformation({
               <option value="services">Services & Book Online ({services.length})</option>
               <option value="team">Team ({employees.length})</option>
               <option value="app-settings">Reminders</option>
+              <option value="finances">Tips & Payroll</option>
             </select>
           </div>
           {/* Desktop tabs */}
@@ -1513,6 +1516,16 @@ export default function BusinessInformation({
                 Reminders
               </div>
               {activeTab === 'app-settings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => setActiveTab('finances')}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'finances' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet className="w-4 h-4" />
+                Tips & Payroll
+              </div>
+              {activeTab === 'finances' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
           </div>
         </div>
@@ -3652,6 +3665,13 @@ export default function BusinessInformation({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Tips & Payroll Tab — Google Sheets integration */}
+      {activeTab === 'finances' && (
+        <div className="p-4 sm:p-6">
+          <GoogleDriveTab apiUrl={apiUrl} authFetch={authFetch} />
         </div>
       )}
 
