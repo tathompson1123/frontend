@@ -192,6 +192,80 @@ export default function EmployeePortalPage() {
   const [dataLoading, setDataLoading] = useState(false);
   const chatBottomRef = useRef(null);
 
+  // ── Time clock ─────────────────────────────────────────────────────────────
+  const [timeStatus, setTimeStatus] = useState(null);
+  const [timeBusy, setTimeBusy] = useState(false);
+  const [, setTick] = useState(0); // re-render every second for the live timer
+  const [dismissedReminders, setDismissedReminders] = useState([]);
+
+  const fetchTimeStatus = useCallback(async () => {
+    if (!token) return;
+    try {
+      const r = await fetch(`${API_URL}/api/employee/time/status`, { headers: authHeaders(token) });
+      if (r.ok) setTimeStatus(await r.json());
+    } catch {}
+  }, [token]);
+
+  // Poll every 30s (this also fires the break-reminder phone pushes server-side) and tick
+  // every second so the on-screen timer counts up smoothly.
+  useEffect(() => {
+    fetchTimeStatus();
+    const poll = setInterval(fetchTimeStatus, 30000);
+    const tick = setInterval(() => setTick(t => t + 1), 1000);
+    return () => { clearInterval(poll); clearInterval(tick); };
+  }, [fetchTimeStatus]);
+
+  const postTime = async (path, body) => {
+    if (timeBusy) return null;
+    setTimeBusy(true);
+    try {
+      const r = await fetch(`${API_URL}/api/employee/time/${path}`, {
+        method: 'POST', headers: authHeaders(token), body: body ? JSON.stringify(body) : undefined,
+      });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) { alert(d.error || 'Something went wrong'); return null; }
+      if (d.status) setTimeStatus(d.status);
+      return d;
+    } catch { alert('Network error — try again'); return null; }
+    finally { setTimeBusy(false); }
+  };
+
+  const clockIn = async () => { setDismissedReminders([]); await postTime('clock-in'); };
+  const clockOut = async () => { if (confirm('Clock out now?')) { await postTime('clock-out'); setDismissedReminders([]); } };
+  const endBreak = async () => { await postTime('break/end'); };
+  const startBreak = async (type) => {
+    const d = await postTime('break/start', { type });
+    // Taking a break clears any reminders that were prompting it.
+    if (d) setDismissedReminders(prev => [...new Set([...prev, ...(timeStatus?.reminders || []).filter(r => r.due).map(r => r.key)])]);
+  };
+
+  // Live worked/break time, recomputed each tick from the raw break list.
+  const liveTime = (() => {
+    if (!timeStatus?.clockedIn) return null;
+    const now = Date.now();
+    const clockInMs = new Date(timeStatus.clockInAt).getTime();
+    let breakMs = 0, onBreak = false, curBreakMs = 0;
+    for (const b of (timeStatus.breaks || [])) {
+      const s = new Date(b.startAt).getTime();
+      const e = b.endAt ? new Date(b.endAt).getTime() : now;
+      breakMs += Math.max(0, e - s);
+      if (!b.endAt) { onBreak = true; curBreakMs = now - s; }
+    }
+    const elapsed = Math.max(0, now - clockInMs) / 1000;
+    return { worked: Math.max(0, elapsed - breakMs / 1000), breakS: breakMs / 1000, onBreak, curBreak: curBreakMs / 1000 };
+  })();
+
+  const fmtHMS = (secs) => {
+    const s = Math.max(0, Math.floor(secs));
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  };
+
+  // Reminders currently prompting the employee (live, minus dismissed; hidden while on break).
+  const activeReminders = (timeStatus?.clockedIn && liveTime && !liveTime.onBreak)
+    ? (timeStatus.reminders || []).filter(r => liveTime.worked >= r.atSeconds && !dismissedReminders.includes(r.key))
+    : [];
+
   // ── Verify token on mount ──────────────────────────────────────────────────
   useEffect(() => {
     if (!token) return;
@@ -540,6 +614,70 @@ export default function EmployeePortalPage() {
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#111827', margin: '4px 0 16px', lineHeight: 1.2 }}>
             {greeting},<br />{firstName}!
           </h1>
+
+          {/* Break reminder banner(s) */}
+          {activeReminders.map(r => (
+            <div key={r.key} style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+              <Bell size={18} color="#d97706" />
+              <span style={{ flex: 1, fontSize: 13, fontWeight: 600, color: '#92400e' }}>{r.label}</span>
+              <button onClick={() => startBreak(r.type)} disabled={timeBusy} style={{ background: '#d97706', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                Start {r.type === 'unpaid' ? 'lunch' : 'break'}
+              </button>
+              <button onClick={() => setDismissedReminders(p => [...p, r.key])} style={{ background: 'none', border: 'none', color: '#b45309', fontSize: 12, cursor: 'pointer' }}>Dismiss</button>
+            </div>
+          ))}
+
+          {/* Time clock card */}
+          <Card style={{ marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+              <span style={{ fontWeight: 700, fontSize: 15, color: '#111827' }}>Time Clock</span>
+              {timeStatus?.clockedIn && (
+                <span style={{ fontSize: 12, fontWeight: 600, color: liveTime?.onBreak ? '#d97706' : '#16a34a' }}>
+                  {liveTime?.onBreak ? '● On break' : '● On the clock'}
+                </span>
+              )}
+            </div>
+
+            {!timeStatus ? (
+              <div style={{ textAlign: 'center', padding: '12px 0', color: '#9ca3af' }}>Loading…</div>
+            ) : !timeStatus.clockedIn ? (
+              <button
+                onClick={clockIn}
+                disabled={timeBusy}
+                style={{ width: '100%', padding: '14px 0', background: PRIMARY, color: '#fff', border: 'none', borderRadius: 12, fontSize: 16, fontWeight: 700, cursor: 'pointer' }}
+              >
+                Clock In
+              </button>
+            ) : (
+              <>
+                <div style={{ textAlign: 'center', marginBottom: 12 }}>
+                  <div style={{ fontSize: 34, fontWeight: 800, color: '#111827', fontVariantNumeric: 'tabular-nums', lineHeight: 1.1 }}>
+                    {fmtHMS(liveTime?.worked)}
+                  </div>
+                  <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 2 }}>
+                    worked today{liveTime?.breakS > 0 ? ` · ${fmtHMS(liveTime.breakS)} on break` : ''}
+                  </div>
+                </div>
+                {liveTime?.onBreak ? (
+                  <button onClick={endBreak} disabled={timeBusy} style={{ width: '100%', padding: '12px 0', background: '#d97706', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer', marginBottom: 8 }}>
+                    End Break ({fmtHMS(liveTime.curBreak)})
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <button onClick={() => startBreak('paid')} disabled={timeBusy} style={{ flex: 1, padding: '11px 0', background: '#fff', color: PRIMARY, border: `1.5px solid ${PRIMARY}`, borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      Paid Break
+                    </button>
+                    <button onClick={() => startBreak('unpaid')} disabled={timeBusy} style={{ flex: 1, padding: '11px 0', background: '#fff', color: '#6b7280', border: '1.5px solid #d1d5db', borderRadius: 12, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+                      Lunch (unpaid)
+                    </button>
+                  </div>
+                )}
+                <button onClick={clockOut} disabled={timeBusy} style={{ width: '100%', padding: '12px 0', background: '#111827', color: '#fff', border: 'none', borderRadius: 12, fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+                  Clock Out
+                </button>
+              </>
+            )}
+          </Card>
 
           {/* Today's schedule card */}
           <Card style={{ marginBottom: 14 }}>
