@@ -57,15 +57,21 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
     Promise.all([loadStatus(), loadSheets()]).finally(() => setLoading(false));
   }, []);
 
-  // Pull the weekly summary whenever connected or the week changes.
-  useEffect(() => {
+  // Pull the weekly summary (callable so create/import can force a refresh).
+  const loadSummary = async () => {
     if (!status?.connected) return;
     setSummaryLoading(true);
-    authFetch(`${apiUrl}/api/google-drive/summary?weekStart=${weekStart}`)
-      .then(r => r.json())
-      .then(d => { if (!d.error) setSummary(d); })
-      .catch(() => {})
-      .finally(() => setSummaryLoading(false));
+    try {
+      const r = await authFetch(`${apiUrl}/api/google-drive/summary?weekStart=${weekStart}`);
+      const d = await r.json();
+      if (!d.error) setSummary(d);
+    } catch {}
+    finally { setSummaryLoading(false); }
+  };
+
+  useEffect(() => {
+    loadSummary();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status?.connected, weekStart]);
 
   const connect = async () => {
@@ -102,7 +108,7 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
         setNewTitle('');
         showToast(`Created "${d.sheet.title}"`);
         // Refresh summary in case this is the new tips/payroll source.
-        setWeekStart(w => w);
+        loadSummary();
       } else {
         showToast(d.error || 'Could not create sheet', 'error');
       }
@@ -125,7 +131,7 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
         setSheets(s => [d.sheet, ...s.filter(x => x.id !== d.sheet.id)]);
         setImportUrl('');
         showToast(d.updated ? `Updated "${d.sheet.title}"` : `Imported "${d.sheet.title}"`);
-        setWeekStart(w => w); // refresh summary
+        loadSummary(); // refresh summary with the newly linked sheet
       } else {
         showToast(d.error || 'Could not import sheet', 'error');
       }
@@ -239,7 +245,7 @@ export default function GoogleDriveTab({ apiUrl, authFetch }) {
                   onChange={e => setWeekStart(mondayOf(new Date(e.target.value + 'T12:00:00')))}
                   className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm"
                 />
-                <button onClick={() => setWeekStart(w => w)} className="p-1.5 text-gray-400 hover:text-gray-700" title="Refresh">
+                <button onClick={() => loadSummary()} className="p-1.5 text-gray-400 hover:text-gray-700" title="Refresh">
                   <RefreshCw className={`w-4 h-4 ${summaryLoading ? 'animate-spin' : ''}`} />
                 </button>
               </div>
