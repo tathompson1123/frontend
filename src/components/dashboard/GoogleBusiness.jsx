@@ -3,7 +3,7 @@ import {
   Sparkles, Star, RefreshCw, Copy, CheckCircle, MessageSquare,
   Calendar, TrendingUp, Clock, Users, BarChart3, Send, Mail,
   Phone, ExternalLink, CheckCircle2, XCircle, Loader2, Info, AlertCircle,
-  Link as LinkIcon, Search, Globe
+  Link as LinkIcon, Search, Globe, Gift, Trophy, Ticket, ShieldCheck, Dices
 } from 'lucide-react';
 import GBPAnalyzer from './GBPAnalyzer';
 
@@ -36,6 +36,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
   loadReviewConfig();
   if (activeTab === 'review-requests') {
     fetchReviewRequests();
+    loadRaffleData();
   }
 }, [activeTab]);
 
@@ -45,8 +46,56 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
   incentiveEnabled: true,
   autoSendEnabled: true,
   sendDelay: 2,
-  sendTrigger: 'booking_completed'
+  sendTrigger: 'booking_completed',
+  raffleEnabled: false,
+  raffleConsolation: '$50 off any Full Detail',
+  raffleRequireVerified: false
 });
+
+  // Monthly raffle state
+  const [raffleHistory, setRaffleHistory] = useState([]);
+  const [rafflePool, setRafflePool] = useState(null);
+  const [raffleLoading, setRaffleLoading] = useState(false);
+  const [rafflePreview, setRafflePreview] = useState(null);
+  const [previewingRaffle, setPreviewingRaffle] = useState(false);
+
+  const loadRaffleData = async () => {
+    setRaffleLoading(true);
+    try {
+      const [histRes, poolRes] = await Promise.all([
+        authFetch(`${apiUrl}/api/google-business/raffles`),
+        authFetch(`${apiUrl}/api/google-business/raffle/pool`)
+      ]);
+      const hist = await histRes.json();
+      const pool = await poolRes.json();
+      if (hist.success) setRaffleHistory(hist.raffles || []);
+      if (pool.success) setRafflePool(pool);
+    } catch (error) {
+      console.error('Error loading raffle data:', error);
+    } finally {
+      setRaffleLoading(false);
+    }
+  };
+
+  const handlePreviewRaffle = async () => {
+    setPreviewingRaffle(true);
+    setRafflePreview(null);
+    try {
+      const res = await authFetch(`${apiUrl}/api/google-business/raffle/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period: rafflePool?.period, dryRun: true })
+      });
+      const data = await res.json();
+      if (data.success) setRafflePreview(data.result);
+      else alert('Could not preview the raffle. Make sure the raffle is enabled and an incentive reward is set.');
+    } catch (error) {
+      console.error('Error previewing raffle:', error);
+      alert('Could not preview the raffle.');
+    } finally {
+      setPreviewingRaffle(false);
+    }
+  };
 
   const fetchUserReviewLink = async () => {
     try {
@@ -182,7 +231,10 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
           incentiveEnabled: data.config.incentive_enabled,
           autoSendEnabled: data.config.auto_send_enabled,
           sendDelay: data.config.send_delay,
-          sendTrigger: data.config.send_trigger || 'booking_completed'
+          sendTrigger: data.config.send_trigger || 'booking_completed',
+          raffleEnabled: data.config.raffle_enabled ?? false,
+          raffleConsolation: data.config.raffle_consolation || '$50 off any Full Detail',
+          raffleRequireVerified: data.config.raffle_require_verified ?? false
         });
       }
     }
@@ -727,6 +779,7 @@ const saveReviewConfig = async () => {
         className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
       >
         <option value="customization">Customization</option>
+        <option value="raffle">Monthly Raffle</option>
         <option value="timeline">Timeline</option>
         <option value="metrics">Metrics</option>
       </select>
@@ -735,6 +788,7 @@ const saveReviewConfig = async () => {
     <div className="hidden md:flex gap-1 bg-gray-100 rounded-lg p-1 mb-6">
       {[
         { id: 'customization', label: 'Customization' },
+        { id: 'raffle', label: 'Monthly Raffle' },
         { id: 'timeline', label: 'Timeline' },
         { id: 'metrics', label: 'Metrics' },
       ].map((tab) => (
@@ -1046,6 +1100,174 @@ const saveReviewConfig = async () => {
               <li>• Use the "service duration ends" trigger to send hands-free, no manual steps needed</li>
             </ul>
           </div>
+        </div>
+      </div>
+    )}
+
+    {/* Monthly Raffle sub-tab */}
+    {reviewSettingsTab === 'raffle' && (
+      <div className="space-y-6">
+        {/* Intro */}
+        <div className="bg-gradient-to-r from-purple-50 to-amber-50 border border-purple-200 rounded-xl p-5">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 bg-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Gift className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <h4 className="font-bold text-gray-900">Monthly Review Raffle</h4>
+              <p className="text-sm text-gray-600 mt-1">
+                On the 1st of each month we automatically draw <strong>one winner</strong> from everyone who left a
+                Google review the previous month, and text the whole group. The winner gets your incentive reward;
+                everyone else gets your consolation offer. Entrants are customers who tapped their review link
+                (each person enters once, and past winners are excluded).
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Enable + offers */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900">Enable Monthly Raffle</p>
+                <p className="text-sm text-gray-600">Auto-draw a winner on the 1st of each month</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={reviewConfig.raffleEnabled} onChange={(e) => setReviewConfig({ ...reviewConfig, raffleEnabled: e.target.checked })} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500" /> Winner Reward
+              </label>
+              <input
+                type="text"
+                value={reviewConfig.incentive}
+                onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="e.g., a FREE Full Detail"
+              />
+              <p className="text-xs text-gray-500 mt-1">This is the same incentive reward from the Customization tab — what the monthly winner receives.</p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-green-600" /> Consolation Offer (non-winners)
+              </label>
+              <input
+                type="text"
+                value={reviewConfig.raffleConsolation}
+                onChange={(e) => setReviewConfig({ ...reviewConfig, raffleConsolation: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                placeholder="$50 off any Full Detail"
+              />
+              <p className="text-xs text-gray-500 mt-1">Everyone who didn't win gets this offer as a thank-you text.</p>
+            </div>
+
+            <div className="flex items-start justify-between p-4 bg-gray-50 rounded-lg gap-3">
+              <div>
+                <p className="font-medium text-gray-900 flex items-center gap-2"><ShieldCheck className="w-4 h-4 text-blue-600" /> Only enter verified reviewers</p>
+                <p className="text-sm text-gray-600">Restrict the draw to people we could confirm on Google. Note: Google only exposes a handful of recent reviews, so this usually shrinks the pool a lot — leave off unless you want to be strict.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer mt-1">
+                <input type="checkbox" checked={reviewConfig.raffleRequireVerified} onChange={(e) => setReviewConfig({ ...reviewConfig, raffleRequireVerified: e.target.checked })} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <p className="text-xs text-gray-400">Remember to click <strong>Save Settings</strong> above after changing raffle options.</p>
+          </div>
+
+          {/* This month's pool */}
+          <div className="space-y-4">
+            <div className="bg-white border border-gray-200 rounded-xl p-5">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-bold text-gray-900 flex items-center gap-2">
+                  <Ticket className="w-5 h-5 text-purple-600" /> This Month's Entrants
+                </h4>
+                <span className="text-xs text-gray-500">{rafflePool?.period || ''}</span>
+              </div>
+              {raffleLoading ? (
+                <div className="flex items-center gap-2 text-gray-500 text-sm py-4"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
+              ) : rafflePool && rafflePool.poolSize > 0 ? (
+                <>
+                  <div className="flex items-baseline gap-2 mb-3">
+                    <span className="text-3xl font-bold text-purple-600">{rafflePool.poolSize}</span>
+                    <span className="text-sm text-gray-600">entrant{rafflePool.poolSize === 1 ? '' : 's'} so far</span>
+                  </div>
+                  <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto">
+                    {rafflePool.pool.map((p, i) => (
+                      <span key={i} className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
+                        {p.verified && <ShieldCheck className="w-3 h-3 text-blue-600" />}
+                        {p.name}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : (
+                <p className="text-sm text-gray-500 py-4">No entrants yet this month. Customers who tap their review link will appear here.</p>
+              )}
+            </div>
+
+            {/* Preview draw (dry run) */}
+            <button
+              type="button"
+              onClick={handlePreviewRaffle}
+              disabled={previewingRaffle}
+              className="w-full bg-purple-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {previewingRaffle ? <><Loader2 className="w-5 h-5 animate-spin" /> Drawing preview…</> : <><Dices className="w-5 h-5" /> Preview a Draw (no texts sent)</>}
+            </button>
+
+            {rafflePreview && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
+                {rafflePreview.status === 'dry_run' ? (
+                  <>
+                    <p className="font-semibold text-amber-900 flex items-center gap-2"><Trophy className="w-4 h-4" /> Would win: {rafflePreview.winner?.name}</p>
+                    <p className="text-amber-800 mt-1">Pool of {rafflePreview.poolSize} · reward: {rafflePreview.reward}</p>
+                    <p className="text-xs text-amber-700 mt-2">This is just a preview — no texts were sent. The real draw runs automatically on the 1st.</p>
+                  </>
+                ) : (
+                  <p className="text-amber-800">Preview: {rafflePreview.status}{rafflePreview.notes ? ` — ${rafflePreview.notes}` : ''}</p>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Past winners */}
+        <div>
+          <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2"><Trophy className="w-5 h-5 text-amber-500" /> Past Winners</h4>
+          {raffleHistory.length === 0 ? (
+            <div className="text-center py-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-300">
+              <Gift className="w-10 h-10 text-gray-400 mx-auto mb-2" />
+              <p className="text-gray-600 font-medium">No raffles drawn yet</p>
+              <p className="text-sm text-gray-500 mt-1">Your first winner will be drawn on the 1st of next month.</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {raffleHistory.map((r) => (
+                <div key={r.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-4">
+                  <div>
+                    <p className="font-semibold text-gray-900">
+                      {r.status === 'completed' ? (
+                        <span className="flex items-center gap-2"><Trophy className="w-4 h-4 text-amber-500" /> {r.winner_name || 'Winner'}</span>
+                      ) : (
+                        <span className="text-gray-500">{r.status === 'skipped_empty' ? 'No entrants' : r.status}</span>
+                      )}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">{r.period} · pool of {r.pool_size} · {r.texts_sent} text{r.texts_sent === 1 ? '' : 's'} sent</p>
+                  </div>
+                  {r.reward && r.status === 'completed' && (
+                    <span className="text-xs text-amber-700 bg-amber-50 px-3 py-1 rounded-full max-w-[40%] truncate">{r.reward}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     )}
