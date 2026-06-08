@@ -53,29 +53,60 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
 });
 
   // Monthly raffle state
+  const currentPeriod = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  })();
+  // Build a list of the last 6 months as selectable periods
+  const recentPeriods = (() => {
+    const list = [];
+    const d = new Date();
+    for (let i = 0; i < 6; i++) {
+      const m = new Date(d.getFullYear(), d.getMonth() - i, 1);
+      const period = `${m.getFullYear()}-${String(m.getMonth() + 1).padStart(2, '0')}`;
+      const label = m.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      list.push({ period, label });
+    }
+    return list;
+  })();
+  const [rafflePeriod, setRafflePeriod] = useState(currentPeriod);
   const [raffleHistory, setRaffleHistory] = useState([]);
   const [rafflePool, setRafflePool] = useState(null);
   const [raffleLoading, setRaffleLoading] = useState(false);
   const [rafflePreview, setRafflePreview] = useState(null);
   const [previewingRaffle, setPreviewingRaffle] = useState(false);
+  const [runningRaffle, setRunningRaffle] = useState(false);
 
-  const loadRaffleData = async () => {
-    setRaffleLoading(true);
+  const loadRaffleHistory = async () => {
     try {
-      const [histRes, poolRes] = await Promise.all([
-        authFetch(`${apiUrl}/api/google-business/raffles`),
-        authFetch(`${apiUrl}/api/google-business/raffle/pool`)
-      ]);
+      const histRes = await authFetch(`${apiUrl}/api/google-business/raffles`);
       const hist = await histRes.json();
-      const pool = await poolRes.json();
       if (hist.success) setRaffleHistory(hist.raffles || []);
+    } catch (error) {
+      console.error('Error loading raffle history:', error);
+    }
+  };
+
+  const loadRafflePool = async (period = rafflePeriod) => {
+    setRaffleLoading(true);
+    setRafflePreview(null);
+    try {
+      const poolRes = await authFetch(`${apiUrl}/api/google-business/raffle/pool?period=${period}`);
+      const pool = await poolRes.json();
       if (pool.success) setRafflePool(pool);
     } catch (error) {
-      console.error('Error loading raffle data:', error);
+      console.error('Error loading raffle pool:', error);
     } finally {
       setRaffleLoading(false);
     }
   };
+
+  const loadRaffleData = async () => {
+    await Promise.all([loadRaffleHistory(), loadRafflePool(rafflePeriod)]);
+  };
+
+  // Whether this period already has a recorded draw
+  const drawnPeriods = new Set(raffleHistory.map(r => r.period));
 
   const handlePreviewRaffle = async () => {
     setPreviewingRaffle(true);
@@ -84,7 +115,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
       const res = await authFetch(`${apiUrl}/api/google-business/raffle/run`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ period: rafflePool?.period, dryRun: true })
+        body: JSON.stringify({ period: rafflePeriod, dryRun: true })
       });
       const data = await res.json();
       if (data.success) setRafflePreview(data.result);
@@ -94,6 +125,44 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
       alert('Could not preview the raffle.');
     } finally {
       setPreviewingRaffle(false);
+    }
+  };
+
+  const handleRunRaffle = async () => {
+    const periodLabel = recentPeriods.find(p => p.period === rafflePeriod)?.label || rafflePeriod;
+    const size = rafflePool?.poolSize || 0;
+    if (size === 0) { alert('No entrants for this month yet — nothing to draw.'); return; }
+    if (!reviewConfig.raffleEnabled) { alert('Turn on "Enable Monthly Raffle" and click Save Settings first.'); return; }
+    const ok = window.confirm(
+      `Draw the ${periodLabel} raffle now?\n\n` +
+      `This picks 1 winner and IMMEDIATELY texts all ${size} entrant(s) — the winner gets your reward, everyone else the consolation offer. This cannot be undone, and ${periodLabel} won't be drawn again.`
+    );
+    if (!ok) return;
+    setRunningRaffle(true);
+    setRafflePreview(null);
+    try {
+      const res = await authFetch(`${apiUrl}/api/google-business/raffle/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ period: rafflePeriod, dryRun: false })
+      });
+      const data = await res.json();
+      const r = data.result || {};
+      if (data.success && r.status === 'completed') {
+        alert(`🎉 Winner: ${r.winner?.name}\n${r.textsSent} text(s) sent to a pool of ${r.poolSize}.`);
+      } else if (r.status === 'already_drawn') {
+        alert('This month was already drawn — each month can only run once.');
+      } else if (r.status === 'skipped' || r.status === 'skipped_empty') {
+        alert(`Nothing drawn: ${r.notes || 'no eligible entrants'}.`);
+      } else {
+        alert(`Could not run the raffle: ${r.notes || r.status || 'unknown error'}.`);
+      }
+      await loadRaffleData();
+    } catch (error) {
+      console.error('Error running raffle:', error);
+      alert('Could not run the raffle.');
+    } finally {
+      setRunningRaffle(false);
     }
   };
 
@@ -1184,11 +1253,21 @@ const saveReviewConfig = async () => {
           {/* This month's pool */}
           <div className="space-y-4">
             <div className="bg-white border border-gray-200 rounded-xl p-5">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center justify-between mb-3 gap-2">
                 <h4 className="font-bold text-gray-900 flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-purple-600" /> This Month's Entrants
+                  <Ticket className="w-5 h-5 text-purple-600" /> Entrants
                 </h4>
-                <span className="text-xs text-gray-500">{rafflePool?.period || ''}</span>
+                <select
+                  value={rafflePeriod}
+                  onChange={(e) => { setRafflePeriod(e.target.value); loadRafflePool(e.target.value); }}
+                  className="text-xs border border-gray-300 rounded-lg px-2 py-1.5 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                >
+                  {recentPeriods.map((p) => (
+                    <option key={p.period} value={p.period}>
+                      {p.label}{p.period === currentPeriod ? ' (current)' : ''}{drawnPeriods.has(p.period) ? ' ✓ drawn' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
               {raffleLoading ? (
                 <div className="flex items-center gap-2 text-gray-500 text-sm py-4"><Loader2 className="w-4 h-4 animate-spin" /> Loading…</div>
@@ -1212,15 +1291,32 @@ const saveReviewConfig = async () => {
               )}
             </div>
 
-            {/* Preview draw (dry run) */}
-            <button
-              type="button"
-              onClick={handlePreviewRaffle}
-              disabled={previewingRaffle}
-              className="w-full bg-purple-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {previewingRaffle ? <><Loader2 className="w-5 h-5 animate-spin" /> Drawing preview…</> : <><Dices className="w-5 h-5" /> Preview a Draw (no texts sent)</>}
-            </button>
+            {drawnPeriods.has(rafflePeriod) ? (
+              <div className="w-full bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg text-sm flex items-center justify-center gap-2">
+                <CheckCircle className="w-4 h-4" /> This month has already been drawn.
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row gap-2">
+                {/* Preview draw (dry run, no texts) */}
+                <button
+                  type="button"
+                  onClick={handlePreviewRaffle}
+                  disabled={previewingRaffle || runningRaffle}
+                  className="flex-1 bg-white border-2 border-purple-600 text-purple-700 px-4 py-3 rounded-lg font-semibold hover:bg-purple-50 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {previewingRaffle ? <><Loader2 className="w-5 h-5 animate-spin" /> Previewing…</> : <><Dices className="w-5 h-5" /> Preview (no texts)</>}
+                </button>
+                {/* Real draw — sends texts */}
+                <button
+                  type="button"
+                  onClick={handleRunRaffle}
+                  disabled={runningRaffle || previewingRaffle}
+                  className="flex-1 bg-purple-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {runningRaffle ? <><Loader2 className="w-5 h-5 animate-spin" /> Drawing…</> : <><Trophy className="w-5 h-5" /> Draw now &amp; text everyone</>}
+                </button>
+              </div>
+            )}
 
             {rafflePreview && (
               <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm">
