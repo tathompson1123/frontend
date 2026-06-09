@@ -48,6 +48,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
   sendDelay: 2,
   sendTrigger: 'booking_completed',
   raffleEnabled: false,
+  raffleReward: '',
   raffleConsolation: '$50 off any Full Detail',
   raffleRequireVerified: false
 });
@@ -302,6 +303,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
           sendDelay: data.config.send_delay,
           sendTrigger: data.config.send_trigger || 'booking_completed',
           raffleEnabled: data.config.raffle_enabled ?? false,
+          raffleReward: data.config.raffle_reward || '',
           raffleConsolation: data.config.raffle_consolation || '$50 off any Full Detail',
           raffleRequireVerified: data.config.raffle_require_verified ?? false
         });
@@ -1074,6 +1076,7 @@ const saveReviewConfig = async () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">Incentive Offer</label>
               <input type="text" value={reviewConfig.incentive} onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., $10 off your next service" />
               <div className="mt-2 space-y-1.5">
+                <p className="text-xs text-red-600 font-semibold">⚠️ This line is added to every review-request text. Word it as an invitation ("Enter to win…"), never "You won…" — the raffle winner is texted separately with its own reward.</p>
                 <p className="text-xs text-amber-700 font-semibold">🔥 The more compelling the offer, the more reviews you'll get.</p>
                 <p className="text-xs text-gray-500">Strong examples:</p>
                 <ul className="text-xs text-gray-500 space-y-0.5 ml-2">
@@ -1214,12 +1217,14 @@ const saveReviewConfig = async () => {
               </label>
               <input
                 type="text"
-                value={reviewConfig.incentive}
-                onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })}
+                value={reviewConfig.raffleReward}
+                onChange={(e) => setReviewConfig({ ...reviewConfig, raffleReward: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="e.g., a FREE Full Detail"
               />
-              <p className="text-xs text-gray-500 mt-1">This is the same incentive reward from the Customization tab — what the monthly winner receives.</p>
+              <p className="text-xs text-gray-500 mt-1">
+                Used <strong>only</strong> in the winner's text: "You WON … {reviewConfig.raffleReward || 'a FREE Full Detail'}". Phrase it as the prize (a noun), e.g. <em>"a FREE Full Detail"</em> — not "you won," which the message already says. This is separate from the review-request incentive on the Customization tab.
+              </p>
             </div>
 
             <div>
