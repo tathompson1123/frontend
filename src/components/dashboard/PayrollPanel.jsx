@@ -1,7 +1,147 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Users, TrendingUp, Loader, ChevronLeft, ChevronRight, SlidersHorizontal, Plus, Trash2, Save } from 'lucide-react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
+import { Users, TrendingUp, Loader, ChevronLeft, ChevronRight, SlidersHorizontal, Plus, Trash2, Save, Clock, ChevronDown } from 'lucide-react';
 
 const fmt$ = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Convert a stored ISO timestamp (UTC) to a value for <input type="datetime-local"> in the
+// browser's local time, and back. datetime-local has no timezone, so we shift by the offset.
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+}
+function localInputToISO(localStr) {
+  if (!localStr) return null;
+  const d = new Date(localStr); // parsed as local time
+  return isNaN(d.getTime()) ? null : d.toISOString();
+}
+function entryDayLabel(iso) {
+  return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// ── Per-employee clock in/out entries (view + edit) ──────────
+function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToast }) {
+  const [loading, setLoading] = useState(true);
+  const [entries, setEntries] = useState([]);
+  const [drafts, setDrafts] = useState({}); // { [id]: { clockIn, clockOut } } in local-input format
+  const [total, setTotal] = useState(0);
+  const [savingId, setSavingId] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [newEntry, setNewEntry] = useState({ clockIn: '', clockOut: '' });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await authFetch(`${apiUrl}/api/payroll/time-entries?employeeId=${employee.id}&weekStart=${weekStart}`);
+      const d = await r.json();
+      if (!d.error) {
+        setEntries(d.entries || []);
+        setTotal(d.totalWorked || 0);
+        const dr = {};
+        for (const e of (d.entries || [])) dr[e.id] = { clockIn: toLocalInput(e.clockIn), clockOut: toLocalInput(e.clockOut) };
+        setDrafts(dr);
+      }
+    } finally { setLoading(false); }
+  }, [apiUrl, authFetch, employee.id, weekStart]);
+  useEffect(() => { load(); }, [load]);
+
+  const setDraft = (id, key, val) => setDrafts(s => ({ ...s, [id]: { ...s[id], [key]: val } }));
+
+  const saveEntry = async (id) => {
+    const dft = drafts[id];
+    if (!dft) return;
+    setSavingId(id);
+    try {
+      const r = await authFetch(`${apiUrl}/api/payroll/time-entries/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clockIn: localInputToISO(dft.clockIn), clockOut: dft.clockOut ? localInputToISO(dft.clockOut) : '' }),
+      });
+      const d = await r.json();
+      if (r.ok) { showToast(`Saved ${employee.name}'s entry`); await load(); onChange && onChange(); }
+      else showToast(d.error || 'Could not save entry', 'error');
+    } finally { setSavingId(null); }
+  };
+
+  const delEntry = async (id) => {
+    if (!confirm('Delete this clock entry?')) return;
+    const r = await authFetch(`${apiUrl}/api/payroll/time-entries/${id}`, { method: 'DELETE' });
+    if (r.ok) { showToast('Deleted entry'); await load(); onChange && onChange(); }
+    else showToast('Could not delete', 'error');
+  };
+
+  const addEntry = async () => {
+    if (!newEntry.clockIn) { showToast('Set a clock-in time first', 'error'); return; }
+    const r = await authFetch(`${apiUrl}/api/payroll/time-entries`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId: employee.id, clockIn: localInputToISO(newEntry.clockIn), clockOut: newEntry.clockOut ? localInputToISO(newEntry.clockOut) : null }),
+    });
+    const d = await r.json();
+    if (r.ok) { showToast('Added entry'); setAdding(false); setNewEntry({ clockIn: '', clockOut: '' }); await load(); onChange && onChange(); }
+    else showToast(d.error || 'Could not add entry', 'error');
+  };
+
+  const inputCls = 'border border-gray-200 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-purple-400 outline-none';
+
+  return (
+    <div className="bg-gray-50 rounded-xl p-3 my-1">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold text-gray-600 flex items-center gap-1.5"><Clock className="w-3.5 h-3.5 text-purple-500" /> Clock entries — {employee.name}</p>
+        <p className="text-xs text-gray-500">Total worked: <span className="font-semibold text-gray-800">{total}h</span></p>
+      </div>
+
+      {employee.clockedOverridden && (
+        <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mb-2">
+          This week's hours are manually overridden ({employee.clockedHours}h). Editing punches here won't change the payroll total until you clear the override in the "Clocked" box above.
+        </p>
+      )}
+
+      {loading ? (
+        <div className="py-4 flex justify-center"><Loader className="w-4 h-4 animate-spin text-gray-400" /></div>
+      ) : entries.length === 0 ? (
+        <p className="text-xs text-gray-400 py-2">No clock entries this week.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {entries.map(e => (
+            <div key={e.id} className="flex flex-wrap items-center gap-2 bg-white rounded-lg border border-gray-100 px-2.5 py-2">
+              <span className="text-[11px] text-gray-400 w-24">{entryDayLabel(e.clockIn)}</span>
+              <label className="text-[11px] text-gray-500">In</label>
+              <input type="datetime-local" value={drafts[e.id]?.clockIn || ''} onChange={ev => setDraft(e.id, 'clockIn', ev.target.value)} className={inputCls} />
+              <label className="text-[11px] text-gray-500">Out</label>
+              <input type="datetime-local" value={drafts[e.id]?.clockOut || ''} onChange={ev => setDraft(e.id, 'clockOut', ev.target.value)} className={inputCls} />
+              {e.open && <span className="text-[10px] font-semibold text-green-600 bg-green-50 rounded px-1.5 py-0.5">clocked in</span>}
+              <span className="text-[11px] text-gray-500">{e.workedHours}h{e.breakHours > 0 ? ` · ${e.breakHours}h break` : ''}</span>
+              <div className="ml-auto flex items-center gap-1">
+                <button onClick={() => saveEntry(e.id)} disabled={savingId === e.id} className="flex items-center gap-1 text-[11px] font-semibold text-white bg-purple-600 rounded-lg px-2 py-1 hover:bg-purple-700 disabled:opacity-50">
+                  {savingId === e.id ? <Loader className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                </button>
+                <button onClick={() => delEntry(e.id)} className="p-1 text-gray-300 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add a manual entry */}
+      {adding ? (
+        <div className="flex flex-wrap items-center gap-2 bg-white rounded-lg border border-purple-200 px-2.5 py-2 mt-2">
+          <label className="text-[11px] text-gray-500">In</label>
+          <input type="datetime-local" value={newEntry.clockIn} onChange={ev => setNewEntry(s => ({ ...s, clockIn: ev.target.value }))} className={inputCls} />
+          <label className="text-[11px] text-gray-500">Out</label>
+          <input type="datetime-local" value={newEntry.clockOut} onChange={ev => setNewEntry(s => ({ ...s, clockOut: ev.target.value }))} className={inputCls} />
+          <div className="ml-auto flex items-center gap-1">
+            <button onClick={addEntry} className="text-[11px] font-semibold text-white bg-purple-600 rounded-lg px-2 py-1 hover:bg-purple-700">Add</button>
+            <button onClick={() => { setAdding(false); setNewEntry({ clockIn: '', clockOut: '' }); }} className="text-[11px] font-semibold text-gray-500 px-2 py-1 hover:text-gray-800">Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button onClick={() => setAdding(true)} className="flex items-center gap-1 text-[11px] font-semibold text-gray-600 border border-gray-200 rounded-lg px-2.5 py-1.5 hover:bg-white mt-2">
+          <Plus className="w-3.5 h-3.5" /> Add entry
+        </button>
+      )}
+    </div>
+  );
+}
 
 function mondayOf(d = new Date()) {
   const day = (d.getDay() + 6) % 7;
@@ -25,6 +165,7 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
   const [showTiers, setShowTiers] = useState(false);
   const [tiers, setTiers] = useState([]);
   const [savingTiers, setSavingTiers] = useState(false);
+  const [expanded, setExpanded] = useState(null); // employee id whose clock entries are open
 
   const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
@@ -144,8 +285,18 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
               </thead>
               <tbody>
                 {data.employees.map(emp => (
-                  <tr key={emp.id} className="border-b border-gray-50">
-                    <td className="py-2.5 pr-3 font-medium text-gray-900 whitespace-nowrap">{emp.name}</td>
+                  <Fragment key={emp.id}>
+                  <tr className="border-b border-gray-50">
+                    <td className="py-2.5 pr-3 font-medium text-gray-900 whitespace-nowrap">
+                      <button
+                        onClick={() => setExpanded(x => x === emp.id ? null : emp.id)}
+                        className="inline-flex items-center gap-1.5 hover:text-purple-700"
+                        title="View / edit clock in & out times"
+                      >
+                        <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded === emp.id ? 'rotate-180' : ''}`} />
+                        {emp.name}
+                      </button>
+                    </td>
                     <td className="py-2.5 px-2">
                       <input
                         type="number" step="0.5"
@@ -190,6 +341,14 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
                       />
                     </td>
                   </tr>
+                  {expanded === emp.id && (
+                    <tr>
+                      <td colSpan={8} className="p-0">
+                        <TimeEntries apiUrl={apiUrl} authFetch={authFetch} employee={emp} weekStart={weekStart} onChange={load} showToast={showToast} />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
