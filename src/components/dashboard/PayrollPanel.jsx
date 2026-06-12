@@ -20,15 +20,18 @@ function entryDayLabel(iso) {
   return new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 }
 
-// ── Per-employee clock in/out entries (view + edit) ──────────
+// ── Per-employee clock in/out entries + breaks (view + edit) ──
 function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToast }) {
   const [loading, setLoading] = useState(true);
   const [entries, setEntries] = useState([]);
-  const [drafts, setDrafts] = useState({}); // { [id]: { clockIn, clockOut } } in local-input format
+  const [drafts, setDrafts] = useState({});        // { [entryId]: { clockIn, clockOut } }
+  const [breakDrafts, setBreakDrafts] = useState({}); // { [breakId]: { startAt, endAt, breakType } }
   const [total, setTotal] = useState(0);
   const [savingId, setSavingId] = useState(null);
   const [adding, setAdding] = useState(false);
   const [newEntry, setNewEntry] = useState({ clockIn: '', clockOut: '' });
+  const [addBreakFor, setAddBreakFor] = useState(null); // entryId
+  const [newBreak, setNewBreak] = useState({ startAt: '', endAt: '', breakType: 'paid' });
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -38,20 +41,24 @@ function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToa
       if (!d.error) {
         setEntries(d.entries || []);
         setTotal(d.totalWorked || 0);
-        const dr = {};
-        for (const e of (d.entries || [])) dr[e.id] = { clockIn: toLocalInput(e.clockIn), clockOut: toLocalInput(e.clockOut) };
-        setDrafts(dr);
+        const dr = {}, bdr = {};
+        for (const e of (d.entries || [])) {
+          dr[e.id] = { clockIn: toLocalInput(e.clockIn), clockOut: toLocalInput(e.clockOut) };
+          for (const b of (e.breaks || [])) bdr[b.id] = { startAt: toLocalInput(b.startAt), endAt: toLocalInput(b.endAt), breakType: b.breakType };
+        }
+        setDrafts(dr); setBreakDrafts(bdr);
       }
     } finally { setLoading(false); }
   }, [apiUrl, authFetch, employee.id, weekStart]);
   useEffect(() => { load(); }, [load]);
 
   const setDraft = (id, key, val) => setDrafts(s => ({ ...s, [id]: { ...s[id], [key]: val } }));
+  const setBreakDraft = (id, key, val) => setBreakDrafts(s => ({ ...s, [id]: { ...s[id], [key]: val } }));
 
   const saveEntry = async (id) => {
     const dft = drafts[id];
     if (!dft) return;
-    setSavingId(id);
+    setSavingId(`e${id}`);
     try {
       const r = await authFetch(`${apiUrl}/api/payroll/time-entries/${id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
@@ -64,7 +71,7 @@ function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToa
   };
 
   const delEntry = async (id) => {
-    if (!confirm('Delete this clock entry?')) return;
+    if (!confirm('Delete this clock entry (and its breaks)?')) return;
     const r = await authFetch(`${apiUrl}/api/payroll/time-entries/${id}`, { method: 'DELETE' });
     if (r.ok) { showToast('Deleted entry'); await load(); onChange && onChange(); }
     else showToast('Could not delete', 'error');
@@ -81,7 +88,41 @@ function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToa
     else showToast(d.error || 'Could not add entry', 'error');
   };
 
+  const saveBreak = async (id) => {
+    const dft = breakDrafts[id];
+    if (!dft) return;
+    setSavingId(`b${id}`);
+    try {
+      const r = await authFetch(`${apiUrl}/api/payroll/breaks/${id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ startAt: localInputToISO(dft.startAt), endAt: dft.endAt ? localInputToISO(dft.endAt) : '', breakType: dft.breakType }),
+      });
+      const d = await r.json();
+      if (r.ok) { showToast('Saved break'); await load(); onChange && onChange(); }
+      else showToast(d.error || 'Could not save break', 'error');
+    } finally { setSavingId(null); }
+  };
+
+  const delBreak = async (id) => {
+    if (!confirm('Delete this break?')) return;
+    const r = await authFetch(`${apiUrl}/api/payroll/breaks/${id}`, { method: 'DELETE' });
+    if (r.ok) { showToast('Deleted break'); await load(); onChange && onChange(); }
+    else showToast('Could not delete break', 'error');
+  };
+
+  const addBreak = async (entryId) => {
+    if (!newBreak.startAt) { showToast('Set a break start time first', 'error'); return; }
+    const r = await authFetch(`${apiUrl}/api/payroll/time-entries/${entryId}/breaks`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ startAt: localInputToISO(newBreak.startAt), endAt: newBreak.endAt ? localInputToISO(newBreak.endAt) : null, breakType: newBreak.breakType }),
+    });
+    const d = await r.json();
+    if (r.ok) { showToast('Added break'); setAddBreakFor(null); setNewBreak({ startAt: '', endAt: '', breakType: 'paid' }); await load(); onChange && onChange(); }
+    else showToast(d.error || 'Could not add break', 'error');
+  };
+
   const inputCls = 'border border-gray-200 rounded-lg px-2 py-1 text-xs focus:ring-2 focus:ring-purple-400 outline-none';
+  const selCls = 'border border-gray-200 rounded-lg px-1.5 py-1 text-xs focus:ring-2 focus:ring-purple-400 outline-none bg-white';
 
   return (
     <div className="bg-gray-50 rounded-xl p-3 my-1">
@@ -92,7 +133,7 @@ function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToa
 
       {employee.clockedOverridden && (
         <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-1 mb-2">
-          This week's hours are manually overridden ({employee.clockedHours}h). Editing punches here won't change the payroll total until you clear the override in the "Clocked" box above.
+          This week's hours are manually overridden ({employee.clockedHours}h). Editing punches/breaks here won't change the payroll total until you clear the override in the "Clocked" box above.
         </p>
       )}
 
@@ -101,21 +142,69 @@ function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToa
       ) : entries.length === 0 ? (
         <p className="text-xs text-gray-400 py-2">No clock entries this week.</p>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           {entries.map(e => (
-            <div key={e.id} className="flex flex-wrap items-center gap-2 bg-white rounded-lg border border-gray-100 px-2.5 py-2">
-              <span className="text-[11px] text-gray-400 w-24">{entryDayLabel(e.clockIn)}</span>
-              <label className="text-[11px] text-gray-500">In</label>
-              <input type="datetime-local" value={drafts[e.id]?.clockIn || ''} onChange={ev => setDraft(e.id, 'clockIn', ev.target.value)} className={inputCls} />
-              <label className="text-[11px] text-gray-500">Out</label>
-              <input type="datetime-local" value={drafts[e.id]?.clockOut || ''} onChange={ev => setDraft(e.id, 'clockOut', ev.target.value)} className={inputCls} />
-              {e.open && <span className="text-[10px] font-semibold text-green-600 bg-green-50 rounded px-1.5 py-0.5">clocked in</span>}
-              <span className="text-[11px] text-gray-500">{e.workedHours}h{e.breakHours > 0 ? ` · ${e.breakHours}h break` : ''}</span>
-              <div className="ml-auto flex items-center gap-1">
-                <button onClick={() => saveEntry(e.id)} disabled={savingId === e.id} className="flex items-center gap-1 text-[11px] font-semibold text-white bg-purple-600 rounded-lg px-2 py-1 hover:bg-purple-700 disabled:opacity-50">
-                  {savingId === e.id ? <Loader className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
-                </button>
-                <button onClick={() => delEntry(e.id)} className="p-1 text-gray-300 hover:text-red-600"><Trash2 className="w-3.5 h-3.5" /></button>
+            <div key={e.id} className="bg-white rounded-lg border border-gray-100 px-2.5 py-2">
+              {/* Clock in/out row */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-gray-400 w-24">{entryDayLabel(e.clockIn)}</span>
+                <label className="text-[11px] text-gray-500">In</label>
+                <input type="datetime-local" value={drafts[e.id]?.clockIn || ''} onChange={ev => setDraft(e.id, 'clockIn', ev.target.value)} className={inputCls} />
+                <label className="text-[11px] text-gray-500">Out</label>
+                <input type="datetime-local" value={drafts[e.id]?.clockOut || ''} onChange={ev => setDraft(e.id, 'clockOut', ev.target.value)} className={inputCls} />
+                {e.open && <span className="text-[10px] font-semibold text-green-600 bg-green-50 rounded px-1.5 py-0.5">clocked in</span>}
+                <span className="text-[11px] text-gray-500">{e.workedHours}h{e.breakHours > 0 ? ` · ${e.breakHours}h break` : ''}</span>
+                <div className="ml-auto flex items-center gap-1">
+                  <button onClick={() => saveEntry(e.id)} disabled={savingId === `e${e.id}`} className="flex items-center gap-1 text-[11px] font-semibold text-white bg-purple-600 rounded-lg px-2 py-1 hover:bg-purple-700 disabled:opacity-50">
+                    {savingId === `e${e.id}` ? <Loader className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                  </button>
+                  <button onClick={() => delEntry(e.id)} className="p-1 text-gray-300 hover:text-red-600" title="Delete entry"><Trash2 className="w-3.5 h-3.5" /></button>
+                </div>
+              </div>
+
+              {/* Breaks for this entry */}
+              <div className="mt-1.5 pl-4 border-l-2 border-gray-100 space-y-1.5">
+                {(e.breaks || []).map(b => (
+                  <div key={b.id} className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] uppercase tracking-wide text-gray-400 w-12">Break</span>
+                    <select value={breakDrafts[b.id]?.breakType || 'paid'} onChange={ev => setBreakDraft(b.id, 'breakType', ev.target.value)} className={selCls}>
+                      <option value="paid">Paid</option>
+                      <option value="unpaid">Unpaid</option>
+                    </select>
+                    <label className="text-[11px] text-gray-500">Start</label>
+                    <input type="datetime-local" value={breakDrafts[b.id]?.startAt || ''} onChange={ev => setBreakDraft(b.id, 'startAt', ev.target.value)} className={inputCls} />
+                    <label className="text-[11px] text-gray-500">End</label>
+                    <input type="datetime-local" value={breakDrafts[b.id]?.endAt || ''} onChange={ev => setBreakDraft(b.id, 'endAt', ev.target.value)} className={inputCls} />
+                    {b.open && <span className="text-[10px] font-semibold text-amber-600 bg-amber-50 rounded px-1.5 py-0.5">on break</span>}
+                    <div className="ml-auto flex items-center gap-1">
+                      <button onClick={() => saveBreak(b.id)} disabled={savingId === `b${b.id}`} className="flex items-center gap-1 text-[11px] font-semibold text-gray-700 border border-gray-200 rounded-lg px-2 py-1 hover:bg-gray-50 disabled:opacity-50">
+                        {savingId === `b${b.id}` ? <Loader className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />} Save
+                      </button>
+                      <button onClick={() => delBreak(b.id)} className="p-1 text-gray-300 hover:text-red-600" title="Delete break"><Trash2 className="w-3 h-3" /></button>
+                    </div>
+                  </div>
+                ))}
+
+                {addBreakFor === e.id ? (
+                  <div className="flex flex-wrap items-center gap-2 bg-purple-50/60 rounded-lg px-2 py-1.5">
+                    <select value={newBreak.breakType} onChange={ev => setNewBreak(s => ({ ...s, breakType: ev.target.value }))} className={selCls}>
+                      <option value="paid">Paid</option>
+                      <option value="unpaid">Unpaid</option>
+                    </select>
+                    <label className="text-[11px] text-gray-500">Start</label>
+                    <input type="datetime-local" value={newBreak.startAt} onChange={ev => setNewBreak(s => ({ ...s, startAt: ev.target.value }))} className={inputCls} />
+                    <label className="text-[11px] text-gray-500">End</label>
+                    <input type="datetime-local" value={newBreak.endAt} onChange={ev => setNewBreak(s => ({ ...s, endAt: ev.target.value }))} className={inputCls} />
+                    <div className="ml-auto flex items-center gap-1">
+                      <button onClick={() => addBreak(e.id)} className="text-[11px] font-semibold text-white bg-purple-600 rounded-lg px-2 py-1 hover:bg-purple-700">Add</button>
+                      <button onClick={() => { setAddBreakFor(null); setNewBreak({ startAt: '', endAt: '', breakType: 'paid' }); }} className="text-[11px] font-semibold text-gray-500 px-2 py-1 hover:text-gray-800">Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button onClick={() => { setAddBreakFor(e.id); setNewBreak({ startAt: drafts[e.id]?.clockIn || '', endAt: '', breakType: 'paid' }); }} className="flex items-center gap-1 text-[11px] font-medium text-gray-500 hover:text-purple-700">
+                    <Plus className="w-3 h-3" /> Add break
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -139,6 +228,8 @@ function TimeEntries({ apiUrl, authFetch, employee, weekStart, onChange, showToa
           <Plus className="w-3.5 h-3.5" /> Add entry
         </button>
       )}
+
+      <p className="text-[10px] text-gray-400 mt-2">Note: every break (paid or unpaid) currently subtracts from worked hours.</p>
     </div>
   );
 }
@@ -310,6 +401,7 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
                     <td className="py-2.5 px-2">
                       <span className="inline-flex items-center gap-1">
                         <input
+                          key={`hours-${emp.id}-${emp.clockedHours}`}
                           type="number" step="0.25"
                           defaultValue={emp.clockedHours}
                           onChange={e => setEdits(s => ({ ...s, [`hours_${emp.id}`]: e.target.value }))}
