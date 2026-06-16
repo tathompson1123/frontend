@@ -50,6 +50,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingNotes, setBookingNotes] = useState('');
   const [editingNotes, setEditingNotes] = useState(false);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetHours, setBudgetHours] = useState('');
+  const [savingBudget, setSavingBudget] = useState(false);
   const [bookingUpsells, setBookingUpsells] = useState(null);
   const [upsellLoading, setUpsellLoading] = useState(false);
   const [upsellForId, setUpsellForId] = useState(null);
@@ -316,6 +319,42 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     } catch (error) {
       console.error('Error saving notes:', error);
       showToast('Failed to save notes: ' + error.message, 'error');
+    }
+  };
+
+  // Default budgeted hours = sum of the service durations on the booking. The manager's
+  // override (budgeted_hours) wins when set; otherwise this default is what's used.
+  const defaultHoursFor = (booking) =>
+    (booking?.items || []).reduce((sum, it) => sum + (parseFloat(it.duration) || 0), 0);
+
+  const effectiveHoursFor = (booking) =>
+    booking?.budgeted_hours != null ? parseFloat(booking.budgeted_hours) : defaultHoursFor(booking);
+
+  const handleSaveBudget = async () => {
+    if (!selectedBooking) return;
+    setSavingBudget(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/bookings/${selectedBooking.id}/budgeted-hours`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ hours: budgetHours.trim() === '' ? null : budgetHours }),
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        const newVal = data.budgeted_hours != null ? parseFloat(data.budgeted_hours) : null;
+        setSelectedBooking({ ...selectedBooking, budgeted_hours: newVal });
+        setAllBookings(allBookings.map(b => b.id === selectedBooking.id ? { ...b, budgeted_hours: newVal } : b));
+        setFilteredBookings(filteredBookings.map(b => b.id === selectedBooking.id ? { ...b, budgeted_hours: newVal } : b));
+        setEditingBudget(false);
+        showToast(newVal == null ? 'Budgeted hours reset to default' : 'Budgeted hours saved!');
+      } else {
+        showToast(data.error || 'Failed to save budgeted hours', 'error');
+      }
+    } catch (error) {
+      console.error('Error saving budgeted hours:', error);
+      showToast('Failed to save budgeted hours: ' + error.message, 'error');
+    } finally {
+      setSavingBudget(false);
     }
   };
 
@@ -1345,6 +1384,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     setShowBookingModal(false);
                     setSelectedBooking(null);
                     setEditingNotes(false);
+                    setEditingBudget(false);
                     setBookingUpsells(null);
                     setUpsellForId(null);
                   }}
@@ -1596,6 +1636,75 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   </div>
                 ) : (
                   <p className="text-gray-600">No service details available</p>
+                )}
+              </div>
+
+              {/* Budgeted hours — manager override used for efficiency tracking */}
+              <div className="bg-indigo-50 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <Target className="w-5 h-5 text-indigo-600" />
+                    <h3 className="font-bold text-gray-900">Budgeted Hours</h3>
+                  </div>
+                  {!editingBudget ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setBudgetHours(selectedBooking.budgeted_hours != null ? String(parseFloat(selectedBooking.budgeted_hours)) : '');
+                        setEditingBudget(true);
+                      }}
+                      className="flex items-center gap-2 px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 rounded-lg transition text-sm font-medium"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                      Edit B.H.
+                    </button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveBudget}
+                        disabled={savingBudget}
+                        className="flex items-center gap-2 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition text-sm font-medium disabled:opacity-50"
+                      >
+                        {savingBudget ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingBudget(false)}
+                        className="px-3 py-2 bg-white hover:bg-gray-100 text-gray-700 rounded-lg transition text-sm font-medium"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {editingBudget ? (
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.25"
+                        value={budgetHours}
+                        onChange={(e) => setBudgetHours(e.target.value)}
+                        placeholder={String(defaultHoursFor(selectedBooking))}
+                        className="w-32 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                      />
+                      <span className="text-sm text-gray-600">hours</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-2">
+                      Leave blank to use the service default ({defaultHoursFor(selectedBooking)} hr).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg p-4 flex items-baseline gap-2">
+                    <span className="text-2xl font-bold text-gray-900">{effectiveHoursFor(selectedBooking)}</span>
+                    <span className="text-sm text-gray-600">hours</span>
+                    <span className="ml-2 text-xs text-gray-400">
+                      {selectedBooking.budgeted_hours != null ? 'Manager override' : 'Service default'}
+                    </span>
+                  </div>
                 )}
               </div>
 
