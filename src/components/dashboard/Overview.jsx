@@ -10,18 +10,20 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const [todos, setTodos] = useState([]);
   const [todoInput, setTodoInput] = useState('');
   const [todoPriority, setTodoPriority] = useState('medium');
+  // 'admin' = the owner's own list; 'team' = the shared list employees fill out in the app.
+  const [todoScope, setTodoScope] = useState('admin');
 
-  // Load todos from backend (shared with employee admin app)
+  // Load todos from backend (shared with the employee app — 'team' scope is the app list)
   useEffect(() => {
     if (!authFetch || !apiUrl) return;
-    authFetch(`${apiUrl}/api/todos`)
+    authFetch(`${apiUrl}/api/todos?scope=${todoScope}`)
       .then(r => r.ok ? r.json() : { todos: [] })
       .then(d => setTodos((d.todos || []).map(t => ({
         id: t.id, text: t.text, done: t.done, priority: t.priority, createdAt: t.created_at,
         creatorName: t.creator_name, creatorColor: t.creator_color,
       }))))
       .catch(() => {});
-  }, [apiUrl, authFetch]);
+  }, [apiUrl, authFetch, todoScope]);
 
   const PRIORITY_CONFIG = {
     high:   { label: 'High',   color: 'text-red-600',    bg: 'bg-red-50',   border: 'border-red-200',   icon: <AlertTriangle className="w-3 h-3" /> },
@@ -37,7 +39,7 @@ export default function Overview({ bookings, services, employees, setCurrentView
       const r = await authFetch(`${apiUrl}/api/todos`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, priority: todoPriority }),
+        body: JSON.stringify({ text, priority: todoPriority, scope: todoScope }),
       });
       const d = await r.json();
       if (d.todo) setTodos(ts => [...ts, {
@@ -489,10 +491,25 @@ export default function Overview({ bookings, services, employees, setCurrentView
     {/* Right column — To-Do List */}
     <div className="w-full md:w-80 md:flex-shrink-0 md:sticky md:top-6">
       <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200">
-        <h2 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
           <CheckCircle2 className="w-5 h-5 text-amber-600" />
           To-Do List
         </h2>
+        <div className="flex bg-gray-100 rounded-lg p-1 mb-4">
+          {[
+            { key: 'admin', label: 'My List' },
+            { key: 'team', label: 'Team List' },
+          ].map(opt => (
+            <button
+              key={opt.key}
+              type="button"
+              onClick={() => setTodoScope(opt.key)}
+              className={`flex-1 px-3 py-1.5 rounded-md text-xs font-semibold transition ${todoScope === opt.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
         <div className="flex gap-2 mb-2">
           <input
             type="text"

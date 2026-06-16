@@ -301,6 +301,17 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
     if (r.ok) { showToast(`Saved ${emp.name}'s pay`); load(); } else showToast('Could not save', 'error');
   };
 
+  const saveTotal = async () => {
+    const v = edits.payrollTotal;
+    if (v === undefined) return; // untouched
+    const r = await authFetch(`${apiUrl}/api/payroll/total`, {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ weekStart, amount: v }),
+    });
+    if (r.ok) { showToast(v === '' ? 'Cleared payroll total' : 'Saved payroll total'); load(); }
+    else showToast('Could not save payroll total', 'error');
+  };
+
   const saveTiers = async () => {
     setSavingTiers(true);
     try {
@@ -341,13 +352,27 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
         <>
           {/* Totals */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+            <div className="rounded-xl border border-gray-100 bg-purple-50/50 p-3">
+              <div className="text-[11px] font-semibold text-purple-700 uppercase">Payroll total</div>
+              <div className="flex items-center gap-1 mt-0.5">
+                <span className="text-gray-400 text-lg font-bold">$</span>
+                <input
+                  key={`ptotal-${weekStart}-${t.manualTotal ?? ''}`}
+                  type="number" step="1"
+                  defaultValue={t.manualTotal ?? ''}
+                  placeholder={String(t.actual || 0)}
+                  onChange={e => setEdits(s => ({ ...s, payrollTotal: e.target.value }))}
+                  onBlur={saveTotal}
+                  onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); }}
+                  title="Type your total payroll for the week to drive the % of revenue. Leave blank to use the sum of the actuals below."
+                  className="w-24 border border-purple-200 rounded-lg px-2 py-1 text-xl font-bold text-gray-900 outline-none focus:ring-2 focus:ring-purple-400"
+                />
+              </div>
+              <div className="text-[10px] text-gray-400 mt-0.5">{t.manualTotal != null ? 'Manual' : `From actuals · ${fmt$(t.actual)}`}</div>
+            </div>
             <div className="rounded-xl border border-gray-100 bg-gray-50 p-3">
               <div className="text-[11px] font-semibold text-gray-500 uppercase">Projected (base)</div>
               <p className="text-xl font-bold text-gray-900">{fmt$(t.projected)}</p>
-            </div>
-            <div className="rounded-xl border border-gray-100 bg-purple-50/50 p-3">
-              <div className="text-[11px] font-semibold text-purple-700 uppercase">Actual (you set)</div>
-              <p className="text-xl font-bold text-gray-900">{fmt$(t.actual)}</p>
             </div>
             <div className="rounded-xl border border-gray-100 bg-blue-50/50 p-3">
               <div className="text-[11px] font-semibold text-blue-700 uppercase">Revenue (Square)</div>
