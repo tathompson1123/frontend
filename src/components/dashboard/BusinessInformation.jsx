@@ -356,6 +356,7 @@ export default function BusinessInformation({
   const [editingGroup, setEditingGroup] = useState(null);
   const [invitingEmployeeId, setInvitingEmployeeId] = useState(null);
   const [togglingAdminId, setTogglingAdminId] = useState(null);
+  const [deletingEmployeeId, setDeletingEmployeeId] = useState(null);
 
   const handleToggleAdmin = async (employee) => {
     const newVal = !employee.is_admin;
@@ -730,6 +731,27 @@ export default function BusinessInformation({
       }
     } catch (err) {
       console.error('Error revoking access:', err);
+    }
+  };
+
+  const handleDeleteEmployee = async (employee) => {
+    if (!confirm(`Remove ${employee.name} from your team? This can't be undone.`)) return;
+    setDeletingEmployeeId(employee.id);
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/${employee.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchEmployees();
+      } else {
+        alert(data.error || 'Failed to remove employee');
+      }
+    } catch (err) {
+      console.error('Error removing employee:', err);
+      alert('Failed to remove employee');
+    } finally {
+      setDeletingEmployeeId(null);
     }
   };
 
@@ -3083,8 +3105,11 @@ export default function BusinessInformation({
                           <Shield className="w-5 h-5" />
                         </button>
                       )}
-                      <button type="button" onClick={() => handleEditEmployee(employee)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
+                      <button type="button" onClick={() => handleEditEmployee(employee)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
                         <Edit className="w-5 h-5" />
+                      </button>
+                      <button type="button" onClick={() => handleDeleteEmployee(employee)} disabled={deletingEmployeeId === employee.id} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-50" title="Remove from team">
+                        <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                   </div>
