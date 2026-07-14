@@ -326,6 +326,13 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [viewingCustomer, setViewingCustomer] = useState(null);
   const [viewingCustomerEditMode, setViewingCustomerEditMode] = useState(false);
   const [viewingCustomerEdit, setViewingCustomerEdit] = useState({});
+  const [viewingCustomerBookings, setViewingCustomerBookings] = useState([]);
+  const [viewingCustomerBookingsLoading, setViewingCustomerBookingsLoading] = useState(false);
+
+  // Bookings tab
+  const [bookings, setBookings] = useState([]);
+  const [bookingsLoading, setBookingsLoading] = useState(false);
+  const [viewingBooking, setViewingBooking] = useState(null);
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -820,6 +827,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       fetchConversations();
       fetchSmsLeadConversations();
     }
+    if (activeTab === 'bookings') fetchBookings();
 
     // Handle OAuth callback redirect
     const params = new URLSearchParams(window.location.search);
@@ -1169,6 +1177,46 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           notes: 'Great customer, always on time'
         }
       ]);
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      setBookingsLoading(true);
+      const response = await authFetch(`${apiUrl}/api/bookings`);
+      if (response.ok) {
+        const data = await response.json();
+        // Most recent first (the list endpoint returns ascending by date).
+        const sorted = (data.bookings || []).slice().sort((a, b) =>
+          bookingSortKey(b).localeCompare(bookingSortKey(a))
+        );
+        setBookings(sorted);
+      }
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
+    } finally {
+      setBookingsLoading(false);
+    }
+  };
+
+  // Open the customer detail slide-over and load their recent bookings.
+  const openViewingCustomer = (customer) => {
+    setViewingCustomer(customer);
+    setViewingCustomerEditMode(false);
+    setViewingCustomerEdit({
+      name: customer.name, phone: customer.phone, email: customer.email,
+      last_service: customer.last_service, last_service_date: customer.last_service_date,
+      left_review: customer.left_review, notes: customer.notes,
+    });
+    setViewingCustomerBookings([]);
+    // Demo customers use non-numeric ids — skip the fetch for them.
+    if (/^\d+$/.test(String(customer.id))) {
+      setViewingCustomerBookingsLoading(true);
+      authFetch(`${apiUrl}/api/customers/${customer.id}/bookings`)
+        .then(r => r.json())
+        .then(d => setViewingCustomerBookings(d.bookings || []))
+        .catch(() => setViewingCustomerBookings([]))
+        .finally(() => setViewingCustomerBookingsLoading(false));
     }
   };
 
@@ -1566,6 +1614,19 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     phoneMatches(customer.phone)
   );
 
+  const filteredBookings = bookings.filter(b => {
+    if (!term) return true;
+    const services = bookingServiceLabel(b).toLowerCase();
+    return (
+      b.booking_number?.toLowerCase().includes(term) ||
+      b.customer_name?.toLowerCase().includes(term) ||
+      b.customer_email?.toLowerCase().includes(term) ||
+      b.status?.toLowerCase().includes(term) ||
+      services.includes(term) ||
+      phoneMatches(b.customer_phone)
+    );
+  });
+
   const leadStats = {
     total: currentLeads.length,
     new: currentLeads.filter(l => l.status === 'new').length,
@@ -1643,11 +1704,13 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               if (val === 'conversations') { fetchConversations(); fetchSmsLeadConversations(); }
               if (val === 'rewards') fetchRewardsData();
               if (val === 'analytics') fetchAnalytics();
+              if (val === 'bookings') fetchBookings();
             }}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
           >
             <option value="leads">Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})</option>
             <option value="customers">Customers ({customerStats.total})</option>
+            <option value="bookings">Bookings</option>
             <option value="conversations">Conversations</option>
             <option value="rewards">Rewards</option>
             <option value="analytics">Analytics</option>
@@ -1685,6 +1748,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 Customers ({customerStats.total})
               </div>
               {activeTab === 'customers' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => { setActiveTab('bookings'); setSearchTerm(''); setEditingCell(null); fetchBookings(); }}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'bookings' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Bookings
+              </div>
+              {activeTab === 'bookings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
             <button
               onClick={() => { setActiveTab('conversations'); setSearchTerm(''); setEditingCell(null); fetchConversations(); fetchSmsLeadConversations(); }}
@@ -2265,7 +2338,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   <p className="text-gray-600">Convert leads or add bookings</p>
                 </div>
               ) : filteredCustomers.map((customer) => (
-                <div key={customer.id} onClick={() => { setViewingCustomer(customer); setViewingCustomerEditMode(false); setViewingCustomerEdit({ name: customer.name, phone: customer.phone, email: customer.email, last_service: customer.last_service, last_service_date: customer.last_service_date, left_review: customer.left_review, notes: customer.notes }); }} className="p-4 cursor-pointer active:bg-blue-50">
+                <div key={customer.id} onClick={() => openViewingCustomer(customer)} className="p-4 cursor-pointer active:bg-blue-50">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <span className="text-blue-600 font-semibold text-sm">{customer.name || '—'}</span>
@@ -2287,7 +2360,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               <CustomersTable
                 customers={filteredCustomers}
                 columns={customerColumns}
-                openViewingCustomer={(c) => { setViewingCustomer(c); setViewingCustomerEditMode(false); setViewingCustomerEdit({ name: c.name, phone: c.phone, email: c.email, last_service: c.last_service, last_service_date: c.last_service_date, left_review: c.left_review, notes: c.notes }); }}
+                openViewingCustomer={openViewingCustomer}
                 deleteCustomer={deleteCustomer}
               />
             </div>
@@ -2299,6 +2372,70 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           {activeTab === 'leads' ? filteredLeads.length : filteredCustomers.length} records
         </div>
       </div>
+      )}
+
+      {/* Bookings Tab */}
+      {activeTab === 'bookings' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          {/* Toolbar */}
+          <div className="p-4 border-b border-gray-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <div className="relative flex-1 md:flex-none w-full md:w-auto">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search booking #, name, email, phone, service…"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-96"
+              />
+            </div>
+            <button
+              onClick={fetchBookings}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 flex-shrink-0"
+            >
+              <Clock className="w-4 h-4" />
+              Refresh
+            </button>
+          </div>
+
+          {/* Mobile card list */}
+          <div className="md:hidden divide-y divide-gray-100">
+            {bookingsLoading ? (
+              <div className="text-center py-12 text-gray-500 text-sm">Loading bookings…</div>
+            ) : filteredBookings.length === 0 ? (
+              <div className="text-center py-12">
+                <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings found</h3>
+                <p className="text-gray-600">Bookings will appear here as they come in</p>
+              </div>
+            ) : filteredBookings.map((b) => (
+              <div key={b.id} onClick={() => setViewingBooking(b)} className="p-4 cursor-pointer active:bg-blue-50">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-xs font-semibold text-gray-500">#{b.booking_number}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getBookingStatusColor(b.status)}`}>{formatLabel(b.status)}</span>
+                    </div>
+                    <p className="text-blue-600 font-semibold text-sm mt-1">{b.customer_name || '—'}</p>
+                    <p className="text-xs text-gray-600 truncate">{bookingServiceLabel(b)}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{fmtBookingDate(b.booking_date)}{b.start_time ? ` · ${fmtBookingTime(b.start_time)}` : ''}</p>
+                  </div>
+                  <span className="text-sm font-bold text-green-700 flex-shrink-0">${parseFloat(b.total_amount || 0).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Desktop table */}
+          <div className="hidden md:block overflow-x-auto">
+            <BookingsTable bookings={filteredBookings} loading={bookingsLoading} onView={setViewingBooking} />
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200 text-sm text-gray-600">
+            {filteredBookings.length} booking{filteredBookings.length === 1 ? '' : 's'}
+          </div>
+        </div>
       )}
 
       {/* Conversations Tab */}
@@ -4064,6 +4201,35 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
               {viewingCustomer.notes && <div className="mt-3"><p className="text-xs text-gray-400 mb-1">Notes</p><p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingCustomer.notes}</p></div>}
             </div>
 
+            {/* Recent Bookings */}
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Recent Bookings</h3>
+              {viewingCustomerBookingsLoading ? (
+                <p className="text-sm text-gray-400">Loading…</p>
+              ) : viewingCustomerBookings.length === 0 ? (
+                <p className="text-sm text-gray-400">No bookings found for this customer.</p>
+              ) : (
+                <div className="space-y-2">
+                  {viewingCustomerBookings.slice(0, 10).map((b) => (
+                    <div key={b.id} onClick={() => setViewingBooking(b)} className="flex items-center justify-between gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50 cursor-pointer transition">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-semibold text-gray-500">#{b.booking_number}</span>
+                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${getBookingStatusColor(b.status)}`}>{formatLabel(b.status)}</span>
+                        </div>
+                        <p className="text-sm text-gray-800 truncate mt-0.5">{bookingServiceLabel(b)}</p>
+                        <p className="text-xs text-gray-400">{fmtBookingDate(b.booking_date)}{b.start_time ? ` · ${fmtBookingTime(b.start_time)}` : ''}</p>
+                      </div>
+                      <span className="text-sm font-bold text-green-700 flex-shrink-0">${parseFloat(b.total_amount || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                  {viewingCustomerBookings.length > 10 && (
+                    <p className="text-xs text-gray-400 pt-1">Showing 10 of {viewingCustomerBookings.length} bookings</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Marketing subscriptions — manual opt-out controls */}
             <div className="p-5 border-b border-gray-100">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Marketing Subscriptions</h3>
@@ -4127,6 +4293,88 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     <button onClick={() => setViewingCustomerEditMode(false)} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 transition">Cancel</button>
                   </div>
                 </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Booking Detail Slide-over */}
+      {viewingBooking && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-50 flex justify-end" onClick={() => setViewingBooking(null)}>
+          <div className="bg-white w-full max-w-xl h-full shadow-2xl flex flex-col overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            {/* Header */}
+            <div className="p-5 border-b border-gray-200 flex items-start justify-between bg-gray-50">
+              <div>
+                <h2 className="text-xl font-bold text-gray-900">Booking #{viewingBooking.booking_number}</h2>
+                <div className="mt-1.5">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getBookingStatusColor(viewingBooking.status)}`}>{formatLabel(viewingBooking.status)}</span>
+                  {viewingBooking.source && <span className="ml-2 text-xs text-gray-400">via {formatLabel(viewingBooking.source)}</span>}
+                </div>
+              </div>
+              <button onClick={() => setViewingBooking(null)} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"><X className="w-5 h-5" /></button>
+            </div>
+
+            {/* Schedule */}
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Schedule</h3>
+              <div className="flex items-center gap-3 text-sm text-gray-800">
+                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                <span>
+                  {fmtBookingDate(viewingBooking.booking_date)}
+                  {viewingBooking.start_time ? ` · ${fmtBookingTime(viewingBooking.start_time)}` : ''}
+                  {viewingBooking.end_time ? ` – ${fmtBookingTime(viewingBooking.end_time)}` : ''}
+                </span>
+              </div>
+            </div>
+
+            {/* Customer */}
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Customer</h3>
+              <p className="text-sm font-semibold text-gray-900 mb-2">{viewingBooking.customer_name || '—'}</p>
+              <div className="space-y-2">
+                {viewingBooking.customer_email && <div className="flex items-center gap-3"><Mail className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`mailto:${viewingBooking.customer_email}`} className="text-blue-600 hover:underline text-sm">{viewingBooking.customer_email}</a></div>}
+                {viewingBooking.customer_phone && <div className="flex items-center gap-3"><Phone className="w-4 h-4 text-gray-400 flex-shrink-0" /><a href={`tel:${viewingBooking.customer_phone}`} className="text-blue-600 hover:underline text-sm">{viewingBooking.customer_phone}</a></div>}
+              </div>
+            </div>
+
+            {/* Services */}
+            <div className="p-5 border-b border-gray-100">
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Services</h3>
+              {Array.isArray(viewingBooking.items) && viewingBooking.items.length > 0 ? (
+                <div className="space-y-1.5">
+                  {viewingBooking.items.map((it) => (
+                    <div key={it.id} className="flex items-center justify-between gap-3 text-sm">
+                      <span className="text-gray-800">{it.service_name}{it.is_addon ? <span className="ml-1.5 text-[10px] uppercase text-gray-400">add-on</span> : ''}</span>
+                      <span className="text-gray-600 flex-shrink-0">${parseFloat(it.price || 0).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">{viewingBooking.services || '—'}</p>
+              )}
+              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-500">Total</span>
+                <span className="text-lg font-bold text-green-700">${parseFloat(viewingBooking.total_amount || 0).toFixed(2)}</span>
+              </div>
+            </div>
+
+            {/* Notes */}
+            {(viewingBooking.customer_notes || viewingBooking.job_notes) && (
+              <div className="p-5 border-b border-gray-100">
+                <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Notes</h3>
+                {viewingBooking.customer_notes && (
+                  <div className="mb-3">
+                    <p className="text-xs text-gray-400 mb-1">Customer note</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingBooking.customer_notes}</p>
+                  </div>
+                )}
+                {viewingBooking.job_notes && (
+                  <div>
+                    <p className="text-xs text-gray-400 mb-1">Job note</p>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{viewingBooking.job_notes}</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -4412,6 +4660,105 @@ function CustomersTable({ customers, columns, openViewingCustomer, deleteCustome
             <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
               <button onClick={(e) => { e.stopPropagation(); deleteCustomer(customer.id); }} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
             </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+// Sortable key for a booking (ISO date + time) so string compare orders chronologically.
+function bookingSortKey(b) {
+  const d = String(b?.booking_date || '').slice(0, 10);
+  return `${d}T${b?.start_time || '00:00:00'}`;
+}
+
+// Short label of a booking's service(s). Handles both the /api/bookings shape
+// (items array) and the customer-bookings shape (services string).
+function bookingServiceLabel(b) {
+  if (Array.isArray(b?.items) && b.items.length > 0) {
+    const mains = b.items.filter(i => !i.is_addon);
+    const first = (mains[0] || b.items[0])?.service_name || 'Service';
+    const extra = b.items.length - 1;
+    return extra > 0 ? `${first} +${extra} more` : first;
+  }
+  return b?.services || '—';
+}
+
+// Format a booking_date (may be 'YYYY-MM-DD' or an ISO timestamp) without TZ shift.
+function fmtBookingDate(d) {
+  if (!d) return '—';
+  const parts = String(d).slice(0, 10).split('-');
+  if (parts.length !== 3) return '—';
+  return new Date(parts[0], parts[1] - 1, parts[2]).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// Format a 'HH:MM:SS' time string to 12-hour with AM/PM.
+function fmtBookingTime(t) {
+  if (!t) return '';
+  const [h, m = '00'] = String(t).split(':');
+  const hr = parseInt(h, 10);
+  if (Number.isNaN(hr)) return '';
+  const ampm = hr >= 12 ? 'PM' : 'AM';
+  const h12 = hr % 12 || 12;
+  return `${h12}:${m} ${ampm}`;
+}
+
+function getBookingStatusColor(status) {
+  const colors = {
+    pending: 'bg-yellow-100 text-yellow-700',
+    confirmed: 'bg-blue-100 text-blue-700',
+    confirmed_card_on_file: 'bg-indigo-100 text-indigo-700',
+    completed: 'bg-green-100 text-green-700',
+    cancelled: 'bg-red-100 text-red-700',
+    no_show: 'bg-gray-100 text-gray-700',
+  };
+  return colors[status] || 'bg-gray-100 text-gray-700';
+}
+
+function BookingsTable({ bookings, loading, onView }) {
+  if (loading) {
+    return <div className="text-center py-12 text-gray-500 text-sm">Loading bookings…</div>;
+  }
+  if (bookings.length === 0) {
+    return (
+      <div className="text-center py-12">
+        <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings found</h3>
+        <p className="text-gray-600">Bookings will appear here as they come in</p>
+      </div>
+    );
+  }
+  return (
+    <table className="w-full">
+      <thead className="bg-gray-50 border-b border-gray-200">
+        <tr>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking #</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-200">
+        {bookings.map((b) => (
+          <tr key={b.id} onClick={() => onView(b)} className="cursor-pointer hover:bg-blue-50 transition">
+            <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">#{b.booking_number}</td>
+            <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{fmtBookingDate(b.booking_date)}</td>
+            <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{fmtBookingTime(b.start_time)}</td>
+            <td className="px-4 py-3 text-sm">
+              <div className="text-blue-600 font-medium">{b.customer_name || <span className="text-gray-400">—</span>}</div>
+              {(b.customer_email || b.customer_phone) && (
+                <div className="text-xs text-gray-400 truncate max-w-[220px]">{b.customer_email || b.customer_phone}</div>
+              )}
+            </td>
+            <td className="px-4 py-3 text-sm text-gray-700 max-w-[240px] truncate">{bookingServiceLabel(b)}</td>
+            <td className="px-4 py-3 text-sm">
+              <span className={`px-2 py-1 rounded-full text-xs font-semibold ${getBookingStatusColor(b.status)}`}>{formatLabel(b.status)}</span>
+            </td>
+            <td className="px-4 py-3 text-sm font-semibold text-green-700 text-right whitespace-nowrap">${parseFloat(b.total_amount || 0).toFixed(2)}</td>
           </tr>
         ))}
       </tbody>
