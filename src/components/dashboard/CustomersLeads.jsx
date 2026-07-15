@@ -333,6 +333,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
   const [viewingBooking, setViewingBooking] = useState(null);
+  // Sort: job_date_desc | job_date_asc | booked_desc | booked_asc
+  const [bookingSort, setBookingSortRaw] = useState(() => localStorage.getItem('bookingSort') || 'job_date_desc');
+  const setBookingSort = (v) => { setBookingSortRaw(v); localStorage.setItem('bookingSort', v); };
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
 
@@ -1186,11 +1189,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       const response = await authFetch(`${apiUrl}/api/bookings`);
       if (response.ok) {
         const data = await response.json();
-        // Most recent first (the list endpoint returns ascending by date).
-        const sorted = (data.bookings || []).slice().sort((a, b) =>
-          bookingSortKey(b).localeCompare(bookingSortKey(a))
-        );
-        setBookings(sorted);
+        // Ordering is applied at render time via `sortedBookings` (see below).
+        setBookings(data.bookings || []);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -1625,6 +1625,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       services.includes(term) ||
       phoneMatches(b.customer_phone)
     );
+  });
+
+  // Sort by job date (booking_date) or date booked (created_at), asc or desc.
+  const sortedBookings = [...filteredBookings].sort((a, b) => {
+    switch (bookingSort) {
+      case 'job_date_asc': return bookingSortKey(a).localeCompare(bookingSortKey(b));
+      case 'booked_desc': return parseTS(b.created_at) - parseTS(a.created_at);
+      case 'booked_asc': return parseTS(a.created_at) - parseTS(b.created_at);
+      case 'job_date_desc':
+      default: return bookingSortKey(b).localeCompare(bookingSortKey(a));
+    }
   });
 
   const leadStats = {
@@ -2389,26 +2400,39 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 className="pl-9 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full md:w-96"
               />
             </div>
-            <button
-              onClick={fetchBookings}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 flex-shrink-0"
-            >
-              <Clock className="w-4 h-4" />
-              Refresh
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <select
+                value={bookingSort}
+                onChange={(e) => setBookingSort(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white flex-shrink-0 focus:ring-2 focus:ring-blue-500"
+                title="Sort bookings"
+              >
+                <option value="job_date_desc">Job date — latest first</option>
+                <option value="job_date_asc">Job date — soonest first</option>
+                <option value="booked_desc">Date booked — newest first</option>
+                <option value="booked_asc">Date booked — oldest first</option>
+              </select>
+              <button
+                onClick={fetchBookings}
+                className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2 flex-shrink-0"
+              >
+                <Clock className="w-4 h-4" />
+                Refresh
+              </button>
+            </div>
           </div>
 
           {/* Mobile card list */}
           <div className="md:hidden divide-y divide-gray-100">
             {bookingsLoading ? (
               <div className="text-center py-12 text-gray-500 text-sm">Loading bookings…</div>
-            ) : filteredBookings.length === 0 ? (
+            ) : sortedBookings.length === 0 ? (
               <div className="text-center py-12">
                 <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">No bookings found</h3>
                 <p className="text-gray-600">Bookings will appear here as they come in</p>
               </div>
-            ) : filteredBookings.map((b) => (
+            ) : sortedBookings.map((b) => (
               <div key={b.id} onClick={() => setViewingBooking(b)} className="p-4 cursor-pointer active:bg-blue-50">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -2418,7 +2442,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     </div>
                     <p className="text-blue-600 font-semibold text-sm mt-1">{b.customer_name || '—'}</p>
                     <p className="text-xs text-gray-600 truncate">{bookingServiceLabel(b)}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">{fmtBookingDate(b.booking_date)}{b.start_time ? ` · ${fmtBookingTime(b.start_time)}` : ''}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Job: {fmtBookingDate(b.booking_date)}{b.start_time ? ` · ${fmtBookingTime(b.start_time)}` : ''}</p>
+                    {b.created_at && <p className="text-xs text-gray-400">Booked: {fmtBookingDate(b.created_at)}</p>}
                   </div>
                   <span className="text-sm font-bold text-green-700 flex-shrink-0">${parseFloat(b.total_amount || 0).toFixed(2)}</span>
                 </div>
@@ -2428,12 +2453,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
           {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto">
-            <BookingsTable bookings={filteredBookings} loading={bookingsLoading} onView={setViewingBooking} />
+            <BookingsTable bookings={sortedBookings} loading={bookingsLoading} onView={setViewingBooking} />
           </div>
 
           {/* Footer */}
           <div className="p-4 border-t border-gray-200 text-sm text-gray-600">
-            {filteredBookings.length} booking{filteredBookings.length === 1 ? '' : 's'}
+            {sortedBookings.length} booking{sortedBookings.length === 1 ? '' : 's'}
           </div>
         </div>
       )}
@@ -4318,13 +4343,21 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             {/* Schedule */}
             <div className="p-5 border-b border-gray-100">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Schedule</h3>
-              <div className="flex items-center gap-3 text-sm text-gray-800">
-                <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                <span>
-                  {fmtBookingDate(viewingBooking.booking_date)}
-                  {viewingBooking.start_time ? ` · ${fmtBookingTime(viewingBooking.start_time)}` : ''}
-                  {viewingBooking.end_time ? ` – ${fmtBookingTime(viewingBooking.end_time)}` : ''}
-                </span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 text-sm text-gray-800">
+                  <Calendar className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  <span>
+                    {fmtBookingDate(viewingBooking.booking_date)}
+                    {viewingBooking.start_time ? ` · ${fmtBookingTime(viewingBooking.start_time)}` : ''}
+                    {viewingBooking.end_time ? ` – ${fmtBookingTime(viewingBooking.end_time)}` : ''}
+                  </span>
+                </div>
+                {viewingBooking.created_at && (
+                  <div className="flex items-center gap-3 text-xs text-gray-500">
+                    <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                    <span>Booked {fmtDateTime(viewingBooking.created_at)}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -4734,8 +4767,9 @@ function BookingsTable({ bookings, loading, onView }) {
       <thead className="bg-gray-50 border-b border-gray-200">
         <tr>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booking #</th>
-          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job Date</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Time</th>
+          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Booked</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Service</th>
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -4748,6 +4782,7 @@ function BookingsTable({ bookings, loading, onView }) {
             <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">#{b.booking_number}</td>
             <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{fmtBookingDate(b.booking_date)}</td>
             <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{fmtBookingTime(b.start_time)}</td>
+            <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{b.created_at ? fmtBookingDate(b.created_at) : '—'}</td>
             <td className="px-4 py-3 text-sm">
               <div className="text-blue-600 font-medium">{b.customer_name || <span className="text-gray-400">—</span>}</div>
               {(b.customer_email || b.customer_phone) && (
