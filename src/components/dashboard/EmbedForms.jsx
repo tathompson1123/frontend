@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
-  Plus, X, Copy, Check, Trash2, ChevronLeft, ChevronUp, ChevronDown,
+  Plus, X, Copy, CopyPlus, Check, Trash2, ChevronLeft, ChevronUp, ChevronDown,
   FileText, Eye, Code, Pencil, MessageSquare,
 } from 'lucide-react';
 
@@ -37,6 +37,7 @@ const newDraft = () => ({
   submit_text: 'Submit',
   success_message: "Thanks! We'll be in touch shortly.",
   theme_color: '#d97706',
+  field_color: '#d1d5db',
   sms_followup: true,
   fields: [
     { ...STANDARD_PRESETS[0] },
@@ -55,6 +56,7 @@ export default function EmbedForms({ apiUrl, authFetch }) {
   const [saving, setSaving] = useState(false);
   const [sourceTouched, setSourceTouched] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const [duplicatingId, setDuplicatingId] = useState(null);
 
   useEffect(() => { load(); }, []);
 
@@ -85,6 +87,7 @@ export default function EmbedForms({ apiUrl, authFetch }) {
     setDraft({
       name: f.name, source: f.source, title: f.title, description: f.description || '',
       submit_text: f.submit_text, success_message: f.success_message, theme_color: f.theme_color,
+      field_color: f.field_color || '#d1d5db',
       sms_followup: f.sms_followup, fields: Array.isArray(f.fields) ? f.fields : [],
     });
     setEditingId(f.id);
@@ -96,6 +99,18 @@ export default function EmbedForms({ apiUrl, authFetch }) {
     if (!window.confirm('Delete this form? The embed snippet will stop working.')) return;
     await authFetch(`${apiUrl}/api/embed-forms/${id}`, { method: 'DELETE' });
     load();
+  };
+
+  const duplicate = async (id) => {
+    setDuplicatingId(id);
+    try {
+      const res = await authFetch(`${apiUrl}/api/embed-forms/${id}/duplicate`, { method: 'POST' });
+      if (res.ok) await load();
+    } catch (e) {
+      console.error('Duplicate failed', e);
+    } finally {
+      setDuplicatingId(null);
+    }
   };
 
   const save = async () => {
@@ -183,6 +198,7 @@ export default function EmbedForms({ apiUrl, authFetch }) {
                   </div>
                   <div className="flex items-center gap-2">
                     <button onClick={() => startEdit(f)} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition"><Pencil className="w-3.5 h-3.5" /> Edit</button>
+                    <button onClick={() => duplicate(f.id)} disabled={duplicatingId === f.id} className="inline-flex items-center gap-1 px-3 py-1.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition disabled:opacity-50"><CopyPlus className="w-3.5 h-3.5" /> {duplicatingId === f.id ? 'Duplicating…' : 'Duplicate'}</button>
                     <button onClick={() => remove(f.id)} className="p-1.5 text-gray-400 hover:text-red-500 transition"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </div>
@@ -319,10 +335,17 @@ export default function EmbedForms({ apiUrl, authFetch }) {
                 <input value={draft.submit_text} onChange={(e) => setDraft({ ...draft, submit_text: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none" placeholder="Submit" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Theme Color</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Theme Color <span className="text-gray-400">(button &amp; focus)</span></label>
                 <div className="flex items-center gap-2">
                   <input type="color" value={draft.theme_color} onChange={(e) => setDraft({ ...draft, theme_color: e.target.value })} className="w-9 h-9 rounded-lg border-2 border-gray-200 cursor-pointer" />
                   <input value={draft.theme_color} onChange={(e) => setDraft({ ...draft, theme_color: e.target.value })} className="flex-1 px-2 py-1.5 border-2 border-gray-200 rounded-lg text-xs font-mono focus:border-blue-500 focus:outline-none" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Field Color <span className="text-gray-400">(input borders)</span></label>
+                <div className="flex items-center gap-2">
+                  <input type="color" value={draft.field_color || '#d1d5db'} onChange={(e) => setDraft({ ...draft, field_color: e.target.value })} className="w-9 h-9 rounded-lg border-2 border-gray-200 cursor-pointer" />
+                  <input value={draft.field_color || '#d1d5db'} onChange={(e) => setDraft({ ...draft, field_color: e.target.value })} className="flex-1 px-2 py-1.5 border-2 border-gray-200 rounded-lg text-xs font-mono focus:border-blue-500 focus:outline-none" />
                 </div>
               </div>
             </div>
@@ -356,10 +379,10 @@ export default function EmbedForms({ apiUrl, authFetch }) {
                         <>
                           <label className="block text-xs font-medium text-gray-700 mb-1">{f.label}{f.required && <span className="text-red-400 ml-0.5">*</span>}</label>
                           {f.type === 'textarea'
-                            ? <textarea rows="2" placeholder={f.placeholder} disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400 resize-none" />
+                            ? <textarea rows="2" placeholder={f.placeholder} disabled style={{ borderColor: draft.field_color }} className="w-full px-3 py-2 border-2 rounded-lg text-xs bg-gray-50 text-gray-400 resize-none" />
                             : f.type === 'select'
-                              ? <select disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400"><option>{f.placeholder || 'Select…'}</option></select>
-                              : <input type="text" placeholder={f.placeholder} disabled className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-xs bg-gray-50 text-gray-400" />}
+                              ? <select disabled style={{ borderColor: draft.field_color }} className="w-full px-3 py-2 border-2 rounded-lg text-xs bg-gray-50 text-gray-400"><option>{f.placeholder || 'Select…'}</option></select>
+                              : <input type="text" placeholder={f.placeholder} disabled style={{ borderColor: draft.field_color }} className="w-full px-3 py-2 border-2 rounded-lg text-xs bg-gray-50 text-gray-400" />}
                         </>
                       )}
                     </div>
