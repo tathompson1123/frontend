@@ -57,9 +57,19 @@ function fmtTime(ts) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
-function fmtDateTime(ts) {
+function fmtDateTime(ts, tz) {
   const d = parseTS(ts);
-  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz || undefined });
+}
+
+// Format a UTC timestamp (e.g. created_at) as a date in the business's timezone.
+// Unlike fmtBookingDate (which is for tz-less calendar dates like booking_date),
+// this converts the instant to the owner's local day so "Booked" never lands a day off.
+function fmtInstantDate(ts, tz) {
+  if (!ts) return '—';
+  const d = parseTS(ts);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: tz || undefined });
 }
 
 // Wraps horizontally-scrollable content and shows a floating scrollbar pinned to the
@@ -332,6 +342,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   // Bookings tab
   const [bookings, setBookings] = useState([]);
   const [bookingsLoading, setBookingsLoading] = useState(false);
+  // Business IANA timezone (from location in settings) — used to render booking
+  // timestamps in the owner's local time rather than UTC/browser time.
+  const [businessTz, setBusinessTz] = useState(null);
   const [viewingBooking, setViewingBooking] = useState(null);
   // Sort: job_date_desc | job_date_asc | booked_desc | booked_asc
   const [bookingSort, setBookingSortRaw] = useState(() => localStorage.getItem('bookingSort') || 'job_date_desc');
@@ -1191,6 +1204,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
         const data = await response.json();
         // Ordering is applied at render time via `sortedBookings` (see below).
         setBookings(data.bookings || []);
+        if (data.timezone) setBusinessTz(data.timezone);
       }
     } catch (error) {
       console.error('Error fetching bookings:', error);
@@ -1214,7 +1228,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       setViewingCustomerBookingsLoading(true);
       authFetch(`${apiUrl}/api/customers/${customer.id}/bookings`)
         .then(r => r.json())
-        .then(d => setViewingCustomerBookings(d.bookings || []))
+        .then(d => { setViewingCustomerBookings(d.bookings || []); if (d.timezone) setBusinessTz(d.timezone); })
         .catch(() => setViewingCustomerBookings([]))
         .finally(() => setViewingCustomerBookingsLoading(false));
     }
@@ -2443,7 +2457,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     <p className="text-blue-600 font-semibold text-sm mt-1">{b.customer_name || '—'}</p>
                     <p className="text-xs text-gray-600 truncate">{bookingServiceLabel(b)}</p>
                     <p className="text-xs text-gray-400 mt-0.5">Job: {fmtBookingDate(b.booking_date)}{b.start_time ? ` · ${fmtBookingTime(b.start_time)}` : ''}</p>
-                    {b.created_at && <p className="text-xs text-gray-400">Booked: {fmtBookingDate(b.created_at)}</p>}
+                    {b.created_at && <p className="text-xs text-gray-400">Booked: {fmtInstantDate(b.created_at, businessTz)}</p>}
                   </div>
                   <span className="text-sm font-bold text-green-700 flex-shrink-0">${parseFloat(b.total_amount || 0).toFixed(2)}</span>
                 </div>
@@ -2453,7 +2467,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
           {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto">
-            <BookingsTable bookings={sortedBookings} loading={bookingsLoading} onView={setViewingBooking} />
+            <BookingsTable bookings={sortedBookings} loading={bookingsLoading} onView={setViewingBooking} tz={businessTz} />
           </div>
 
           {/* Footer */}
@@ -4355,7 +4369,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 {viewingBooking.created_at && (
                   <div className="flex items-center gap-3 text-xs text-gray-500">
                     <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                    <span>Booked {fmtDateTime(viewingBooking.created_at)}</span>
+                    <span>Booked {fmtDateTime(viewingBooking.created_at, businessTz)}</span>
                   </div>
                 )}
               </div>
@@ -4749,7 +4763,7 @@ function getBookingStatusColor(status) {
   return colors[status] || 'bg-gray-100 text-gray-700';
 }
 
-function BookingsTable({ bookings, loading, onView }) {
+function BookingsTable({ bookings, loading, onView, tz }) {
   if (loading) {
     return <div className="text-center py-12 text-gray-500 text-sm">Loading bookings…</div>;
   }
@@ -4782,7 +4796,7 @@ function BookingsTable({ bookings, loading, onView }) {
             <td className="px-4 py-3 text-sm font-medium text-gray-700 whitespace-nowrap">#{b.booking_number}</td>
             <td className="px-4 py-3 text-sm text-gray-700 whitespace-nowrap">{fmtBookingDate(b.booking_date)}</td>
             <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{fmtBookingTime(b.start_time)}</td>
-            <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{b.created_at ? fmtBookingDate(b.created_at) : '—'}</td>
+            <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{b.created_at ? fmtInstantDate(b.created_at, tz) : '—'}</td>
             <td className="px-4 py-3 text-sm">
               <div className="text-blue-600 font-medium">{b.customer_name || <span className="text-gray-400">—</span>}</div>
               {(b.customer_email || b.customer_phone) && (
