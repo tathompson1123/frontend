@@ -386,6 +386,32 @@ function PlanLoadingScreen() {
   );
 }
 
+// Ready-to-paste code block for a plan step (schema / meta tags), with a copy button.
+// Rendered only when the AI provided step.code, so the owner never assembles code by hand.
+function StepCodeBox({ code }) {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+  return (
+    <div className="mt-3 border border-gray-200 rounded-lg overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-gray-50 border-b border-gray-200">
+        <span className="text-xs font-semibold text-gray-600 flex items-center gap-1.5"><Code className="w-3.5 h-3.5" /> Copy &amp; paste this exact code</span>
+        <button
+          onClick={copy}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-semibold transition ${copied ? 'bg-green-100 text-green-700' : 'bg-purple-100 text-purple-700 hover:bg-purple-200'}`}
+        >
+          {copied ? <><CheckCircle className="w-3 h-3" /> Copied!</> : <><Code className="w-3 h-3" /> Copy Code</>}
+        </button>
+      </div>
+      <pre className="text-[11px] leading-relaxed text-green-300 bg-gray-900 p-3 overflow-x-auto whitespace-pre-wrap break-words max-h-64">{code}</pre>
+    </div>
+  );
+}
+
 // ── Visitor chart (pure SVG, no external lib) ────────────
 function SeoVisitorChart({ visits, seoCodeGeneratedAt }) {
   if (!visits || visits.length === 0) return null;
@@ -400,9 +426,24 @@ function SeoVisitorChart({ visits, seoCodeGeneratedAt }) {
   const linePts = visits.map((v, i) => `${xAt(i)},${yAt(v.count)}`).join(' ');
   const areaPts = `${xAt(0)},${PT + ch} ${linePts} ${xAt(visits.length - 1)},${PT + ch}`;
 
-  // Average daily visitors — drawn as a horizontal reference line over the series.
-  const avg = visits.reduce((s, v) => s + v.count, 0) / visits.length;
-  const avgY = yAt(avg);
+  // Weekly average trend — bucket days into 7-day weeks from the start of the range and
+  // average each week, so the amber line shows the average changing week to week rather
+  // than one flat number for the whole filter.
+  const firstDayMs = new Date(String(visits[0].date).slice(0, 10) + 'T12:00:00').getTime();
+  const weekMap = new Map();
+  visits.forEach((v, i) => {
+    const dMs = new Date(String(v.date).slice(0, 10) + 'T12:00:00').getTime();
+    const wk = Math.floor((dMs - firstDayMs) / (7 * 86400000));
+    const b = weekMap.get(wk) || { sum: 0, n: 0, idxs: [] };
+    b.sum += v.count; b.n += 1; b.idxs.push(i);
+    weekMap.set(wk, b);
+  });
+  const weekAvgPts = [...weekMap.values()].map((b) => {
+    const midIdx = b.idxs[Math.floor(b.idxs.length / 2)];
+    return { x: xAt(midIdx), y: yAt(b.sum / b.n), avg: b.sum / b.n };
+  });
+  const weekAvgLine = weekAvgPts.map((p) => `${p.x},${p.y}`).join(' ');
+  const lastWeekAvg = weekAvgPts.length ? weekAvgPts[weekAvgPts.length - 1] : null;
 
   const appliedDate = seoCodeGeneratedAt ? seoCodeGeneratedAt.split('T')[0] : null;
   const appliedIdx = appliedDate ? visits.findIndex(v => v.date >= appliedDate) : -1;
@@ -443,12 +484,19 @@ function SeoVisitorChart({ visits, seoCodeGeneratedAt }) {
       <polyline points={linePts} fill="none" stroke="#8b5cf6" strokeWidth="2"
         strokeLinecap="round" strokeLinejoin="round" />
 
-      {/* Average visitors reference line */}
-      <line x1={PL} y1={avgY} x2={W - PR} y2={avgY}
-        stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,3" />
-      <text x={W - PR} y={avgY - 4} fill="#f59e0b" fontSize="8.5" fontWeight="600" textAnchor="end">
-        Avg {Math.round(avg).toLocaleString()}
-      </text>
+      {/* Weekly average trend line */}
+      {weekAvgPts.length > 1 && (
+        <polyline points={weekAvgLine} fill="none" stroke="#f59e0b" strokeWidth="1.5"
+          strokeDasharray="5,3" strokeLinejoin="round" strokeLinecap="round" />
+      )}
+      {weekAvgPts.map((p, i) => (
+        <circle key={`wa${i}`} cx={p.x} cy={p.y} r="2.5" fill="#f59e0b" stroke="white" strokeWidth="1" />
+      ))}
+      {lastWeekAvg && (
+        <text x={lastWeekAvg.x} y={lastWeekAvg.y - 5} fill="#f59e0b" fontSize="8.5" fontWeight="600" textAnchor="end">
+          Wk avg {Math.round(lastWeekAvg.avg).toLocaleString()}
+        </text>
+      )}
 
       {/* Data points */}
       {visits.map((v, i) => (
@@ -505,8 +553,7 @@ function SeoVisitorGraph({ apiUrl, authFetch }) {
     data.visits.forEach(v => { if (v.date < split) before += v.count; else after += v.count; });
   }
 
-  // Average daily visitors + how the daily average changed after the SEO code went live.
-  const avgPerDay = hasVisits ? Math.round(total / data.visits.length) : 0;
+  // How the daily average changed after the SEO code went live (before vs after split).
   let avgChangePct = null;
   if (hasVisits && appliedDate) {
     const split = appliedDate.split('T')[0];
@@ -574,10 +621,10 @@ function SeoVisitorGraph({ apiUrl, authFetch }) {
           {/* Chart */}
           <SeoVisitorChart visits={data.visits} seoCodeGeneratedAt={data.seoCodeGeneratedAt} />
 
-          {/* Average legend + change since SEO code */}
+          {/* Weekly-average legend + change since SEO code */}
           <p className="text-xs text-gray-400 flex items-center gap-1.5 flex-wrap">
             <span className="inline-block w-3 border-t-2 border-dashed" style={{ borderColor: '#f59e0b' }} />
-            Avg {avgPerDay.toLocaleString()} visitors/day
+            Weekly average visitors (updates each week)
             {avgChangePct !== null && (
               <span className={avgChangePct >= 0 ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
                 {avgChangePct >= 0 ? '▲' : '▼'} {Math.abs(avgChangePct)}% vs before SEO code
@@ -2539,6 +2586,8 @@ function PlanViewer({ plan, onRerun }) {
               </div>
             ))}
           </div>
+
+          {currentStep.code && currentStep.code.trim() && <StepCodeBox code={currentStep.code} />}
 
           {currentStep.expectedImpact && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2">
