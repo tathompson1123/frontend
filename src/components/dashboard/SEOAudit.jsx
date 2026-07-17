@@ -400,6 +400,10 @@ function SeoVisitorChart({ visits, seoCodeGeneratedAt }) {
   const linePts = visits.map((v, i) => `${xAt(i)},${yAt(v.count)}`).join(' ');
   const areaPts = `${xAt(0)},${PT + ch} ${linePts} ${xAt(visits.length - 1)},${PT + ch}`;
 
+  // Average daily visitors — drawn as a horizontal reference line over the series.
+  const avg = visits.reduce((s, v) => s + v.count, 0) / visits.length;
+  const avgY = yAt(avg);
+
   const appliedDate = seoCodeGeneratedAt ? seoCodeGeneratedAt.split('T')[0] : null;
   const appliedIdx = appliedDate ? visits.findIndex(v => v.date >= appliedDate) : -1;
   const appliedX = appliedIdx >= 0 ? xAt(appliedIdx) : null;
@@ -439,6 +443,13 @@ function SeoVisitorChart({ visits, seoCodeGeneratedAt }) {
       <polyline points={linePts} fill="none" stroke="#8b5cf6" strokeWidth="2"
         strokeLinecap="round" strokeLinejoin="round" />
 
+      {/* Average visitors reference line */}
+      <line x1={PL} y1={avgY} x2={W - PR} y2={avgY}
+        stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="5,3" />
+      <text x={W - PR} y={avgY - 4} fill="#f59e0b" fontSize="8.5" fontWeight="600" textAnchor="end">
+        Avg {Math.round(avg).toLocaleString()}
+      </text>
+
       {/* Data points */}
       {visits.map((v, i) => (
         <circle key={i} cx={xAt(i)} cy={yAt(v.count)} r="2.5"
@@ -456,7 +467,7 @@ function SeoVisitorChart({ visits, seoCodeGeneratedAt }) {
       {/* X labels */}
       {labelIdxs.map(i => (
         <text key={i} x={xAt(i)} y={H - 4} fill="#9ca3af" fontSize="8.5" textAnchor="middle">
-          {new Date(visits[i].date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+          {new Date(String(visits[i].date).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
         </text>
       ))}
     </svg>
@@ -492,6 +503,20 @@ function SeoVisitorGraph({ apiUrl, authFetch }) {
   if (hasVisits && appliedDate) {
     const split = appliedDate.split('T')[0];
     data.visits.forEach(v => { if (v.date < split) before += v.count; else after += v.count; });
+  }
+
+  // Average daily visitors + how the daily average changed after the SEO code went live.
+  const avgPerDay = hasVisits ? Math.round(total / data.visits.length) : 0;
+  let avgChangePct = null;
+  if (hasVisits && appliedDate) {
+    const split = appliedDate.split('T')[0];
+    const beforeDays = data.visits.filter(v => String(v.date).slice(0, 10) < split);
+    const afterDays = data.visits.filter(v => String(v.date).slice(0, 10) >= split);
+    if (beforeDays.length && afterDays.length) {
+      const avgB = beforeDays.reduce((s, v) => s + v.count, 0) / beforeDays.length;
+      const avgA = afterDays.reduce((s, v) => s + v.count, 0) / afterDays.length;
+      if (avgB > 0) avgChangePct = Math.round(((avgA - avgB) / avgB) * 100);
+    }
   }
 
   return (
@@ -549,10 +574,21 @@ function SeoVisitorGraph({ apiUrl, authFetch }) {
           {/* Chart */}
           <SeoVisitorChart visits={data.visits} seoCodeGeneratedAt={data.seoCodeGeneratedAt} />
 
+          {/* Average legend + change since SEO code */}
+          <p className="text-xs text-gray-400 flex items-center gap-1.5 flex-wrap">
+            <span className="inline-block w-3 border-t-2 border-dashed" style={{ borderColor: '#f59e0b' }} />
+            Avg {avgPerDay.toLocaleString()} visitors/day
+            {avgChangePct !== null && (
+              <span className={avgChangePct >= 0 ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                {avgChangePct >= 0 ? '▲' : '▼'} {Math.abs(avgChangePct)}% vs before SEO code
+              </span>
+            )}
+          </p>
+
           {appliedDate && (
             <p className="text-xs text-gray-400 flex items-center gap-1.5">
               <span className="inline-block w-3 border-t-2 border-dashed border-purple-400" />
-              SEO code applied {new Date(appliedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              SEO code applied {new Date(String(appliedDate).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
             </p>
           )}
         </div>
