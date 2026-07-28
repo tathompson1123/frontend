@@ -12,6 +12,8 @@ export default function Overview({ bookings, services, employees, setCurrentView
   const [todoPriority, setTodoPriority] = useState('medium');
   // 'admin' = the owner's own list; 'team' = the shared list employees fill out in the app.
   const [todoScope, setTodoScope] = useState('admin');
+  // Team chat feed (read-only mirror of the employee app's shared chat).
+  const [teamChat, setTeamChat] = useState([]);
 
   // Load todos from backend (shared with the employee app — 'team' scope is the app list)
   useEffect(() => {
@@ -24,6 +26,15 @@ export default function Overview({ bookings, services, employees, setCurrentView
       }))))
       .catch(() => {});
   }, [apiUrl, authFetch, todoScope]);
+
+  // Load the team chat feed (what employees post from the app).
+  useEffect(() => {
+    if (!authFetch || !apiUrl) return;
+    authFetch(`${apiUrl}/api/employees/team-chat`)
+      .then(r => r.ok ? r.json() : { messages: [] })
+      .then(d => setTeamChat(d.messages || []))
+      .catch(() => {});
+  }, [apiUrl, authFetch]);
 
   const PRIORITY_CONFIG = {
     high:   { label: 'High',   color: 'text-red-600',    bg: 'bg-red-50',   border: 'border-red-200',   icon: <AlertTriangle className="w-3 h-3" /> },
@@ -580,6 +591,37 @@ export default function Overview({ bookings, services, employees, setCurrentView
                 </div>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* Team Chat — read-only feed of what the team posts from the employee app */}
+      <div className="bg-white rounded-xl p-4 md:p-6 shadow-sm border border-gray-200 mt-4">
+        <h2 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+          <MessageSquare className="w-5 h-5 text-blue-600" />
+          Team Chat
+        </h2>
+        {teamChat.length === 0 ? (
+          <p className="text-sm text-gray-400 text-center py-6">No team messages yet — they'll appear here as your team posts in the app.</p>
+        ) : (
+          <div className="space-y-3 max-h-[400px] overflow-y-auto pr-1">
+            {teamChat.map(m => (
+              <div key={m.id} className="flex items-start gap-2.5">
+                <div
+                  className="w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs font-bold"
+                  style={{ backgroundColor: m.employee_color || '#9ca3af' }}
+                >
+                  {(m.employee_name || '?').charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-gray-800">{m.employee_name || 'Team'}</span>
+                    {m.created_at && <span className="text-xs text-gray-400">{formatTodoDate(m.created_at)}</span>}
+                  </div>
+                  <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">{m.body}</p>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
