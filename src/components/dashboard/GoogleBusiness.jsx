@@ -50,8 +50,13 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
   raffleEnabled: false,
   raffleReward: '',
   raffleConsolation: '$50 off any Full Detail',
-  raffleRequireVerified: false
+  raffleRequireVerified: false,
+  repName: '',
+  incentiveScore: null,
+  incentiveTip: ''
 });
+
+  const [ratingIncentive, setRatingIncentive] = useState(false);
 
   // Monthly raffle state
   const currentPeriod = (() => {
@@ -305,7 +310,10 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
           raffleEnabled: data.config.raffle_enabled ?? false,
           raffleReward: data.config.raffle_reward || '',
           raffleConsolation: data.config.raffle_consolation || '$50 off any Full Detail',
-          raffleRequireVerified: data.config.raffle_require_verified ?? false
+          raffleRequireVerified: data.config.raffle_require_verified ?? false,
+          repName: data.config.rep_name || '',
+          incentiveScore: data.config.incentive_score ?? null,
+          incentiveTip: data.config.incentive_tip || ''
         });
       }
     }
@@ -323,6 +331,10 @@ const saveReviewConfig = async () => {
     });
     
     if (response.ok) {
+      const data = await response.json().catch(() => ({}));
+      if (data.incentiveScore !== undefined) {
+        setReviewConfig(prev => ({ ...prev, incentiveScore: data.incentiveScore, incentiveTip: data.incentiveTip || '' }));
+      }
       alert('✅ Review request settings saved!');
     } else {
       alert('Failed to save settings');
@@ -330,6 +342,27 @@ const saveReviewConfig = async () => {
   } catch (error) {
     console.error('Error saving config:', error);
     alert('Failed to save settings');
+  }
+};
+
+// Ask Claude to rate the incentive 1-10 (how likely it is to earn a review) on demand.
+const rateIncentiveNow = async () => {
+  if (!reviewConfig.incentive?.trim()) return;
+  setRatingIncentive(true);
+  try {
+    const response = await authFetch(`${apiUrl}/api/review-config/rate-incentive`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ incentive: reviewConfig.incentive })
+    });
+    if (response.ok) {
+      const data = await response.json();
+      setReviewConfig(prev => ({ ...prev, incentiveScore: data.score ?? null, incentiveTip: data.tip || '' }));
+    }
+  } catch (e) {
+    console.error('Error rating incentive:', e);
+  } finally {
+    setRatingIncentive(false);
   }
 };
 
@@ -1061,6 +1094,19 @@ const saveReviewConfig = async () => {
           })()}
         </div>
         <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Your name (used in the opener text)</label>
+            <input
+              type="text"
+              value={reviewConfig.repName}
+              onChange={(e) => setReviewConfig({ ...reviewConfig, repName: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., Kurt"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Opener: “Hey [first name], this is {reviewConfig.repName?.trim() || 'Kurt'} with your business. How did the [service] go?”
+            </p>
+          </div>
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
               <p className="font-medium text-gray-900">Offer Incentive</p>
@@ -1075,6 +1121,17 @@ const saveReviewConfig = async () => {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Incentive Offer</label>
               <input type="text" value={reviewConfig.incentive} onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., $10 off your next service" />
+              <div className="mt-2 flex items-center gap-3">
+                <button type="button" onClick={rateIncentiveNow} disabled={ratingIncentive || !reviewConfig.incentive?.trim()} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+                  {ratingIncentive ? 'Rating…' : 'Rate my incentive'}
+                </button>
+                {reviewConfig.incentiveScore != null && (
+                  <span className={`text-sm font-bold ${reviewConfig.incentiveScore >= 7 ? 'text-green-600' : reviewConfig.incentiveScore >= 4 ? 'text-amber-600' : 'text-red-600'}`}>{reviewConfig.incentiveScore}/10</span>
+                )}
+              </div>
+              {reviewConfig.incentiveTip && (
+                <p className="mt-1 text-xs text-gray-600 italic">💡 {reviewConfig.incentiveTip}</p>
+              )}
               <div className="mt-2 space-y-1.5">
                 <p className="text-xs text-red-600 font-semibold">⚠️ This line is added to every review-request text. Word it as an invitation ("Enter to win…"), never "You won…" — the raffle winner is texted separately with its own reward.</p>
                 <p className="text-xs text-amber-700 font-semibold">🔥 The more compelling the offer, the more reviews you'll get.</p>
