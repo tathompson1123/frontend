@@ -1746,7 +1746,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">CRM Management</h1>
+            <h1 className="text-3xl font-bold text-gray-900">CRM</h1>
             <p className="text-gray-600 mt-1">Leads, customers, analytics and source ROI</p>
           </div>
         </div>
