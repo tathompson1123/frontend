@@ -1,4 +1,11 @@
 {
+  "redirects": [
+    {
+      "source": "/r/:id",
+      "destination": "https://backend-production-ab50.up.railway.app/api/public/review-click/:id",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",

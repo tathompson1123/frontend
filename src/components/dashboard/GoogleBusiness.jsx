@@ -982,116 +982,15 @@ const rateIncentiveNow = async () => {
     {reviewSettingsTab === 'customization' && (
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Message Template</label>
-            <textarea
-              value={reviewConfig.messageTemplate}
-              onChange={(e) => setReviewConfig({ ...reviewConfig, messageTemplate: e.target.value })}
-              rows="6"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-              placeholder="Enter your review request message..."
-            />
-            <p className="text-xs text-gray-500 mt-2">
-              Available variables: <code className="bg-gray-100 px-1 rounded">{'{{name}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{business}}'}</code>, <code className="bg-gray-100 px-1 rounded">{'{{service}}'}</code>
-            </p>
+          <div className="rounded-xl border border-blue-100 bg-blue-50 p-4 space-y-3">
+            <p className="text-sm font-bold text-gray-900">How the review text works</p>
+            <div className="space-y-2 text-sm text-gray-700">
+              <p><span className="font-semibold">1. Opener (sent automatically):</span> “Hey [first name], this is {reviewConfig.repName?.trim() || 'your name'} with {user?.businessName || user?.business_name || 'your business'}. How did the [service] go?”</p>
+              <p><span className="font-semibold text-green-700">2a. If they reply positively:</span> we thank them and ask for a Google review — with your incentive woven in — plus your review link.</p>
+              <p><span className="font-semibold text-amber-700">2b. If they reply negatively:</span> we tell them we're escalating to a manager and email you to make it right.</p>
+            </div>
+            <p className="text-xs text-gray-500">It's all written automatically — there's no message template to fill in. Just set your name and incentive on the right. →</p>
           </div>
-          {/* Dual iPhone preview */}
-          {(() => {
-            const bizName = user?.businessName || user?.business_name || 'Your Business';
-            const previewMsg = reviewConfig.messageTemplate
-              .replace(/\{\{name\}\}|\{name\}/g, 'John')
-              .replace(/\{\{business\}\}|\{business\}/g, bizName)
-              .replace(/\{\{service\}\}|\{service\}/g, 'Full Detail');
-            const msgEndsWithPunct = /[.!?]$/.test(previewMsg.trimEnd());
-            const msgWithPunct = msgEndsWithPunct ? previewMsg : previewMsg.trimEnd() + '.';
-            return (
-              <div className="flex flex-col sm:flex-row gap-4">
-                {/* SMS iPhone */}
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">SMS Preview</p>
-                  <div className="mx-auto w-44">
-                    <div className="bg-gray-900 rounded-[2rem] p-2 shadow-xl">
-                      <div className="bg-black rounded-[1.6rem] overflow-hidden">
-                        <div className="bg-black flex justify-center pt-2 pb-1">
-                          <div className="w-16 h-3.5 bg-gray-900 rounded-full" />
-                        </div>
-                        <div className="bg-gray-100 min-h-[280px] px-2 py-3 flex flex-col">
-                          <p className="text-center text-gray-400 text-[8px] mb-2">Today</p>
-                          {/* sender name */}
-                          <p className="text-center text-[8px] font-semibold text-gray-600 mb-2">{bizName}</p>
-                          <div className="flex justify-start">
-                            <div className="bg-white rounded-2xl rounded-tl-sm px-2.5 py-2 max-w-full shadow-sm space-y-1.5">
-                              <p className="text-[9px] text-gray-900 leading-relaxed break-words">
-                                {msgWithPunct}
-                                {reviewConfig.incentiveEnabled && reviewConfig.incentive
-                                  ? ` ${reviewConfig.incentive}${/[.!?]$/.test(reviewConfig.incentive.trimEnd()) ? '' : '.'}`
-                                  : ''}
-                              </p>
-                              {/* Review link as a tappable row, not inline text */}
-                              <div className="border-t border-gray-100 pt-1.5">
-                                <p className="text-[8px] text-gray-500 mb-0.5">Leave your review here:</p>
-                                <p className="text-[8px] text-blue-500 font-medium break-all">
-                                  {reviewLink ? 'g.page/r/your-business ↗' : '[your Google review link]'}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email iPhone */}
-                <div className="flex-1">
-                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 text-center">Email Preview</p>
-                  <div className="mx-auto w-44">
-                    <div className="bg-gray-900 rounded-[2rem] p-2 shadow-xl">
-                      <div className="bg-black rounded-[1.6rem] overflow-hidden">
-                        <div className="bg-black flex justify-center pt-2 pb-1">
-                          <div className="w-16 h-3.5 bg-gray-900 rounded-full" />
-                        </div>
-                        <div className="bg-white min-h-[280px] flex flex-col">
-                          {/* Mail app top bar */}
-                          <div className="bg-gray-50 px-2 py-1.5 flex items-center justify-between border-b border-gray-200">
-                            <span className="text-[8px] text-blue-500 font-medium">‹ Inbox</span>
-                            <span className="text-[8px] text-gray-400">⋯</span>
-                          </div>
-                          {/* From / To / Subject */}
-                          <div className="px-2 py-1.5 border-b border-gray-100 space-y-0.5">
-                            <p className="text-[8px] text-gray-500"><span className="font-semibold text-gray-700">From:</span> {bizName}</p>
-                            <p className="text-[8px] text-gray-500"><span className="font-semibold text-gray-700">To:</span> john@example.com</p>
-                            <p className="text-[8px] font-semibold text-gray-800 truncate">How was your experience?</p>
-                          </div>
-                          {/* Body */}
-                          <div className="px-2 py-2 flex-1 space-y-2">
-                            <p className="text-[8px] text-gray-700 leading-relaxed">
-                              Hi John,
-                            </p>
-                            <p className="text-[8px] text-gray-700 leading-relaxed">
-                              {msgWithPunct}
-                            </p>
-                            {reviewConfig.incentiveEnabled && reviewConfig.incentive && (
-                              <p className="text-[8px] text-green-700 font-semibold">
-                                🎁 {reviewConfig.incentive}
-                              </p>
-                            )}
-                            {/* CTA button */}
-                            <div className="bg-blue-600 rounded-md px-2 py-1.5 text-center mt-1">
-                              <p className="text-[8px] text-white font-bold">⭐ Leave a Review</p>
-                            </div>
-                            <p className="text-[7px] text-gray-400 pt-1">
-                              You're receiving this because you recently used {bizName}. Reply STOP to unsubscribe.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
         </div>
         <div className="space-y-4">
           <div>
@@ -1118,9 +1017,10 @@ const rateIncentiveNow = async () => {
             </label>
           </div>
           {reviewConfig.incentiveEnabled && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Incentive Offer</label>
-              <input type="text" value={reviewConfig.incentive} onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="e.g., $10 off your next service" />
+            <div className="rounded-xl border-2 border-green-300 bg-green-50 p-4">
+              <label className="block text-base font-bold text-gray-900 mb-1">👉 Type your incentive here</label>
+              <p className="text-xs text-gray-600 mb-2">The reward a customer gets for leaving a review. We weave it into the positive-reply text automatically — for example: "leave us a quick Google review and 10% off your next detail".</p>
+              <input type="text" value={reviewConfig.incentive} onChange={(e) => setReviewConfig({ ...reviewConfig, incentive: e.target.value })} className="w-full px-4 py-3 border-2 border-green-400 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 text-base" placeholder="e.g., 10% off your next detail" />
               <div className="mt-2 flex items-center gap-3">
                 <button type="button" onClick={rateIncentiveNow} disabled={ratingIncentive || !reviewConfig.incentive?.trim()} className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
                   {ratingIncentive ? 'Rating…' : 'Rate my incentive'}
@@ -1132,15 +1032,12 @@ const rateIncentiveNow = async () => {
               {reviewConfig.incentiveTip && (
                 <p className="mt-1 text-xs text-gray-600 italic">💡 {reviewConfig.incentiveTip}</p>
               )}
-              <div className="mt-2 space-y-1.5">
-                <p className="text-xs text-red-600 font-semibold">⚠️ This line is added to every review-request text. Word it as an invitation ("Enter to win…"), never "You won…" — the raffle winner is texted separately with its own reward.</p>
-                <p className="text-xs text-amber-700 font-semibold">🔥 The more compelling the offer, the more reviews you'll get.</p>
-                <p className="text-xs text-gray-500">Strong examples:</p>
+              <div className="mt-3 space-y-1">
+                <p className="text-xs text-gray-500 font-medium">Only sent to customers who reply positively. Examples:</p>
                 <ul className="text-xs text-gray-500 space-y-0.5 ml-2">
-                  <li>• "Enter to win a FREE full car detail — one winner every month!"</li>
-                  <li>• "Leave a review and get your next oil change FREE"</li>
-                  <li>• "Review us this week and we'll upgrade your next visit at no charge"</li>
-                  <li>• "Every review enters you in our monthly $100 gift card raffle"</li>
+                  <li>• "10% off your next detail"</li>
+                  <li>• "a free interior wipe-down next visit"</li>
+                  <li>• "entry into our monthly free-detail drawing"</li>
                 </ul>
               </div>
             </div>
