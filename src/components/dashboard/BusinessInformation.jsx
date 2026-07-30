@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical, Calendar, ToggleLeft, ToggleRight, CheckCircle, AlertCircle, ChevronRight } from 'lucide-react';
+import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical, Calendar, ToggleLeft, ToggleRight, CheckCircle, AlertCircle, ChevronRight, RotateCcw, Archive } from 'lucide-react';
 import { FileSpreadsheet } from 'lucide-react';
 import GoogleDriveTab from './GoogleDriveTab';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
@@ -340,6 +340,34 @@ export default function BusinessInformation({
     '#14b8a6', '#f97316', '#06b6d4', '#84cc16', '#f43f5e', '#6366f1',
   ];
 
+  // ── Employee time off ──
+  const [timeOffList, setTimeOffList] = useState([]);
+  const [timeOffForm, setTimeOffForm] = useState({ employeeId: '', startDate: '', endDate: '', reason: '' });
+  const loadTimeOff = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/time-off`);
+      if (res.ok) { const d = await res.json(); setTimeOffList(d.timeOff || []); }
+    } catch (e) { /* noop */ }
+  };
+  useEffect(() => { loadTimeOff(); }, []);
+  const fmtTimeOffDate = (d) => new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const addTimeOff = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/time-off`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(timeOffForm),
+      });
+      if (res.ok) { setTimeOffForm({ employeeId: '', startDate: '', endDate: '', reason: '' }); loadTimeOff(); }
+      else { const e = await res.json().catch(() => ({})); alert(e.error || 'Failed to add time off'); }
+    } catch (e) { alert('Failed to add time off'); }
+  };
+  const deleteTimeOff = async (id) => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/time-off/${id}`, { method: 'DELETE' });
+      if (res.ok) loadTimeOff();
+    } catch (e) { /* noop */ }
+  };
+
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
   const [employeeForm, setEmployeeForm] = useState({
@@ -357,6 +385,10 @@ export default function BusinessInformation({
   const [invitingEmployeeId, setInvitingEmployeeId] = useState(null);
   const [togglingAdminId, setTogglingAdminId] = useState(null);
   const [deletingEmployeeId, setDeletingEmployeeId] = useState(null);
+  const [showArchived, setShowArchived] = useState(false);
+  const [archivedEmployees, setArchivedEmployees] = useState([]);
+  const [loadingArchived, setLoadingArchived] = useState(false);
+  const [restoringEmployeeId, setRestoringEmployeeId] = useState(null);
 
   const handleToggleAdmin = async (employee) => {
     const newVal = !employee.is_admin;
@@ -735,7 +767,7 @@ export default function BusinessInformation({
   };
 
   const handleDeleteEmployee = async (employee) => {
-    if (!confirm(`Remove ${employee.name} from your team? This can't be undone.`)) return;
+    if (!confirm(`Remove ${employee.name} from your team?\n\nThey'll be archived — their clocked hours and payroll history are kept and stay viewable, and you can restore them anytime.`)) return;
     setDeletingEmployeeId(employee.id);
     try {
       const res = await authFetch(`${apiUrl}/api/employees/${employee.id}`, {
@@ -744,6 +776,7 @@ export default function BusinessInformation({
       const data = await res.json();
       if (res.ok) {
         fetchEmployees();
+        if (showArchived) fetchArchivedEmployees();
       } else {
         alert(data.error || 'Failed to remove employee');
       }
@@ -752,6 +785,46 @@ export default function BusinessInformation({
       alert('Failed to remove employee');
     } finally {
       setDeletingEmployeeId(null);
+    }
+  };
+
+  const fetchArchivedEmployees = async () => {
+    setLoadingArchived(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees?includeArchived=1`);
+      const data = await res.json();
+      setArchivedEmployees((data.employees || []).filter(e => e.archived_at));
+    } catch (err) {
+      console.error('Error loading archived employees:', err);
+    } finally {
+      setLoadingArchived(false);
+    }
+  };
+
+  const handleToggleArchived = () => {
+    const next = !showArchived;
+    setShowArchived(next);
+    if (next) fetchArchivedEmployees();
+  };
+
+  const handleRestoreEmployee = async (employee) => {
+    setRestoringEmployeeId(employee.id);
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/${employee.id}/restore`, {
+        method: 'POST'
+      });
+      const data = await res.json();
+      if (res.ok) {
+        fetchEmployees();
+        fetchArchivedEmployees();
+      } else {
+        alert(data.error || 'Failed to restore employee');
+      }
+    } catch (err) {
+      console.error('Error restoring employee:', err);
+      alert('Failed to restore employee');
+    } finally {
+      setRestoringEmployeeId(null);
     }
   };
 
@@ -3008,6 +3081,44 @@ export default function BusinessInformation({
       {/* Team Tab */}
       {activeTab === 'team' && (
         <div className="space-y-6">
+          {/* Time Off */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">Time Off</h3>
+            <p className="text-sm text-gray-600 mb-4">Block out an employee for days off — it shows as blocked on their app schedule.</p>
+            <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Employee</label>
+                <select value={timeOffForm.employeeId} onChange={(e) => setTimeOffForm({ ...timeOffForm, employeeId: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+                  <option value="">Select…</option>
+                  {employees.map(emp => <option key={emp.id} value={emp.id}>{emp.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">From</label>
+                <input type="date" value={timeOffForm.startDate} onChange={(e) => setTimeOffForm({ ...timeOffForm, startDate: e.target.value, endDate: timeOffForm.endDate || e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">To</label>
+                <input type="date" value={timeOffForm.endDate} onChange={(e) => setTimeOffForm({ ...timeOffForm, endDate: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              </div>
+              <button onClick={addTimeOff} disabled={!timeOffForm.employeeId || !timeOffForm.startDate || !timeOffForm.endDate} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">Add</button>
+            </div>
+            <input type="text" value={timeOffForm.reason} onChange={(e) => setTimeOffForm({ ...timeOffForm, reason: e.target.value })} placeholder="Reason (optional) — e.g., Vacation, Sick" className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            {timeOffList.length > 0 && (
+              <div className="mt-4 space-y-2">
+                {timeOffList.map(t => (
+                  <div key={t.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
+                    <div className="text-sm">
+                      <span className="font-semibold text-gray-900">{t.employee_name || 'Employee'}</span>
+                      <span className="text-gray-600"> · {fmtTimeOffDate(t.start_date)}{String(t.start_date).slice(0, 10) !== String(t.end_date).slice(0, 10) ? ` – ${fmtTimeOffDate(t.end_date)}` : ''}</span>
+                      {t.reason ? <span className="text-gray-500"> · {t.reason}</span> : null}
+                    </div>
+                    <button onClick={() => deleteTimeOff(t.id)} className="text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">Team Members</h2>
@@ -3171,6 +3282,61 @@ export default function BusinessInformation({
               ))}
             </div>
           )}
+
+          {/* Archived (removed) team members — kept so their hours stay accessible */}
+          <div className="mt-6 border-t border-gray-200 pt-4">
+            <button
+              type="button"
+              onClick={handleToggleArchived}
+              className="flex items-center gap-2 text-sm font-semibold text-gray-600 hover:text-gray-900"
+            >
+              <Archive className="w-4 h-4" />
+              Archived team members
+              <ChevronRight className={`w-4 h-4 transition-transform ${showArchived ? 'rotate-90' : ''}`} />
+            </button>
+
+            {showArchived && (
+              <div className="mt-3">
+                <p className="text-xs text-gray-500 mb-3">
+                  Removed employees are archived, not deleted. Their clocked hours and payroll history are preserved —
+                  view them in <span className="font-semibold">Payroll</span> by turning on “Include archived”. Restore anyone to add them back to the team.
+                </p>
+                {loadingArchived ? (
+                  <p className="text-sm text-gray-400">Loading…</p>
+                ) : archivedEmployees.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">No archived team members.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {archivedEmployees.map((employee) => (
+                      <div key={employee.id} className="flex items-center justify-between gap-3 bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 flex-shrink-0 rounded-full flex items-center justify-center text-white font-bold text-sm" style={{ backgroundColor: employee.color }}>
+                            {employee.name.charAt(0).toUpperCase()}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-semibold text-gray-800 truncate">{employee.name}</p>
+                            <p className="text-xs text-gray-500 truncate">
+                              {employee.email || 'No email'}
+                              {employee.archived_at ? ` · archived ${new Date(employee.archived_at).toLocaleDateString()}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRestoreEmployee(employee)}
+                          disabled={restoringEmployeeId === employee.id}
+                          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition disabled:opacity-50 flex-shrink-0"
+                        >
+                          <RotateCcw className="w-3.5 h-3.5" />
+                          {restoringEmployeeId === employee.id ? 'Restoring…' : 'Restore'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {showAddEmployee && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
