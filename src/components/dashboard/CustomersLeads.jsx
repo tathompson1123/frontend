@@ -1746,7 +1746,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Customer Management</h1>
+            <h1 className="text-3xl font-bold text-gray-900">CRM Management</h1>
             <p className="text-gray-600 mt-1">Leads, customers, analytics and source ROI</p>
           </div>
         </div>
@@ -2537,7 +2537,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 onClick={() => { setConversationType('review'); setSelectedConversation(null); setConversationMessages([]); setSelectedSmsLead(null); setSmsLeadMessages([]); fetchReviewConvos(); }}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg text-sm font-medium transition-all ${conversationType === 'review' ? 'bg-amber-500 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-200'}`}
               >
-                <span className="text-sm leading-none">⭐</span>
                 Review SMS
               </button>
             </div>
