@@ -1768,12 +1768,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             }}
             className="w-full px-4 py-3 bg-white border border-gray-200 rounded-lg font-semibold text-gray-800 shadow-sm"
           >
+            <option value="analytics">Analytics</option>
+            <option value="conversations">Conversations</option>
             <option value="leads">Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})</option>
             <option value="customers">Customers ({customerStats.total})</option>
             <option value="bookings">Bookings</option>
-            <option value="conversations">Conversations</option>
             <option value="rewards">Rewards</option>
-            <option value="analytics">Analytics</option>
           </select>
         </div>
         {/* Desktop: horizontal tabs */}
@@ -1788,6 +1788,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 Analytics
               </div>
               {activeTab === 'analytics' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => { setActiveTab('conversations'); setSearchTerm(''); setEditingCell(null); fetchConversations(); fetchSmsLeadConversations(); }}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'conversations' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <MessageCircle className="w-4 h-4" />
+                Conversations
+              </div>
+              {activeTab === 'conversations' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
             <button
               onClick={() => { setActiveTab('leads'); setSearchTerm(''); setEditingCell(null); }}
@@ -1818,16 +1828,6 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 Bookings
               </div>
               {activeTab === 'bookings' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
-            </button>
-            <button
-              onClick={() => { setActiveTab('conversations'); setSearchTerm(''); setEditingCell(null); fetchConversations(); fetchSmsLeadConversations(); }}
-              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'conversations' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
-            >
-              <div className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" />
-                Conversations
-              </div>
-              {activeTab === 'conversations' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
             <button
               onClick={() => { setActiveTab('rewards'); setSearchTerm(''); setEditingCell(null); fetchRewardsData(); }}
