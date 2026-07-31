@@ -228,7 +228,8 @@ export default function DiscoveryCalls({ token }) {
             ))}
           </div>
 
-          <div className="p-3 border-t border-gray-200">
+          {/* Mobile only — on desktop the button lives top-right of the calendar */}
+          <div className="p-3 border-t border-gray-200 md:hidden">
             <button
               onClick={() => openNewCall(new Date())}
               className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition flex items-center justify-center gap-2"
@@ -266,13 +267,21 @@ export default function DiscoveryCalls({ token }) {
                 </button>
               </div>
             </div>
-            <p className="text-sm text-gray-500 hidden lg:block">
-              {calls.filter(c => {
-                const d = new Date(c.scheduled_at);
-                return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()
-                  && c.status !== 'cancelled';
-              }).length} this month
-            </p>
+            <div className="flex items-center gap-4">
+              <p className="text-sm text-gray-500 hidden lg:block">
+                {calls.filter(c => {
+                  const d = new Date(c.scheduled_at);
+                  return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()
+                    && c.status !== 'cancelled';
+                }).length} this month
+              </p>
+              <button
+                onClick={() => openNewCall(new Date())}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition flex items-center gap-2 whitespace-nowrap"
+              >
+                <Plus className="w-4 h-4" /> Book a call
+              </button>
+            </div>
           </div>
 
           <div className="px-6 pb-6 flex-1 flex flex-col min-h-0">

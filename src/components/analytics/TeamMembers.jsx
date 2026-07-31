@@ -45,6 +45,26 @@ export default function TeamMembers({ token }) {
     }
   };
 
+  const changeRole = async (member, role) => {
+    const verb = role === 'admin' ? 'Make an admin' : 'Drop back to member';
+    if (!window.confirm(
+      role === 'admin'
+        ? `Make ${member.name} an admin? They'll see analytics, revenue and billing, and be able to invite and revoke others.`
+        : `Drop ${member.name} back to member? They'll only see the discovery call calendar.`
+    )) return;
+    try {
+      const res = await fetch(`${API_URL}/api/discovery/team/${member.id}/role`, {
+        method: 'PATCH', headers: authHeaders, body: JSON.stringify({ role }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `${verb} failed`);
+      flash(`${member.name} is now ${role === 'admin' ? 'an admin' : 'a member'}`);
+      load();
+    } catch (err) {
+      flash(err.message, 'error');
+    }
+  };
+
   if (loading) {
     return <div className="flex justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-amber-600" /></div>;
   }
@@ -60,7 +80,10 @@ export default function TeamMembers({ token }) {
       <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Team</h2>
-          <p className="text-sm text-gray-500">Who can log into this dashboard and take discovery calls</p>
+          <p className="text-sm text-gray-500">
+            Members see the discovery call calendar only. Admins also see analytics,
+            revenue and billing, and can invite or revoke people.
+          </p>
         </div>
         <button
           onClick={() => setShowInvite(true)}
@@ -111,12 +134,24 @@ export default function TeamMembers({ token }) {
                 {member.title && <p className="text-xs text-gray-400 mt-0.5">{member.title}</p>}
               </div>
               {member.active && (
-                <button
-                  onClick={() => revoke(member)}
-                  className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Revoke
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => changeRole(member, member.role === 'admin' ? 'member' : 'admin')}
+                    className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                    title={member.role === 'admin'
+                      ? 'Drop back to member — discovery calls only'
+                      : 'Make admin — analytics, revenue, billing and team'}
+                  >
+                    <Shield className="w-3.5 h-3.5" />
+                    {member.role === 'admin' ? 'Make member' : 'Make admin'}
+                  </button>
+                  <button
+                    onClick={() => revoke(member)}
+                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Revoke
+                  </button>
+                </div>
               )}
             </div>
           ))}

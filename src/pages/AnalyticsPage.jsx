@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, DollarSign, TrendingDown, TrendingUp,
   LogOut, RefreshCw, Search, MessageCircle, Phone, ChevronUp, ChevronDown, Minus,
-  CheckCircle, XCircle, ShieldCheck, BarChart3, CalendarDays, UsersRound
+  CheckCircle, XCircle, ShieldCheck, BarChart3, CalendarDays, UsersRound, CreditCard
 } from 'lucide-react';
 import DiscoveryCalls from '../components/analytics/DiscoveryCalls';
 import TeamMembers from '../components/analytics/TeamMembers';
+import CollectPayment from '../components/analytics/CollectPayment';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -55,6 +56,8 @@ export default function AnalyticsPage() {
   const [actioningId, setActioningId] = useState(null);
   const [tab, setTab] = useState(() => sessionStorage.getItem('analyticsTab') || 'analytics');
   const [billingFilter, setBillingFilter] = useState('paying');
+  const [showCollect, setShowCollect] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(null);
   const [syncing, setSyncing] = useState(false);
 
   const syncStripe = async () => {
@@ -127,10 +130,35 @@ export default function AnalyticsPage() {
     } finally { setActioningId(null); }
   };
 
+  // Ask the server what this session may see. Members get the discovery calendar
+  // only; admins and master-password sessions get everything.
   useEffect(() => {
     if (!token) { navigate('/analytics/login'); return; }
-    fetchData();
-  }, [token, navigate, fetchData]);
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/discovery/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.status === 401) {
+          sessionStorage.removeItem('analyticsToken');
+          navigate('/analytics/login');
+          return;
+        }
+        const me = await res.json();
+        setIsAdmin(!!me.isAdmin);
+        if (!me.isAdmin) setTab('discovery');
+      } catch {
+        setIsAdmin(false);
+      }
+    })();
+  }, [token, navigate]);
+
+  // Only admins can load the analytics payload — for a member it 403s, and the
+  // handler below would otherwise sign them straight back out.
+  useEffect(() => {
+    if (isAdmin) fetchData();
+    else if (isAdmin === false) setLoading(false);
+  }, [isAdmin, fetchData]);
 
   const handleSort = (field) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -198,9 +226,19 @@ export default function AnalyticsPage() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            {isAdmin && (
+              <button
+                onClick={() => setShowCollect(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold transition"
+              >
+                <CreditCard className="w-4 h-4" />
+                Collect Payment
+              </button>
+            )}
             <button
               onClick={fetchData}
               disabled={loading}
+              hidden={!isAdmin}
               className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium transition disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -221,10 +259,10 @@ export default function AnalyticsPage() {
       <div className="border-b border-gray-200 bg-white">
         <div className="max-w-screen-2xl mx-auto px-6 flex gap-1">
           {[
-            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3, adminOnly: true },
             { id: 'discovery', label: 'Discovery Calls', icon: CalendarDays },
-            { id: 'team', label: 'Team', icon: UsersRound },
-          ].map(t => {
+            { id: 'team', label: 'Team', icon: UsersRound, adminOnly: true },
+          ].filter(t => isAdmin || !t.adminOnly).map(t => {
             const Icon = t.icon;
             return (
               <button
@@ -598,6 +636,10 @@ export default function AnalyticsPage() {
           </>
         )}
       </main>
+
+      {showCollect && (
+        <CollectPayment token={token} onClose={() => setShowCollect(false)} onDone={fetchData} />
+      )}
     </div>
   );
 }
