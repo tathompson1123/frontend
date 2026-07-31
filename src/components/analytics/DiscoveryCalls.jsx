@@ -217,6 +217,11 @@ export default function DiscoveryCalls({ token, isAdmin }) {
                   {fmtDate(call.scheduled_at)} · {fmtTime(call.scheduled_at)}
                 </p>
                 <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  {call.has_paid && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-600 text-white">
+                      PAID
+                    </span>
+                  )}
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${STATUS_STYLES[call.status]}`}>
                     {STATUS_LABELS[call.status]}
                   </span>
@@ -476,6 +481,44 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
               </a>
             )}
           </div>
+
+          {/* What they've actually paid, matched to their SORCE account by email */}
+          {call.has_paid && (
+            <div className="rounded-xl border-2 border-green-200 bg-green-50 p-4">
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <span className="text-sm font-bold text-green-800 flex items-center gap-1.5">
+                  <Check className="w-4 h-4" /> Paid
+                </span>
+                {call.is_subscribed && (
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-green-600 text-white uppercase">
+                    {call.customer_plan || 'subscribed'}
+                  </span>
+                )}
+              </div>
+              <div className="space-y-1 text-sm">
+                {call.customer_last_payment_description && (
+                  <p className="text-gray-800 font-medium">{call.customer_last_payment_description}</p>
+                )}
+                <div className="flex items-center gap-3 text-gray-600">
+                  {call.customer_last_payment_amount != null && (
+                    <span className="font-bold text-green-700">
+                      ${Number(call.customer_last_payment_amount).toFixed(2)}
+                    </span>
+                  )}
+                  {call.customer_last_payment_at && (
+                    <span className="text-xs">
+                      {new Date(call.customer_last_payment_at).toLocaleDateString('en-US', {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                      })}
+                    </span>
+                  )}
+                </div>
+                {!call.is_subscribed && (
+                  <p className="text-xs text-amber-700">One-off charge — no active subscription</p>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Closing them on the call — takes their details straight through */}
           {isAdmin && (
