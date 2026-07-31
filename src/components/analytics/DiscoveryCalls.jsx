@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Phone, Mail, Building2, X,
-  Loader2, Check, Trash2, Send, StickyNote, User, RefreshCw,
+  Loader2, Check, Trash2, Send, StickyNote, User, RefreshCw, CreditCard,
 } from 'lucide-react';
+import CollectPayment from './CollectPayment';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -44,7 +45,7 @@ function monthGridDays(date) {
   });
 }
 
-export default function DiscoveryCalls({ token }) {
+export default function DiscoveryCalls({ token, isAdmin }) {
   const [calls, setCalls] = useState([]);
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -53,6 +54,7 @@ export default function DiscoveryCalls({ token }) {
   const [statusFilter, setStatusFilter] = useState('scheduled');
   const [showForm, setShowForm] = useState(false);
   const [formDate, setFormDate] = useState(null);
+  const [collectFor, setCollectFor] = useState(null);
   const [toast, setToast] = useState(null);
 
   const authHeaders = useMemo(
@@ -371,10 +373,25 @@ export default function DiscoveryCalls({ token }) {
         <CallDetailModal
           call={selected}
           team={team}
+          isAdmin={isAdmin}
           onClose={() => setSelectedId(null)}
           onPatch={patch}
           onDelete={removeCall}
           onResend={resend}
+          onCollect={() => setCollectFor(selected)}
+        />
+      )}
+
+      {collectFor && (
+        <CollectPayment
+          token={token}
+          prefill={{
+            name: collectFor.company || collectFor.name,
+            email: collectFor.email || '',
+            phone: collectFor.phone || '',
+          }}
+          onClose={() => setCollectFor(null)}
+          onDone={() => flash('Payment collected')}
         />
       )}
 
@@ -397,7 +414,7 @@ export default function DiscoveryCalls({ token }) {
   );
 }
 
-function CallDetailModal({ call, team, onClose, onPatch, onDelete, onResend }) {
+function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onResend, onCollect }) {
   const [noteDraft, setNoteDraft] = useState(call.notes || '');
   const [noteSaved, setNoteSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -459,6 +476,16 @@ function CallDetailModal({ call, team, onClose, onPatch, onDelete, onResend }) {
               </a>
             )}
           </div>
+
+          {/* Closing them on the call — takes their details straight through */}
+          {isAdmin && (
+            <button
+              onClick={onCollect}
+              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 transition flex items-center justify-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" /> Collect payment from {call.name.split(' ')[0]}
+            </button>
+          )}
 
           <div className="flex items-center gap-2 text-xs flex-wrap">
             {[

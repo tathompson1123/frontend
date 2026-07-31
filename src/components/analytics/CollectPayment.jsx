@@ -20,11 +20,30 @@ const getStripe = () => {
   return stripePromise;
 };
 
-export default function CollectPayment({ token, onClose, onDone }) {
+export default function CollectPayment({ token, onClose, onDone, prefill }) {
   const [target, setTarget] = useState(null);        // existing user, if matched
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
-  const [manual, setManual] = useState({ name: '', email: '', phone: '' });
+  const [manual, setManual] = useState({
+    name: prefill?.name || '', email: prefill?.email || '', phone: prefill?.phone || '',
+  });
+  // Opened from a discovery call, so we already know who they are — but still look
+  // them up, in case they've since signed up and have a Stripe customer already.
+  useEffect(() => {
+    if (!prefill?.email) return;
+    (async () => {
+      try {
+        const res = await fetch(`${API_URL}/api/internal-billing/search?q=${encodeURIComponent(prefill.email)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data = await res.json();
+        const match = (data.users || []).find(
+          u => u.email?.toLowerCase() === prefill.email.toLowerCase()
+        );
+        if (match) setTarget(match);
+      } catch { /* fall back to the manual details */ }
+    })();
+  }, [prefill?.email, token]);
 
   const [plan, setPlan] = useState('pro');
   const [trialDays, setTrialDays] = useState('');

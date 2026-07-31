@@ -3,11 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, DollarSign, TrendingDown, TrendingUp,
   LogOut, RefreshCw, Search, MessageCircle, Phone, ChevronUp, ChevronDown, Minus,
-  CheckCircle, XCircle, ShieldCheck, BarChart3, CalendarDays, UsersRound, CreditCard
+  CheckCircle, XCircle, ShieldCheck, BarChart3, CalendarDays, UsersRound
 } from 'lucide-react';
 import DiscoveryCalls from '../components/analytics/DiscoveryCalls';
 import TeamMembers from '../components/analytics/TeamMembers';
-import CollectPayment from '../components/analytics/CollectPayment';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -56,7 +55,6 @@ export default function AnalyticsPage() {
   const [actioningId, setActioningId] = useState(null);
   const [tab, setTab] = useState(() => sessionStorage.getItem('analyticsTab') || 'analytics');
   const [billingFilter, setBillingFilter] = useState('paying');
-  const [showCollect, setShowCollect] = useState(false);
   const [isAdmin, setIsAdmin] = useState(null);
   const [syncing, setSyncing] = useState(false);
 
@@ -226,15 +224,6 @@ export default function AnalyticsPage() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            {isAdmin && (
-              <button
-                onClick={() => setShowCollect(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-sm font-semibold transition"
-              >
-                <CreditCard className="w-4 h-4" />
-                Collect Payment
-              </button>
-            )}
             <button
               onClick={fetchData}
               disabled={loading}
@@ -283,7 +272,7 @@ export default function AnalyticsPage() {
 
       {tab === 'discovery' && (
         <main className="max-w-screen-2xl mx-auto px-6 py-8">
-          <DiscoveryCalls token={token} />
+          <DiscoveryCalls token={token} isAdmin={isAdmin} />
         </main>
       )}
 
@@ -637,9 +626,6 @@ export default function AnalyticsPage() {
         )}
       </main>
 
-      {showCollect && (
-        <CollectPayment token={token} onClose={() => setShowCollect(false)} onDone={fetchData} />
-      )}
     </div>
   );
 }
