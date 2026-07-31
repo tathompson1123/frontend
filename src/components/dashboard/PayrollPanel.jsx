@@ -257,17 +257,18 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
   const [tiers, setTiers] = useState([]);
   const [savingTiers, setSavingTiers] = useState(false);
   const [expanded, setExpanded] = useState(null); // employee id whose clock entries are open
+  const [includeArchived, setIncludeArchived] = useState(false); // show former (archived) employees' hours
 
   const showToast = (msg, type = 'success') => { setToast({ msg, type }); setTimeout(() => setToast(null), 3000); };
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await authFetch(`${apiUrl}/api/payroll/summary?weekStart=${weekStart}`);
+      const r = await authFetch(`${apiUrl}/api/payroll/summary?weekStart=${weekStart}${includeArchived ? '&includeArchived=1' : ''}`);
       const d = await r.json();
       if (!d.error) { setData(d); setTiers(d.tiers || []); setEdits({}); }
     } finally { setLoading(false); }
-  }, [apiUrl, authFetch, weekStart]);
+  }, [apiUrl, authFetch, weekStart, includeArchived]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -337,6 +338,10 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
       {/* Header + week nav */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <h4 className="font-bold text-gray-900 flex items-center gap-2"><Users className="w-4 h-4 text-purple-600" /> Payroll & Efficiency</h4>
+        <label className="flex items-center gap-1.5 text-xs font-medium text-gray-600 cursor-pointer select-none" title="Show former employees so you can review the hours of anyone who ever clocked in">
+          <input type="checkbox" checked={includeArchived} onChange={e => setIncludeArchived(e.target.checked)} className="rounded border-gray-300 text-purple-600 focus:ring-purple-400" />
+          Include archived
+        </label>
         <div className="flex items-center gap-1">
           <button onClick={() => setWeekStart(w => addDays(w, -7))} className="p-1.5 text-gray-400 hover:text-gray-700"><ChevronLeft className="w-4 h-4" /></button>
           <span className="text-xs font-semibold text-gray-600 w-28 text-center">{label(weekStart)} – {label(addDays(weekStart, 6))}</span>
@@ -411,6 +416,7 @@ export default function PayrollPanel({ apiUrl, authFetch }) {
                       >
                         <ChevronDown className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded === emp.id ? 'rotate-180' : ''}`} />
                         {emp.name}
+                        {emp.archived && <span className="ml-1.5 text-[10px] font-semibold text-gray-500 bg-gray-100 rounded px-1.5 py-0.5 align-middle">archived</span>}
                       </button>
                     </td>
                     <td className="py-2.5 px-2">
