@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, X, ArrowRight, Sparkles, Crown, TrendingUp, Zap, MessageSquare, Mail, Star, ChevronDown } from 'lucide-react';
-import SignupModal from '../components/SignupModal';
+import AuthModal from '../components/AuthModal';
 
 const ENTERPRISE_REASONS = [
   'Multi-location business',
@@ -104,19 +104,30 @@ function EnterpriseModal({ onClose }) {
 export default function PricingPage() {
   const navigate = useNavigate();
   const [showSignupModal, setShowSignupModal] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [authMode, setAuthMode] = useState('signup');
   const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
 
   const handleSelectPlan = (plan) => {
     if (plan.enterprise) { setShowEnterpriseModal(true); return; }
     if (plan.id === null) return;
-    setSelectedPlan({ plan: plan.id, price: plan.price, billing: 'monthly' });
+    // Remember which plan they picked so billing can pick it up after onboarding
+    localStorage.setItem('sorce_pending_plan', JSON.stringify({ plan: plan.id, price: plan.price, billing: 'monthly' }));
+    setAuthMode('signup');
     setShowSignupModal(true);
   };
 
-  const handleSignupSuccess = () => {
+  // Same account creation + onboarding path as "Get Started" on the homepage
+  const handleSignupSuccess = (user, token) => {
     setShowSignupModal(false);
-    navigate('/dashboard');
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    if (!user.email_verified) {
+      navigate('/verify-email');
+    } else if (!user.questionnaire_completed) {
+      navigate('/onboarding');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const plans = [
@@ -331,10 +342,11 @@ export default function PricingPage() {
         </div>
       </div>
 
-      <SignupModal
+      <AuthModal
         isOpen={showSignupModal}
         onClose={() => setShowSignupModal(false)}
-        selectedPlan={selectedPlan}
+        mode={authMode}
+        onModeChange={setAuthMode}
         onSuccess={handleSignupSuccess}
       />
       {showEnterpriseModal && <EnterpriseModal onClose={() => setShowEnterpriseModal(false)} />}
