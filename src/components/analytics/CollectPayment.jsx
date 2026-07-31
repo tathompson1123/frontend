@@ -5,7 +5,11 @@ import {
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const STRIPE_PK = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+// Vite only exposes VITE_-prefixed vars to the browser, so a plain STRIPE_PUBLIC_KEY
+// on the backend host won't reach here. Accept either of the usual names.
+const STRIPE_PK =
+  import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
 const PLANS = [
   { id: 'pro',   label: 'Pro',   price: 99.95 },
