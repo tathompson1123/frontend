@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Phone, Mail, Building2, X,
-  Loader2, Check, Clock, Trash2, Send, StickyNote, User, RefreshCw,
+  Loader2, Check, Trash2, Send, StickyNote, User, RefreshCw,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -15,8 +15,11 @@ const STATUS_STYLES = {
 const STATUS_LABELS = {
   scheduled: 'Scheduled', completed: 'Completed', no_show: 'No show', cancelled: 'Cancelled',
 };
+// Pill colour inside a calendar cell, mirroring how the dashboard colours bookings.
+const CELL_COLORS = {
+  scheduled: '#2563eb', completed: '#059669', no_show: '#d97706', cancelled: '#9ca3af',
+};
 
-const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
 const sameDay = (a, b) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 const toLocalInput = (iso) => {
@@ -29,18 +32,27 @@ const fmtTime = (iso) =>
 const fmtDate = (iso) =>
   new Date(iso).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
 
+// Six weeks of cells starting on the Sunday before the 1st, same as the dashboard grid.
+function monthGridDays(date) {
+  const first = new Date(date.getFullYear(), date.getMonth(), 1);
+  const start = new Date(first);
+  start.setDate(first.getDate() - first.getDay());
+  return Array.from({ length: 42 }, (_, i) => {
+    const d = new Date(start);
+    d.setDate(start.getDate() + i);
+    return d;
+  });
+}
+
 export default function DiscoveryCalls({ token }) {
   const [calls, setCalls] = useState([]);
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState(() => new Date());
+  const [currentDate, setCurrentDate] = useState(() => new Date());
   const [selectedId, setSelectedId] = useState(null);
   const [statusFilter, setStatusFilter] = useState('scheduled');
   const [showForm, setShowForm] = useState(false);
-  const [noteDraft, setNoteDraft] = useState('');
-  const [noteSaved, setNoteSaved] = useState(false);
+  const [formDate, setFormDate] = useState(null);
   const [toast, setToast] = useState(null);
 
   const authHeaders = useMemo(
@@ -74,24 +86,13 @@ export default function DiscoveryCalls({ token }) {
   useEffect(() => { load(); }, [load]);
 
   const selected = calls.find(c => c.id === selectedId) || null;
-  useEffect(() => {
-    setNoteDraft(selected?.notes || '');
-    setNoteSaved(false);
-  }, [selectedId, selected?.notes]);
 
   const filtered = useMemo(() => {
     const list = statusFilter === 'all' ? calls : calls.filter(c => c.status === statusFilter);
     return [...list].sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
   }, [calls, statusFilter]);
 
-  const callsOnSelectedDay = useMemo(
-    () => calls.filter(c => sameDay(new Date(c.scheduled_at), selectedDate))
-               .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at)),
-    [calls, selectedDate]
-  );
-
   const patch = async (id, body, { quiet = false } = {}) => {
-    setSaving(true);
     try {
       const res = await fetch(`${API_URL}/api/discovery/calls/${id}`, {
         method: 'PUT', headers: authHeaders, body: JSON.stringify(body),
@@ -103,16 +104,7 @@ export default function DiscoveryCalls({ token }) {
       return data.call;
     } catch (err) {
       flash(err.message, 'error');
-    } finally {
-      setSaving(false);
     }
-  };
-
-  const saveNote = async () => {
-    if (!selected) return;
-    await patch(selected.id, { notes: noteDraft }, { quiet: true });
-    setNoteSaved(true);
-    setTimeout(() => setNoteSaved(false), 2500);
   };
 
   const removeCall = async (id) => {
@@ -120,7 +112,7 @@ export default function DiscoveryCalls({ token }) {
     try {
       await fetch(`${API_URL}/api/discovery/calls/${id}`, { method: 'DELETE', headers: authHeaders });
       setCalls(prev => prev.filter(c => c.id !== id));
-      if (selectedId === id) setSelectedId(null);
+      setSelectedId(null);
       flash('Call deleted');
     } catch {
       flash('Could not delete that call', 'error');
@@ -128,7 +120,6 @@ export default function DiscoveryCalls({ token }) {
   };
 
   const resend = async (id) => {
-    setSaving(true);
     try {
       const res = await fetch(`${API_URL}/api/discovery/calls/${id}/resend`, {
         method: 'POST', headers: authHeaders,
@@ -137,32 +128,15 @@ export default function DiscoveryCalls({ token }) {
       const sent = [data.smsSent && 'text', data.emailSent && 'email'].filter(Boolean);
       if (sent.length) flash(`Confirmation ${sent.join(' and ')} resent`);
       else flash(data.errors?.join(' · ') || 'Nothing was sent', 'error');
-    } finally {
-      setSaving(false);
+    } catch {
+      flash('Could not resend', 'error');
     }
   };
 
-  // Calendar grid: leading blanks + every day of the month
-  const grid = useMemo(() => {
-    const first = startOfMonth(month);
-    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-    const cells = Array.from({ length: first.getDay() }, () => null);
-    for (let d = 1; d <= daysInMonth; d++) {
-      cells.push(new Date(month.getFullYear(), month.getMonth(), d));
-    }
-    return cells;
-  }, [month]);
-
-  const countsByDay = useMemo(() => {
-    const map = {};
-    for (const c of calls) {
-      if (c.status === 'cancelled') continue;
-      const d = new Date(c.scheduled_at);
-      map[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] =
-        (map[`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`] || 0) + 1;
-    }
-    return map;
-  }, [calls]);
+  const openNewCall = (date) => {
+    setFormDate(date || new Date());
+    setShowForm(true);
+  };
 
   if (loading) {
     return (
@@ -172,8 +146,10 @@ export default function DiscoveryCalls({ token }) {
     );
   }
 
+  const gridDays = monthGridDays(currentDate);
+
   return (
-    <div className="relative">
+    <div>
       {toast && (
         <div className={`fixed top-6 right-6 z-50 px-4 py-3 rounded-xl shadow-lg text-sm font-medium ${
           toast.kind === 'error' ? 'bg-red-600 text-white' : 'bg-gray-900 text-white'
@@ -182,317 +158,221 @@ export default function DiscoveryCalls({ token }) {
         </div>
       )}
 
-      <div className="flex items-center justify-between mb-5 gap-3 flex-wrap">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Discovery Calls</h2>
-          <p className="text-sm text-gray-500">Prospects booked in for a call about SORCE</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={load}
-            className="px-3 py-2 bg-white border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50 transition flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" /> Refresh
-          </button>
-          <button
-            onClick={() => setShowForm(true)}
-            className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> Book a call
-          </button>
-        </div>
-      </div>
+      <div className="flex flex-col gap-4 md:flex-row md:gap-6">
 
-      <div className="grid lg:grid-cols-[1fr_380px] gap-6 items-start">
-        {/* LEFT: the pipeline */}
-        <div className="space-y-4 min-w-0">
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-            {[
-              ['scheduled', 'Upcoming'], ['completed', 'Completed'],
-              ['no_show', 'No show'], ['all', 'All'],
-            ].map(([value, label]) => (
+        {/* LEFT: narrow vertical list of who's booked */}
+        <div className="md:w-80 md:flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col md:h-[calc(100vh-220px)]">
+          <div className="p-4 border-b border-gray-200">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-gray-900">Booked</h3>
               <button
-                key={value}
-                onClick={() => setStatusFilter(value)}
-                className={`px-4 py-2 rounded-lg text-sm font-semibold transition ${
-                  statusFilter === value ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
+                onClick={load}
+                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                title="Refresh"
+              >
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+            <select
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:border-amber-500 focus:outline-none"
+            >
+              <option value="scheduled">Upcoming ({calls.filter(c => c.status === 'scheduled').length})</option>
+              <option value="completed">Completed ({calls.filter(c => c.status === 'completed').length})</option>
+              <option value="no_show">No show ({calls.filter(c => c.status === 'no_show').length})</option>
+              <option value="cancelled">Cancelled ({calls.filter(c => c.status === 'cancelled').length})</option>
+              <option value="all">All ({calls.length})</option>
+            </select>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {filtered.length === 0 ? (
+              <div className="text-center py-10">
+                <Calendar className="w-9 h-9 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500 font-medium">Nothing here yet</p>
+              </div>
+            ) : filtered.map(call => (
+              <button
+                key={call.id}
+                onClick={() => { setSelectedId(call.id); setCurrentDate(new Date(call.scheduled_at)); }}
+                className={`w-full text-left p-3 rounded-xl border transition ${
+                  selectedId === call.id
+                    ? 'border-amber-400 bg-amber-50'
+                    : 'border-gray-200 hover:border-amber-300 hover:bg-gray-50'
                 }`}
               >
-                {label}
-                <span className="ml-1.5 text-xs text-gray-400">
-                  {value === 'all' ? calls.length : calls.filter(c => c.status === value).length}
-                </span>
+                <div className="flex items-start justify-between gap-2">
+                  <p className="font-semibold text-gray-900 text-sm truncate">{call.name}</p>
+                  {call.notes && <StickyNote className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />}
+                </div>
+                {call.company && (
+                  <p className="text-xs text-gray-500 truncate flex items-center gap-1 mt-0.5">
+                    <Building2 className="w-3 h-3 flex-shrink-0" /> {call.company}
+                  </p>
+                )}
+                <p className="text-xs font-medium text-amber-700 mt-1.5">
+                  {fmtDate(call.scheduled_at)} · {fmtTime(call.scheduled_at)}
+                </p>
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${STATUS_STYLES[call.status]}`}>
+                    {STATUS_LABELS[call.status]}
+                  </span>
+                  {call.source === 'public' && (
+                    <span className="px-1.5 py-0.5 rounded-full text-[10px] font-medium bg-purple-50 text-purple-600 border border-purple-100">
+                      Self-booked
+                    </span>
+                  )}
+                </div>
               </button>
             ))}
           </div>
 
-          {filtered.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-2xl border-2 border-dashed border-gray-200">
-              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-600 font-medium">No calls here yet</p>
-              <p className="text-sm text-gray-400 mt-1">Book one manually, or wait for a prospect to self-book.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map(call => {
-                const isOpen = selectedId === call.id;
-                return (
-                  <div
-                    key={call.id}
-                    className={`bg-white rounded-2xl border transition-all ${
-                      isOpen ? 'border-amber-400 shadow-md' : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
-                    }`}
-                  >
-                    <button
-                      onClick={() => setSelectedId(isOpen ? null : call.id)}
-                      className="w-full text-left p-5"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <h3 className="font-bold text-gray-900 truncate">{call.name}</h3>
-                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_STYLES[call.status] || STATUS_STYLES.scheduled}`}>
-                              {STATUS_LABELS[call.status] || call.status}
-                            </span>
-                            {call.source === 'public' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-600 border border-purple-100">
-                                Self-booked
-                              </span>
-                            )}
-                          </div>
-                          {call.company && (
-                            <p className="text-sm text-gray-500 flex items-center gap-1.5">
-                              <Building2 className="w-3.5 h-3.5" /> {call.company}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600 flex-wrap">
-                            <span className="flex items-center gap-1.5 font-medium text-gray-900">
-                              <Clock className="w-3.5 h-3.5 text-amber-600" />
-                              {fmtDate(call.scheduled_at)} · {fmtTime(call.scheduled_at)}
-                            </span>
-                            {call.phone && (
-                              <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" />{call.phone}</span>
-                            )}
-                          </div>
-                          {call.rep_name && (
-                            <p className="text-xs text-gray-400 mt-2 flex items-center gap-1.5">
-                              <User className="w-3 h-3" /> {call.rep_name}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end gap-1 flex-shrink-0">
-                          {call.notes && <StickyNote className="w-4 h-4 text-amber-500" />}
-                          <ChevronRight className={`w-4 h-4 text-gray-400 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
-                        </div>
-                      </div>
-                    </button>
-
-                    {isOpen && (
-                      <div className="px-5 pb-5 border-t border-gray-100 pt-4 space-y-4">
-                        <div className="grid sm:grid-cols-2 gap-3 text-sm">
-                          {call.email && (
-                            <a href={`mailto:${call.email}`} className="flex items-center gap-2 text-blue-600 hover:underline">
-                              <Mail className="w-4 h-4" /> {call.email}
-                            </a>
-                          )}
-                          {call.phone && (
-                            <a href={`tel:${call.phone}`} className="flex items-center gap-2 text-blue-600 hover:underline">
-                              <Phone className="w-4 h-4" /> {call.phone}
-                            </a>
-                          )}
-                        </div>
-
-                        <div className="flex items-center gap-3 text-xs">
-                          <span className={`px-2 py-1 rounded-md ${call.confirmation_sms_sent ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                            {call.confirmation_sms_sent ? '✓' : '—'} Confirmation text
-                          </span>
-                          <span className={`px-2 py-1 rounded-md ${call.confirmation_email_sent ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                            {call.confirmation_email_sent ? '✓' : '—'} Confirmation email
-                          </span>
-                          <span className={`px-2 py-1 rounded-md ${call.reminder_24h_sent ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                            24h
-                          </span>
-                          <span className={`px-2 py-1 rounded-md ${call.reminder_2h_sent ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
-                            2h
-                          </span>
-                        </div>
-
-                        {/* Notes on the booking card */}
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
-                            <StickyNote className="w-3.5 h-3.5 text-amber-500" /> Notes
-                          </label>
-                          <textarea
-                            value={noteDraft}
-                            onChange={e => { setNoteDraft(e.target.value); setNoteSaved(false); }}
-                            rows={4}
-                            placeholder="What they're struggling with, what they're running now, what to follow up on..."
-                            className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none resize-y"
-                          />
-                          <div className="flex items-center gap-2 mt-2">
-                            <button
-                              onClick={saveNote}
-                              disabled={saving || noteDraft === (selected?.notes || '')}
-                              className="px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-semibold hover:bg-gray-800 transition disabled:opacity-40"
-                            >
-                              {noteSaved ? <><Check className="w-3 h-3 inline" /> Saved</> : 'Save note'}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="grid sm:grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Status</label>
-                            <select
-                              value={call.status}
-                              onChange={e => patch(call.id, { status: e.target.value })}
-                              className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-                            >
-                              {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Assigned to</label>
-                            <select
-                              value={call.assigned_to || ''}
-                              onChange={e => patch(call.id, { assignedTo: e.target.value || null })}
-                              className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-                            >
-                              <option value="">Unassigned</option>
-                              {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                            </select>
-                          </div>
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-semibold text-gray-600 mb-1.5">Reschedule</label>
-                          <input
-                            type="datetime-local"
-                            value={toLocalInput(call.scheduled_at)}
-                            onChange={e => patch(call.id, { scheduledAt: new Date(e.target.value).toISOString() })}
-                            className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-                          />
-                          <p className="text-xs text-gray-400 mt-1">Moving the call re-arms both reminder texts.</p>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-1">
-                          <button
-                            onClick={() => resend(call.id)}
-                            disabled={saving}
-                            className="px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold hover:bg-blue-100 transition flex items-center gap-1.5 disabled:opacity-50"
-                          >
-                            <Send className="w-3.5 h-3.5" /> Resend confirmation
-                          </button>
-                          <button
-                            onClick={() => removeCall(call.id)}
-                            className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ml-auto"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" /> Delete
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT: the calendar */}
-        <div className="lg:sticky lg:top-6 space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              <span className="font-bold text-gray-900 text-sm">
-                {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-              </span>
-              <button
-                onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-                className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-7 gap-1 mb-1">
-              {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-                <div key={i} className="text-center text-[11px] font-semibold text-gray-400 py-1">{d}</div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-1">
-              {grid.map((day, i) => {
-                if (!day) return <div key={i} />;
-                const key = `${day.getFullYear()}-${day.getMonth()}-${day.getDate()}`;
-                const count = countsByDay[key] || 0;
-                const isSelected = sameDay(day, selectedDate);
-                const isToday = sameDay(day, new Date());
-                return (
-                  <button
-                    key={i}
-                    onClick={() => setSelectedDate(day)}
-                    className={`aspect-square rounded-lg text-sm font-medium flex flex-col items-center justify-center gap-0.5 transition ${
-                      isSelected ? 'bg-amber-600 text-white'
-                      : isToday ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
-                      : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    {day.getDate()}
-                    {count > 0 && (
-                      <span className={`w-1.5 h-1.5 rounded-full ${isSelected ? 'bg-white' : 'bg-amber-500'}`} />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-200 p-5">
-            <p className="text-sm font-bold text-gray-900 mb-3">
-              {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-            {callsOnSelectedDay.length === 0 ? (
-              <p className="text-sm text-gray-400 py-3">Nothing booked this day.</p>
-            ) : (
-              <div className="space-y-2">
-                {callsOnSelectedDay.map(call => (
-                  <button
-                    key={call.id}
-                    onClick={() => setSelectedId(call.id)}
-                    className={`w-full text-left p-3 rounded-xl border transition ${
-                      selectedId === call.id
-                        ? 'border-amber-400 bg-amber-50'
-                        : 'border-gray-200 hover:border-amber-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-semibold text-gray-900 truncate">{call.name}</span>
-                      <span className="text-xs font-medium text-amber-700 flex-shrink-0">{fmtTime(call.scheduled_at)}</span>
-                    </div>
-                    {call.company && <p className="text-xs text-gray-500 truncate mt-0.5">{call.company}</p>}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="p-3 border-t border-gray-200">
             <button
-              onClick={() => setShowForm(true)}
-              className="w-full mt-3 py-2.5 border-2 border-dashed border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:border-amber-400 hover:text-amber-700 transition flex items-center justify-center gap-1.5"
+              onClick={() => openNewCall(new Date())}
+              className="w-full py-2.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition flex items-center justify-center gap-2"
             >
               <Plus className="w-4 h-4" /> Book a call
             </button>
           </div>
         </div>
+
+        {/* RIGHT: the calendar, filling the space */}
+        <div className="flex-1 min-w-0 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col md:h-[calc(100vh-220px)]">
+          <div className="flex items-center justify-between p-6 pb-4 flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              </h2>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <ChevronLeft className="w-5 h-5 text-gray-600" />
+                </button>
+                <button
+                  onClick={() => setCurrentDate(new Date())}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm font-medium transition"
+                >
+                  Today
+                </button>
+                <button
+                  onClick={() => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <ChevronRight className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+            <p className="text-sm text-gray-500 hidden lg:block">
+              {calls.filter(c => {
+                const d = new Date(c.scheduled_at);
+                return d.getMonth() === currentDate.getMonth() && d.getFullYear() === currentDate.getFullYear()
+                  && c.status !== 'cancelled';
+              }).length} this month
+            </p>
+          </div>
+
+          <div className="px-6 pb-6 flex-1 flex flex-col min-h-0">
+            <div className="border border-gray-200 rounded-lg flex-1 flex flex-col overflow-hidden">
+              <div className="grid grid-cols-7 border-b border-gray-200 bg-gray-50">
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+                  <div
+                    key={day}
+                    className={`p-3 text-center text-sm font-medium text-gray-600 ${day !== 'Sat' ? 'border-r border-gray-200' : ''}`}
+                  >
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex-1 overflow-y-auto">
+                <div className="grid grid-cols-7 auto-rows-fr" style={{ minHeight: '100%' }}>
+                  {gridDays.map((day, idx) => {
+                    const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+                    const isToday = sameDay(day, new Date());
+                    const dayCalls = calls
+                      .filter(c => sameDay(new Date(c.scheduled_at), day))
+                      .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
+                    const maxVisible = 3;
+
+                    return (
+                      <div
+                        key={idx}
+                        onDoubleClick={() => openNewCall(day)}
+                        className={`min-h-[110px] p-1.5 border-b border-r border-gray-100 ${
+                          !isCurrentMonth ? 'bg-gray-50' : 'bg-white'
+                        } ${isToday ? 'bg-blue-50/50' : ''}`}
+                      >
+                        <div className={`text-sm font-medium mb-1 px-1 ${
+                          isToday
+                            ? 'text-white bg-blue-600 rounded-full w-7 h-7 flex items-center justify-center'
+                            : !isCurrentMonth
+                            ? 'text-gray-300'
+                            : 'text-gray-900'
+                        }`}>
+                          {day.getDate()}
+                        </div>
+                        <div className="space-y-0.5">
+                          {dayCalls.slice(0, maxVisible).map(call => {
+                            const color = CELL_COLORS[call.status] || CELL_COLORS.scheduled;
+                            return (
+                              <button
+                                key={call.id}
+                                type="button"
+                                onClick={() => setSelectedId(call.id)}
+                                className={`w-full text-left px-1.5 py-0.5 rounded text-[11px] font-medium truncate transition hover:brightness-110 ${
+                                  call.status === 'cancelled' ? 'opacity-50 line-through' : ''
+                                }`}
+                                style={{
+                                  backgroundColor: color + '20',
+                                  color,
+                                  borderLeft: `3px solid ${color}`,
+                                }}
+                                title={`${call.name} — ${fmtTime(call.scheduled_at)}`}
+                              >
+                                {fmtTime(call.scheduled_at)} {call.name}
+                              </button>
+                            );
+                          })}
+                          {dayCalls.length > maxVisible && (
+                            <button
+                              type="button"
+                              onClick={() => setSelectedId(dayCalls[maxVisible].id)}
+                              className="w-full text-left px-1.5 py-0.5 text-[11px] font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition"
+                            >
+                              +{dayCalls.length - maxVisible} more
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mt-2">Double-click any day to book a call on it.</p>
+          </div>
+        </div>
       </div>
+
+      {selected && (
+        <CallDetailModal
+          call={selected}
+          team={team}
+          onClose={() => setSelectedId(null)}
+          onPatch={patch}
+          onDelete={removeCall}
+          onResend={resend}
+        />
+      )}
 
       {showForm && (
         <BookCallModal
           team={team}
-          defaultDate={selectedDate}
+          defaultDate={formDate || new Date()}
           authHeaders={authHeaders}
           onClose={() => setShowForm(false)}
           onCreated={(call, delivery) => {
@@ -508,9 +388,160 @@ export default function DiscoveryCalls({ token }) {
   );
 }
 
+function CallDetailModal({ call, team, onClose, onPatch, onDelete, onResend }) {
+  const [noteDraft, setNoteDraft] = useState(call.notes || '');
+  const [noteSaved, setNoteSaved] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => { setNoteDraft(call.notes || ''); setNoteSaved(false); }, [call.id, call.notes]);
+
+  const saveNote = async () => {
+    setBusy(true);
+    await onPatch(call.id, { notes: noteDraft }, { quiet: true });
+    setNoteSaved(true);
+    setBusy(false);
+    setTimeout(() => setNoteSaved(false), 2500);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="flex items-start justify-between p-6 border-b border-gray-100">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap mb-1">
+              <h3 className="text-lg font-bold text-gray-900 truncate">{call.name}</h3>
+              <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${STATUS_STYLES[call.status]}`}>
+                {STATUS_LABELS[call.status]}
+              </span>
+              {call.source === 'public' && (
+                <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-purple-50 text-purple-600 border border-purple-100">
+                  Self-booked
+                </span>
+              )}
+            </div>
+            <p className="text-sm text-gray-500">
+              {fmtDate(call.scheduled_at)} · {fmtTime(call.scheduled_at)}
+              {call.company ? ` · ${call.company}` : ''}
+            </p>
+            {call.rep_name && (
+              <p className="text-xs text-gray-400 mt-1 flex items-center gap-1.5">
+                <User className="w-3 h-3" /> {call.rep_name}
+              </p>
+            )}
+          </div>
+          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 flex-shrink-0">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        <div className="p-6 space-y-5">
+          <div className="grid sm:grid-cols-2 gap-3 text-sm">
+            {call.email && (
+              <a href={`mailto:${call.email}`} className="flex items-center gap-2 text-blue-600 hover:underline truncate">
+                <Mail className="w-4 h-4 flex-shrink-0" /> {call.email}
+              </a>
+            )}
+            {call.phone && (
+              <a href={`tel:${call.phone}`} className="flex items-center gap-2 text-blue-600 hover:underline">
+                <Phone className="w-4 h-4 flex-shrink-0" /> {call.phone}
+              </a>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 text-xs flex-wrap">
+            {[
+              ['Confirmation text', call.confirmation_sms_sent],
+              ['Confirmation email', call.confirmation_email_sent],
+              ['24h reminder', call.reminder_24h_sent],
+              ['2h reminder', call.reminder_2h_sent],
+            ].map(([label, done]) => (
+              <span key={label} className={`px-2 py-1 rounded-md ${done ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-400'}`}>
+                {done ? '✓' : '—'} {label}
+              </span>
+            ))}
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5 flex items-center gap-1.5">
+              <StickyNote className="w-3.5 h-3.5 text-amber-500" /> Notes
+            </label>
+            <textarea
+              value={noteDraft}
+              onChange={e => { setNoteDraft(e.target.value); setNoteSaved(false); }}
+              rows={5}
+              placeholder="What they're struggling with, what they're running now, what to follow up on..."
+              className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none resize-y"
+            />
+            <button
+              onClick={saveNote}
+              disabled={busy || noteDraft === (call.notes || '')}
+              className="mt-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-xs font-semibold hover:bg-gray-800 transition disabled:opacity-40"
+            >
+              {noteSaved ? <><Check className="w-3 h-3 inline" /> Saved</> : 'Save note'}
+            </button>
+          </div>
+
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Status</label>
+              <select
+                value={call.status}
+                onChange={e => onPatch(call.id, { status: e.target.value })}
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
+              >
+                {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1.5">Assigned to</label>
+              <select
+                value={call.assigned_to || ''}
+                onChange={e => onPatch(call.id, { assignedTo: e.target.value || null })}
+                className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
+              >
+                <option value="">Unassigned</option>
+                {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">Reschedule</label>
+            <input
+              type="datetime-local"
+              value={toLocalInput(call.scheduled_at)}
+              onChange={e => onPatch(call.id, { scheduledAt: new Date(e.target.value).toISOString() })}
+              className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">Moving the call re-arms both reminder texts.</p>
+          </div>
+
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={() => onResend(call.id)}
+              className="px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold hover:bg-blue-100 transition flex items-center gap-1.5"
+            >
+              <Send className="w-3.5 h-3.5" /> Resend confirmation
+            </button>
+            <button
+              onClick={() => onDelete(call.id)}
+              className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ml-auto"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BookCallModal({ team, defaultDate, authHeaders, onClose, onCreated }) {
   const initial = new Date(defaultDate);
-  initial.setHours(10, 0, 0, 0);
+  if (!initial.getHours()) initial.setHours(10, 0, 0, 0);
   const [form, setForm] = useState({
     name: '', email: '', phone: '', company: '',
     scheduledAt: toLocalInput(initial.toISOString()),
@@ -624,9 +655,7 @@ function BookCallModal({ team, defaultDate, authHeaders, onClose, onCreated }) {
               onChange={e => setForm(f => ({ ...f, sendNotifications: e.target.checked }))}
               className="rounded border-gray-300 text-amber-600 focus:ring-amber-400"
             />
-            <span className="text-sm text-gray-700">
-              Send the confirmation text and email now
-            </span>
+            <span className="text-sm text-gray-700">Send the confirmation text and email now</span>
           </label>
 
           {error && (

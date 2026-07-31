@@ -782,7 +782,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       if (res.error) throw new Error(res.error);
       setShowVerifyModal(null);
       setVerifyEmail('');
-      fetchAdConnections();
+      // fetchAdConnections(); // paused — ad tracking UI is hidden until the sync works
       setAdConnectToast({ type: 'success', msg: 'Request submitted! You\'ll get an email when approved.' });
       setTimeout(() => setAdConnectToast(null), 5000);
     } catch (e) {
@@ -809,7 +809,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const disconnectAdPlatform = async (platform) => {
     if (!confirm(`Disconnect ${platformLabel(platform)}? Synced spend data will remain.`)) return;
     await authFetch(`${apiUrl}/api/ad-platforms/${toPath(platform)}`, { method: 'DELETE' });
-    fetchAdConnections();
+    // fetchAdConnections(); // paused — ad tracking UI is hidden until the sync works
   };
 
   const syncAdPlatform = async (platform) => {
@@ -840,7 +840,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     fetchLeads();
     fetchCustomers();
     fetchAnalytics();
-    fetchAdConnections();
+    // fetchAdConnections(); // paused — ad tracking UI is hidden until the sync works
     // Conversations tab lazy-loads on click; on refresh, the persisted tab is
     // already 'conversations' and the click handler never fires — fetch here.
     if (activeTab === 'conversations') {
@@ -1010,7 +1010,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       const spendRes = await authFetch(`${apiUrl}/api/leads/ad-spend`).then(r => r.json());
       setAdSpendEntries(spendRes.entries || []);
     } catch { setAdSpendEntries([]); }
-    fetchAdConnections();
+    // fetchAdConnections(); // paused — ad tracking UI is hidden until the sync works
   };
 
   const saveAdSpend = async () => {
@@ -3989,111 +3989,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             );
           })()}
 
-          {/* Ad Platform Connections — always rendered, regardless of analyticsData */}
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-700">Ad Platform Connections</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Auto-sync ad spend from Google Ads and Google Local Services</p>
-              </div>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {[
-                { key: 'google_ads', label: 'Google Ads', icon: '🔵', color: 'blue', needsVerify: true },
-                { key: 'google_lsa', label: 'Google LSA', icon: '🟢', color: 'green', needsVerify: true },
-              ].map(card => {
-                const conn = adConnections.find(c => c.platform === card.key);
-                const verif = adVerifications.find(v => v.platform === card.key);
-                const isConnected = !!conn;
-                const isConnecting = adConnecting === card.key;
-                const isSyncing = adSyncing === card.key;
-                const verifStatus = verif?.status;
-
-                return (
-                  <div key={card.key} className="border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-2.5">
-                        <span className="text-xl">{card.icon}</span>
-                        <div>
-                          <p className="font-semibold text-sm text-gray-900">{card.label}</p>
-                          {isConnected ? (
-                            <p className="text-xs text-green-600 font-medium mt-0.5">✓ Connected</p>
-                          ) : verifStatus === 'pending' ? (
-                            <p className="text-xs text-amber-600 font-medium mt-0.5">⏳ Pending verification</p>
-                          ) : verifStatus === 'verified' ? (
-                            <p className="text-xs text-blue-600 font-medium mt-0.5">✓ Verified — ready to connect</p>
-                          ) : verifStatus === 'rejected' ? (
-                            <p className="text-xs text-red-600 font-medium mt-0.5">✕ Verification rejected</p>
-                          ) : card.needsVerify ? (
-                            <p className="text-xs text-gray-500 mt-0.5">Not verified</p>
-                          ) : (
-                            <p className="text-xs text-gray-500 mt-0.5">Not connected</p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {isConnected ? (
-                      <div className="space-y-2">
-                        {conn.last_synced_at && (
-                          <p className="text-xs text-gray-500">Last synced: {new Date(conn.last_synced_at).toLocaleString()}</p>
-                        )}
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => syncAdPlatform(card.key)}
-                            disabled={isSyncing}
-                            className="flex-1 py-1.5 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition disabled:opacity-50"
-                          >
-                            {isSyncing ? 'Syncing…' : 'Sync now'}
-                          </button>
-                          <button
-                            onClick={() => disconnectAdPlatform(card.key)}
-                            className="px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md text-xs font-medium transition"
-                          >
-                            Disconnect
-                          </button>
-                        </div>
-                      </div>
-                    ) : verifStatus === 'verified' ? (
-                      <button
-                        onClick={() => connectAdPlatform(card.key)}
-                        disabled={isConnecting}
-                        className="w-full py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition disabled:opacity-50"
-                      >
-                        {isConnecting ? 'Connecting…' : `Connect ${card.label}`}
-                      </button>
-                    ) : verifStatus === 'pending' ? (
-                      <div className="text-xs text-gray-500 italic py-2 text-center bg-amber-50 rounded-md">
-                        Awaiting admin approval. Check your email soon.
-                      </div>
-                    ) : verifStatus === 'rejected' ? (
-                      <button
-                        onClick={() => { setVerifyEmail(''); setShowVerifyModal(card.key); }}
-                        className="w-full py-2 bg-gray-100 text-gray-700 rounded-md text-xs font-medium hover:bg-gray-200 transition"
-                      >
-                        Resubmit for verification
-                      </button>
-                    ) : card.needsVerify ? (
-                      <button
-                        onClick={() => { setVerifyEmail(''); setShowVerifyModal(card.key); }}
-                        className="w-full py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition"
-                      >
-                        Submit for verification
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => connectAdPlatform(card.key)}
-                        disabled={isConnecting}
-                        className="w-full py-2 bg-blue-600 text-white rounded-md text-xs font-semibold hover:bg-blue-700 transition disabled:opacity-50"
-                      >
-                        {isConnecting ? 'Connecting…' : `Connect ${card.label}`}
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {/* Ad Platform Connections removed for now — hidden until the Google Ads / LSA / Meta
+              sync is actually wired up. The fetch + state below are left in place so it can come back. */}
         </div>
       )}
 

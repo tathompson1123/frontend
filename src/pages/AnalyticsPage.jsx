@@ -54,6 +54,20 @@ export default function AnalyticsPage() {
   const [verifyRequests, setVerifyRequests] = useState([]);
   const [actioningId, setActioningId] = useState(null);
   const [tab, setTab] = useState(() => sessionStorage.getItem('analyticsTab') || 'analytics');
+  const [billingFilter, setBillingFilter] = useState('paying');
+  const [syncing, setSyncing] = useState(false);
+
+  const syncStripe = async () => {
+    setSyncing(true);
+    try {
+      await fetch(`${API_URL}/api/analytics/sync-stripe`, {
+        method: 'POST', headers: { Authorization: `Bearer ${token}` },
+      });
+      await fetchData();
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   useEffect(() => { sessionStorage.setItem('analyticsTab', tab); }, [tab]);
 
@@ -129,11 +143,24 @@ export default function AnalyticsPage() {
   };
 
   const users = data?.users || [];
+
+  // Stripe is the authority on who's paying. Anything else — trialing, a card that's
+  // failing, cancelled — is a follow-up, not revenue.
+  const BILLING_FILTERS = {
+    paying:   u => u.is_paying,
+    trialing: u => u.subscription_status === 'trialing',
+    past_due: u => u.is_past_due,
+    churned:  u => u.subscription_status === 'canceled',
+    unpaid:   u => !u.is_paying,
+  };
+
   const filtered = users
     .filter(u => {
       const q = search.toLowerCase();
+      const matchesBilling = billingFilter === 'all' || (BILLING_FILTERS[billingFilter]?.(u) ?? true);
       return (!q || u.email.toLowerCase().includes(q) || u.business_name.toLowerCase().includes(q) || u.name.toLowerCase().includes(q))
-          && (planFilter === 'all' || u.plan === planFilter);
+          && (planFilter === 'all' || u.plan === planFilter)
+          && matchesBilling;
     })
     .sort((a, b) => {
       let av = a[sortField], bv = b[sortField];
@@ -248,14 +275,14 @@ export default function AnalyticsPage() {
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
-                icon={Users} label="Total Users" color="bg-blue-100 text-blue-600"
-                value={fmtN(totals.user_count)}
-                sub={`${Object.entries(breakdown).map(([k,v]) => `${v} ${PLAN_LABEL[k] || k}`).join(' · ')}`}
+                icon={CheckCircle} label="Active Paying" color="bg-green-100 text-green-600"
+                value={fmtN(totals.paying_count ?? 0)}
+                sub={`of ${fmtN(totals.user_count)} accounts · verified in Stripe`}
               />
               <KpiCard
                 icon={DollarSign} label="Monthly Revenue (MRR)" color="bg-green-100 text-green-600"
                 value={fmt$(totals.revenue)}
-                sub={`${fmtN(totals.user_count)} paying accounts`}
+                sub={`${fmtN(totals.paying_count ?? 0)} paying account${totals.paying_count === 1 ? '' : 's'}`}
               />
               <KpiCard
                 icon={TrendingDown} label="Est. Costs This Month" color="bg-orange-500/20 text-orange-400"
@@ -267,6 +294,39 @@ export default function AnalyticsPage() {
                 value={fmt$(totals.margin)}
                 sub={totals.revenue > 0 ? `${((totals.margin / totals.revenue) * 100).toFixed(1)}% margin` : '—'}
               />
+            </div>
+
+            {/* Billing status — what Stripe says, not what the plan column says */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: 'paying',   label: 'Active paying', count: totals.paying_count,   tone: 'bg-green-600 border-green-600' },
+                { id: 'trialing', label: 'On trial',      count: totals.trialing_count, tone: 'bg-blue-600 border-blue-600' },
+                { id: 'past_due', label: 'Payment failing', count: totals.past_due_count, tone: 'bg-red-600 border-red-600' },
+                { id: 'churned',  label: 'Cancelled',     count: totals.churned_count,  tone: 'bg-gray-600 border-gray-600' },
+                { id: 'unpaid',   label: 'Not paying',    count: (totals.user_count ?? 0) - (totals.paying_count ?? 0), tone: 'bg-amber-600 border-amber-600' },
+                { id: 'all',      label: 'Everyone',      count: totals.user_count,     tone: 'bg-gray-900 border-gray-900' },
+              ].map(f => (
+                <button
+                  key={f.id}
+                  onClick={() => setBillingFilter(f.id)}
+                  className={`px-4 py-1.5 rounded-full text-sm font-semibold border transition ${
+                    billingFilter === f.id
+                      ? `${f.tone} text-white`
+                      : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                  }`}
+                >
+                  {f.label} ({fmtN(f.count ?? 0)})
+                </button>
+              ))}
+              <button
+                onClick={syncStripe}
+                disabled={syncing}
+                className="ml-auto px-3 py-1.5 rounded-full text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:border-gray-400 transition disabled:opacity-50 flex items-center gap-1.5"
+                title="Pull payment status straight from Stripe"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${syncing ? 'animate-spin' : ''}`} />
+                {syncing ? 'Syncing Stripe...' : 'Sync Stripe'}
+              </button>
             </div>
 
             {/* Plan Breakdown Pills */}
@@ -386,6 +446,7 @@ export default function AnalyticsPage() {
                       {th('Business / User', 'business_name')}
                       {th('Plan', 'plan')}
                       {th('MRR', 'revenue')}
+                      {th('Last Payment', 'last_payment_at')}
                       {th('SMS / mo', 'sms_sent_month')}
                       {th('SMS Cost', 'sms_cost')}
                       {th('Chats / mo', 'chat_convos_month')}
@@ -418,8 +479,37 @@ export default function AnalyticsPage() {
                           </span>
                         </td>
 
-                        {/* MRR */}
-                        <td className="px-4 py-3 text-green-600 font-medium">{fmt$(u.revenue)}</td>
+                        {/* MRR — zero unless Stripe says the subscription is active */}
+                        <td className="px-4 py-3 font-medium">
+                          {u.revenue > 0
+                            ? <span className="text-green-600">{fmt$(u.revenue)}</span>
+                            : <span className="text-gray-300">—</span>}
+                        </td>
+
+                        {/* Last payment — the follow-up hook */}
+                        <td className="px-4 py-3">
+                          {u.last_payment_at ? (
+                            <>
+                              <span className="text-gray-800 text-xs whitespace-nowrap">
+                                {new Date(u.last_payment_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
+                              </span>
+                              <span className="block text-gray-400 text-[10px]">
+                                {u.last_payment_amount != null ? fmt$(u.last_payment_amount) : ''}
+                                {' · '}
+                                {Math.floor((Date.now() - new Date(u.last_payment_at)) / 86400000)}d ago
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-gray-300 text-xs">
+                              {u.has_stripe ? 'never paid' : 'no Stripe'}
+                            </span>
+                          )}
+                          {u.last_payment_failed_at && (
+                            <span className="block text-red-600 text-[10px] font-semibold">
+                              failed {new Date(u.last_payment_failed_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                            </span>
+                          )}
+                        </td>
 
                         {/* SMS / mo */}
                         <td className="px-4 py-3">
@@ -460,12 +550,21 @@ export default function AnalyticsPage() {
 
                         {/* Status */}
                         <td className="px-4 py-3">
-                          {u.is_canceling ? (
+                          {/* Reflects Stripe, so a failing card can't read as Active */}
+                          {u.is_past_due ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-100 text-red-700 border border-red-200 font-semibold">Payment failing</span>
+                          ) : u.subscription_status === 'canceled' ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500 border border-gray-200">Cancelled</span>
+                          ) : u.is_canceling ? (
                             <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200">Canceling</span>
-                          ) : u.is_trialing ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-500/30">Trial</span>
+                          ) : u.subscription_status === 'trialing' || u.is_trialing ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-200">Trial</span>
+                          ) : u.is_paying ? (
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700 border border-green-200 font-semibold">Paying</span>
                           ) : (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Active</span>
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-500 border border-gray-200">
+                              {u.has_stripe ? 'Not paying' : 'No subscription'}
+                            </span>
                           )}
                         </td>
 
