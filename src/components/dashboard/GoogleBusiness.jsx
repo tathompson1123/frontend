@@ -966,20 +966,40 @@ const rateIncentiveNow = async () => {
                           </p>
                         </div>
 
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Custom review link (optional)</label>
-                          <input
-                            type="text"
-                            value={reviewConfig.reviewLinkBase}
-                            onChange={(e) => setReviewConfig({ ...reviewConfig, reviewLinkBase: e.target.value })}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="e.g., https://thompsonsautodetailing.com/googlereview"
-                          />
-                          <div className="mt-2 text-xs text-gray-500 space-y-1">
-                            <p>Use your own domain so texts read <span className="font-mono text-gray-700">yourdomain.com/googlereview/123</span> instead of a generic link.</p>
-                            <p className="font-semibold text-gray-700">One-time setup on your domain:</p>
-                            <p>Add a redirect from <span className="font-mono text-gray-700">/googlereview/*</span> → <span className="font-mono text-gray-700">https://sorceintegrations.com/r/*</span> (forwards through our click tracker to your Google review page). Leave blank to use the default link.</p>
-                          </div>
+                        <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                          <p className="text-sm font-semibold text-gray-900 mb-1">Your review link</p>
+                          <p className="text-xs text-gray-600">
+                            Texts include a tracked link carrying your business name, so customers
+                            recognise it:
+                          </p>
+                          <p className="font-mono text-xs text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2 mt-2 break-all">
+                            sorceintegrations.com/r/{(user?.businessName || user?.business_name || 'your-business')
+                              .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'your-business'}/k3f9qa
+                          </p>
+                          <p className="text-xs text-gray-500 mt-2">
+                            Set up automatically — nothing for you to configure. One tap takes them
+                            straight to your Google review page, and we record the click.
+                          </p>
+                          <details className="mt-3">
+                            <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
+                              Advanced: use my own domain instead
+                            </summary>
+                            <div className="mt-2 space-y-2">
+                              <input
+                                type="text"
+                                value={reviewConfig.reviewLinkBase}
+                                onChange={(e) => setReviewConfig({ ...reviewConfig, reviewLinkBase: e.target.value })}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                placeholder="e.g., https://thompsonsautodetailing.com/googlereview"
+                              />
+                              <p className="text-xs text-gray-500">
+                                Only worth it if you want your own domain in the text. Requires a
+                                wildcard redirect from <span className="font-mono">/googlereview/*</span> →
+                                <span className="font-mono"> https://sorceintegrations.com/r/*</span> on your
+                                host. Leave blank to use the link above.
+                              </p>
+                            </div>
+                          </details>
                         </div>
 
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
