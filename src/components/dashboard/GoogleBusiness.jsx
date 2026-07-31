@@ -33,6 +33,7 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
 
   // Review Requests State
   const [reviewRequests, setReviewRequests] = useState([]);
+  const [reviewDiagnostics, setReviewDiagnostics] = useState([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const [filterStatus, setFilterStatus] = useState('all');
   const [reviewLink, setReviewLink] = useState('');
@@ -263,6 +264,15 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
       console.error('Error fetching review requests:', error);
     } finally {
       setIsLoadingRequests(false);
+    }
+    // Why any recent booking hasn't produced a text — a customer who was skipped is
+    // otherwise just silently absent from the list.
+    try {
+      const res = await authFetch(`${apiUrl}/api/google-business/review-diagnostics?days=30`);
+      const data = await res.json();
+      if (data.success) setReviewDiagnostics(data.bookings || []);
+    } catch (error) {
+      console.error('Error fetching review diagnostics:', error);
     }
   };
 
@@ -1542,6 +1552,38 @@ const rateIncentiveNow = async () => {
                           ))}
                         </div>
                       </div>
+
+                      {/* Bookings that didn't produce a text, and why */}
+                      {reviewDiagnostics.some(b => b.diagnostic_status !== 'sent') && (
+                        <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+                            <p className="text-sm font-bold text-gray-900">Recent jobs with no review text</p>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Why each one hasn't gone out — last 30 days
+                            </p>
+                          </div>
+                          <div className="divide-y divide-gray-100 max-h-72 overflow-y-auto">
+                            {reviewDiagnostics.filter(b => b.diagnostic_status !== 'sent').map(b => (
+                              <div key={b.booking_id} className="px-5 py-3 flex items-start gap-3">
+                                <span className={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${
+                                  b.diagnostic_status === 'blocked' ? 'bg-red-500'
+                                  : b.diagnostic_status === 'waiting' ? 'bg-amber-400'
+                                  : 'bg-gray-300'
+                                }`} />
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-sm font-semibold text-gray-900">
+                                    {b.customer_name || 'No customer on the booking'}
+                                    <span className="ml-2 text-xs font-normal text-gray-400">
+                                      {new Date(b.booking_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </span>
+                                  </p>
+                                  <p className="text-xs text-gray-600 mt-0.5">{b.reason}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       {/* Requests List */}
                       {isLoadingRequests ? (
