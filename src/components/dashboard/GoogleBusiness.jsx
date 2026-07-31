@@ -53,7 +53,8 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
   raffleRequireVerified: false,
   repName: '',
   incentiveScore: null,
-  incentiveTip: ''
+  incentiveTip: '',
+  reviewLinkBase: ''
 });
 
   const [ratingIncentive, setRatingIncentive] = useState(false);
@@ -313,7 +314,8 @@ export default function GoogleBusiness({ apiUrl, user, authFetch, inOnboarding }
           raffleRequireVerified: data.config.raffle_require_verified ?? false,
           repName: data.config.rep_name || '',
           incentiveScore: data.config.incentive_score ?? null,
-          incentiveTip: data.config.incentive_tip || ''
+          incentiveTip: data.config.incentive_tip || '',
+          reviewLinkBase: data.config.review_link_base || ''
         });
       }
     }
@@ -1005,6 +1007,21 @@ const rateIncentiveNow = async () => {
             <p className="mt-1 text-xs text-gray-500">
               Opener: “Hey [first name], this is {reviewConfig.repName?.trim() || 'Kurt'} with your business. How did the [service] go?”
             </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Custom review link (optional)</label>
+            <input
+              type="text"
+              value={reviewConfig.reviewLinkBase}
+              onChange={(e) => setReviewConfig({ ...reviewConfig, reviewLinkBase: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., https://thompsonsautodetailing.com/googlereview"
+            />
+            <div className="mt-2 text-xs text-gray-500 space-y-1">
+              <p>Use your own domain so texts read <span className="font-mono text-gray-700">yourdomain.com/googlereview/123</span> instead of a generic link.</p>
+              <p className="font-semibold text-gray-700">One-time setup on your domain:</p>
+              <p>Add a redirect from <span className="font-mono text-gray-700">/googlereview/*</span> → <span className="font-mono text-gray-700">https://sorceintegrations.com/r/*</span> (forwards through our click tracker to your Google review page). Leave blank to use the default link.</p>
+            </div>
           </div>
           <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
             <div>
