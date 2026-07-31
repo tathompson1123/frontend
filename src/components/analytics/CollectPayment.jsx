@@ -12,9 +12,8 @@ const STRIPE_PK =
   import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
 const PLANS = [
-  { id: 'pro',   label: 'Pro',   price: 99.95 },
-  { id: 'scale', label: 'Scale', price: 175.95 },
-  { id: 'basic', label: 'Basic', price: 29.95 },
+  { id: 'pro',   label: 'Pro',   price: 99 },
+  { id: 'scale', label: 'Scale', price: 175 },
   { id: '',      label: 'No plan — offer only', price: 0 },
 ];
 
@@ -94,6 +93,7 @@ export default function CollectPayment({ token, onClose, onDone, prefill }) {
   });
 
   const valid = (target || (manual.email.trim() && manual.name.trim())) && (plan || offerAmount);
+  const who = () => target?.business_name || target?.email || manual.name || manual.email || 'them';
 
   const createLink = async () => {
     setBusy(true); setError(''); setLinkUrl('');
@@ -107,9 +107,21 @@ export default function CollectPayment({ token, onClose, onDone, prefill }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not create the link');
-      setLinkUrl(data.url);
+
       const sent = [data.delivery?.smsSent && 'text', data.delivery?.emailSent && 'email'].filter(Boolean);
-      if (sent.length) setDone(`Link sent by ${sent.join(' and ')}`);
+      // If it actually reached them there's nothing left to do here — hand back a
+      // result and close. The link only stays on screen when we couldn't deliver it,
+      // because then copying it manually is the only way through.
+      if (sent.length) {
+        onDone?.({
+          kind: 'link',
+          message: `Payment link sent to ${who()} by ${sent.join(' and ')}`,
+        });
+        onClose();
+        return;
+      }
+      setLinkUrl(data.url);
+      setDone('Link created — nothing was sent, so copy it across yourself');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -333,7 +345,10 @@ export default function CollectPayment({ token, onClose, onDone, prefill }) {
               payload={payload}
               valid={valid}
               onError={setError}
-              onSuccess={(msg) => { setDone(msg); onDone?.(); }}
+              onSuccess={(msg) => {
+                onDone?.({ kind: 'card', message: `${msg} — ${who()}` });
+                onClose();
+              }}
             />
           )}
         </div>

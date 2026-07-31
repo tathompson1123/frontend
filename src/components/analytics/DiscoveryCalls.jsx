@@ -391,7 +391,7 @@ export default function DiscoveryCalls({ token, isAdmin }) {
             phone: collectFor.phone || '',
           }}
           onClose={() => setCollectFor(null)}
-          onDone={() => flash('Payment collected')}
+          onDone={(result) => flash(result?.message || 'Payment collected')}
         />
       )}
 
