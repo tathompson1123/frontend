@@ -16,6 +16,8 @@ import PrivacyPolicy from './pages/PrivacyPolicy';
 import CardOnFilePage from './pages/CardOnFilePage';
 import AnalyticsLogin from './pages/AnalyticsLogin';
 import AnalyticsPage from './pages/AnalyticsPage';
+import AnalyticsAcceptInvite from './pages/AnalyticsAcceptInvite';
+import BookCallPage from './pages/BookCallPage';
 import OnboardingQuestionnairePage from './pages/OnboardingQuestionnairePage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 
@@ -40,7 +42,9 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/card-on-file/:token" element={<CardOnFilePage />} />
         <Route path="/analytics/login" element={<AnalyticsLogin />} />
+        <Route path="/analytics/accept-invite" element={<AnalyticsAcceptInvite />} />
         <Route path="/analytics" element={<AnalyticsPage />} />
+        <Route path="/book-a-call" element={<BookCallPage />} />
         <Route path="/onboarding" element={<OnboardingQuestionnairePage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />

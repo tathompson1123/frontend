@@ -3,16 +3,18 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, DollarSign, TrendingDown, TrendingUp,
   LogOut, RefreshCw, Search, MessageCircle, Phone, ChevronUp, ChevronDown, Minus,
-  CheckCircle, XCircle, ShieldCheck
+  CheckCircle, XCircle, ShieldCheck, BarChart3, CalendarDays, UsersRound
 } from 'lucide-react';
+import DiscoveryCalls from '../components/analytics/DiscoveryCalls';
+import TeamMembers from '../components/analytics/TeamMembers';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const PLAN_COLORS = {
-  scale:  'bg-purple-500/15 text-purple-300 border-purple-500/30',
-  pro:    'bg-blue-500/15   text-blue-300   border-blue-500/30',
-  expert: 'bg-blue-500/15   text-blue-300   border-blue-500/30',
-  basic:  'bg-gray-500/15   text-gray-300   border-gray-500/30',
+  scale:  'bg-purple-50 text-purple-700 border-purple-200',
+  pro:    'bg-blue-50   text-blue-700   border-blue-200',
+  expert: 'bg-blue-50   text-blue-700   border-blue-200',
+  basic:  'bg-gray-100   text-gray-700   border-gray-200',
 };
 
 const PLAN_LABEL = { scale: 'Scale', pro: 'Pro', expert: 'Expert', basic: 'Basic' };
@@ -22,14 +24,14 @@ function fmtN(n) { return n.toLocaleString(); }
 
 function KpiCard({ icon: Icon, label, value, sub, color }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5 flex items-start gap-4">
+    <div className="bg-white border border-gray-200 rounded-2xl p-5 flex items-start gap-4">
       <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
         <Icon className="w-5 h-5" />
       </div>
       <div>
-        <p className="text-gray-400 text-sm">{label}</p>
-        <p className="text-white text-2xl font-bold mt-0.5">{value}</p>
-        {sub && <p className="text-gray-500 text-xs mt-1">{sub}</p>}
+        <p className="text-gray-500 text-sm">{label}</p>
+        <p className="text-gray-900 text-2xl font-bold mt-0.5">{value}</p>
+        {sub && <p className="text-gray-400 text-xs mt-1">{sub}</p>}
       </div>
     </div>
   );
@@ -51,6 +53,9 @@ export default function AnalyticsPage() {
   const [sortDir, setSortDir]       = useState('desc');
   const [verifyRequests, setVerifyRequests] = useState([]);
   const [actioningId, setActioningId] = useState(null);
+  const [tab, setTab] = useState(() => sessionStorage.getItem('analyticsTab') || 'analytics');
+
+  useEffect(() => { sessionStorage.setItem('analyticsTab', tab); }, [tab]);
 
   const token = sessionStorage.getItem('analyticsToken');
 
@@ -141,7 +146,7 @@ export default function AnalyticsPage() {
   const th = (label, field) => (
     <th
       onClick={() => handleSort(field)}
-      className="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wide cursor-pointer hover:text-gray-200 select-none whitespace-nowrap"
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-200 select-none whitespace-nowrap"
     >
       <span className="flex items-center gap-1">
         {label} <SortIcon field={field} sortField={sortField} sortDir={sortDir} />
@@ -153,14 +158,14 @@ export default function AnalyticsPage() {
   const breakdown = data?.plan_breakdown || {};
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       {/* Header */}
-      <header className="border-b border-gray-800 bg-gray-900/80 backdrop-blur sticky top-0 z-10">
+      <header className="border-b border-gray-200 bg-white/90 backdrop-blur sticky top-0 z-10">
         <div className="max-w-screen-2xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-white">SORCE Analytics</h1>
+            <h1 className="text-xl font-bold text-gray-900">SORCE Analytics</h1>
             {data?.generated_at && (
-              <p className="text-gray-500 text-xs mt-0.5">
+              <p className="text-gray-400 text-xs mt-0.5">
                 Updated {new Date(data.generated_at).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               </p>
             )}
@@ -169,14 +174,14 @@ export default function AnalyticsPage() {
             <button
               onClick={fetchData}
               disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl text-sm font-medium transition disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-white hover:bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium transition disabled:opacity-50"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </button>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 rounded-xl text-sm font-medium transition"
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 hover:bg-red-100 border border-red-200 text-red-600 rounded-xl text-sm font-medium transition"
             >
               <LogOut className="w-4 h-4" />
               Logout
@@ -185,16 +190,54 @@ export default function AnalyticsPage() {
         </div>
       </header>
 
-      <main className="max-w-screen-2xl mx-auto px-6 py-8 space-y-8">
+      {/* Sub-tabs */}
+      <div className="border-b border-gray-200 bg-white">
+        <div className="max-w-screen-2xl mx-auto px-6 flex gap-1">
+          {[
+            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+            { id: 'discovery', label: 'Discovery Calls', icon: CalendarDays },
+            { id: 'team', label: 'Team', icon: UsersRound },
+          ].map(t => {
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                className={`px-5 py-3.5 font-semibold text-sm transition-all relative flex items-center gap-2 ${
+                  tab === t.id ? 'text-amber-600' : 'text-gray-500 hover:text-gray-900'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {t.label}
+                {tab === t.id && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-600" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {tab === 'discovery' && (
+        <main className="max-w-screen-2xl mx-auto px-6 py-8">
+          <DiscoveryCalls token={token} />
+        </main>
+      )}
+
+      {tab === 'team' && (
+        <main className="max-w-screen-2xl mx-auto px-6 py-8">
+          <TeamMembers token={token} />
+        </main>
+      )}
+
+      <main className={`max-w-screen-2xl mx-auto px-6 py-8 space-y-8 ${tab === 'analytics' ? '' : 'hidden'}`}>
 
         {error && (
-          <div className="bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl px-4 py-3 text-sm">
+          <div className="bg-red-50 border border-red-200 text-red-600 rounded-xl px-4 py-3 text-sm">
             {error}
           </div>
         )}
 
         {loading && !data && (
-          <div className="text-center py-32 text-gray-500">
+          <div className="text-center py-32 text-gray-400">
             <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-3 text-blue-500" />
             Loading analytics data...
           </div>
@@ -205,12 +248,12 @@ export default function AnalyticsPage() {
             {/* KPI Cards */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <KpiCard
-                icon={Users} label="Total Users" color="bg-blue-500/20 text-blue-400"
+                icon={Users} label="Total Users" color="bg-blue-100 text-blue-600"
                 value={fmtN(totals.user_count)}
                 sub={`${Object.entries(breakdown).map(([k,v]) => `${v} ${PLAN_LABEL[k] || k}`).join(' · ')}`}
               />
               <KpiCard
-                icon={DollarSign} label="Monthly Revenue (MRR)" color="bg-green-500/20 text-green-400"
+                icon={DollarSign} label="Monthly Revenue (MRR)" color="bg-green-100 text-green-600"
                 value={fmt$(totals.revenue)}
                 sub={`${fmtN(totals.user_count)} paying accounts`}
               />
@@ -220,7 +263,7 @@ export default function AnalyticsPage() {
                 sub={`${fmtN(totals.sms_sent_month)} SMS · ${fmtN(totals.chat_convos_month)} chats`}
               />
               <KpiCard
-                icon={TrendingUp} label="Net Margin" color={totals.margin >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}
+                icon={TrendingUp} label="Net Margin" color={totals.margin >= 0 ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-100 text-red-600'}
                 value={fmt$(totals.margin)}
                 sub={totals.revenue > 0 ? `${((totals.margin / totals.revenue) * 100).toFixed(1)}% margin` : '—'}
               />
@@ -234,8 +277,8 @@ export default function AnalyticsPage() {
                   onClick={() => setPlanFilter(p)}
                   className={`px-4 py-1.5 rounded-full text-sm font-medium border transition ${
                     planFilter === p
-                      ? 'bg-blue-600 text-white border-blue-500'
-                      : 'bg-gray-800 text-gray-400 border-gray-700 hover:border-gray-500'
+                      ? 'bg-blue-600 text-gray-900 border-blue-500'
+                      : 'bg-gray-100 text-gray-500 border-gray-200 hover:border-gray-500'
                   }`}
                 >
                   {p === 'all' ? `All (${users.length})` : `${PLAN_LABEL[p] || p} (${breakdown[p] || 0})`}
@@ -243,31 +286,31 @@ export default function AnalyticsPage() {
               ))}
 
               <div className="ml-auto relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search users..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
-                  className="pl-9 pr-4 py-1.5 bg-gray-800 border border-gray-700 rounded-full text-sm text-gray-200 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
+                  className="pl-9 pr-4 py-1.5 bg-gray-100 border border-gray-200 rounded-full text-sm text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 w-56"
                 />
               </div>
             </div>
 
             {/* Ad Platform Verification Requests */}
             {verifyRequests.length > 0 && (
-              <div className="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+              <div className="bg-white border border-gray-200 rounded-2xl p-5">
                 <div className="flex items-center gap-2 mb-4">
-                  <ShieldCheck className="w-5 h-5 text-blue-400" />
-                  <h2 className="text-lg font-bold text-white">Ad Platform Verification Requests</h2>
-                  <span className="ml-auto text-xs text-gray-500">
+                  <ShieldCheck className="w-5 h-5 text-blue-600" />
+                  <h2 className="text-lg font-bold text-gray-900">Ad Platform Verification Requests</h2>
+                  <span className="ml-auto text-xs text-gray-400">
                     {verifyRequests.filter(r => r.status === 'pending').length} pending
                   </span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
-                    <thead className="border-b border-gray-800">
-                      <tr className="text-left text-xs font-medium text-gray-400 uppercase tracking-wide">
+                    <thead className="border-b border-gray-200">
+                      <tr className="text-left text-xs font-medium text-gray-500 uppercase tracking-wide">
                         <th className="px-3 py-2">User</th>
                         <th className="px-3 py-2">Platform</th>
                         <th className="px-3 py-2">Account Email</th>
@@ -280,25 +323,25 @@ export default function AnalyticsPage() {
                       {verifyRequests.map(r => (
                         <tr key={r.id} className="hover:bg-gray-800/50">
                           <td className="px-3 py-3">
-                            <div className="text-white font-medium">{r.business_name || r.user_name || '—'}</div>
-                            <div className="text-gray-500 text-xs">{r.user_email}</div>
+                            <div className="text-gray-900 font-medium">{r.business_name || r.user_name || '—'}</div>
+                            <div className="text-gray-400 text-xs">{r.user_email}</div>
                           </td>
-                          <td className="px-3 py-3 text-gray-300">
+                          <td className="px-3 py-3 text-gray-700">
                             {r.platform === 'google_ads' ? 'Google Ads' : r.platform === 'google_lsa' ? 'Google LSA' : r.platform}
                           </td>
-                          <td className="px-3 py-3 text-gray-300 font-mono text-xs">{r.email}</td>
-                          <td className="px-3 py-3 text-gray-500 text-xs whitespace-nowrap">
+                          <td className="px-3 py-3 text-gray-700 font-mono text-xs">{r.email}</td>
+                          <td className="px-3 py-3 text-gray-400 text-xs whitespace-nowrap">
                             {new Date(r.requested_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
                           </td>
                           <td className="px-3 py-3">
                             {r.status === 'pending' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30">Pending</span>
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-500/30">Pending</span>
                             )}
                             {r.status === 'verified' && (
                               <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Verified</span>
                             )}
                             {r.status === 'rejected' && (
-                              <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/15 text-red-300 border border-red-500/30">Rejected</span>
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200">Rejected</span>
                             )}
                           </td>
                           <td className="px-3 py-3 text-right">
@@ -315,7 +358,7 @@ export default function AnalyticsPage() {
                                 <button
                                   onClick={() => rejectVerification(r.id)}
                                   disabled={actioningId === r.id}
-                                  className="flex items-center gap-1 px-3 py-1 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-300 rounded-lg text-xs font-medium disabled:opacity-50"
+                                  className="flex items-center gap-1 px-3 py-1 bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 rounded-lg text-xs font-medium disabled:opacity-50"
                                 >
                                   <XCircle className="w-3.5 h-3.5" />
                                   Reject
@@ -323,7 +366,7 @@ export default function AnalyticsPage() {
                               </div>
                             )}
                             {r.status === 'verified' && r.verified_at && (
-                              <span className="text-xs text-gray-500">{new Date(r.verified_at).toLocaleDateString()}</span>
+                              <span className="text-xs text-gray-400">{new Date(r.verified_at).toLocaleDateString()}</span>
                             )}
                           </td>
                         </tr>
@@ -335,10 +378,10 @@ export default function AnalyticsPage() {
             )}
 
             {/* User Table */}
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+            <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b border-gray-800 bg-gray-900/60">
+                  <thead className="border-b border-gray-200 bg-gray-50">
                     <tr>
                       {th('Business / User', 'business_name')}
                       {th('Plan', 'plan')}
@@ -356,7 +399,7 @@ export default function AnalyticsPage() {
                   <tbody className="divide-y divide-gray-800/60">
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={11} className="px-4 py-12 text-center text-gray-500">
+                        <td colSpan={11} className="px-4 py-12 text-center text-gray-400">
                           No users match your filters
                         </td>
                       </tr>
@@ -364,8 +407,8 @@ export default function AnalyticsPage() {
                       <tr key={u.id} className="hover:bg-gray-800/40 transition">
                         {/* Business / User */}
                         <td className="px-4 py-3">
-                          <p className="font-medium text-white truncate max-w-[180px]">{u.business_name}</p>
-                          <p className="text-gray-500 text-xs truncate max-w-[180px]">{u.email}</p>
+                          <p className="font-medium text-gray-900 truncate max-w-[180px]">{u.business_name}</p>
+                          <p className="text-gray-400 text-xs truncate max-w-[180px]">{u.email}</p>
                         </td>
 
                         {/* Plan */}
@@ -376,15 +419,15 @@ export default function AnalyticsPage() {
                         </td>
 
                         {/* MRR */}
-                        <td className="px-4 py-3 text-green-400 font-medium">{fmt$(u.revenue)}</td>
+                        <td className="px-4 py-3 text-green-600 font-medium">{fmt$(u.revenue)}</td>
 
                         {/* SMS / mo */}
                         <td className="px-4 py-3">
-                          <span className="flex items-center gap-1 text-gray-200">
-                            <Phone className="w-3.5 h-3.5 text-gray-500" />
+                          <span className="flex items-center gap-1 text-gray-800">
+                            <Phone className="w-3.5 h-3.5 text-gray-400" />
                             {fmtN(u.sms_sent_month)}
                           </span>
-                          <span className="text-gray-500 text-xs">{fmtN(u.sms_sent_total)} total</span>
+                          <span className="text-gray-400 text-xs">{fmtN(u.sms_sent_total)} total</span>
                         </td>
 
                         {/* SMS Cost */}
@@ -392,17 +435,17 @@ export default function AnalyticsPage() {
 
                         {/* Chats / mo */}
                         <td className="px-4 py-3">
-                          <span className="flex items-center gap-1 text-gray-200">
-                            <MessageCircle className="w-3.5 h-3.5 text-gray-500" />
+                          <span className="flex items-center gap-1 text-gray-800">
+                            <MessageCircle className="w-3.5 h-3.5 text-gray-400" />
                             {fmtN(u.chat_convos_month)}
                           </span>
-                          <span className="text-gray-500 text-xs">{fmtN(u.chat_convos_total)} total</span>
+                          <span className="text-gray-400 text-xs">{fmtN(u.chat_convos_total)} total</span>
                         </td>
 
                         {/* Claude Cost (real tracked) */}
                         <td className="px-4 py-3 text-orange-300 text-xs">
                           {fmt$(u.claude_cost_month)}
-                          {u.claude_cost_month === 0 && <span className="block text-gray-600 text-[10px]">no data yet</span>}
+                          {u.claude_cost_month === 0 && <span className="block text-gray-500 text-[10px]">no data yet</span>}
                         </td>
 
                         {/* Total Cost */}
@@ -410,7 +453,7 @@ export default function AnalyticsPage() {
 
                         {/* Margin */}
                         <td className="px-4 py-3 font-semibold">
-                          <span className={u.margin >= 0 ? 'text-emerald-400' : 'text-red-400'}>
+                          <span className={u.margin >= 0 ? 'text-emerald-400' : 'text-red-600'}>
                             {fmt$(u.margin)}
                           </span>
                         </td>
@@ -418,16 +461,16 @@ export default function AnalyticsPage() {
                         {/* Status */}
                         <td className="px-4 py-3">
                           {u.is_canceling ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-500/15 text-red-300 border border-red-500/30">Canceling</span>
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-red-50 text-red-700 border border-red-200">Canceling</span>
                           ) : u.is_trialing ? (
-                            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/15 text-amber-300 border border-amber-500/30">Trial</span>
+                            <span className="px-2 py-0.5 rounded-full text-xs bg-amber-50 text-amber-700 border border-amber-500/30">Trial</span>
                           ) : (
                             <span className="px-2 py-0.5 rounded-full text-xs bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Active</span>
                           )}
                         </td>
 
                         {/* Joined */}
-                        <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
+                        <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                           {new Date(u.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </td>
                       </tr>
@@ -438,10 +481,10 @@ export default function AnalyticsPage() {
 
               {/* Table Footer */}
               {filtered.length > 0 && (
-                <div className="px-4 py-3 border-t border-gray-800 flex items-center justify-between text-xs text-gray-500">
+                <div className="px-4 py-3 border-t border-gray-200 flex items-center justify-between text-xs text-gray-400">
                   <span>Showing {filtered.length} of {users.length} users</span>
                   <span>
-                    Filtered MRR: <span className="text-green-400 font-medium">{fmt$(filtered.reduce((s,u)=>s+u.revenue,0))}</span>
+                    Filtered MRR: <span className="text-green-600 font-medium">{fmt$(filtered.reduce((s,u)=>s+u.revenue,0))}</span>
                     {' · '}
                     Filtered Cost: <span className="text-orange-400 font-medium">{fmt$(filtered.reduce((s,u)=>s+u.total_cost,0))}</span>
                   </span>
@@ -450,7 +493,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Cost breakdown note */}
-            <p className="text-gray-600 text-xs text-center">
+            <p className="text-gray-500 text-xs text-center">
               Claude costs are real tracked token usage (logged on every API call from this deploy forward) · SMS cost estimated at $0.0075/outbound msg · Total org-level spend at console.anthropic.com
             </p>
           </>
