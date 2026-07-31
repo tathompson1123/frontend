@@ -12,8 +12,8 @@ const STRIPE_PK =
   import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
 const PLANS = [
-  { id: 'pro',   label: 'Pro',   price: 99 },
-  { id: 'scale', label: 'Scale', price: 175 },
+  { id: 'pro',   label: 'Pro',   price: 99.95 },
+  { id: 'scale', label: 'Scale', price: 175.95 },
   { id: '',      label: 'No plan — offer only', price: 0 },
 ];
 
