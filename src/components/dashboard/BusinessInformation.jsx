@@ -342,7 +342,9 @@ export default function BusinessInformation({
 
   // ── Employee time off ──
   const [timeOffList, setTimeOffList] = useState([]);
-  const [timeOffForm, setTimeOffForm] = useState({ employeeId: '', startDate: '', endDate: '', reason: '' });
+  const emptyTimeOffForm = { employeeId: '', startDate: '', endDate: '', reason: '', showOnSchedule: true };
+  const [timeOffForm, setTimeOffForm] = useState(emptyTimeOffForm);
+  const [editingTimeOffId, setEditingTimeOffId] = useState(null);
   const loadTimeOff = async () => {
     try {
       const res = await authFetch(`${apiUrl}/api/employees/time-off`);
@@ -351,20 +353,41 @@ export default function BusinessInformation({
   };
   useEffect(() => { loadTimeOff(); }, []);
   const fmtTimeOffDate = (d) => new Date(String(d).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  const addTimeOff = async () => {
+  const saveTimeOff = async () => {
     try {
-      const res = await authFetch(`${apiUrl}/api/employees/time-off`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+      const editing = editingTimeOffId != null;
+      const res = await authFetch(`${apiUrl}/api/employees/time-off${editing ? `/${editingTimeOffId}` : ''}`, {
+        method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(timeOffForm),
       });
-      if (res.ok) { setTimeOffForm({ employeeId: '', startDate: '', endDate: '', reason: '' }); loadTimeOff(); }
-      else { const e = await res.json().catch(() => ({})); alert(e.error || 'Failed to add time off'); }
-    } catch (e) { alert('Failed to add time off'); }
+      if (res.ok) { setTimeOffForm(emptyTimeOffForm); setEditingTimeOffId(null); loadTimeOff(); }
+      else { const e = await res.json().catch(() => ({})); alert(e.error || 'Failed to save time off'); }
+    } catch (e) { alert('Failed to save time off'); }
+  };
+  const startEditTimeOff = (t) => {
+    setEditingTimeOffId(t.id);
+    setTimeOffForm({
+      employeeId: String(t.employee_id),
+      startDate: String(t.start_date).slice(0, 10),
+      endDate: String(t.end_date).slice(0, 10),
+      reason: t.reason || '',
+      showOnSchedule: t.show_on_schedule !== false,
+    });
+  };
+  const cancelEditTimeOff = () => { setEditingTimeOffId(null); setTimeOffForm(emptyTimeOffForm); };
+  const toggleTimeOffShow = async (t) => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/employees/time-off/${t.id}`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ showOnSchedule: !(t.show_on_schedule !== false) }),
+      });
+      if (res.ok) loadTimeOff();
+    } catch (e) { /* noop */ }
   };
   const deleteTimeOff = async (id) => {
     try {
       const res = await authFetch(`${apiUrl}/api/employees/time-off/${id}`, { method: 'DELETE' });
-      if (res.ok) loadTimeOff();
+      if (res.ok) { if (editingTimeOffId === id) cancelEditTimeOff(); loadTimeOff(); }
     } catch (e) { /* noop */ }
   };
 
@@ -3084,7 +3107,7 @@ export default function BusinessInformation({
           {/* Time Off */}
           <div className="bg-white rounded-2xl border border-gray-200 p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-1">Time Off</h3>
-            <p className="text-sm text-gray-600 mb-4">Block out an employee for days off — it shows as blocked on their app schedule.</p>
+            <p className="text-sm text-gray-600 mb-4">Block out an employee for days off — with "Show on schedule" on, it appears as blocked on the calendar and their app schedule.</p>
             <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 items-end">
               <div className="sm:col-span-2">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Employee</label>
@@ -3101,21 +3124,37 @@ export default function BusinessInformation({
                 <label className="block text-xs font-semibold text-gray-600 mb-1">To</label>
                 <input type="date" value={timeOffForm.endDate} onChange={(e) => setTimeOffForm({ ...timeOffForm, endDate: e.target.value })} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" />
               </div>
-              <button onClick={addTimeOff} disabled={!timeOffForm.employeeId || !timeOffForm.startDate || !timeOffForm.endDate} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">Add</button>
+              <div className="flex gap-2">
+                <button onClick={saveTimeOff} disabled={!timeOffForm.employeeId || !timeOffForm.startDate || !timeOffForm.endDate} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">{editingTimeOffId ? 'Save' : 'Add'}</button>
+                {editingTimeOffId && <button onClick={cancelEditTimeOff} className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-semibold hover:bg-gray-200">Cancel</button>}
+              </div>
             </div>
-            <input type="text" value={timeOffForm.reason} onChange={(e) => setTimeOffForm({ ...timeOffForm, reason: e.target.value })} placeholder="Reason (optional) — e.g., Vacation, Sick" className="w-full mt-3 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3">
+              <input type="text" value={timeOffForm.reason} onChange={(e) => setTimeOffForm({ ...timeOffForm, reason: e.target.value })} placeholder="Reason (optional) — e.g., Vacation, Sick" className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm" />
+              <label className="flex items-center gap-2 text-sm text-gray-700 whitespace-nowrap">
+                <input type="checkbox" checked={timeOffForm.showOnSchedule} onChange={(e) => setTimeOffForm({ ...timeOffForm, showOnSchedule: e.target.checked })} className="w-4 h-4" />
+                Show on schedule
+              </label>
+            </div>
             {timeOffList.length > 0 && (
               <div className="mt-4 space-y-2">
-                {timeOffList.map(t => (
-                  <div key={t.id} className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-                    <div className="text-sm">
-                      <span className="font-semibold text-gray-900">{t.employee_name || 'Employee'}</span>
-                      <span className="text-gray-600"> · {fmtTimeOffDate(t.start_date)}{String(t.start_date).slice(0, 10) !== String(t.end_date).slice(0, 10) ? ` – ${fmtTimeOffDate(t.end_date)}` : ''}</span>
-                      {t.reason ? <span className="text-gray-500"> · {t.reason}</span> : null}
+                {timeOffList.map(t => {
+                  const shown = t.show_on_schedule !== false;
+                  return (
+                    <div key={t.id} className={`flex items-center justify-between rounded-lg px-3 py-2 bg-gray-50 ${shown ? '' : 'opacity-60'}`}>
+                      <div className="text-sm min-w-0">
+                        <span className="font-semibold text-gray-900">{t.employee_name || 'Employee'}</span>
+                        <span className="text-gray-600"> · {fmtTimeOffDate(t.start_date)}{String(t.start_date).slice(0, 10) !== String(t.end_date).slice(0, 10) ? ` – ${fmtTimeOffDate(t.end_date)}` : ''}</span>
+                        {t.reason ? <span className="text-gray-500"> · {t.reason}</span> : null}
+                      </div>
+                      <div className="flex items-center gap-3 flex-shrink-0 ml-3">
+                        <button onClick={() => toggleTimeOffShow(t)} className={`text-xs font-medium ${shown ? 'text-green-600' : 'text-gray-400'}`} title="Toggle showing on the schedule">{shown ? '👁 On schedule' : 'Hidden'}</button>
+                        <button onClick={() => startEditTimeOff(t)} className="text-blue-600 hover:text-blue-700 text-sm font-medium">Edit</button>
+                        <button onClick={() => deleteTimeOff(t.id)} className="text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
+                      </div>
                     </div>
-                    <button onClick={() => deleteTimeOff(t.id)} className="text-red-500 hover:text-red-700 text-sm font-medium">Remove</button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

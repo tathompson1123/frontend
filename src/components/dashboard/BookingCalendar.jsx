@@ -68,6 +68,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [allBookings, setAllBookings] = useState([]);
+  const [calTimeOff, setCalTimeOff] = useState([]);
   const [filteredBookings, setFilteredBookings] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -220,6 +221,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       console.error('Error fetching bookings:', error);
     }
   };
+
+  // Time off (only entries flagged to show on the schedule).
+  useEffect(() => {
+    (async () => {
+      try {
+        const r = await authFetch(`${apiUrl}/api/employees/time-off`);
+        if (r.ok) { const d = await r.json(); setCalTimeOff((d.timeOff || []).filter(t => t.show_on_schedule !== false)); }
+      } catch (e) { /* noop */ }
+    })();
+  }, []);
 
   const handleCompleteBooking = async (bookingId) => {
     if (!confirm('Mark this booking as completed? This will trigger automated review requests.')) return;
@@ -1067,6 +1078,29 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             </button>
           </div>
         </div>
+
+        {/* Time-off strip for the current view (day / week / month). */}
+        {(() => {
+          const d = new Date(currentDate);
+          let rs, re;
+          if (calendarView === 'day') { rs = new Date(d); re = new Date(d); }
+          else if (calendarView === 'month') { rs = new Date(d.getFullYear(), d.getMonth(), 1); re = new Date(d.getFullYear(), d.getMonth() + 1, 0); }
+          else { rs = new Date(d); rs.setDate(d.getDate() - d.getDay()); re = new Date(rs); re.setDate(rs.getDate() + 6); }
+          const iso = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+          const rangeStart = iso(rs), rangeEnd = iso(re);
+          const off = calTimeOff.filter(t => String(t.start_date).slice(0, 10) <= rangeEnd && String(t.end_date).slice(0, 10) >= rangeStart);
+          if (off.length === 0) return null;
+          const fmt = (x) => new Date(String(x).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          return (
+            <div className="mx-3 mb-2 flex flex-wrap gap-2">
+              {off.map(t => (
+                <span key={t.id} className="inline-flex items-center gap-1 bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full">
+                  🌴 {t.employee_name || 'Employee'} off {fmt(t.start_date)}{String(t.start_date).slice(0, 10) !== String(t.end_date).slice(0, 10) ? `–${fmt(t.end_date)}` : ''}{t.reason ? ` · ${t.reason}` : ''}
+                </span>
+              ))}
+            </div>
+          );
+        })()}
 
         {calendarView === 'week' && (
           <>
