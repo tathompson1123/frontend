@@ -1596,7 +1596,12 @@ const rateIncentiveNow = async () => {
                                   <p className="text-sm font-semibold text-gray-900">
                                     {b.customer_name || <span className="text-gray-500 italic">No customer on the booking</span>}
                                     <span className="ml-2 text-xs font-normal text-gray-400">
-                                      {new Date(b.booking_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      {/* Plain YYYY-MM-DD from the API — parsing it into a
+                                          Date here would shift it a day west of UTC. */}
+                                      {(() => {
+                                        const [y, m, d] = String(b.booking_date).split('-').map(Number);
+                                        return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                                      })()}
                                       {b.start_time ? ` · ${b.start_time.slice(0, 5)}` : ''}
                                       {b.service_name ? ` · ${b.service_name}` : ''}
                                       {' · #'}{b.booking_id}
