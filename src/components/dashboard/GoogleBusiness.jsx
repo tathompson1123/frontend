@@ -883,6 +883,26 @@ const rateIncentiveNow = async () => {
                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-amber-500 focus:outline-none text-sm"
                       />
 
+                      {/* The commonest cause of clicks that produce no reviews: a link
+                          that opens the business profile instead of the review form. */}
+                      {reviewLink && !/\/review|writereview/i.test(reviewLink) && (
+                        <div className="mt-3 flex items-start gap-2 p-3 bg-amber-50 border-2 border-amber-300 rounded-lg">
+                          <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                          <div className="text-xs text-amber-900">
+                            <p className="font-bold mb-1">This link may open your profile, not the review box</p>
+                            <p>
+                              Customers who tap it would land on your listing and have to hunt for
+                              where to write a review — which is why clicks can go up while reviews
+                              don't. A link that opens the review form directly ends in
+                              <span className="font-mono"> /review</span> (like
+                              <span className="font-mono"> g.page/r/AbC.../review</span>) or is a
+                              <span className="font-mono"> search.google.com/local/writereview?placeid=…</span> link.
+                            </p>
+                            <p className="mt-1">Tap <strong>Test This Link</strong> below — if the review box doesn't open straight away, this is your problem.</p>
+                          </div>
+                        </div>
+                      )}
+
                       {reviewLink && (
                         <div className="flex gap-2 mt-3">
                           <a
@@ -1503,10 +1523,11 @@ const rateIncentiveNow = async () => {
                         </div>
                         <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200">
                           <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle2 className="w-5 h-5 text-green-600" />
-                            <p className="text-sm font-medium text-green-900">Completed</p>
+                            <ExternalLink className="w-5 h-5 text-green-600" />
+                            <p className="text-sm font-medium text-green-900">Link Clicked</p>
                           </div>
-                          <p className="text-3xl font-bold text-green-600">{reviewRequests.filter((r) => r.review_completed).length}</p>
+                          <p className="text-3xl font-bold text-green-600">{reviewRequests.filter((r) => r.link_clicked).length}</p>
+                          <p className="text-xs text-green-700 mt-1">tapped through to Google</p>
                         </div>
                         <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl p-6 border border-yellow-200">
                           <div className="flex items-center gap-2 mb-2">
@@ -1518,13 +1539,14 @@ const rateIncentiveNow = async () => {
                         <div className="bg-gradient-to-br from-amber-50 to-amber-100 rounded-xl p-6 border border-amber-200">
                           <div className="flex items-center gap-2 mb-2">
                             <TrendingUp className="w-5 h-5 text-amber-600" />
-                            <p className="text-sm font-medium text-amber-900">Success Rate</p>
+                            <p className="text-sm font-medium text-amber-900">Click Rate</p>
                           </div>
                           <p className="text-3xl font-bold text-amber-600">
                             {reviewRequests.filter((r) => r.status === 'sent').length > 0
-                              ? Math.round((reviewRequests.filter((r) => r.review_completed).length / reviewRequests.filter((r) => r.status === 'sent').length) * 100)
+                              ? Math.round((reviewRequests.filter((r) => r.link_clicked).length / reviewRequests.filter((r) => r.status === 'sent').length) * 100)
                               : 0}%
                           </p>
+                          <p className="text-xs text-amber-700 mt-1">of texts sent</p>
                         </div>
                       </div>
 
