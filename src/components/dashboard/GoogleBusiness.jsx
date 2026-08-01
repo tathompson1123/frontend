@@ -1572,9 +1572,12 @@ const rateIncentiveNow = async () => {
                                 }`} />
                                 <div className="min-w-0 flex-1">
                                   <p className="text-sm font-semibold text-gray-900">
-                                    {b.customer_name || 'No customer on the booking'}
+                                    {b.customer_name || <span className="text-gray-500 italic">No customer on the booking</span>}
                                     <span className="ml-2 text-xs font-normal text-gray-400">
                                       {new Date(b.booking_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                      {b.start_time ? ` · ${b.start_time.slice(0, 5)}` : ''}
+                                      {b.service_name ? ` · ${b.service_name}` : ''}
+                                      {' · #'}{b.booking_id}
                                     </span>
                                   </p>
                                   <p className="text-xs text-gray-600 mt-0.5">{b.reason}</p>
