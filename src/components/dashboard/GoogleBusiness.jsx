@@ -1642,7 +1642,9 @@ const rateIncentiveNow = async () => {
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div className="flex items-center gap-3 mb-2">
-                                    <h4 className="font-bold text-gray-900">{request.customer_name}</h4>
+                                    <h4 className="font-bold text-gray-900">
+                                      {request.customer_name || <span className="font-medium text-gray-400 italic">Unnamed customer</span>}
+                                    </h4>
                                     {request.review_completed ? (
                                       <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold flex items-center gap-1">
                                         <CheckCircle2 className="w-3 h-3" />
@@ -1669,7 +1671,12 @@ const rateIncentiveNow = async () => {
                                   <div className="grid grid-cols-2 gap-4 mt-3 text-sm">
                                     <div>
                                       <p className="text-gray-500">Service</p>
-                                      <p className="font-medium text-gray-900">{request.service_name}</p>
+                                      {/* Requests queued without a booking have nothing to
+                                          resolve a service from — say so rather than showing
+                                          an empty field that reads as a bug. */}
+                                      <p className="font-medium text-gray-900">
+                                        {request.service_name || <span className="font-normal text-gray-400 italic">Not linked to a booking</span>}
+                                      </p>
                                     </div>
                                     <div>
                                       <p className="text-gray-500">Scheduled Send</p>
