@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import Papa from 'papaparse';
 import {
@@ -70,6 +70,41 @@ function fmtInstantDate(ts, tz) {
   const d = parseTS(ts);
   if (isNaN(d.getTime())) return '—';
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: tz || undefined });
+}
+
+// A lead's SMS thread pulls in texts from wherever they came from — the AI agent, a
+// marketing blast, a booking exchange, a review ask, an employee. Labelling each one
+// stops the owner reading a campaign blast as something their agent said, and makes
+// it obvious when a reply landed in a thread it doesn't belong to.
+const THREAD_SOURCES = {
+  lead:     { label: 'Lead Agent',     sender: 'AI Agent',    badge: 'bg-green-100 text-green-700' },
+  campaign: { label: 'Campaign',       sender: 'Campaign',    badge: 'bg-purple-100 text-purple-700' },
+  booking:  { label: 'Booking',        sender: 'Business',    badge: 'bg-blue-100 text-blue-700' },
+  review:   { label: 'Review Request', sender: 'Review Text', badge: 'bg-amber-100 text-amber-700' },
+  employee: { label: 'Employee',       sender: 'Employee',    badge: 'bg-indigo-100 text-indigo-700' },
+  other:    { label: 'Direct',         sender: 'Business',    badge: 'bg-gray-100 text-gray-600' },
+};
+const threadSource = (s) => THREAD_SOURCES[s] || THREAD_SOURCES.other;
+
+// Day heading between messages: "Today" / "Yesterday" / "Tue, Mar 4" (+ year if it
+// isn't this one). Without these a thread spanning months reads as one sitting.
+function fmtDayDivider(ts) {
+  const d = parseTS(ts);
+  if (isNaN(d.getTime())) return '';
+  const today = new Date();
+  const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+  const diffDays = Math.round((startOfDay(today) - startOfDay(d)) / 86400000);
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric',
+    ...(d.getFullYear() === today.getFullYear() ? {} : { year: 'numeric' }),
+  });
+}
+
+function isSameDay(a, b) {
+  const x = parseTS(a), y = parseTS(b);
+  return x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate();
 }
 
 // Wraps horizontally-scrollable content and shows a floating scrollbar pinned to the
@@ -2625,10 +2660,21 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 truncate">{lead.last_message || 'No messages'}</p>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-gray-400">{lead.phone}</span>
-                        <span className="text-xs text-gray-400">{lead.last_message_at ? parseTS(lead.last_message_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}{' '}{lead.message_count} msg{lead.message_count !== 1 ? 's' : ''}</span>
+                      <div className="flex items-center justify-between gap-2 mt-2">
+                        <span className="text-xs text-gray-400 truncate">{lead.phone}</span>
+                        <span className="text-xs text-gray-400 whitespace-nowrap">
+                          {lead.last_message_at ? fmtInstantDate(lead.last_message_at) : ''} · {lead.message_count} msg{lead.message_count !== 1 ? 's' : ''}
+                        </span>
                       </div>
+                      {/* Which thread the newest message came from — so a campaign blast
+                          isn't mistaken for the agent working the lead. */}
+                      {lead.last_thread_source && (
+                        <div className="mt-1.5">
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${threadSource(lead.last_thread_source).badge}`}>
+                            {threadSource(lead.last_thread_source).label}
+                          </span>
+                        </div>
+                      )}
                     </button>
                   ))
                 )
@@ -2796,7 +2842,21 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   <div className="flex-1 flex flex-col overflow-hidden">
                     <div className="p-3 border-b border-gray-200 bg-gray-50">
                       <p className="text-sm font-semibold text-gray-700">{selectedSmsLead.name} · SMS Conversation</p>
-                      <p className="text-xs text-gray-400">{selectedSmsLead.message_count} message{selectedSmsLead.message_count !== 1 ? 's' : ''}</p>
+                      <div className="flex items-center gap-2 flex-wrap mt-0.5">
+                        <span className="text-xs text-gray-400">
+                          {selectedSmsLead.message_count} message{selectedSmsLead.message_count !== 1 ? 's' : ''}
+                          {selectedSmsLead.first_message_at && (
+                            <> · {fmtInstantDate(selectedSmsLead.first_message_at)} – {fmtInstantDate(selectedSmsLead.last_message_at)}</>
+                          )}
+                        </span>
+                        {/* A thread stitched from more than one source is worth flagging — it's
+                            the shape a misattributed reply shows up as. */}
+                        {selectedSmsLead.thread_source_count > 1 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-gray-200 text-gray-600">
+                            {selectedSmsLead.thread_source_count} sources
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3">
                       {loadingSmsMessages ? (
@@ -2804,15 +2864,45 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                       ) : smsLeadMessages.length === 0 ? (
                         <div className="text-center py-12"><p className="text-gray-400 text-sm">No messages in this conversation</p></div>
                       ) : (
-                        smsLeadMessages.map((msg, idx) => (
-                          <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
-                            <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.direction === 'incoming' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-green-600 text-white'}`}>
-                              <div className={`text-xs font-medium mb-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-100'}`}>{msg.direction === 'incoming' ? 'Customer' : 'AI Agent'}</div>
-                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                              <p className={`text-xs mt-2 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{fmtTime(msg.created_at)}</p>
-                            </div>
-                          </div>
-                        ))
+                        smsLeadMessages.map((msg, idx) => {
+                          const prev = smsLeadMessages[idx - 1];
+                          const newDay = !prev || !isSameDay(prev.created_at, msg.created_at);
+                          const inbound = msg.direction === 'incoming';
+                          const src = threadSource(msg.thread_source);
+                          return (
+                            <Fragment key={msg.id ?? idx}>
+                              {newDay && (
+                                <div className="flex items-center gap-3 pt-2">
+                                  <div className="flex-1 h-px bg-gray-200" />
+                                  <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">{fmtDayDivider(msg.created_at)}</span>
+                                  <div className="flex-1 h-px bg-gray-200" />
+                                </div>
+                              )}
+                              <div className={`flex ${inbound ? 'justify-start' : 'justify-end'}`}>
+                                <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${inbound ? 'bg-white border border-gray-200 text-gray-900' : 'bg-green-600 text-white'}`}>
+                                  <div className="flex items-center justify-between gap-3 mb-1">
+                                    <span className={`text-xs font-medium ${inbound ? 'text-gray-400' : 'text-green-100'}`}>
+                                      {inbound ? 'Customer' : src.sender}
+                                    </span>
+                                    <span
+                                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap ${inbound ? src.badge : 'bg-white/20 text-white'}`}
+                                      title={`This message belongs to the ${src.label} thread`}
+                                    >
+                                      {src.label}
+                                    </span>
+                                  </div>
+                                  <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                                  <p
+                                    className={`text-xs mt-2 ${inbound ? 'text-gray-400' : 'text-green-200'}`}
+                                    title={fmtDateTime(msg.created_at)}
+                                  >
+                                    {fmtTime(msg.created_at)}
+                                  </p>
+                                </div>
+                              </div>
+                            </Fragment>
+                          );
+                        })
                       )}
                     </div>
                   </div>
@@ -3677,14 +3767,28 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     <p className="text-sm text-gray-400 italic">No SMS messages yet.</p>
                   ) : (
                     <div className="space-y-2 max-h-80 overflow-y-auto">
-                      {viewingLeadSmsMessages.map((msg, idx) => (
-                        <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
-                          <div className={`max-w-[80%] rounded-xl px-3 py-2 ${msg.direction === 'incoming' ? 'bg-gray-100 text-gray-900' : 'bg-green-600 text-white'}`}>
-                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
-                            <p className={`text-xs mt-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-green-200'}`}>{fmtDateTime(msg.created_at)}</p>
+                      {viewingLeadSmsMessages.map((msg, idx) => {
+                        const inbound = msg.direction === 'incoming';
+                        const src = threadSource(msg.thread_source);
+                        return (
+                          <div key={msg.id ?? idx} className={`flex ${inbound ? 'justify-start' : 'justify-end'}`}>
+                            <div className={`max-w-[80%] rounded-xl px-3 py-2 ${inbound ? 'bg-gray-100 text-gray-900' : 'bg-green-600 text-white'}`}>
+                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                              <div className="flex items-center justify-between gap-2 mt-1">
+                                <span
+                                  className={`text-xs ${inbound ? 'text-gray-400' : 'text-green-200'}`}
+                                  title={fmtInstantDate(msg.created_at)}
+                                >
+                                  {fmtDateTime(msg.created_at)}
+                                </span>
+                                <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold whitespace-nowrap ${inbound ? src.badge : 'bg-white/20 text-white'}`}>
+                                  {src.label}
+                                </span>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )
                 )}
