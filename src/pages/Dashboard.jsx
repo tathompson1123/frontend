@@ -478,6 +478,29 @@ useEffect(() => {
     }
   }, []);
 
+  // "Book" on a lead or customer card hands the contact over to the calendar, which
+  // is where the create-booking form lives. Held here rather than in either component
+  // because the handover crosses between them.
+  const [bookingPrefill, setBookingPrefill] = useState(null);
+
+  const handleBookCustomer = useCallback((person) => {
+    if (!person) return;
+    setBookingPrefill({
+      name: person.name || '',
+      email: person.email || '',
+      phone: person.phone || '',
+      // Neither leads nor customers stores an address today, so this is always blank
+      // and the owner still types it. Kept so it fills itself if that column arrives —
+      // the existing customer picker maps it the same way.
+      address: person.address || '',
+    });
+    requestViewChange('booking-calendar');
+  }, [requestViewChange]);
+
+  // Stable identity so the calendar's consume-effect doesn't re-fire (and reset a
+  // half-filled form) every time this component re-renders for an unrelated reason.
+  const handleBookingPrefillConsumed = useCallback(() => setBookingPrefill(null), []);
+
   const handleUnsavedLeave = () => {
     isDirtyRef.current = false;
     setShowUnsavedModal(false);
@@ -552,6 +575,8 @@ useEffect(() => {
           services={services}
           employees={employees}
           authFetch={authFetch}
+          bookingPrefill={bookingPrefill}
+          onBookingPrefillConsumed={handleBookingPrefillConsumed}
         />
       )}
       {currentView === 'customers-leads' && (
@@ -560,6 +585,7 @@ useEffect(() => {
           setCurrentView={requestViewChange}
           apiUrl={apiUrl}
           authFetch={authFetch}
+          onBookCustomer={handleBookCustomer}
         />
       )}
       {currentView === 'ai-agents' && (

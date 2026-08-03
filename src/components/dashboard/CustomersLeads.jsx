@@ -319,7 +319,7 @@ function DrilldownCard({ item, kind, onSaveNote }) {
   );
 }
 
-export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch }) {
+export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch, onBookCustomer }) {
   const [activeTab, setActiveTabRaw] = useState(() => localStorage.getItem('crmActiveTab') || 'analytics');
   const setActiveTab = (t) => {
     setActiveTabRaw(t);
@@ -3472,6 +3472,15 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 <Users className="w-3.5 h-3.5" />
                 Convert
               </button>
+              {/* Straight into the calendar's create form with their details filled in,
+                  so a lead that phones in ready to book doesn't have to be re-typed. */}
+              <button
+                onClick={() => { const l = viewingLead; setViewingLead(null); setViewingLeadDetail(null); setViewingLeadEditMode(false); onBookCustomer?.(l); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Book
+              </button>
               <button onClick={() => { setViewingLead(null); setViewingLeadDetail(null); setViewingLeadEditMode(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition">
                 <X className="w-5 h-5" />
               </button>
@@ -4322,6 +4331,15 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 <button onClick={() => setViewingCustomerEditMode(!viewingCustomerEditMode)} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition ${viewingCustomerEditMode ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                   <Edit2 className="w-3.5 h-3.5" />
                   Edit
+                </button>
+                {/* Repeat customers book far more often than they're created, so the
+                    same one-click handover matters more here than on a lead. */}
+                <button
+                  onClick={() => { const c = viewingCustomer; setViewingCustomer(null); setViewingCustomerEditMode(false); onBookCustomer?.(c); }}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Book
                 </button>
                 <button onClick={() => { setViewingCustomer(null); setViewingCustomerEditMode(false); }} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-200 rounded-lg transition"><X className="w-5 h-5" /></button>
               </div>

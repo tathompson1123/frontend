@@ -30,7 +30,7 @@ import {
   Target
 } from 'lucide-react';
 
-export default function BookingCalendar({ apiUrl, user, services, employees, authFetch }) {
+export default function BookingCalendar({ apiUrl, user, services, employees, authFetch, bookingPrefill, onBookingPrefillConsumed }) {
   const formatTime = (time24) => {
     if (!time24) return '';
     const [hours, minutes] = time24.split(':').map(Number);
@@ -270,6 +270,29 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       setLoadingPicker(false);
     }
   };
+
+  // Arriving from a "Book" button on a lead or customer card: open the create form
+  // with their details already filled, so the owner only has to pick a service and a
+  // time. Consumed immediately so returning to the calendar later doesn't reopen it.
+  useEffect(() => {
+    if (!bookingPrefill) return;
+    const prefilled = {
+      customerId: '', customerName: bookingPrefill.name || '',
+      customerEmail: bookingPrefill.email || '', customerPhone: bookingPrefill.phone || '',
+      customerAddress: bookingPrefill.address || '',
+      mainServices: [], additionalServices: [],
+      employeeId: '', groupId: '', bookingDate: '', startTime: '', notes: '',
+      referralSource: '',
+    };
+    setIsEditingBooking(false);
+    setEditingBookingId(null);
+    setNewBooking(prefilled);
+    // Snapshot the prefilled state, not an empty one — otherwise the form counts as
+    // dirty the moment it opens and closing it prompts about unsaved changes.
+    setBookingFormSnapshot(JSON.stringify(prefilled));
+    setShowCreateBookingModal(true);
+    onBookingPrefillConsumed?.();
+  }, [bookingPrefill, onBookingPrefillConsumed]);
 
   const selectFromPicker = (person) => {
     setNewBooking(prev => ({
