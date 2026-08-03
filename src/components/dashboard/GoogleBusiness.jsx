@@ -1732,15 +1732,6 @@ const rateIncentiveNow = async () => {
                                     )}
                                   </div>
                                 </div>
-
-                                {request.incentive_code && (
-                                  <div className="text-right">
-                                    <p className="text-xs text-gray-500 mb-1">Incentive Code</p>
-                                    <p className="font-mono font-bold text-amber-600 text-lg">
-                                      {request.incentive_code}
-                                    </p>
-                                  </div>
-                                )}
                               </div>
                             </div>
                           ))}
