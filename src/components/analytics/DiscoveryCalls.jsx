@@ -56,7 +56,6 @@ export default function DiscoveryCalls({ token, isAdmin }) {
   const [formDate, setFormDate] = useState(null);
   const [collectFor, setCollectFor] = useState(null);
   const [toast, setToast] = useState(null);
-  const [zoomCheck, setZoomCheck] = useState(null); // null | 'checking'
 
   const authHeaders = useMemo(
     () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
@@ -161,33 +160,6 @@ export default function DiscoveryCalls({ token, isAdmin }) {
       else flash(data.errors?.join(' · ') || 'Nothing was sent', 'error');
     } catch {
       flash('Could not resend', 'error');
-    }
-  };
-
-  // Reports create/update/delete separately: they're distinct Zoom scopes, so booking
-  // can work while rescheduling and cancelling silently don't — and that only surfaces
-  // when a prospect is sitting in a meeting that should have moved.
-  const checkZoom = async () => {
-    setZoomCheck('checking');
-    try {
-      const res = await fetch(`${API_URL}/api/discovery/zoom/status`, { headers: authHeaders });
-      const d = await res.json();
-      if (d.ok) {
-        flash(`Zoom connected — booking, rescheduling and cancelling all work${d.hostUser && d.hostUser !== 'me' ? ` (host: ${d.hostUser})` : ''}.`);
-      } else if (!d.configured) {
-        flash(d.error || 'Zoom credentials are not set in Railway.', 'error');
-      } else {
-        const broken = [
-          d.canCreate === false && 'booking',
-          d.canUpdate === false && 'rescheduling',
-          d.canDelete === false && 'cancelling',
-        ].filter(Boolean).join(', ');
-        flash(`Zoom problem with ${broken || 'the connection'}. ${d.hint || d.updateError || d.deleteError || d.error || ''}`, 'error');
-      }
-    } catch (e) {
-      flash(`Could not run the Zoom check: ${e.message}`, 'error');
-    } finally {
-      setZoomCheck(null);
     }
   };
 
@@ -343,22 +315,6 @@ export default function DiscoveryCalls({ token, isAdmin }) {
                     && c.status !== 'cancelled';
                 }).length} this month
               </p>
-              {/* Zoom links ride on every confirmation, so a broken credential is
-                  invisible until a prospect can't join. This checks it on demand by
-                  round-tripping a throwaway meeting. */}
-              {isAdmin && (
-                <button
-                  onClick={checkZoom}
-                  disabled={zoomCheck === 'checking'}
-                  title="Verify the Zoom credentials and scopes"
-                  className="px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 transition flex items-center gap-1.5 whitespace-nowrap"
-                >
-                  {zoomCheck === 'checking'
-                    ? <Loader2 className="w-4 h-4 animate-spin" />
-                    : <Video className="w-4 h-4" />}
-                  Zoom
-                </button>
-              )}
               <button
                 onClick={() => openNewCall(new Date())}
                 className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition flex items-center gap-2 whitespace-nowrap"

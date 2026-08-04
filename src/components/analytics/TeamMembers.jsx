@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { UserPlus, Mail, Shield, Loader2, X, Check, Trash2, Clock, Copy } from 'lucide-react';
+import { UserPlus, Mail, Shield, Loader2, X, Check, Trash2, Clock, Copy, Pencil, Phone } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -8,6 +8,8 @@ export default function TeamMembers({ token }) {
   const [loading, setLoading] = useState(true);
   const [showInvite, setShowInvite] = useState(false);
   const [toast, setToast] = useState(null);
+  const [editing, setEditing] = useState(null); // { id, name, email, title, phone }
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const authHeaders = useMemo(
     () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
@@ -42,6 +44,30 @@ export default function TeamMembers({ token }) {
       load();
     } catch {
       flash('Could not revoke access', 'error');
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!editing?.name?.trim()) { flash('Name cannot be empty', 'error'); return; }
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`${API_URL}/api/discovery/team/${editing.id}`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({
+          name: editing.name, email: editing.email,
+          title: editing.title, phone: editing.phone,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not save');
+      setTeam(t => t.map(m => (m.id === editing.id ? { ...m, ...data.member } : m)));
+      setEditing(null);
+      flash('Saved');
+    } catch (err) {
+      flash(err.message, 'error');
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -131,10 +157,26 @@ export default function TeamMembers({ token }) {
                 <p className="text-sm text-gray-500 flex items-center gap-1.5 mt-0.5">
                   <Mail className="w-3.5 h-3.5" /> {member.email}
                 </p>
+                {/* Called out rather than tucked away: without it, a prospect's reply
+                    about this person's call has nowhere to go. */}
+                <p className={`text-sm flex items-center gap-1.5 mt-0.5 ${member.phone ? 'text-gray-500' : 'text-amber-700'}`}>
+                  <Phone className="w-3.5 h-3.5" />
+                  {member.phone || 'No phone — call replies for them fall back to the catch-all number'}
+                </p>
                 {member.title && <p className="text-xs text-gray-400 mt-0.5">{member.title}</p>}
               </div>
               {member.active && (
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setEditing({
+                      id: member.id, name: member.name || '', email: member.email || '',
+                      title: member.title || '', phone: member.phone || '',
+                    })}
+                    className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
+                    title="Edit name, email, title and phone"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Edit
+                  </button>
                   <button
                     onClick={() => changeRole(member, member.role === 'admin' ? 'member' : 'admin')}
                     className="px-3 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-xs font-semibold transition flex items-center gap-1.5"
@@ -155,6 +197,56 @@ export default function TeamMembers({ token }) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {editing && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4"
+             onClick={() => !savingEdit && setEditing(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="font-bold text-gray-900">Edit team member</h3>
+              <button onClick={() => setEditing(null)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {[
+                { k: 'name', label: 'Name', required: true },
+                { k: 'email', label: 'Email', type: 'email', required: true, hint: 'This is their login.' },
+                { k: 'title', label: 'Title', hint: 'Shown to prospects in the confirmation email.' },
+                { k: 'phone', label: 'Mobile', type: 'tel',
+                  hint: 'Where replies about their discovery calls get forwarded. Use +1XXXXXXXXXX.' },
+              ].map(f => (
+                <div key={f.k}>
+                  <label className="block text-xs font-semibold text-gray-700 mb-1.5">
+                    {f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}
+                  </label>
+                  <input
+                    type={f.type || 'text'}
+                    value={editing[f.k]}
+                    onChange={e => setEditing(v => ({ ...v, [f.k]: e.target.value }))}
+                    className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
+                  />
+                  {f.hint && <p className="text-xs text-gray-400 mt-1">{f.hint}</p>}
+                </div>
+              ))}
+            </div>
+            <div className="p-5 border-t border-gray-200 flex items-center justify-end gap-2">
+              <button onClick={() => setEditing(null)}
+                      className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg text-sm font-medium transition">
+                Cancel
+              </button>
+              <button
+                onClick={saveEdit}
+                disabled={savingEdit}
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-60 transition flex items-center gap-1.5"
+              >
+                {savingEdit ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
