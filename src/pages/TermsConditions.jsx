@@ -114,10 +114,13 @@ export default function TermsConditions() {
               by up to two reminders before the call — one around 24 hours ahead and one around 2 hours ahead.
             </p>
             <p>
-              <strong>How you opt in.</strong> Consent is given either by submitting our booking form, where the
-              disclosure appears directly above the submit button, or verbally during a call with a member of
-              our team, who records the consent with the date and their name. We do not buy, rent or import
-              phone numbers from third-party lists.
+              {/* Must stay consistent with the A2P campaign registration, which states
+                  opt-in is verbal with no web form. A reviewer reads both; a
+                  contradiction between them is a rejection. */}
+              <strong>How you opt in.</strong> Consent is given verbally during a call with a member of our
+              team, who reads a short disclosure and records your consent with the date, their name and the
+              number you gave. We only message numbers with that record, and we do not buy, rent, share or
+              import phone numbers from third-party lists.
             </p>
             <p>
               <strong>Message frequency.</strong> Up to three messages per booked appointment. We do not send
