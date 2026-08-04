@@ -13,6 +13,7 @@ import EmployeePortalPage from './pages/EmployeePortalPage';
 import UnsubscribePage from './pages/UnsubscribePage';
 import WebsitePreview from './pages/WebsitePreview';
 import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsConditions from './pages/TermsConditions';
 import CardOnFilePage from './pages/CardOnFilePage';
 import AnalyticsLogin from './pages/AnalyticsLogin';
 import AnalyticsPage from './pages/AnalyticsPage';
@@ -40,6 +41,10 @@ function App() {
         <Route path="/employee" element={<EmployeePortalPage />} />
         <Route path="/unsubscribe" element={<UnsubscribePage />} />
         <Route path="/privacy" element={<PrivacyPolicy />} />
+        {/* Both spellings: the A2P registration and older links point at /terms, but
+            /terms-and-conditions is what people type. */}
+        <Route path="/terms" element={<TermsConditions />} />
+        <Route path="/terms-and-conditions" element={<TermsConditions />} />
         <Route path="/card-on-file/:token" element={<CardOnFilePage />} />
         <Route path="/analytics/login" element={<AnalyticsLogin />} />
         <Route path="/analytics/accept-invite" element={<AnalyticsAcceptInvite />} />

@@ -284,6 +284,8 @@ export default function BookCallPage() {
                 By booking, you agree to receive text messages from SORCE about this call —
                 a confirmation with your Zoom link, and reminders before it starts.
                 Message and data rates may apply. Reply STOP to opt out at any time.
+                See our <a href="/terms" className="underline hover:text-gray-700">Terms</a> and{' '}
+                <a href="/privacy" className="underline hover:text-gray-700">Privacy Policy</a>.
               </p>
 
               {error && (

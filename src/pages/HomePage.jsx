@@ -586,7 +586,10 @@ export default function HomePage() {
             </div>
 
             <div className="flex items-center gap-4 text-gray-400 text-sm">
+              {/* Both linked from the public site because the A2P registration points
+                  at them and carriers check they're reachable, not just that they exist. */}
               <Link to="/privacy" className="hover:text-white transition">Privacy Policy</Link>
+              <Link to="/terms" className="hover:text-white transition">Terms &amp; Conditions</Link>
               <span>© 2026 SORCE. Built for service businesses.</span>
             </div>
           </div>

@@ -83,11 +83,25 @@ export default function PrivacyPolicy() {
           </section>
 
           <section>
-            <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-3">4. SMS & Communications</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mt-8 mb-3">4. SMS &amp; Communications</h2>
             <p>
               Our Service may send SMS messages to your customers on your behalf (e.g., booking confirmations,
               lead follow-ups). SMS messaging is initiated only when you enable it and your customers provide
               consent. Message and data rates may apply. Customers can opt out of SMS at any time by replying STOP.
+            </p>
+            <p>
+              SORCE also sends SMS directly to business owners who have asked to speak with us — for example,
+              a confirmation and reminders for a scheduled discovery call. Consent for these messages is given
+              either on our booking form or verbally during a call with our team, and is recorded with the date
+              and the team member who took it. Message frequency is limited to messages about that appointment.
+              Message and data rates may apply. Reply STOP to opt out or HELP for help.
+            </p>
+            {/* Mobile carriers require this stated explicitly and verbatim before they
+                will approve an A2P 10DLC campaign. Do not reword or remove it. */}
+            <p className="font-medium text-gray-900">
+              No mobile information will be shared with third parties or affiliates for marketing or
+              promotional purposes. All of the above categories exclude text messaging originator opt-in
+              data and consent; this information will not be shared with any third parties.
             </p>
           </section>
 
@@ -109,6 +123,10 @@ export default function PrivacyPolicy() {
               <li><strong>Legal Requirements:</strong> When required by law, court order, or to protect our rights</li>
               <li><strong>Business Transfers:</strong> In connection with a merger, acquisition, or sale of assets</li>
             </ul>
+            <p className="font-medium text-gray-900">
+              Text messaging originator opt-in data and consent are excluded from every category above.
+              This information is never shared with third parties or affiliates for any purpose.
+            </p>
           </section>
 
           <section>
