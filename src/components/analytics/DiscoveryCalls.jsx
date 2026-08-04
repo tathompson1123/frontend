@@ -603,6 +603,22 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
             </div>
           )}
 
+          {/* Their reply lives here as well as on whoever's phone it was forwarded to,
+              so it isn't lost the moment that text scrolls away. */}
+          {call.last_reply_text && (
+            <div className="rounded-xl border-2 border-blue-200 bg-blue-50 p-4">
+              <p className="text-sm font-bold text-blue-800 flex items-center gap-1.5 mb-1.5">
+                <Phone className="w-4 h-4" /> They texted back
+                <span className="font-normal text-xs text-blue-600">
+                  {call.last_reply_at && new Date(call.last_reply_at).toLocaleString('en-US', {
+                    month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                  })}
+                </span>
+              </p>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">{call.last_reply_text}</p>
+            </div>
+          )}
+
           {/* The one thing you need at the top of the hour, so it sits where the eye
               already lands. Opens the host link when we have one — that starts the
               meeting with host controls rather than dropping the rep in as a guest. */}

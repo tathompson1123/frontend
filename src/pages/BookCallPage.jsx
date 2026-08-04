@@ -92,7 +92,7 @@ export default function BookCallPage() {
           <div className="bg-gray-50 rounded-xl p-4 text-left space-y-2 mb-6">
             <p className="text-sm text-gray-600 flex items-start gap-2">
               <Phone className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-              We'll call you on {form.phone}
+              We'll text your Zoom link to {form.phone}
             </p>
             <p className="text-sm text-gray-600 flex items-start gap-2">
               <Mail className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
@@ -277,6 +277,15 @@ export default function BookCallPage() {
                 />
               </div>
 
+              {/* A2P 10DLC registration asks you to evidence the opt-in for the number
+                  you text from, and carriers expect the disclosure at the point the
+                  number is collected — not only in the message that follows. */}
+              <p className="text-xs text-gray-500 leading-relaxed">
+                By booking, you agree to receive text messages from SORCE about this call —
+                a confirmation with your Zoom link, and reminders before it starts.
+                Message and data rates may apply. Reply STOP to opt out at any time.
+              </p>
+
               {error && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{error}</div>
               )}
@@ -293,7 +302,7 @@ export default function BookCallPage() {
 
               <div className="flex items-center justify-center gap-5 pt-2 text-xs text-gray-500">
                 <span className="flex items-center gap-1.5"><Clock className="w-3.5 h-3.5" /> 30 minutes</span>
-                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> We call you</span>
+                <span className="flex items-center gap-1.5"><Phone className="w-3.5 h-3.5" /> On Zoom</span>
                 <span className="flex items-center gap-1.5"><Star className="w-3.5 h-3.5" /> No obligation</span>
               </div>
             </form>
