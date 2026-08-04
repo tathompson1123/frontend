@@ -163,6 +163,28 @@ export default function SorceLeads({ token }) {
     }
   };
 
+  // Verbal consent, stamped server-side with who took it. Kept separate from the
+  // ordinary save so it can't be set by accident while editing something else.
+  const setConsent = async (lead, granted) => {
+    try {
+      const res = await fetch(`${API_URL}/api/discovery/leads/${lead.id}`, {
+        method: 'PATCH',
+        headers: authHeaders,
+        body: JSON.stringify({
+          recordSmsConsent: granted,
+          ...(granted ? { sms_consent_note: lead.sms_consent_note || null } : {}),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.error || 'Could not save consent');
+      setLeads(ls => ls.map(l => (l.id === lead.id ? data.lead : l)));
+      setEditing(e => (e && e.id === lead.id ? { ...e, ...data.lead } : e));
+      notify(granted ? 'Verbal consent recorded' : 'Consent cleared');
+    } catch (e) {
+      notify(e.message);
+    }
+  };
+
   // Reset the staleness clock without opening anything. This is the whole point of
   // showing days-since-contact: see the stale row, act on it, clear it.
   const logContact = async (lead) => {
@@ -309,11 +331,18 @@ export default function SorceLeads({ token }) {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {visible.map(l => (
-                    <tr key={l.id} className="hover:bg-gray-50 transition">
+                    // Whole row opens the record. The controls inside it stop
+                    // propagation so changing a status or logging contact stays a
+                    // one-click job rather than also throwing the editor open.
+                    <tr
+                      key={l.id}
+                      onClick={() => setEditing({ ...l })}
+                      className="hover:bg-gray-50 transition cursor-pointer"
+                    >
                       <td className="px-5 py-3">
-                        <button onClick={() => setEditing({ ...l })} className="text-blue-600 font-semibold hover:underline text-left">
+                        <span className="text-blue-600 font-semibold">
                           {l.name || '—'}
-                        </button>
+                        </span>
                         {l.call_scheduled_at && (
                           <span className="ml-2 text-xs text-amber-600 inline-flex items-center gap-1">
                             <CalendarDays className="w-3 h-3" />{fmtDate(l.call_scheduled_at)}
@@ -321,9 +350,9 @@ export default function SorceLeads({ token }) {
                         )}
                       </td>
                       <td className="px-5 py-3 text-gray-600">
-                        <div className="flex flex-col gap-0.5">
-                          {l.email && <a href={`mailto:${l.email}`} className="text-blue-600 hover:underline truncate max-w-[220px]">{l.email}</a>}
-                          {l.phone && <a href={`tel:${l.phone}`} className="text-gray-500 hover:underline">{l.phone}</a>}
+                        <div className="flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
+                          {l.email && <a href={`mailto:${l.email}`} className="text-blue-600 hover:underline truncate max-w-[220px] w-fit">{l.email}</a>}
+                          {l.phone && <a href={`tel:${l.phone}`} className="text-gray-500 hover:underline w-fit">{l.phone}</a>}
                           {!l.email && !l.phone && <span className="text-gray-400">—</span>}
                         </div>
                       </td>
@@ -345,6 +374,7 @@ export default function SorceLeads({ token }) {
                               </div>
                               {l.call_zoom_url && (
                                 <a href={l.call_zoom_url} target="_blank" rel="noreferrer"
+                                   onClick={e => e.stopPropagation()}
                                    className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-0.5">
                                   <Video className="w-3 h-3" /> Zoom link
                                 </a>
@@ -361,7 +391,8 @@ export default function SorceLeads({ token }) {
                         {/* Bare select styled as a pill so the common edit stays one click */}
                         <select
                           value={l.status}
-                          onChange={e => setStatus(l, e.target.value)}
+                          onClick={e => e.stopPropagation()}
+                          onChange={e => { e.stopPropagation(); setStatus(l, e.target.value); }}
                           className={`px-2 py-0.5 rounded-full text-xs font-semibold border-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-500/40 ${statusMeta(l.status).pill}`}
                         >
                           {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
@@ -373,7 +404,7 @@ export default function SorceLeads({ token }) {
                           if (!age) return <span className="text-gray-400">—</span>;
                           return (
                             <button
-                              onClick={() => logContact(l)}
+                              onClick={e => { e.stopPropagation(); logContact(l); }}
                               title="Log contact — resets this counter to today"
                               className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap hover:ring-2 hover:ring-amber-400/40 transition ${age.tone}`}
                             >
@@ -429,18 +460,31 @@ export default function SorceLeads({ token }) {
         )}
       </div>
 
-      {/* Add / edit panel */}
+      {/* Full-screen editor. The fields outgrew a side panel once the business detail
+          went in, and a narrow column made an eight-field form scroll for no reason. */}
       {editing && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex justify-end" onClick={() => !saving && setEditing(null)}>
-          <div className="bg-white w-full max-w-md h-full shadow-2xl flex flex-col overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-gray-200 flex items-center justify-between bg-gray-50">
-              <h3 className="font-bold text-gray-900">{editing.id ? 'Edit Lead' : 'Add Lead'}</h3>
-              <button onClick={() => setEditing(null)} className="p-1.5 text-gray-400 hover:text-gray-600 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+        <div className="fixed inset-0 bg-white z-[60] flex flex-col">
+          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between flex-shrink-0">
+            <div className="min-w-0">
+              <h3 className="text-xl font-bold text-gray-900 truncate">
+                {editing.id ? (editing.name || 'Edit Lead') : 'Add Lead'}
+              </h3>
+              {editing.id && (editing.company || editing.status) && (
+                <p className="text-sm text-gray-500 mt-0.5">
+                  {[editing.company, statusMeta(editing.status).label].filter(Boolean).join(' · ')}
+                </p>
+              )}
             </div>
+            <button
+              onClick={() => setEditing(null)}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
 
-            <div className="p-5 space-y-4">
+          <div className="flex-1 overflow-y-auto">
+            <div className="max-w-3xl mx-auto px-6 py-6 space-y-4">
               {editing.id && (() => {
                 const age = contactAge(editing);
                 return age ? (
@@ -455,6 +499,44 @@ export default function SorceLeads({ token }) {
                   </div>
                 ) : null;
               })()}
+
+              {/* Texting a number you got on a cold call needs consent you can evidence.
+                  Recorded here with the date and who took it, because "they said yes on
+                  the phone" is not a defence without a record of when. */}
+              {editing.id && (
+                <div className={`rounded-lg border p-4 ${editing.has_sms_consent
+                  ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className={`text-sm font-bold flex items-center gap-1.5 ${
+                        editing.has_sms_consent ? 'text-green-800' : 'text-gray-700'}`}>
+                        <Check className="w-4 h-4" />
+                        {editing.has_sms_consent ? 'Verbal SMS consent on file' : 'No SMS consent recorded'}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        {editing.has_sms_consent
+                          ? `Taken ${fmtDateTime(editing.sms_consent_at)}${editing.sms_consent_by_name ? ` by ${editing.sms_consent_by_name}` : ''}`
+                          : 'Read the consent script on the call before texting this number.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setConsent(editing, !editing.has_sms_consent)}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex-shrink-0 ${
+                        editing.has_sms_consent
+                          ? 'text-gray-600 hover:bg-gray-200'
+                          : 'bg-green-600 text-white hover:bg-green-700'}`}
+                    >
+                      {editing.has_sms_consent ? 'Clear' : 'Record verbal consent'}
+                    </button>
+                  </div>
+                  <input
+                    value={editing.sms_consent_note || ''}
+                    onChange={e => setEditing(v => ({ ...v, sms_consent_note: e.target.value }))}
+                    placeholder="Who agreed, and anything they said about it"
+                    className="w-full mt-3 px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  />
+                </div>
+              )}
 
               {editing.call_scheduled_at && (
                 <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
@@ -471,30 +553,31 @@ export default function SorceLeads({ token }) {
                 </div>
               )}
 
-              {[
-                { k: 'name', label: 'Contact Name', icon: User, required: true },
-                { k: 'contact_title', label: 'Their Role' },
-                { k: 'company', label: 'Business Name', icon: Building2 },
-                { k: 'email', label: 'Email', icon: Mail, type: 'email' },
-                { k: 'phone', label: 'Phone', icon: Phone, type: 'tel' },
-                { k: 'website', label: 'Website', icon: Globe },
-                { k: 'industry', label: 'Industry' },
-                { k: 'address', label: 'Address', icon: MapPin },
-              ].map(f => (
-                <div key={f.k}>
-                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
-                    {f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}
-                  </label>
-                  <input
-                    type={f.type || 'text'}
-                    value={editing[f.k] || ''}
-                    onChange={e => setEditing(v => ({ ...v, [f.k]: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
-                  />
-                </div>
-              ))}
-
-              <div className="grid grid-cols-2 gap-3">
+              {/* Two across now there's room, so the whole record is visible without
+                  scrolling. Address, city and state share a row as one address block. */}
+              <div className="grid sm:grid-cols-2 gap-4">
+                {[
+                  { k: 'name', label: 'Contact Name', required: true },
+                  { k: 'contact_title', label: 'Their Role' },
+                  { k: 'company', label: 'Business Name' },
+                  { k: 'industry', label: 'Industry' },
+                  { k: 'email', label: 'Email', type: 'email' },
+                  { k: 'phone', label: 'Phone', type: 'tel' },
+                  { k: 'website', label: 'Website' },
+                  { k: 'address', label: 'Address' },
+                ].map(f => (
+                  <div key={f.k}>
+                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
+                      {f.label}{f.required && <span className="text-red-500 ml-0.5">*</span>}
+                    </label>
+                    <input
+                      type={f.type || 'text'}
+                      value={editing[f.k] || ''}
+                      onChange={e => setEditing(v => ({ ...v, [f.k]: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                    />
+                  </div>
+                ))}
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">City</label>
                   <input
@@ -513,7 +596,7 @@ export default function SorceLeads({ token }) {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Status</label>
                   <select
@@ -534,32 +617,34 @@ export default function SorceLeads({ token }) {
                     {SOURCES.map(s => <option key={s} value={s}>{label(s)}</option>)}
                   </select>
                 </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Owner</label>
-                <select
-                  value={editing.assigned_to || ''}
-                  onChange={e => setEditing(v => ({ ...v, assigned_to: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
-                >
-                  <option value="">Unassigned</option>
-                  {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                </select>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Owner</label>
+                  <select
+                    value={editing.assigned_to || ''}
+                    onChange={e => setEditing(v => ({ ...v, assigned_to: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30"
+                  >
+                    <option value="">Unassigned</option>
+                    {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  </select>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Notes</label>
                 <textarea
-                  rows={5}
+                  rows={8}
                   value={editing.notes || ''}
                   onChange={e => setEditing(v => ({ ...v, notes: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  placeholder="What they said, what they run now, what to follow up on..."
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 resize-y"
                 />
               </div>
             </div>
+          </div>
 
-            <div className="mt-auto p-5 border-t border-gray-200 flex items-center justify-between gap-3">
+          <div className="border-t border-gray-200 bg-white flex-shrink-0">
+            <div className="max-w-3xl mx-auto px-6 py-4 flex items-center justify-between gap-3">
               {editing.id ? (
                 <button onClick={() => remove(editing.id)} className="flex items-center gap-1.5 px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-sm font-medium transition">
                   <Trash2 className="w-4 h-4" /> Delete
@@ -572,7 +657,7 @@ export default function SorceLeads({ token }) {
                 <button
                   onClick={save}
                   disabled={saving}
-                  className="flex items-center gap-1.5 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-60 transition"
+                  className="flex items-center gap-1.5 px-5 py-2.5 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 disabled:opacity-60 transition"
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                   {editing.id ? 'Save' : 'Add Lead'}
