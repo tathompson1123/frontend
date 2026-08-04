@@ -709,12 +709,17 @@ function BookCallModal({ team, defaultDate, authHeaders, onClose, onCreated }) {
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Who's taking it</label>
+              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Who's taking it *</label>
+              {/* Was "Me", which sent no assignee at all. On a shared-password session
+                  that resolved to nobody, so the confirmation email introduced the rep
+                  as "Your SORCE specialist" instead of naming a person. Forcing the
+                  choice means the prospect always gets a real name, photo and bio. */}
               <select
+                required
                 value={form.assignedTo} onChange={set('assignedTo')}
                 className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
               >
-                <option value="">Me</option>
+                <option value="">Select a team member…</option>
                 {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
