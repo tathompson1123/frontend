@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Phone, Mail, Building2, X,
-  Loader2, Check, Trash2, Send, StickyNote, User, RefreshCw, CreditCard,
+  Loader2, Check, Trash2, Send, StickyNote, User, RefreshCw, CreditCard, Video,
 } from 'lucide-react';
 import CollectPayment from './CollectPayment';
 
@@ -56,6 +56,7 @@ export default function DiscoveryCalls({ token, isAdmin }) {
   const [formDate, setFormDate] = useState(null);
   const [collectFor, setCollectFor] = useState(null);
   const [toast, setToast] = useState(null);
+  const [zoomCheck, setZoomCheck] = useState(null); // null | 'checking'
 
   const authHeaders = useMemo(
     () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
@@ -89,10 +90,38 @@ export default function DiscoveryCalls({ token, isAdmin }) {
 
   const selected = calls.find(c => c.id === selectedId) || null;
 
+  // Scoped to the month on screen and newest first. Previously it listed every call
+  // ever, oldest first, so the top of the list was the oldest call on record and the
+  // panel had no relationship to the calendar beside it.
   const filtered = useMemo(() => {
-    const list = statusFilter === 'all' ? calls : calls.filter(c => c.status === statusFilter);
-    return [...list].sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
-  }, [calls, statusFilter]);
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    return calls
+      .filter(c => statusFilter === 'all' || c.status === statusFilter)
+      .filter(c => {
+        const d = new Date(c.scheduled_at);
+        return d.getFullYear() === y && d.getMonth() === m;
+      })
+      .sort((a, b) => new Date(b.scheduled_at) - new Date(a.scheduled_at));
+  }, [calls, statusFilter, currentDate]);
+
+  // Status counts follow the same month, or the dropdown would advertise calls the
+  // list can't show.
+  const monthCounts = useMemo(() => {
+    const y = currentDate.getFullYear();
+    const m = currentDate.getMonth();
+    const inMonth = calls.filter(c => {
+      const d = new Date(c.scheduled_at);
+      return d.getFullYear() === y && d.getMonth() === m;
+    });
+    return {
+      all: inMonth.length,
+      scheduled: inMonth.filter(c => c.status === 'scheduled').length,
+      completed: inMonth.filter(c => c.status === 'completed').length,
+      no_show: inMonth.filter(c => c.status === 'no_show').length,
+      cancelled: inMonth.filter(c => c.status === 'cancelled').length,
+    };
+  }, [calls, currentDate]);
 
   const patch = async (id, body, { quiet = false } = {}) => {
     try {
@@ -135,6 +164,33 @@ export default function DiscoveryCalls({ token, isAdmin }) {
     }
   };
 
+  // Reports create/update/delete separately: they're distinct Zoom scopes, so booking
+  // can work while rescheduling and cancelling silently don't — and that only surfaces
+  // when a prospect is sitting in a meeting that should have moved.
+  const checkZoom = async () => {
+    setZoomCheck('checking');
+    try {
+      const res = await fetch(`${API_URL}/api/discovery/zoom/status`, { headers: authHeaders });
+      const d = await res.json();
+      if (d.ok) {
+        flash(`Zoom connected — booking, rescheduling and cancelling all work${d.hostUser && d.hostUser !== 'me' ? ` (host: ${d.hostUser})` : ''}.`);
+      } else if (!d.configured) {
+        flash(d.error || 'Zoom credentials are not set in Railway.', 'error');
+      } else {
+        const broken = [
+          d.canCreate === false && 'booking',
+          d.canUpdate === false && 'rescheduling',
+          d.canDelete === false && 'cancelling',
+        ].filter(Boolean).join(', ');
+        flash(`Zoom problem with ${broken || 'the connection'}. ${d.hint || d.updateError || d.deleteError || d.error || ''}`, 'error');
+      }
+    } catch (e) {
+      flash(`Could not run the Zoom check: ${e.message}`, 'error');
+    } finally {
+      setZoomCheck(null);
+    }
+  };
+
   const openNewCall = (date) => {
     setFormDate(date || new Date());
     setShowForm(true);
@@ -165,7 +221,7 @@ export default function DiscoveryCalls({ token, isAdmin }) {
         {/* LEFT: narrow vertical list of who's booked */}
         <div className="md:w-80 md:flex-shrink-0 bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col md:h-[calc(100vh-220px)]">
           <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center justify-between mb-1">
               <h3 className="font-bold text-gray-900">Booked</h3>
               <button
                 onClick={load}
@@ -175,16 +231,21 @@ export default function DiscoveryCalls({ token, isAdmin }) {
                 <RefreshCw className="w-4 h-4" />
               </button>
             </div>
+            {/* Says which month, so an empty list reads as "nothing in March" rather
+                than "nothing booked". */}
+            <p className="text-xs text-gray-500 mb-3">
+              {currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })} · newest first
+            </p>
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:border-amber-500 focus:outline-none"
             >
-              <option value="scheduled">Upcoming ({calls.filter(c => c.status === 'scheduled').length})</option>
-              <option value="completed">Completed ({calls.filter(c => c.status === 'completed').length})</option>
-              <option value="no_show">No show ({calls.filter(c => c.status === 'no_show').length})</option>
-              <option value="cancelled">Cancelled ({calls.filter(c => c.status === 'cancelled').length})</option>
-              <option value="all">All ({calls.length})</option>
+              <option value="scheduled">Upcoming ({monthCounts.scheduled})</option>
+              <option value="completed">Completed ({monthCounts.completed})</option>
+              <option value="no_show">No show ({monthCounts.no_show})</option>
+              <option value="cancelled">Cancelled ({monthCounts.cancelled})</option>
+              <option value="all">All ({monthCounts.all})</option>
             </select>
           </div>
 
@@ -282,6 +343,22 @@ export default function DiscoveryCalls({ token, isAdmin }) {
                     && c.status !== 'cancelled';
                 }).length} this month
               </p>
+              {/* Zoom links ride on every confirmation, so a broken credential is
+                  invisible until a prospect can't join. This checks it on demand by
+                  round-tripping a throwaway meeting. */}
+              {isAdmin && (
+                <button
+                  onClick={checkZoom}
+                  disabled={zoomCheck === 'checking'}
+                  title="Verify the Zoom credentials and scopes"
+                  className="px-3 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-semibold hover:bg-gray-50 disabled:opacity-60 transition flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  {zoomCheck === 'checking'
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Video className="w-4 h-4" />}
+                  Zoom
+                </button>
+              )}
               <button
                 onClick={() => openNewCall(new Date())}
                 className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition flex items-center gap-2 whitespace-nowrap"
@@ -411,7 +488,13 @@ export default function DiscoveryCalls({ token, isAdmin }) {
             setShowForm(false);
             setSelectedId(call.id);
             const sent = [delivery?.smsSent && 'text', delivery?.emailSent && 'email'].filter(Boolean);
-            flash(sent.length ? `Booked — confirmation ${sent.join(' and ')} sent` : 'Booked');
+            // Say what did NOT go out, not just what did. "Booked — confirmation email
+            // sent" reads like success while the text silently failed.
+            if (delivery?.errors?.length) {
+              flash(`Booked${sent.length ? `, ${sent.join(' and ')} sent` : ''} — but ${delivery.errors.join('; ')}`, 'error');
+            } else {
+              flash(sent.length ? `Booked — confirmation ${sent.join(' and ')} sent` : 'Booked');
+            }
           }}
         />
       )}
@@ -520,14 +603,18 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
             </div>
           )}
 
-          {/* Closing them on the call — takes their details straight through */}
-          {isAdmin && (
-            <button
-              onClick={onCollect}
-              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 transition flex items-center justify-center gap-2"
+          {/* The one thing you need at the top of the hour, so it sits where the eye
+              already lands. Opens the host link when we have one — that starts the
+              meeting with host controls rather than dropping the rep in as a guest. */}
+          {(call.zoom_start_url || call.zoom_join_url) && call.status === 'scheduled' && (
+            <a
+              href={call.zoom_start_url || call.zoom_join_url}
+              target="_blank"
+              rel="noreferrer"
+              className="w-full py-3 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 transition flex items-center justify-center gap-2"
             >
-              <CreditCard className="w-4 h-4" /> Collect payment from {call.name.split(' ')[0]}
-            </button>
+              <Video className="w-4 h-4" /> Join the Zoom call with {call.name.split(' ')[0]}
+            </a>
           )}
 
           <div className="flex items-center gap-2 text-xs flex-wrap">
@@ -597,6 +684,17 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
             />
             <p className="text-xs text-gray-400 mt-1">Moving the call re-arms both reminder texts.</p>
           </div>
+
+          {/* Closing them on the call — takes their details straight through. Lives at
+              the bottom now: it's the end of the conversation, not the start. */}
+          {isAdmin && (
+            <button
+              onClick={onCollect}
+              className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 transition flex items-center justify-center gap-2"
+            >
+              <CreditCard className="w-4 h-4" /> Collect payment from {call.name.split(' ')[0]}
+            </button>
+          )}
 
           <div className="flex items-center gap-2 pt-1">
             <button

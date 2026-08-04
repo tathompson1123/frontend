@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus, Search, X, Loader2, Trash2, Mail, Phone, Building2, User,
-  CalendarDays, Pencil, Check,
+  CalendarDays, Pencil, Check, Video, PhoneCall, Globe, MapPin, Clock,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -25,12 +25,48 @@ const label = (s) => String(s || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.
 const fmtDate = (iso) => iso
   ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
   : '—';
+const fmtDateTime = (iso) => iso
+  ? new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  : '—';
 
-const EMPTY = { name: '', email: '', phone: '', company: '', source: 'manual', status: 'new', notes: '', assigned_to: '' };
+// Three ways into the same pipeline table. Booked Meetings is every prospect with a
+// discovery call attached — the backend links one automatically the moment a call is
+// booked, so this view and the calendar can't drift. Cold Outreach is the same rows
+// filtered to that source, with the business fields foregrounded instead of buried.
+const VIEWS = [
+  { id: 'pipeline', label: 'Pipeline',       icon: User },
+  { id: 'booked',   label: 'Booked Meetings', icon: Video },
+  { id: 'outreach', label: 'Cold Outreach',   icon: PhoneCall },
+];
+
+// Staleness, not just age: a lead nobody has touched in three weeks is the one that
+// quietly dies, and it looks identical to a fresh one without this.
+function contactAge(lead) {
+  const d = Number(lead?.days_since_contact);
+  if (!Number.isFinite(d)) return null;
+  const never = !lead.has_been_contacted;
+  const text = d === 0 ? (never ? 'Added today' : 'Today')
+    : `${d}d ${never ? 'old, no contact' : 'since contact'}`;
+  const tone = d >= 21 ? 'bg-red-100 text-red-700'
+    : d >= 7 ? 'bg-amber-100 text-amber-700'
+    : 'bg-gray-100 text-gray-500';
+  return { text, tone, days: d };
+}
+
+const EMPTY = {
+  name: '', email: '', phone: '', company: '', source: 'manual', status: 'new',
+  notes: '', assigned_to: '', website: '', address: '', city: '', state: '',
+  industry: '', contact_title: '',
+};
+// Cold-outreach entries start from the business, so the form opens on that footing
+// and the row's contact clock starts the moment it's logged.
+const EMPTY_OUTREACH = { ...EMPTY, source: 'cold_outreach', status: 'contacted' };
 
 export default function SorceLeads({ token }) {
   const [leads, setLeads] = useState([]);
   const [counts, setCounts] = useState({});
+  const [viewCounts, setViewCounts] = useState({});
+  const [view, setView] = useState('pipeline');
   const [team, setTeam] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -51,7 +87,11 @@ export default function SorceLeads({ token }) {
       setLoading(true);
       const res = await fetch(`${API_URL}/api/discovery/leads`, { headers: authHeaders });
       const data = await res.json();
-      if (data.success) { setLeads(data.leads || []); setCounts(data.counts || {}); }
+      if (data.success) {
+        setLeads(data.leads || []);
+        setCounts(data.counts || {});
+        setViewCounts(data.views || {});
+      }
     } catch {
       notify('Could not load leads');
     } finally {
@@ -74,11 +114,14 @@ export default function SorceLeads({ token }) {
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return leads.filter(l => {
+      if (view === 'booked' && !l.discovery_call_id) return false;
+      if (view === 'outreach' && l.source !== 'cold_outreach') return false;
       if (statusFilter !== 'all' && l.status !== statusFilter) return false;
       if (!q) return true;
-      return [l.name, l.email, l.company, l.phone].some(v => String(v || '').toLowerCase().includes(q));
+      return [l.name, l.email, l.company, l.phone, l.city, l.industry]
+        .some(v => String(v || '').toLowerCase().includes(q));
     });
-  }, [leads, statusFilter, search]);
+  }, [leads, view, statusFilter, search]);
 
   const save = async () => {
     if (!editing?.name?.trim()) { notify('Name is required'); return; }
@@ -89,6 +132,8 @@ export default function SorceLeads({ token }) {
         name: editing.name, email: editing.email, phone: editing.phone,
         company: editing.company, source: editing.source, status: editing.status,
         notes: editing.notes, assigned_to: editing.assigned_to || null,
+        website: editing.website, address: editing.address, city: editing.city,
+        state: editing.state, industry: editing.industry, contact_title: editing.contact_title,
       };
       const res = await fetch(
         `${API_URL}/api/discovery/leads${isNew ? '' : `/${editing.id}`}`,
@@ -115,6 +160,22 @@ export default function SorceLeads({ token }) {
       load();
     } catch {
       notify('Could not delete lead');
+    }
+  };
+
+  // Reset the staleness clock without opening anything. This is the whole point of
+  // showing days-since-contact: see the stale row, act on it, clear it.
+  const logContact = async (lead) => {
+    setLeads(ls => ls.map(l => (l.id === lead.id
+      ? { ...l, days_since_contact: 0, has_been_contacted: true } : l)));
+    try {
+      await fetch(`${API_URL}/api/discovery/leads/${lead.id}`, {
+        method: 'PATCH', headers: authHeaders, body: JSON.stringify({ markContacted: true }),
+      });
+      notify('Contact logged');
+    } catch {
+      notify('Could not log contact');
+      load();
     }
   };
 
@@ -150,12 +211,36 @@ export default function SorceLeads({ token }) {
           </p>
         </div>
         <button
-          onClick={() => setEditing({ ...EMPTY })}
+          onClick={() => setEditing({ ...(view === 'outreach' ? EMPTY_OUTREACH : EMPTY) })}
           className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-semibold hover:bg-amber-700 transition"
         >
           <Plus className="w-4 h-4" />
-          Add Lead
+          {view === 'outreach' ? 'Log a Business' : 'Add Lead'}
         </button>
+      </div>
+
+      {/* Views */}
+      <div className="flex gap-1 border-b border-gray-200">
+        {VIEWS.map(v => {
+          const Icon = v.icon;
+          const n = v.id === 'pipeline' ? (viewCounts.total ?? leads.length)
+            : v.id === 'booked' ? (viewCounts.booked ?? 0)
+            : (viewCounts.outreach ?? 0);
+          return (
+            <button
+              key={v.id}
+              onClick={() => { setView(v.id); setStatusFilter('all'); }}
+              className={`px-4 py-2.5 text-sm font-semibold relative flex items-center gap-2 transition ${
+                view === v.id ? 'text-amber-600' : 'text-gray-500 hover:text-gray-900'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              {v.label}
+              <span className="text-xs opacity-60">{n}</span>
+              {view === v.id && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-600" />}
+            </button>
+          );
+        })}
       </div>
 
       {/* Filters */}
@@ -212,11 +297,13 @@ export default function SorceLeads({ token }) {
                   <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
                     <th className="px-5 py-3">Name</th>
                     <th className="px-5 py-3">Contact</th>
-                    <th className="px-5 py-3">Company</th>
-                    <th className="px-5 py-3">Source</th>
+                    <th className="px-5 py-3">{view === 'outreach' ? 'Business' : 'Company'}</th>
+                    {view === 'booked'
+                      ? <th className="px-5 py-3">Meeting</th>
+                      : <th className="px-5 py-3">Source</th>}
                     <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Last Contact</th>
                     <th className="px-5 py-3">Owner</th>
-                    <th className="px-5 py-3">Added</th>
                     <th className="px-5 py-3 w-10"></th>
                   </tr>
                 </thead>
@@ -240,10 +327,36 @@ export default function SorceLeads({ token }) {
                           {!l.email && !l.phone && <span className="text-gray-400">—</span>}
                         </div>
                       </td>
-                      <td className="px-5 py-3 text-gray-700">{l.company || <span className="text-gray-400">—</span>}</td>
-                      <td className="px-5 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{label(l.source)}</span>
+                      <td className="px-5 py-3 text-gray-700">
+                        <div>{l.company || <span className="text-gray-400">—</span>}</div>
+                        {(l.city || l.industry) && (
+                          <div className="text-xs text-gray-400 mt-0.5">
+                            {[l.industry, [l.city, l.state].filter(Boolean).join(', ')].filter(Boolean).join(' · ')}
+                          </div>
+                        )}
                       </td>
+                      {view === 'booked' ? (
+                        <td className="px-5 py-3">
+                          {l.call_scheduled_at ? (
+                            <div className="text-gray-700">
+                              <div className="flex items-center gap-1.5">
+                                <CalendarDays className="w-3.5 h-3.5 text-amber-600" />
+                                {fmtDateTime(l.call_scheduled_at)}
+                              </div>
+                              {l.call_zoom_url && (
+                                <a href={l.call_zoom_url} target="_blank" rel="noreferrer"
+                                   className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-0.5">
+                                  <Video className="w-3 h-3" /> Zoom link
+                                </a>
+                              )}
+                            </div>
+                          ) : <span className="text-gray-400">—</span>}
+                        </td>
+                      ) : (
+                        <td className="px-5 py-3">
+                          <span className="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{label(l.source)}</span>
+                        </td>
+                      )}
                       <td className="px-5 py-3">
                         {/* Bare select styled as a pill so the common edit stays one click */}
                         <select
@@ -254,8 +367,22 @@ export default function SorceLeads({ token }) {
                           {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                         </select>
                       </td>
+                      <td className="px-5 py-3">
+                        {(() => {
+                          const age = contactAge(l);
+                          if (!age) return <span className="text-gray-400">—</span>;
+                          return (
+                            <button
+                              onClick={() => logContact(l)}
+                              title="Log contact — resets this counter to today"
+                              className={`px-2 py-0.5 rounded-full text-xs font-semibold whitespace-nowrap hover:ring-2 hover:ring-amber-400/40 transition ${age.tone}`}
+                            >
+                              {age.text}
+                            </button>
+                          );
+                        })()}
+                      </td>
                       <td className="px-5 py-3 text-gray-600">{l.assigned_name || <span className="text-gray-400">Unassigned</span>}</td>
-                      <td className="px-5 py-3 text-gray-500">{fmtDate(l.created_at)}</td>
                       <td className="px-5 py-3">
                         <button onClick={() => setEditing({ ...l })} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
                           <Pencil className="w-3.5 h-3.5" />
@@ -281,8 +408,20 @@ export default function SorceLeads({ token }) {
                   <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-500 flex-wrap">
                     {l.email && <span className="flex items-center gap-1 truncate"><Mail className="w-3 h-3" />{l.email}</span>}
                     {l.phone && <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{l.phone}</span>}
-                    <span>{fmtDate(l.created_at)}</span>
+                    {l.call_scheduled_at && (
+                      <span className="flex items-center gap-1 text-amber-600">
+                        <CalendarDays className="w-3 h-3" />{fmtDateTime(l.call_scheduled_at)}
+                      </span>
+                    )}
                   </div>
+                  {(() => {
+                    const age = contactAge(l);
+                    return age ? (
+                      <span className={`inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-xs font-semibold ${age.tone}`}>
+                        <Clock className="w-3 h-3" />{age.text}
+                      </span>
+                    ) : null;
+                  })()}
                 </button>
               ))}
             </div>
@@ -302,11 +441,45 @@ export default function SorceLeads({ token }) {
             </div>
 
             <div className="p-5 space-y-4">
+              {editing.id && (() => {
+                const age = contactAge(editing);
+                return age ? (
+                  <div className="flex items-center justify-between gap-3 -mt-1 mb-1 p-3 bg-gray-50 rounded-lg">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${age.tone}`}>{age.text}</span>
+                    <button
+                      onClick={() => { logContact(editing); setEditing(v => ({ ...v, days_since_contact: 0, has_been_contacted: true })); }}
+                      className="text-xs font-semibold text-amber-700 hover:underline"
+                    >
+                      Log contact today
+                    </button>
+                  </div>
+                ) : null;
+              })()}
+
+              {editing.call_scheduled_at && (
+                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
+                  <p className="font-semibold text-amber-800 flex items-center gap-1.5">
+                    <CalendarDays className="w-4 h-4" /> Meeting booked
+                  </p>
+                  <p className="text-amber-700 mt-0.5">{fmtDateTime(editing.call_scheduled_at)}</p>
+                  {editing.call_zoom_url && (
+                    <a href={editing.call_zoom_url} target="_blank" rel="noreferrer"
+                       className="text-blue-600 hover:underline text-xs inline-flex items-center gap-1 mt-1">
+                      <Video className="w-3 h-3" /> Join link
+                    </a>
+                  )}
+                </div>
+              )}
+
               {[
-                { k: 'name', label: 'Name', icon: User, required: true },
+                { k: 'name', label: 'Contact Name', icon: User, required: true },
+                { k: 'contact_title', label: 'Their Role' },
+                { k: 'company', label: 'Business Name', icon: Building2 },
                 { k: 'email', label: 'Email', icon: Mail, type: 'email' },
                 { k: 'phone', label: 'Phone', icon: Phone, type: 'tel' },
-                { k: 'company', label: 'Company', icon: Building2 },
+                { k: 'website', label: 'Website', icon: Globe },
+                { k: 'industry', label: 'Industry' },
+                { k: 'address', label: 'Address', icon: MapPin },
               ].map(f => (
                 <div key={f.k}>
                   <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">
@@ -320,6 +493,25 @@ export default function SorceLeads({ token }) {
                   />
                 </div>
               ))}
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">City</label>
+                  <input
+                    value={editing.city || ''}
+                    onChange={e => setEditing(v => ({ ...v, city: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">State</label>
+                  <input
+                    value={editing.state || ''}
+                    onChange={e => setEditing(v => ({ ...v, state: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500"
+                  />
+                </div>
+              </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
