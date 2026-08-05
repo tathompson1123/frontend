@@ -350,9 +350,13 @@ export default function SorceLeads({ token }) {
                         )}
                       </td>
                       <td className="px-5 py-3 text-gray-600">
-                        <div className="flex flex-col gap-0.5" onClick={e => e.stopPropagation()}>
-                          {l.email && <a href={`mailto:${l.email}`} className="text-blue-600 hover:underline truncate max-w-[220px] w-fit">{l.email}</a>}
-                          {l.phone && <a href={`tel:${l.phone}`} className="text-gray-500 hover:underline w-fit">{l.phone}</a>}
+                        {/* stopPropagation sits on the links themselves, not a wrapper.
+                            On the wrapper it swallowed clicks anywhere in this column —
+                            including the blank space around the text — so the cell
+                            looked clickable, highlighted on hover, and did nothing. */}
+                        <div className="flex flex-col gap-0.5">
+                          {l.email && <a href={`mailto:${l.email}`} onClick={e => e.stopPropagation()} className="text-blue-600 hover:underline truncate max-w-[220px] w-fit">{l.email}</a>}
+                          {l.phone && <a href={`tel:${l.phone}`} onClick={e => e.stopPropagation()} className="text-gray-500 hover:underline w-fit">{l.phone}</a>}
                           {!l.email && !l.phone && <span className="text-gray-400">—</span>}
                         </div>
                       </td>
