@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Calendar, ChevronLeft, ChevronRight, Plus, Phone, Mail, Building2, X,
   Loader2, Check, Trash2, Send, StickyNote, User, RefreshCw, CreditCard, Video,
+  MessageSquare,
 } from 'lucide-react';
 import CollectPayment from './CollectPayment';
 // Shared with the Leads tab, which opens the same form pre-bound to a pipeline row.
@@ -146,10 +147,13 @@ export default function DiscoveryCalls({ token, isAdmin }) {
     }
   };
 
-  const resend = async (id) => {
+  // channel exists for the case where only the text failed — an unverified A2P campaign
+  // drops it while the email lands fine. Resending both would put a second identical
+  // confirmation email in front of the prospect just to deliver the missing text.
+  const resend = async (id, channel = 'both') => {
     try {
       const res = await fetch(`${API_URL}/api/discovery/calls/${id}/resend`, {
-        method: 'POST', headers: authHeaders,
+        method: 'POST', headers: authHeaders, body: JSON.stringify({ channel }),
       });
       const data = await res.json();
       const sent = [data.smsSent && 'text', data.emailSent && 'email'].filter(Boolean);
@@ -665,13 +669,25 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
             </button>
           )}
 
-          <div className="flex items-center gap-2 pt-1">
+          <div className="flex items-center gap-2 pt-1 flex-wrap">
             <button
-              onClick={() => onResend(call.id)}
+              onClick={() => onResend(call.id, 'both')}
               className="px-3 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold hover:bg-blue-100 transition flex items-center gap-1.5"
             >
               <Send className="w-3.5 h-3.5" /> Resend confirmation
             </button>
+            {/* Separate button rather than a menu: the text-only case is what you need
+                after an A2P campaign clears, and the whole point is not re-sending the
+                email that already arrived. */}
+            {call.phone && (
+              <button
+                onClick={() => onResend(call.id, 'sms')}
+                title="Send only the confirmation text — leaves the email alone"
+                className="px-3 py-2 bg-amber-50 text-amber-800 border border-amber-200 rounded-lg text-xs font-semibold hover:bg-amber-100 transition flex items-center gap-1.5"
+              >
+                <MessageSquare className="w-3.5 h-3.5" /> Resend text only
+              </button>
+            )}
             <button
               onClick={() => onDelete(call.id)}
               className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 ml-auto"
