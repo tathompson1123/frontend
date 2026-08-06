@@ -4,6 +4,8 @@ import {
   Loader2, Check, Trash2, Send, StickyNote, User, RefreshCw, CreditCard, Video,
 } from 'lucide-react';
 import CollectPayment from './CollectPayment';
+// Shared with the Leads tab, which opens the same form pre-bound to a pipeline row.
+import BookCallModal, { toLocalInput } from './BookCallModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -23,11 +25,6 @@ const CELL_COLORS = {
 
 const sameDay = (a, b) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-const toLocalInput = (iso) => {
-  const d = new Date(iso);
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-};
 const fmtTime = (iso) =>
   new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 const fmtDate = (iso) =>
@@ -688,150 +685,3 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
   );
 }
 
-function BookCallModal({ team, defaultDate, authHeaders, onClose, onCreated }) {
-  const initial = new Date(defaultDate);
-  if (!initial.getHours()) initial.setHours(10, 0, 0, 0);
-  const [form, setForm] = useState({
-    name: '', email: '', phone: '', company: '',
-    scheduledAt: toLocalInput(initial.toISOString()),
-    durationMinutes: 30, assignedTo: '', notes: '', sendNotifications: true,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSaving(true);
-    try {
-      const res = await fetch(`${API_URL}/api/discovery/calls`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({
-          ...form,
-          scheduledAt: new Date(form.scheduledAt).toISOString(),
-          assignedTo: form.assignedTo || null,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not book that call');
-      onCreated(data.call, data.delivery);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Book a discovery call</h3>
-            <p className="text-sm text-gray-500">They'll get a confirmation text and email</p>
-          </div>
-          <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="p-6 space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Name *</label>
-            <input
-              required value={form.name} onChange={set('name')} placeholder="Jane Smith"
-              className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-            />
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Phone *</label>
-              <input
-                type="tel" value={form.phone} onChange={set('phone')} placeholder="(555) 123-4567"
-                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Email *</label>
-              <input
-                type="email" value={form.email} onChange={set('email')} placeholder="jane@business.com"
-                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Business</label>
-            <input
-              value={form.company} onChange={set('company')} placeholder="Smith Plumbing"
-              className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-            />
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">When *</label>
-              <input
-                required type="datetime-local" value={form.scheduledAt} onChange={set('scheduledAt')}
-                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1.5">Who's taking it *</label>
-              {/* Was "Me", which sent no assignee at all. On a shared-password session
-                  that resolved to nobody, so the confirmation email introduced the rep
-                  as "Your SORCE specialist" instead of naming a person. Forcing the
-                  choice means the prospect always gets a real name, photo and bio. */}
-              <select
-                required
-                value={form.assignedTo} onChange={set('assignedTo')}
-                className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
-              >
-                <option value="">Select a team member…</option>
-                {team.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1.5">Notes</label>
-            <textarea
-              rows={3} value={form.notes} onChange={set('notes')}
-              placeholder="Where they came from, what they're after..."
-              className="w-full px-3 py-2.5 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none resize-y"
-            />
-          </div>
-
-          <label className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg cursor-pointer">
-            <input
-              type="checkbox" checked={form.sendNotifications}
-              onChange={e => setForm(f => ({ ...f, sendNotifications: e.target.checked }))}
-              className="rounded border-gray-300 text-amber-600 focus:ring-amber-400"
-            />
-            <span className="text-sm text-gray-700">Send the confirmation text and email now</span>
-          </label>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{error}</div>
-          )}
-
-          <div className="flex gap-3 pt-1">
-            <button
-              type="button" onClick={onClose}
-              className="flex-1 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit" disabled={saving}
-              className="flex-1 py-3 bg-amber-600 text-white rounded-xl font-semibold text-sm hover:bg-amber-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {saving ? <><Loader2 className="w-4 h-4 animate-spin" /> Booking...</> : 'Book the call'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}

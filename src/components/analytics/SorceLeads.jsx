@@ -4,8 +4,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Plus, Search, X, Loader2, Trash2, Mail, Phone, Building2, User,
-  CalendarDays, Pencil, Check, Video, PhoneCall, Globe, MapPin, Clock,
+  CalendarDays, Pencil, Check, Video, PhoneCall, Globe, MapPin, Clock, CalendarPlus,
 } from 'lucide-react';
+import BookCallModal from './BookCallModal';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -62,7 +63,10 @@ const EMPTY = {
 // and the row's contact clock starts the moment it's logged.
 const EMPTY_OUTREACH = { ...EMPTY, source: 'cold_outreach', status: 'contacted' };
 
-export default function SorceLeads({ token }) {
+// onGoToCalls switches the surrounding page to the Discovery Calls tab. Booking a call
+// here puts it there, so the confirmation offers to take you rather than leaving you to
+// find it.
+export default function SorceLeads({ token, onGoToCalls }) {
   const [leads, setLeads] = useState([]);
   const [counts, setCounts] = useState({});
   const [viewCounts, setViewCounts] = useState({});
@@ -74,13 +78,20 @@ export default function SorceLeads({ token }) {
   const [editing, setEditing] = useState(null); // null | { ...lead } | EMPTY-with-no-id
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
+  const [booking, setBooking] = useState(null); // the lead being scheduled
 
   const authHeaders = useMemo(
     () => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }),
     [token]
   );
 
-  const notify = (msg) => { setToast(msg); setTimeout(() => setToast(null), 2600); };
+  // An optional action rides along so a booking confirmation can offer the jump to the
+  // calendar. Held longer when there's something to click — 2.6s isn't enough to read a
+  // message and act on it.
+  const notify = (msg, action = null) => {
+    setToast({ msg, action });
+    setTimeout(() => setToast(null), action ? 6000 : 2600);
+  };
 
   const load = useCallback(async () => {
     try {
@@ -216,11 +227,48 @@ export default function SorceLeads({ token }) {
     }
   };
 
+  // The lead comes back re-projected with call_scheduled_at and the Zoom link, so the row
+  // can be swapped in place rather than refetching the whole list. Status moved to
+  // demo_scheduled server-side, so the chip counts shift with it.
+  const onBooked = (call, delivery, lead) => {
+    const wasStatus = booking?.status;
+    setBooking(null);
+    if (lead) {
+      setLeads(ls => ls.map(l => (l.id === lead.id ? lead : l)));
+      if (wasStatus && wasStatus !== 'demo_scheduled') {
+        setCounts(c => ({
+          ...c,
+          [wasStatus]: Math.max(0, (c[wasStatus] || 1) - 1),
+          demo_scheduled: (c.demo_scheduled || 0) + 1,
+        }));
+        setViewCounts(v => ({ ...v, booked: (v.booked || 0) + 1 }));
+      }
+    } else {
+      load();
+    }
+
+    // Report what didn't send, not just what did — "Booked, email sent" reads like
+    // success while the text silently failed.
+    const sent = [delivery?.smsSent && 'text', delivery?.emailSent && 'email'].filter(Boolean);
+    const base = delivery?.errors?.length
+      ? `Booked${sent.length ? `, ${sent.join(' and ')} sent` : ''} — but ${delivery.errors.join('; ')}`
+      : sent.length ? `Booked — confirmation ${sent.join(' and ')} sent` : 'Booked';
+    notify(base, onGoToCalls ? { label: 'View in Discovery Calls', onClick: onGoToCalls } : null);
+  };
+
   return (
     <div className="space-y-5">
       {toast && (
-        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg">
-          {toast}
+        <div className="fixed bottom-6 right-6 z-50 bg-gray-900 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg flex items-center gap-3">
+          <span>{toast.msg}</span>
+          {toast.action && (
+            <button
+              onClick={() => { toast.action.onClick(); setToast(null); }}
+              className="font-semibold text-amber-400 hover:text-amber-300 whitespace-nowrap"
+            >
+              {toast.action.label}
+            </button>
+          )}
         </div>
       )}
 
@@ -324,9 +372,10 @@ export default function SorceLeads({ token }) {
                       ? <th className="px-5 py-3">Meeting</th>
                       : <th className="px-5 py-3">Source</th>}
                     <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3">Added</th>
                     <th className="px-5 py-3">Last Contact</th>
                     <th className="px-5 py-3">Owner</th>
-                    <th className="px-5 py-3 w-10"></th>
+                    <th className="px-5 py-3 w-20"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -402,6 +451,7 @@ export default function SorceLeads({ token }) {
                           {STATUSES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
                         </select>
                       </td>
+                      <td className="px-5 py-3 text-gray-600 whitespace-nowrap">{fmtDate(l.created_at)}</td>
                       <td className="px-5 py-3">
                         {(() => {
                           const age = contactAge(l);
@@ -419,9 +469,23 @@ export default function SorceLeads({ token }) {
                       </td>
                       <td className="px-5 py-3 text-gray-600">{l.assigned_name || <span className="text-gray-400">Unassigned</span>}</td>
                       <td className="px-5 py-3">
-                        <button onClick={() => setEditing({ ...l })} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-0.5">
+                          {/* Hidden once a call exists — booking again would be a second
+                              meeting for the same person, and the backend refuses it. The
+                              time is already shown next to the name. */}
+                          {!l.call_scheduled_at && (
+                            <button
+                              onClick={e => { e.stopPropagation(); setBooking(l); }}
+                              title="Book a discovery call"
+                              className="p-1.5 text-gray-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition"
+                            >
+                              <CalendarPlus className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                          <button onClick={() => setEditing({ ...l })} className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -449,14 +513,17 @@ export default function SorceLeads({ token }) {
                       </span>
                     )}
                   </div>
-                  {(() => {
-                    const age = contactAge(l);
-                    return age ? (
-                      <span className={`inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full text-xs font-semibold ${age.tone}`}>
-                        <Clock className="w-3 h-3" />{age.text}
-                      </span>
-                    ) : null;
-                  })()}
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {(() => {
+                      const age = contactAge(l);
+                      return age ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${age.tone}`}>
+                          <Clock className="w-3 h-3" />{age.text}
+                        </span>
+                      ) : null;
+                    })()}
+                    <span className="text-xs text-gray-400">Added {fmtDate(l.created_at)}</span>
+                  </div>
                 </button>
               ))}
             </div>
@@ -492,8 +559,11 @@ export default function SorceLeads({ token }) {
               {editing.id && (() => {
                 const age = contactAge(editing);
                 return age ? (
-                  <div className="flex items-center justify-between gap-3 -mt-1 mb-1 p-3 bg-gray-50 rounded-lg">
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${age.tone}`}>{age.text}</span>
+                  <div className="flex items-center justify-between gap-3 -mt-1 mb-1 p-3 bg-gray-50 rounded-lg flex-wrap">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${age.tone}`}>{age.text}</span>
+                      <span className="text-xs text-gray-500">Added {fmtDate(editing.created_at)}</span>
+                    </div>
                     <button
                       onClick={() => { logContact(editing); setEditing(v => ({ ...v, days_since_contact: 0, has_been_contacted: true })); }}
                       className="text-xs font-semibold text-amber-700 hover:underline"
@@ -503,6 +573,55 @@ export default function SorceLeads({ token }) {
                   </div>
                 ) : null;
               })()}
+
+              {/* The meeting, front and centre. Booking from here writes a real discovery
+                  call rather than just flipping the status to Demo Set, which used to
+                  leave the calendar and the Discovery Calls tab none the wiser. */}
+              {editing.id && (
+                <div className={`rounded-lg border p-4 ${editing.call_scheduled_at
+                  ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="min-w-0">
+                      <p className={`text-sm font-bold flex items-center gap-1.5 ${
+                        editing.call_scheduled_at ? 'text-amber-800' : 'text-gray-700'}`}>
+                        <CalendarDays className="w-4 h-4" />
+                        {editing.call_scheduled_at ? 'Discovery call booked' : 'No discovery call booked'}
+                      </p>
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        {editing.call_scheduled_at
+                          ? `${fmtDateTime(editing.call_scheduled_at)}${editing.call_duration ? ` · ${editing.call_duration} min` : ''}${editing.call_status ? ` · ${label(editing.call_status)}` : ''}`
+                          : (editing.email || editing.phone)
+                            ? 'Book one and it lands in Discovery Calls straight away.'
+                            : 'Add a phone number or email below first so we can send the invite.'}
+                      </p>
+                      {editing.call_zoom_url && (
+                        <a href={editing.call_zoom_url} target="_blank" rel="noreferrer"
+                           className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1 mt-1">
+                          <Video className="w-3 h-3" /> Zoom link
+                        </a>
+                      )}
+                    </div>
+                    {editing.call_scheduled_at ? (
+                      onGoToCalls && (
+                        <button
+                          onClick={() => { setEditing(null); onGoToCalls(); }}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold text-amber-800 hover:bg-amber-100 transition flex-shrink-0"
+                        >
+                          Open in Discovery Calls
+                        </button>
+                      )
+                    ) : (
+                      <button
+                        onClick={() => { setBooking(editing); setEditing(null); }}
+                        disabled={!editing.email && !editing.phone}
+                        className="px-3 py-1.5 rounded-lg text-xs font-semibold bg-amber-600 text-white hover:bg-amber-700 transition flex-shrink-0 disabled:opacity-40 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+                      >
+                        <CalendarPlus className="w-3.5 h-3.5" /> Book a call
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Texting a number you got on a cold call needs consent you can evidence.
                   Recorded here with the date and who took it, because "they said yes on
@@ -670,6 +789,17 @@ export default function SorceLeads({ token }) {
             </div>
           </div>
         </div>
+      )}
+
+      {booking && (
+        <BookCallModal
+          lead={booking}
+          team={team}
+          defaultDate={new Date()}
+          authHeaders={authHeaders}
+          onClose={() => setBooking(null)}
+          onCreated={onBooked}
+        />
       )}
     </div>
   );

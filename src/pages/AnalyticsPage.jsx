@@ -282,7 +282,9 @@ export default function AnalyticsPage() {
 
       {tab === 'leads' && (
         <main className="max-w-screen-2xl mx-auto px-6 py-8">
-          <SorceLeads token={token} />
+          {/* Booking a call from a lead writes it into Discovery Calls, so the
+              confirmation can offer to take you there. */}
+          <SorceLeads token={token} onGoToCalls={() => setTab('discovery')} />
         </main>
       )}
 
