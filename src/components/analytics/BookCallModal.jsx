@@ -6,8 +6,10 @@
 //
 // Contact fields are deliberately not editable in lead mode: they'd look like they were
 // editing the lead, and they wouldn't be. Fix the lead, then book.
-import { useState } from 'react';
-import { X, Loader2, Mail, Phone, Building2, CalendarDays } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+  X, Loader2, Mail, Phone, Building2, CalendarDays, MessageSquare, AlertTriangle, Check,
+} from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -44,6 +46,19 @@ export default function BookCallModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [conflict, setConflict] = useState(null);
+
+  // Whether the confirmation text will actually arrive. Checked on open, because finding
+  // out from the toast afterwards means the prospect already didn't get it. Silent on
+  // failure — a preflight that can't run is not a reason to block a booking.
+  const [sms, setSms] = useState(null);
+  useEffect(() => {
+    let live = true;
+    fetch(`${API_URL}/api/discovery/sms/status`, { headers: authHeaders })
+      .then(r => r.json())
+      .then(d => { if (live && d.success) setSms(d); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [authHeaders]);
 
   const set = (key) => (e) => setForm(f => ({ ...f, [key]: e.target.value }));
 
@@ -194,14 +209,41 @@ export default function BookCallModal({
             />
           </div>
 
-          <label className="flex items-center gap-2.5 p-3 bg-gray-50 rounded-lg cursor-pointer">
-            <input
-              type="checkbox" checked={form.sendNotifications}
-              onChange={e => setForm(f => ({ ...f, sendNotifications: e.target.checked }))}
-              className="rounded border-gray-300 text-amber-600 focus:ring-amber-400"
-            />
-            <span className="text-sm text-gray-700">Send the confirmation text and email now</span>
-          </label>
+          <div className="rounded-lg bg-gray-50 overflow-hidden">
+            <label className="flex items-center gap-2.5 p-3 cursor-pointer">
+              <input
+                type="checkbox" checked={form.sendNotifications}
+                onChange={e => setForm(f => ({ ...f, sendNotifications: e.target.checked }))}
+                className="rounded border-gray-300 text-amber-600 focus:ring-amber-400"
+              />
+              <span className="text-sm text-gray-700">Send the confirmation text and email now</span>
+            </label>
+
+            {/* Only worth saying when a text is actually going out. The email path is
+                unaffected by any of this, so the wording never implies the whole
+                confirmation is broken — just the text half. */}
+            {form.sendNotifications && sms && (
+              <div className={`flex items-start gap-2 px-3 py-2.5 border-t text-xs ${
+                sms.level === 'ok' ? 'border-gray-200 text-gray-500'
+                  : sms.level === 'warn' ? 'border-amber-200 bg-amber-50 text-amber-800'
+                  : 'border-red-200 bg-red-50 text-red-700'}`}>
+                {sms.level === 'ok'
+                  ? <Check className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  : sms.level === 'warn'
+                    ? <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                    : <MessageSquare className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />}
+                <div className="min-w-0">
+                  <p className="font-semibold">{sms.summary}</p>
+                  {sms.detail && <p className="mt-0.5 leading-relaxed">{sms.detail}</p>}
+                  {!sms.ok && (
+                    <p className="mt-1 font-medium">
+                      The call still books and the email still goes out.
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
 
           {unreachable && (
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
