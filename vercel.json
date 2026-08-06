@@ -9,6 +9,11 @@
       "source": "/r/:id",
       "destination": "https://backend-production-ab50.up.railway.app/api/public/review-click/:id",
       "permanent": false
+    },
+    {
+      "source": "/c/:linkToken/:recipientToken",
+      "destination": "https://backend-production-ab50.up.railway.app/api/public/cc/:linkToken/:recipientToken",
+      "permanent": false
     }
   ],
   "rewrites": [

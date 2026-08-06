@@ -427,8 +427,78 @@ function EmailPreview({ html, onHeightChange }) {
 }
 
 // ── Past Campaigns ────────────────────────────────────────────
-function PastCampaigns({ history }) {
+// Per-campaign click detail, loaded on expand rather than with the list — most rows never
+// get opened, and the recipient breakdown is the expensive half of the query.
+function CampaignClicks({ apiUrl, authFetch, campaignId }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    let live = true;
+    authFetch(`${apiUrl}/api/email-campaigns/${campaignId}/clicks`)
+      .then(r => r.json())
+      .then(d => { if (live) { d.success ? setData(d) : setError(true); } })
+      .catch(() => { if (live) setError(true); });
+    return () => { live = false; };
+  }, [apiUrl, authFetch, campaignId]);
+
+  if (error) return <p className="text-xs text-gray-400 px-5 pb-3">Couldn't load click data.</p>;
+  if (!data) return <p className="text-xs text-gray-400 px-5 pb-3">Loading…</p>;
+
+  // A campaign sent before click tracking existed has no recipient rows, which would
+  // otherwise render as a confident "0 clicks" and send someone hunting a reporting bug.
+  if (!data.tracked) {
+    return <p className="text-xs text-gray-400 px-5 pb-3">This campaign was sent before click tracking was added.</p>;
+  }
+
+  return (
+    <div className="px-5 pb-4 space-y-3">
+      <div className="flex items-center gap-4 text-xs">
+        <span className="text-gray-700"><strong>{data.uniqueClickers}</strong> of {data.delivered} clicked</span>
+        {data.clickRate != null && (
+          <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">{data.clickRate}%</span>
+        )}
+        <span className="text-gray-400">{data.totalClicks} total click{data.totalClicks === 1 ? '' : 's'}</span>
+      </div>
+
+      {data.links.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Links</p>
+          {data.links.map(l => (
+            <div key={l.id} className="flex items-center gap-2 text-xs py-0.5">
+              <span className="text-gray-700 font-medium w-10 flex-shrink-0">{l.clicks}</span>
+              <span className="text-gray-500 truncate" title={l.destination}>{l.destination}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {data.recipients.length > 0 && (
+        <div>
+          <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide mb-1">Who clicked</p>
+          <div className="max-h-44 overflow-y-auto">
+            {data.recipients.map(r => (
+              <div key={r.email} className="flex items-center gap-2 text-xs py-0.5">
+                <a href={`mailto:${r.email}`} className="text-blue-600 hover:underline truncate flex-1">{r.email}</a>
+                <span className="text-gray-400 flex-shrink-0">
+                  {r.clicks}× · {new Date(r.last_click).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.recipients.length === 0 && (
+        <p className="text-xs text-gray-400">No clicks yet.</p>
+      )}
+    </div>
+  );
+}
+
+function PastCampaigns({ history, apiUrl, authFetch }) {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(null);
   const sent = history.filter(c => c.status === 'sent');
   if (sent.length === 0) return null;
 
@@ -448,15 +518,31 @@ function PastCampaigns({ history }) {
       {open && (
         <div className="divide-y divide-gray-100 bg-white border-t border-gray-100">
           {sent.slice(0, 10).map(c => (
-            <div key={c.id} className="flex items-center gap-3 px-5 py-3">
-              <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-800 truncate">{c.subject}</p>
-                <p className="text-xs text-gray-400">
-                  {new Date(c.sent_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                  {c.recipient_count ? ` · ${c.recipient_count} recipients` : ''}
-                </p>
-              </div>
+            <div key={c.id}>
+              <button
+                onClick={() => setExpanded(e => (e === c.id ? null : c.id))}
+                className="w-full flex items-center gap-3 px-5 py-3 text-left hover:bg-gray-50 transition-colors"
+              >
+                <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800 truncate">{c.subject}</p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(c.sent_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    {c.recipient_count ? ` · ${c.recipient_count} recipients` : ''}
+                  </p>
+                </div>
+                {c.unique_clickers > 0 && (
+                  <span className="text-xs font-semibold text-green-700 bg-green-50 rounded-full px-2 py-0.5 flex-shrink-0">
+                    {c.unique_clickers} clicked
+                  </span>
+                )}
+                {expanded === c.id
+                  ? <ChevronUp className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  : <ChevronDown className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+              </button>
+              {expanded === c.id && (
+                <CampaignClicks apiUrl={apiUrl} authFetch={authFetch} campaignId={c.id} />
+              )}
             </div>
           ))}
         </div>
@@ -1157,7 +1243,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
 
           {/* Past campaigns */}
           <div className="max-w-2xl mx-auto mt-5">
-            <PastCampaigns history={history} />
+            <PastCampaigns history={history} apiUrl={apiUrl} authFetch={authFetch} />
           </div>
 
           {/* Onboarding continue button */}
