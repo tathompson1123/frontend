@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Clock, Save, Phone, Mail, MapPin, Navigation, Plus, X, Briefcase, Users, Edit, Upload, Send, ShieldOff, Smartphone, MessageSquare, Shield, Trash2, FolderOpen, Link, Timer, GripVertical, Calendar, ToggleLeft, ToggleRight, CheckCircle, AlertCircle, ChevronRight, RotateCcw, Archive } from 'lucide-react';
-import { FileSpreadsheet } from 'lucide-react';
+import { FileSpreadsheet, FileText, Star } from 'lucide-react';
 import GoogleDriveTab from './GoogleDriveTab';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
@@ -56,7 +56,7 @@ function TimeInput({ value, onChange, className }) {
   );
 }
 
-function SortableServiceCard({ service, isAddon, categories, allServices, onEdit, onDelete, onOpenAddons }) {
+function SortableServiceCard({ service, isAddon, categories, allServices, onEdit, onDelete, onOpenAddons, onOpenDescriptions, descriptionCount }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: service.id });
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -119,6 +119,14 @@ function SortableServiceCard({ service, isAddon, categories, allServices, onEdit
               Configure add-ons for this service
             </button>
           )}
+          {/* Saved descriptions feed the "Description for the invoice" box on the
+              booking forms — the default one pre-fills it. */}
+          <button type="button" onClick={() => onOpenDescriptions(service)} className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1.5">
+            <FileText className="w-3.5 h-3.5" />
+            {descriptionCount > 0
+              ? `Invoice descriptions (${descriptionCount})`
+              : 'Add invoice descriptions'}
+          </button>
         </div>
         <div className="flex sm:flex-col flex-row gap-2 items-center justify-end sm:justify-start">
           <button
@@ -333,6 +341,16 @@ export default function BusinessInformation({
   const [addonsService, setAddonsService] = useState(null);
   const [addonSelections, setAddonSelections] = useState([]);
   const [isSavingAddons, setIsSavingAddons] = useState(false);
+
+  // Invoice description presets. Loaded once for all services so each service card can
+  // show its count; the modal edits one service's set at a time.
+  const [descriptionPresets, setDescriptionPresets] = useState([]);
+  const [showDescriptionsModal, setShowDescriptionsModal] = useState(false);
+  const [descriptionsService, setDescriptionsService] = useState(null);
+  const [descriptionDraft, setDescriptionDraft] = useState({ label: '', body: '', isDefault: false });
+  const [editingPresetId, setEditingPresetId] = useState(null);
+  const [isSavingPreset, setIsSavingPreset] = useState(false);
+  const [presetError, setPresetError] = useState(null);
 
   // Team State
   const colorPalette = [
@@ -1235,6 +1253,85 @@ export default function BusinessInformation({
       }
     } catch (err) { console.error(err); setAddonSelections([]); }
     setShowAddonsModal(true);
+  };
+
+  // ── Invoice description presets ────────────────────────────────────────────
+
+  const fetchDescriptionPresets = async () => {
+    try {
+      const res = await authFetch(`${apiUrl}/api/service-descriptions`);
+      const data = await res.json();
+      if (Array.isArray(data.presets)) setDescriptionPresets(data.presets);
+    } catch (err) {
+      console.error('Error loading description presets:', err);
+    }
+  };
+
+  useEffect(() => { fetchDescriptionPresets(); }, []);
+
+  const presetsForService = (serviceId) =>
+    descriptionPresets.filter(p => Number(p.service_id) === Number(serviceId));
+
+  const openDescriptionsModal = (service) => {
+    setDescriptionsService(service);
+    setDescriptionDraft({ label: '', body: '', isDefault: presetsForService(service.id).length === 0 });
+    setEditingPresetId(null);
+    setShowDescriptionsModal(true);
+  };
+
+  const handleSavePreset = async () => {
+    if (!descriptionsService) return;
+    if (!descriptionDraft.label.trim() || !descriptionDraft.body.trim()) return;
+    setPresetError(null);
+    setIsSavingPreset(true);
+    try {
+      const url = editingPresetId
+        ? `${apiUrl}/api/service-descriptions/${editingPresetId}`
+        : `${apiUrl}/api/service-descriptions`;
+      const res = await authFetch(url, {
+        method: editingPresetId ? 'PUT' : 'POST',
+        body: JSON.stringify({
+          serviceId: descriptionsService.id,
+          label: descriptionDraft.label.trim(),
+          body: descriptionDraft.body.trim(),
+          isDefault: descriptionDraft.isDefault,
+        }),
+      });
+      // authFetch only throws on 401, so a 400/500 lands here looking like success.
+      // Clearing the form on a failed save would destroy what the user just typed.
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setPresetError(data.error || 'Could not save that description. Please try again.');
+        return;
+      }
+      await fetchDescriptionPresets();
+      setDescriptionDraft({ label: '', body: '', isDefault: false });
+      setEditingPresetId(null);
+    } catch (err) {
+      console.error('Error saving description preset:', err);
+      setPresetError('Could not save that description. Please try again.');
+    } finally {
+      setIsSavingPreset(false);
+    }
+  };
+
+  const handleDeletePreset = async (presetId) => {
+    setPresetError(null);
+    try {
+      const res = await authFetch(`${apiUrl}/api/service-descriptions/${presetId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        setPresetError('Could not delete that description. Please try again.');
+        return;
+      }
+      await fetchDescriptionPresets();
+      if (editingPresetId === presetId) {
+        setEditingPresetId(null);
+        setDescriptionDraft({ label: '', body: '', isDefault: false });
+      }
+    } catch (err) {
+      console.error('Error deleting description preset:', err);
+      setPresetError('Could not delete that description. Please try again.');
+    }
   };
 
   const handleSaveAddons = async () => {
@@ -2252,6 +2349,8 @@ export default function BusinessInformation({
                           onEdit={handleEditService}
                           onDelete={handleDeleteService}
                           onOpenAddons={openAddonsModal}
+                          onOpenDescriptions={openDescriptionsModal}
+                          descriptionCount={presetsForService(service.id).length}
                         />
                       ))}
                     </div>
@@ -2305,6 +2404,8 @@ export default function BusinessInformation({
                           onEdit={handleEditService}
                           onDelete={handleDeleteService}
                           onOpenAddons={openAddonsModal}
+                          onOpenDescriptions={openDescriptionsModal}
+                          descriptionCount={presetsForService(service.id).length}
                         />
                       ))}
                     </div>
@@ -2312,6 +2413,138 @@ export default function BusinessInformation({
                 </DndContext>
               )}
             </>
+          )}
+
+          {/* Invoice Description Presets Modal.
+              These feed the "Description for the invoice" box under each service on
+              the booking forms (dashboard and employee app). The one marked default
+              pre-fills that box when the service is added to a booking. */}
+          {showDescriptionsModal && descriptionsService && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-8 max-h-[90vh] overflow-y-auto">
+                <h2 className="text-xl font-bold text-gray-900 mb-2">
+                  Invoice descriptions for "{descriptionsService.name}"
+                </h2>
+                <p className="text-sm text-gray-500 mb-6">
+                  Saved descriptions your team can pick when adding this service to a booking.
+                  The default one fills the box automatically.
+                </p>
+
+                <div className="space-y-2 mb-6">
+                  {presetsForService(descriptionsService.id).length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">
+                      No saved descriptions yet. Add one below.
+                    </p>
+                  ) : (
+                    presetsForService(descriptionsService.id).map(p => (
+                      <div key={p.id} className="p-3 border-2 border-gray-200 rounded-lg">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-semibold text-gray-900">{p.label}</span>
+                              {p.is_default && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 rounded-full text-xs font-semibold">
+                                  <Star className="w-3 h-3" /> Default
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mt-1 break-words">{p.body}</p>
+                          </div>
+                          <div className="flex gap-1 flex-shrink-0">
+                            <button
+                              type="button"
+                              title="Edit this description"
+                              onClick={() => {
+                                setEditingPresetId(p.id);
+                                setDescriptionDraft({ label: p.label, body: p.body, isDefault: p.is_default });
+                              }}
+                              className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-gray-100 rounded"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              title="Delete this description"
+                              onClick={() => handleDeletePreset(p.id)}
+                              className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-gray-100 rounded"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="border-t border-gray-200 pt-5 space-y-3">
+                  <h3 className="font-semibold text-gray-900">
+                    {editingPresetId ? 'Edit description' : 'Add a description'}
+                  </h3>
+                  {presetError && (
+                    <div className="flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                      <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                      <span>{presetError}</span>
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    value={descriptionDraft.label}
+                    onChange={(e) => setDescriptionDraft({ ...descriptionDraft, label: e.target.value })}
+                    placeholder="Short label, e.g. Standard full detail"
+                    maxLength={120}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+                  />
+                  <textarea
+                    value={descriptionDraft.body}
+                    onChange={(e) => setDescriptionDraft({ ...descriptionDraft, body: e.target.value })}
+                    placeholder="The text that appears on the invoice line"
+                    rows={3}
+                    maxLength={1000}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 resize-y"
+                  />
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={descriptionDraft.isDefault}
+                      onChange={(e) => setDescriptionDraft({ ...descriptionDraft, isDefault: e.target.checked })}
+                      className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    Use as the default for this service
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={handleSavePreset}
+                      disabled={isSavingPreset || !descriptionDraft.label.trim() || !descriptionDraft.body.trim()}
+                      className="flex-1 bg-indigo-600 text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-indigo-700 transition disabled:opacity-50"
+                    >
+                      {isSavingPreset ? 'Saving...' : editingPresetId ? 'Save changes' : 'Add description'}
+                    </button>
+                    {editingPresetId && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingPresetId(null);
+                          setDescriptionDraft({ label: '', body: '', isDefault: false });
+                        }}
+                        className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition"
+                      >
+                        Cancel edit
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => { setShowDescriptionsModal(false); setDescriptionsService(null); }}
+                  className="w-full mt-6 bg-gray-100 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-200 transition-colors"
+                >
+                  Done
+                </button>
+              </div>
+            </div>
           )}
 
           {/* Addons Configuration Modal */}

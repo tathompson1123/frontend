@@ -30,6 +30,15 @@ import {
   Target
 } from 'lucide-react';
 
+// Display names for payment processors. Clover is absent on purpose — it can't
+// create invoices via API, so it never appears as a draft target.
+const processorLabels = {
+  square: 'Square',
+  stripe: 'Stripe',
+  paypal: 'PayPal',
+  quickbooks: 'QuickBooks',
+};
+
 export default function BookingCalendar({ apiUrl, user, services, employees, authFetch, bookingPrefill, onBookingPrefillConsumed }) {
   const formatTime = (time24) => {
     if (!time24) return '';
@@ -81,9 +90,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   const [sendUpdateEmail, setSendUpdateEmail] = useState(false);
   const [serviceTab, setServiceTab] = useState('main');
   // mainServices / additionalServices are the unified per-line model: each entry is
-  // { id, price, priceTouched }. price is a string (user-typed) that auto-fills from the
-  // service's catalog price unless the user edits it (priceTouched=true). Service catalog
-  // rows are never affected by per-booking edits.
+  // { id, price, priceTouched, description }. price is a string (user-typed) that
+  // auto-fills from the service's catalog price unless the user edits it
+  // (priceTouched=true); description auto-fills from the service's default preset and
+  // is what lands on the invoice line. Service catalog rows are never affected by
+  // per-booking edits.
   const [newBooking, setNewBooking] = useState({
     customerId: '',
     customerName: '',
@@ -101,19 +112,105 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
   const [bookingFormSnapshot, setBookingFormSnapshot] = useState(null);
+  // Reusable line-item descriptions, keyed off the service. Loaded once; the picker
+  // under each service line offers these and the default one pre-fills the box.
+  const [descriptionPresets, setDescriptionPresets] = useState([]);
+  // Which processors this user can push a draft invoice into (and whether Clover is
+  // the only thing they've connected, which we have to explain rather than hide).
+  const [draftTargets, setDraftTargets] = useState({ connected: [], capable: [], cloverOnly: false });
+  const [draftingInvoiceFor, setDraftingInvoiceFor] = useState(null);
+  // Result of the last draft, surfaced as a banner with a link. A toast can't carry a
+  // clickable link and window.open after an await gets popup-blocked.
+  const [draftResult, setDraftResult] = useState(null);
 
   const isBookingDirty = () => bookingFormSnapshot && JSON.stringify(newBooking) !== bookingFormSnapshot;
 
+  // Presets for one service = its own, plus the global (service_id null) ones.
+  const presetsForService = (serviceId) => descriptionPresets.filter(
+    p => p.service_id === null || Number(p.service_id) === Number(serviceId)
+  );
+
+  const defaultDescriptionFor = (serviceId) =>
+    descriptionPresets.find(p => p.is_default && Number(p.service_id) === Number(serviceId))?.body || '';
+
   // Build a service line for the form from a catalog row (or a booking_items row on edit).
   // priceTouched flags "user overrode the price" so the Reset chip can show.
-  const buildServiceLine = (serviceId, priceOverride) => {
+  //
+  // descriptionTouched is the equivalent for the description, and it matters: presets
+  // load asynchronously, so a brand-new line built before they arrive gets ''. Marking
+  // it untouched lets the submit step omit the field entirely, and the backend fills in
+  // the service's default preset. Without that flag, an early-opened form would save a
+  // blank description over a perfectly good default.
+  const buildServiceLine = (serviceId, priceOverride, description) => {
     const svc = services.find(s => s.id == serviceId);
     const listed = svc ? parseFloat(svc.price) : 0;
     const hasOverride = priceOverride !== undefined && priceOverride !== null && priceOverride !== '';
     const overridePrice = hasOverride ? parseFloat(priceOverride) : NaN;
     const isCustom = hasOverride && Number.isFinite(overridePrice) && Math.abs(overridePrice - listed) > 0.001;
     const price = (hasOverride && Number.isFinite(overridePrice) ? overridePrice : listed).toFixed(2);
-    return { id: Number(serviceId), price, priceTouched: isCustom };
+    // On edit the stored value is authoritative — pass it through verbatim (including
+    // '') and mark it touched so a deliberately cleared description stays cleared.
+    const isStored = description !== undefined && description !== null;
+    return {
+      id: Number(serviceId),
+      price,
+      priceTouched: isCustom,
+      description: isStored ? String(description) : defaultDescriptionFor(serviceId),
+      descriptionTouched: isStored,
+    };
+  };
+
+  // Create a DRAFT invoice inside the merchant's payment processor. The invoice is
+  // NOT sent — it lands in Square/Stripe/PayPal/QuickBooks for a human to review and
+  // send from there. Opens the processor's page for the draft on success.
+  const createDraftInvoice = async (booking, processor) => {
+    if (!booking?.id) return;
+    setDraftResult(null);
+    setDraftingInvoiceFor(booking.id);
+    try {
+      const response = await authFetch(`${apiUrl}/api/invoices/draft-from-booking/${booking.id}`, {
+        method: 'POST',
+        body: JSON.stringify(processor ? { processor } : {}),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        showToast(data.error || 'Failed to create draft invoice', 'error');
+        return;
+      }
+      const label = processorLabels[data.processor] || data.processor;
+      // Deliberately NOT window.open() — this runs after two awaits, so it's outside
+      // the user-gesture window and every browser blocks it. Surface a link instead.
+      setDraftResult({
+        invoiceNumber: data.invoiceNumber,
+        label,
+        reviewUrl: data.reviewUrl || null,
+        alreadyExisted: !!data.alreadyExisted,
+      });
+      showToast(
+        data.alreadyExisted
+          ? `Invoice ${data.invoiceNumber} was already drafted in ${label}.`
+          : `Draft invoice ${data.invoiceNumber} created in ${label}. The customer was not emailed.`
+      );
+      fetchAllBookings();
+    } catch (error) {
+      console.error('Error creating draft invoice:', error);
+      showToast('Failed to create draft invoice', 'error');
+    } finally {
+      setDraftingInvoiceFor(null);
+    }
+  };
+
+  // Client-side mirror of backend utils/customerContact.js. Returns an error string,
+  // or null when the contact block is good.
+  const validateBookingContact = ({ customerEmail, customerPhone }) => {
+    const email = (customerEmail || '').trim();
+    const phone = (customerPhone || '').trim();
+    if (!email) return 'Customer email is required to complete a booking';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return 'Enter a valid customer email address';
+    if (!phone) return 'Customer phone number is required to complete a booking';
+    const digits = (phone.match(/\d/g) || []).length;
+    if (digits < 10 || digits > 15) return 'Enter a valid customer phone number';
+    return null;
   };
 
   // Parse a per-line price field into the wire shape. Empty / NaN / negative omits the
@@ -148,7 +245,34 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   useEffect(() => {
     fetchAllBookings();
     fetchGroups();
+    fetchDescriptionPresets();
+    fetchDraftTargets();
   }, []);
+
+  // The draft banner belongs to one booking — drop it when a different one is opened,
+  // or it reads as if the new booking was just drafted.
+  useEffect(() => { setDraftResult(null); }, [selectedBooking?.id]);
+
+  const fetchDescriptionPresets = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/service-descriptions`);
+      const data = await response.json();
+      if (Array.isArray(data.presets)) setDescriptionPresets(data.presets);
+    } catch (error) {
+      // Non-fatal: the description box still works as free text without presets.
+      console.error('Error fetching description presets:', error);
+    }
+  };
+
+  const fetchDraftTargets = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/invoices/draft-targets`);
+      const data = await response.json();
+      if (data && Array.isArray(data.capable)) setDraftTargets(data);
+    } catch (error) {
+      console.error('Error fetching draft invoice targets:', error);
+    }
+  };
 
   const fetchGroups = async () => {
     try {
@@ -432,10 +556,28 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       showToast('Please fill in all required fields', 'error');
       return;
     }
+    // Email and phone gate the booking — a customer without either can't be sent a
+    // confirmation or an invoice. Mirrors the backend check so the user gets the
+    // message inline rather than as a server error.
+    const contactError = validateBookingContact(newBooking);
+    if (contactError) {
+      showToast(contactError, 'error');
+      return;
+    }
     setCreatingBooking(true);
-    // Per-line price override on each main + add-on. The backend re-applies the catalog
-    // price when a line omits its price, so untouched lines round-trip safely.
-    const toWire = (line) => ({ id: line.id, price: linePriceForApi(line) });
+    // Per-line price override plus the typed description on each main + add-on. The
+    // backend re-applies the catalog price when a line omits its price, so untouched
+    // lines round-trip safely.
+    //
+    // `description` is OMITTED entirely when untouched, which is what lets the backend
+    // apply the service's default preset. Sending '' would mean "deliberately cleared".
+    // That distinction matters because presets load asynchronously: a form opened
+    // before they arrive would otherwise save a blank over a good default.
+    const toWire = (line) => {
+      const wire = { id: line.id, price: linePriceForApi(line) };
+      if (line.descriptionTouched) wire.description = line.description || '';
+      return wire;
+    };
     const mainServices = newBooking.mainServices.map(toWire);
     const additionalServices = newBooking.additionalServices.map(toWire);
     try {
@@ -705,9 +847,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   // they predate add-on splitting; the user can re-categorize on save.
                   const items = booking.items || [];
                   const mains = items.filter(i => !i.is_addon)
-                    .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
+                    .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price, i.description ?? ''));
                   const addons = items.filter(i => i.is_addon)
-                    .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
+                    .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price, i.description ?? ''));
                   const editForm = {
                     customerId: booking.customer_id,
                     customerName: booking.customer_name,
@@ -1474,9 +1616,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     // is_addon=true go in the Additional Services tab, the rest are mains.
                     const items = selectedBooking.items || [];
                     const mains = items.filter(i => !i.is_addon)
-                      .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
+                      .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price, i.description ?? ''));
                     const addons = items.filter(i => i.is_addon)
-                      .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price));
+                      .map(i => buildServiceLine(i.service_id, i.price ?? i.service_price, i.description ?? ''));
                     const editForm = {
                       customerId: selectedBooking.customer_id,
                       customerName: selectedBooking.customer_name,
@@ -1512,6 +1654,48 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     Send Card Link
                   </button>
                 )}
+                {/* Draft invoice: creates the invoice inside the merchant's own
+                    processor and stops. Nothing is emailed to the customer. Hidden
+                    unless a draft-capable processor is connected; Clover-only users
+                    get an explanation instead, since Clover has no invoicing API.
+                    The result banner renders below the action row. */}
+                {draftTargets.capable.length > 0 ? (
+                  <div className="relative inline-flex">
+                    <button
+                      type="button"
+                      disabled={draftingInvoiceFor === selectedBooking.id}
+                      onClick={() => createDraftInvoice(selectedBooking)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      title={`Create a draft invoice in ${processorLabels[draftTargets.capable[0]] || draftTargets.capable[0]} for review`}
+                    >
+                      <FileText className="w-4 h-4" />
+                      {draftingInvoiceFor === selectedBooking.id
+                        ? 'Creating draft…'
+                        : `Draft Invoice in ${processorLabels[draftTargets.capable[0]] || draftTargets.capable[0]}`}
+                    </button>
+                    {/* More than one connected? Offer the others too. */}
+                    {draftTargets.capable.length > 1 && (
+                      <select
+                        value=""
+                        onChange={(e) => {
+                          if (e.target.value) createDraftInvoice(selectedBooking, e.target.value);
+                        }}
+                        className="ml-1 px-2 py-1.5 border border-gray-300 rounded-lg text-sm bg-white text-gray-700"
+                        title="Draft into a different processor"
+                      >
+                        <option value="">Other…</option>
+                        {draftTargets.capable.slice(1).map(p => (
+                          <option key={p} value={p}>{processorLabels[p] || p}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ) : draftTargets.cloverOnly && (
+                  <span className="px-3 py-1.5 text-xs text-gray-600 bg-gray-100 border border-gray-200 rounded-lg max-w-xs">
+                    Clover has no invoicing API, so drafts can't be created there.
+                    Connect Square, Stripe, PayPal or QuickBooks in Payment Settings.
+                  </span>
+                )}
                 <button
                   type="button"
                   onClick={() => deleteBooking(selectedBooking.id)}
@@ -1521,6 +1705,39 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   Delete
                 </button>
               </div>
+              {/* Where the draft actually went. Rendered as a real link rather than
+                  auto-opening a tab, which browsers block after an async call. */}
+              {draftResult && (
+                <div className="mt-3 flex items-start gap-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+                  <FileText className="w-4 h-4 text-indigo-600 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-indigo-900 flex-1">
+                    {draftResult.alreadyExisted
+                      ? `Invoice ${draftResult.invoiceNumber} was already drafted in ${draftResult.label}.`
+                      : `Draft invoice ${draftResult.invoiceNumber} is waiting in ${draftResult.label}. The customer has not been emailed.`}
+                    {draftResult.reviewUrl && (
+                      <>
+                        {' '}
+                        <a
+                          href={draftResult.reviewUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-semibold underline hover:text-indigo-700"
+                        >
+                          Open it in {draftResult.label}
+                        </a>
+                      </>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDraftResult(null)}
+                    className="text-indigo-400 hover:text-indigo-600"
+                    title="Dismiss"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="p-6 space-y-6">
@@ -2018,24 +2235,33 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                       required
                     />
                   </div>
+                  {/* Email and phone are both required: the confirmation, reminders and
+                      any invoice go to the email, and the crew and SMS pipeline need the
+                      phone. The backend rejects a booking without them too. */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Email <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="email"
                       value={newBooking.customerEmail}
                       onChange={(e) => setNewBooking({ ...newBooking, customerEmail: e.target.value })}
                       placeholder="john@example.com"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                      required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Phone <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="tel"
                       value={newBooking.customerPhone}
                       onChange={(e) => setNewBooking({ ...newBooking, customerPhone: e.target.value })}
                       placeholder="(555) 123-4567"
                       className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500"
+                      required
                     />
                   </div>
                   <div>
@@ -2132,6 +2358,50 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                             <p className="mt-1.5 text-xs text-gray-500">
                               Listed at ${listed.toFixed(2)}. Edit for one-off adjustments — the service price itself isn't affected.
                             </p>
+
+                            {/* Per-line description. This is the text that shows on the
+                                invoice line, so it's worth being specific here. */}
+                            {(() => {
+                              const presets = presetsForService(line.id);
+                              return (
+                                <div className="mt-3 pt-3 border-t border-gray-100">
+                                  <div className="flex items-center justify-between gap-2 mb-1">
+                                    <label className="block text-xs font-medium text-gray-700">
+                                      Description for the invoice
+                                    </label>
+                                    {presets.length > 0 && (
+                                      <select
+                                        value=""
+                                        onChange={(e) => {
+                                          const preset = presets.find(p => String(p.id) === e.target.value);
+                                          if (preset) updateLine({ description: preset.body, descriptionTouched: true });
+                                        }}
+                                        className="text-xs border border-gray-300 rounded-md px-2 py-1 bg-white text-gray-700 focus:outline-none focus:border-green-500 max-w-[55%]"
+                                        title="Insert a saved description"
+                                      >
+                                        <option value="">Use a saved description…</option>
+                                        {presets.map(p => (
+                                          <option key={p.id} value={p.id}>
+                                            {p.label}{p.service_id === null ? ' (any service)' : ''}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    )}
+                                  </div>
+                                  <textarea
+                                    value={line.description || ''}
+                                    onChange={(e) => updateLine({ description: e.target.value, descriptionTouched: true })}
+                                    rows={2}
+                                    maxLength={1000}
+                                    placeholder="What's actually being done — e.g. Interior + exterior detail, clay bar, sealant"
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:border-green-500 resize-y"
+                                  />
+                                  <p className="mt-1 text-xs text-gray-500">
+                                    Appears as this line's description on the invoice. Leave blank to show just the service name.
+                                  </p>
+                                </div>
+                              );
+                            })()}
                           </div>
                         </div>
                       </div>
