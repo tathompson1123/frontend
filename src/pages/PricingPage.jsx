@@ -3,39 +3,50 @@ import { useNavigate } from 'react-router-dom';
 import { Check, X, ArrowRight, Sparkles, Crown, TrendingUp, Zap, MessageSquare, Mail, Star, ChevronDown } from 'lucide-react';
 import AuthModal from '../components/AuthModal';
 
-const ENTERPRISE_REASONS = [
+// This page is served from the marketing host, where vercel.json rewrites every
+// unmatched path to index.html — so a relative /api/... fetch quietly resolves to the
+// SPA's own HTML with a 200. The backend has to be addressed absolutely.
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const SCALE_REASONS = [
+  'More SMS / chat volume than Pro allows',
   'Multi-location business',
-  'High SMS / chat volume needs',
   'White-label / agency use',
   'Custom integrations required',
   'Other',
 ];
 
-function EnterpriseModal({ onClose }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', reason: '', details: '' });
+function ScaleQuoteModal({ onClose }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', volume: '', reason: '', details: '' });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setError(null);
     try {
-      await fetch('/api/billing/enterprise-inquiry', {
+      // Only claim success on an actual success. This is the only way to buy Scale, so
+      // a swallowed failure is a lost sale that nobody finds out about.
+      const res = await fetch(`${API_URL}/api/billing/enterprise-inquiry`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
       });
+      if (!res.ok) throw new Error('Request failed');
       setSubmitted(true);
-    } catch { setSubmitted(true); } // show success even if fetch fails
-    finally { setSubmitting(false); }
+    } catch {
+      setError("That didn't go through. Try again, or email support@sorceintegrations.com and we'll quote you directly.");
+    } finally { setSubmitting(false); }
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-2xl p-6 text-white">
-          <h2 className="text-xl font-bold mb-1">Enterprise Inquiry</h2>
-          <p className="text-gray-300 text-sm">Tell us about your business and we'll reach out within 1 business day.</p>
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-t-2xl p-6 text-white">
+          <h2 className="text-xl font-bold mb-1">Get a Scale quote</h2>
+          <p className="text-white/80 text-sm">Scale is priced on your customer volume. Tell us your numbers and we'll come back within 1 business day.</p>
         </div>
         {submitted ? (
           <div className="p-8 text-center">
@@ -43,7 +54,7 @@ function EnterpriseModal({ onClose }) {
               <Check className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Request Received!</h3>
-            <p className="text-gray-600 text-sm mb-6">Our sales team will reach out within 1 business day.</p>
+            <p className="text-gray-600 text-sm mb-6">We'll get you a Scale price within 1 business day.</p>
             <button onClick={onClose} className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition">Close</button>
           </div>
         ) : (
@@ -71,12 +82,18 @@ function EnterpriseModal({ onClose }) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="(555) 000-0000" />
             </div>
             <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">New customers or leads per month *</label>
+              <input required value={form.volume} onChange={e => setForm(f => ({ ...f, volume: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="e.g. 400" />
+              <p className="text-[11px] text-gray-400 mt-1">A rough number is fine — it's what we price against.</p>
+            </div>
+            <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Primary Need *</label>
               <div className="relative">
                 <select required value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 appearance-none bg-white pr-8">
                   <option value="">Select...</option>
-                  {ENTERPRISE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  {SCALE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -87,10 +104,13 @@ function EnterpriseModal({ onClose }) {
                 rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
                 placeholder="Number of locations, monthly volume, specific requirements..." />
             </div>
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>
+            )}
             <div className="flex gap-3 pt-1">
-              <button type="submit" disabled={submitting || !form.name || !form.email || !form.phone || !form.company || !form.reason}
-                className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition disabled:opacity-50">
-                {submitting ? 'Sending...' : 'Submit Inquiry'}
+              <button type="submit" disabled={submitting || !form.name || !form.email || !form.phone || !form.company || !form.volume || !form.reason}
+                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm hover:shadow-lg transition disabled:opacity-50">
+                {submitting ? 'Sending...' : 'Request my quote'}
               </button>
               <button type="button" onClick={onClose} className="px-5 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">Cancel</button>
             </div>
@@ -105,10 +125,11 @@ export default function PricingPage() {
   const navigate = useNavigate();
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [authMode, setAuthMode] = useState('signup');
-  const [showEnterpriseModal, setShowEnterpriseModal] = useState(false);
+  const [showQuoteModal, setShowQuoteModal] = useState(false);
 
   const handleSelectPlan = (plan) => {
-    if (plan.enterprise) { setShowEnterpriseModal(true); return; }
+    // Scale is priced on volume, so it opens the quote form rather than signup.
+    if (plan.quoted) { setShowQuoteModal(true); return; }
     if (plan.id === null) return;
     // Remember which plan they picked so billing can pick it up after onboarding
     localStorage.setItem('sorce_pending_plan', JSON.stringify({ plan: plan.id, price: plan.price, billing: 'monthly' }));
@@ -134,7 +155,7 @@ export default function PricingPage() {
     {
       id: 'pro',
       name: 'Pro',
-      price: 99.95,
+      price: 195,
       description: 'Full AI automation for growing businesses',
       icon: Crown,
       gradient: 'from-blue-600 to-purple-600',
@@ -159,42 +180,25 @@ export default function PricingPage() {
     {
       id: 'scale',
       name: 'Scale',
-      price: 175.95,
-      description: 'More capacity for high-volume businesses',
+      // Quoted per customer against their volume, so there's no figure to print —
+      // `priceNote` takes the price slot instead.
+      price: null,
+      priceNote: 'Tailored to your customer volume',
+      description: 'For businesses past what Pro can hold',
       icon: TrendingUp,
       gradient: 'from-purple-600 to-pink-600',
-      trial: '1-week free trial',
-      smsLimit: 500,
       features: [
         { text: 'Everything in Pro', included: true, bold: true },
-        { text: '500 SMS follow-ups / month (5× Pro)', included: true, highlight: true },
-        { text: 'Higher chat conversation volume', included: true, highlight: true },
+        { text: 'SMS volume set to your business, from 500 / month', included: true, highlight: true },
+        { text: 'Unlimited chat conversations', included: true, highlight: true },
+        { text: 'Multi-location support', included: true, highlight: true },
         { text: 'White-label branding', included: true, soon: true },
         { text: 'Dedicated account manager', included: true, soon: true },
         { text: 'Custom API integrations', included: true, soon: true },
       ],
-      cta: 'Start free trial',
+      cta: 'Get a quote',
       ctaClass: 'bg-gradient-to-r from-purple-600 to-pink-600 hover:shadow-xl',
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      price: null,
-      description: 'Custom solutions for large or multi-location businesses',
-      icon: Star,
-      gradient: 'from-gray-700 to-gray-900',
-      features: [
-        { text: 'Everything in Scale', included: true, bold: true },
-        { text: 'Unlimited SMS & chat responses', included: true, highlight: true },
-        { text: 'Multi-location support', included: true, highlight: true },
-        { text: 'White-label branding', included: true, highlight: true },
-        { text: 'Dedicated account manager', included: true },
-        { text: 'Custom API integrations', included: true },
-        { text: 'Custom onboarding & training', included: true },
-      ],
-      cta: 'Contact Sales',
-      ctaClass: 'bg-gray-900 hover:bg-gray-800',
-      enterprise: true,
+      quoted: true,
     },
   ];
 
@@ -221,7 +225,7 @@ export default function PricingPage() {
 
         {/* Value breakdown */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-12 border border-blue-100">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Pro Plan = $427/month of tools for $99.95 — try free for 1 week</h2>
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Pro Plan = $427/month of tools for $195 — try free for 1 week</h2>
           <p className="text-center text-gray-500 text-sm mb-8">Everything bundled — no separate subscriptions needed</p>
           <div className="grid md:grid-cols-4 gap-4">
             {valueItems.map((item) => {
@@ -241,13 +245,14 @@ export default function PricingPage() {
           <div className="text-center mt-6">
             <span className="text-gray-500 line-through mr-2">$427/month</span>
             <ArrowRight className="inline w-4 h-4 text-gray-400 mr-2" />
-            <span className="text-2xl font-bold text-green-600">$99.95/month</span>
-            <span className="ml-3 bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full">Save 78%</span>
+            <span className="text-2xl font-bold text-green-600">$195/month</span>
+            <span className="ml-3 bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full">Save 54%</span>
           </div>
         </div>
 
         {/* Plans */}
-        <div className="grid md:grid-cols-3 gap-6 mb-16 items-start" style={{gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
+        {/* Two plans now, so don't stretch them across three columns */}
+        <div className="grid md:grid-cols-2 gap-6 mb-16 items-start max-w-4xl mx-auto">
           {plans.map((plan) => {
             const Icon = plan.icon;
             return (
@@ -274,12 +279,19 @@ export default function PricingPage() {
                   </div>
 
                   <div className="mb-6">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-5xl font-bold text-gray-900">
-                        {plan.price === 0 ? 'Free' : `$${plan.price}`}
-                      </span>
-                      {plan.price > 0 && <span className="text-gray-500">/month</span>}
-                    </div>
+                    {plan.price == null ? (
+                      <>
+                        <span className="text-5xl font-bold text-gray-900">Custom</span>
+                        <p className="text-sm text-gray-600 mt-1">{plan.priceNote}</p>
+                      </>
+                    ) : (
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-5xl font-bold text-gray-900">
+                          {plan.price === 0 ? 'Free' : `$${plan.price}`}
+                        </span>
+                        {plan.price > 0 && <span className="text-gray-500">/month</span>}
+                      </div>
+                    )}
                     {plan.trial && (
                       <p className="text-xs text-green-600 font-semibold mt-1 bg-green-50 inline-block px-2 py-0.5 rounded-full">{plan.trial}</p>
                     )}
@@ -324,7 +336,7 @@ export default function PricingPage() {
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Frequently Asked Questions</h2>
           <div className="grid md:grid-cols-2 gap-6">
             {[
-              { q: 'What is the SMS Lead Agent?', a: 'When someone submits your contact form or books a service, our AI automatically texts them within 60 seconds with a personalized follow-up. Pro includes 100 texts/month; Scale includes 500.' },
+              { q: 'What is the SMS Lead Agent?', a: 'When someone submits your contact form or books a service, our AI automatically texts them within 60 seconds with a personalized follow-up. Pro includes 100 texts/month. Scale is sized to your volume and starts at 500.' },
               { q: 'How does the AI Email Marketing work?', a: 'Every week, SORCE generates an irresistible promotional offer tailored to your business and sends it to all past customers automatically. You set it up once and it runs on autopilot.' },
               { q: 'Can I cancel or change plans anytime?', a: 'Yes — upgrade, downgrade, or cancel at any time. Changes take effect at your next billing period.' },
               { q: 'Do I need technical knowledge?', a: 'Not at all. Just describe your business, and our AI builds and manages everything for you.' },
@@ -349,7 +361,7 @@ export default function PricingPage() {
         onModeChange={setAuthMode}
         onSuccess={handleSignupSuccess}
       />
-      {showEnterpriseModal && <EnterpriseModal onClose={() => setShowEnterpriseModal(false)} />}
+      {showQuoteModal && <ScaleQuoteModal onClose={() => setShowQuoteModal(false)} />}
     </div>
   );
 }

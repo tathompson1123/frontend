@@ -28,7 +28,7 @@ const plans = [
     id: 'pro',
     name: 'Pro',
     tagline: 'AI-powered automation',
-    price: 69.95,
+    price: 195,
     icon: Crown,
     gradient: 'from-blue-500 to-purple-600',
     popular: true,

@@ -11,9 +11,11 @@ const STRIPE_PK =
   import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY ||
   import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 
+// Scale is `quoted` — it has no list price, so picking it asks for the monthly amount
+// agreed on the call rather than charging a number nobody agreed to.
 const PLANS = [
-  { id: 'pro',   label: 'Pro',   price: 99.95 },
-  { id: 'scale', label: 'Scale', price: 175.95 },
+  { id: 'pro',   label: 'Pro',   price: 195 },
+  { id: 'scale', label: 'Scale', quoted: true },
   { id: '',      label: 'No plan — offer only', price: 0 },
 ];
 
@@ -49,6 +51,7 @@ export default function CollectPayment({ token, onClose, onDone, prefill }) {
   }, [prefill?.email, token]);
 
   const [plan, setPlan] = useState('pro');
+  const [monthlyAmount, setMonthlyAmount] = useState('');   // only for quoted plans
   const [trialDays, setTrialDays] = useState('');
   const [offerAmount, setOfferAmount] = useState('');
   const [offerDescription, setOfferDescription] = useState('');
@@ -82,17 +85,24 @@ export default function CollectPayment({ token, onClose, onDone, prefill }) {
     return () => clearTimeout(t);
   }, [query, authHeaders]);
 
+  const isQuotedPlan = PLANS.find(p => p.id === plan)?.quoted === true;
+
   const payload = () => ({
     userId: target?.id || null,
     email: target?.email || manual.email,
     name: target?.business_name || manual.name,
     plan,
+    monthlyAmount: isQuotedPlan && monthlyAmount ? Number(monthlyAmount) : null,
     trialDays: trialDays || null,
     offerAmount: offerAmount ? Number(offerAmount) : 0,
     offerDescription,
   });
 
-  const valid = (target || (manual.email.trim() && manual.name.trim())) && (plan || offerAmount);
+  // A quoted plan without an amount would silently bill the fallback list price, so
+  // hold the button until it's been typed in.
+  const valid = (target || (manual.email.trim() && manual.name.trim()))
+    && (plan || offerAmount)
+    && (!isQuotedPlan || Number(monthlyAmount) > 0);
   const who = () => target?.business_name || target?.email || manual.name || manual.email || 'them';
 
   const createLink = async () => {
@@ -220,9 +230,26 @@ export default function CollectPayment({ token, onClose, onDone, prefill }) {
                 >
                   {p.label}
                   {p.price > 0 && <span className="block text-[11px] font-normal text-gray-500">${p.price}/mo</span>}
+                  {p.quoted && <span className="block text-[11px] font-normal text-gray-500">quoted</span>}
                 </button>
               ))}
             </div>
+            {isQuotedPlan && (
+              <div className="mt-2">
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                  <input
+                    type="number" min="0.5" step="0.01" value={monthlyAmount}
+                    onChange={e => setMonthlyAmount(e.target.value)}
+                    placeholder="Monthly amount you quoted"
+                    className="w-full pl-7 pr-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-amber-500 focus:outline-none"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">
+                  Scale is priced on their customer volume — this is what recurs each month.
+                </p>
+              </div>
+            )}
             {plan && (
               <input
                 type="number" min="0" value={trialDays} onChange={e => setTrialDays(e.target.value)}

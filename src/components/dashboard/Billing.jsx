@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle, ArrowUpRight, Phone, ChevronDown, Star } from 'lucide-react';
+import { Check, X, Sparkles, Crown, Zap, TrendingUp, MessageSquare, Mail, AlertTriangle, ArrowUpRight, Phone, ChevronDown } from 'lucide-react';
 
 const PLAN_LEVEL = { pro: 1, scale: 2 };
 
+// `price: null` means the plan is quoted per customer, so nothing here should print a
+// figure for it — show PRICE_NOTE instead.
 const PLAN_META = {
   basic:  { name: 'Basic',  price: 29.95,  color: 'from-gray-500 to-gray-600',    icon: Sparkles,   smsLimit: 100,  chatLimit: 200  }, // legacy
-  pro:    { name: 'Pro',    price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 100,  chatLimit: 500  },
-  scale:  { name: 'Scale',  price: 175.95, color: 'from-purple-500 to-pink-600',   icon: TrendingUp, smsLimit: 500,  chatLimit: 99999 },
+  pro:    { name: 'Pro',    price: 195,    color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 100,  chatLimit: 500  },
+  scale:  { name: 'Scale',  price: null,   color: 'from-purple-500 to-pink-600',   icon: TrendingUp, smsLimit: 500,  chatLimit: 99999 },
   expert: { name: 'Expert', price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 200,  chatLimit: 500  }, // legacy
 };
+
+const PRICE_NOTE = 'Tailored to your customer volume';
 
 function UsageMeter({ label, used, limit, color = 'blue', upgradeNote }) {
   const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0;
@@ -156,38 +160,44 @@ function ContactSalesForm({ apiUrl, authFetch, onClose, onSuccess }) {
   );
 }
 
-const ENTERPRISE_REASONS = [
+const SCALE_REASONS = [
+  'More SMS / chat volume than Pro allows',
   'Multi-location business',
-  'High SMS / chat volume needs',
   'White-label / agency use',
   'Custom API integrations required',
   'Other',
 ];
 
-function EnterpriseInquiryModal({ apiUrl, authFetch, onClose }) {
-  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', reason: '', details: '' });
+function ScaleQuoteModal({ apiUrl, authFetch, onClose }) {
+  const [form, setForm] = useState({ name: '', email: '', phone: '', company: '', volume: '', reason: '', details: '' });
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
+    setError(null);
     try {
-      await authFetch(`${apiUrl}/api/billing/enterprise-inquiry`, {
+      // Only claim success on an actual success — this is the only way to buy Scale, so
+      // a swallowed failure is a lost sale that nobody finds out about.
+      const res = await authFetch(`${apiUrl}/api/billing/enterprise-inquiry`, {
         method: 'POST',
         body: JSON.stringify(form),
       });
+      if (res && res.ok === false) throw new Error('Request failed');
       setSubmitted(true);
-    } catch { setSubmitted(true); }
-    finally { setSubmitting(false); }
+    } catch {
+      setError("That didn't go through. Try again, or email support@sorceintegrations.com and we'll quote you directly.");
+    } finally { setSubmitting(false); }
   };
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
-        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-t-2xl p-6 text-white">
-          <h2 className="text-xl font-bold mb-1">Enterprise Inquiry</h2>
-          <p className="text-gray-300 text-sm">Tell us about your business and we'll reach out within 1 business day.</p>
+        <div className="bg-gradient-to-r from-purple-600 to-pink-600 rounded-t-2xl p-6 text-white">
+          <h2 className="text-xl font-bold mb-1">Get a Scale quote</h2>
+          <p className="text-white/80 text-sm">Scale is priced on your customer volume. Tell us your numbers and we'll come back within 1 business day.</p>
         </div>
         {submitted ? (
           <div className="p-8 text-center">
@@ -195,7 +205,7 @@ function EnterpriseInquiryModal({ apiUrl, authFetch, onClose }) {
               <Check className="w-8 h-8 text-green-600" />
             </div>
             <h3 className="text-xl font-bold text-gray-900 mb-2">Request Received!</h3>
-            <p className="text-gray-600 text-sm mb-6">Our sales team will reach out within 1 business day.</p>
+            <p className="text-gray-600 text-sm mb-6">We'll get you a Scale price within 1 business day.</p>
             <button onClick={onClose} className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-semibold text-sm hover:bg-gray-800 transition">Close</button>
           </div>
         ) : (
@@ -223,12 +233,18 @@ function EnterpriseInquiryModal({ apiUrl, authFetch, onClose }) {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="(555) 000-0000" />
             </div>
             <div>
+              <label className="block text-xs font-semibold text-gray-700 mb-1">New customers or leads per month *</label>
+              <input required value={form.volume} onChange={e => setForm(f => ({ ...f, volume: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" placeholder="e.g. 400" />
+              <p className="text-[11px] text-gray-400 mt-1">A rough number is fine — it's what we price against.</p>
+            </div>
+            <div>
               <label className="block text-xs font-semibold text-gray-700 mb-1">Primary Need *</label>
               <div className="relative">
                 <select required value={form.reason} onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 appearance-none bg-white pr-8">
                   <option value="">Select...</option>
-                  {ENTERPRISE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  {SCALE_REASONS.map(r => <option key={r} value={r}>{r}</option>)}
                 </select>
                 <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-gray-400 pointer-events-none" />
               </div>
@@ -239,10 +255,13 @@ function EnterpriseInquiryModal({ apiUrl, authFetch, onClose }) {
                 rows={3} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
                 placeholder="Number of locations, monthly volume, specific requirements..." />
             </div>
+            {error && (
+              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">{error}</p>
+            )}
             <div className="flex gap-3 pt-1">
-              <button type="submit" disabled={submitting || !form.name || !form.email || !form.phone || !form.company || !form.reason}
-                className="flex-1 py-3 bg-gray-900 text-white rounded-xl font-bold text-sm hover:bg-gray-800 transition disabled:opacity-50">
-                {submitting ? 'Sending...' : 'Submit Inquiry'}
+              <button type="submit" disabled={submitting || !form.name || !form.email || !form.phone || !form.company || !form.volume || !form.reason}
+                className="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm hover:shadow-lg transition disabled:opacity-50">
+                {submitting ? 'Sending...' : 'Request my quote'}
               </button>
               <button type="button" onClick={onClose} className="px-5 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold text-sm hover:bg-gray-200 transition">Cancel</button>
             </div>
@@ -261,7 +280,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
   const [subscription, setSubscription] = useState(null);
   const [showContactForm, setShowContactForm] = useState(false);
   const [contactSuccess, setContactSuccess] = useState(false);
-  const [showEnterprise, setShowEnterprise] = useState(false);
+  const [showScaleQuote, setShowScaleQuote] = useState(false);
 
   // Depend on primitive fields, not the user object reference. The Dashboard re-creates
   // `user` on every `user-updated` event, which previously caused an infinite fetch loop.
@@ -300,6 +319,9 @@ export default function Billing({ user, apiUrl, authFetch }) {
   const handleUpgrade = async (planId) => {
     const bp = basePlan || currentPlan;
     if (planId === bp) return;
+    // Scale has no self-serve price to check out with — it's quoted. Send them to the
+    // form instead of a 400 from the API.
+    if (planId === 'scale') { setShowScaleQuote(true); return; }
     setLoading(true);
     try {
       const response = await authFetch(`${apiUrl}/api/billing/create-checkout-session`, {
@@ -312,6 +334,8 @@ export default function Billing({ user, apiUrl, authFetch }) {
         window.location.reload();
       } else if (data.url) {
         window.location.href = data.url;
+      } else if (data.contactSales) {
+        setShowScaleQuote(true);
       } else {
         alert(data.error || 'Failed to start checkout. Please try again.');
       }
@@ -360,7 +384,16 @@ export default function Billing({ user, apiUrl, authFetch }) {
               <div>
                 <p className="text-white/70 text-sm font-medium uppercase tracking-wider">Current Plan</p>
                 <h1 className="text-3xl font-bold">{meta.name}</h1>
-                <p className="text-white/80 text-sm">${meta.price}/month</p>
+                {/* A quoted plan has no list price, so fall back to what Stripe is
+                    actually billing them — and only to the marketing line if we
+                    somehow don't know that either. */}
+                <p className="text-white/80 text-sm">
+                  {meta.price != null
+                    ? `$${meta.price}/month`
+                    : subscription?.amount != null
+                      ? `$${(subscription.amount / 100).toFixed(2)}/month`
+                      : PRICE_NOTE}
+                </p>
               </div>
             </div>
             <div className="text-right">
@@ -433,12 +466,12 @@ export default function Billing({ user, apiUrl, authFetch }) {
               <div>
                 <div className="flex items-center gap-2 mb-1">
                   <TrendingUp className="w-5 h-5 text-purple-600" />
-                  <h3 className="font-bold text-gray-900">Upgrade to Scale — $175.95/mo</h3>
+                  <h3 className="font-bold text-gray-900">Move up to Scale — {PRICE_NOTE.toLowerCase()}</h3>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">Remove your SMS and chat limits and unlock everything at full capacity.</p>
+                <p className="text-sm text-gray-600 mb-3">Remove your SMS and chat limits and unlock everything at full capacity. We price it against the volume you actually do, so tell us your numbers and we'll quote it.</p>
                 <div className="space-y-1.5">
                   {[
-                    '500 SMS / month (5× more)',
+                    'SMS volume set to your business, starting at 500 / month',
                     'Unlimited chat agent responses',
                     'Higher priority support',
                   ].map(f => (
@@ -450,12 +483,11 @@ export default function Billing({ user, apiUrl, authFetch }) {
                 </div>
               </div>
               <button
-                onClick={() => handleUpgrade('scale')}
-                disabled={loading}
-                className="self-start flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50"
+                onClick={() => setShowScaleQuote(true)}
+                className="self-start flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-xl font-bold text-sm hover:shadow-lg hover:scale-105 transition-all"
               >
                 <ArrowUpRight className="w-4 h-4" />
-                Upgrade to Scale
+                Get a Scale quote
               </button>
             </div>
           </div>
@@ -516,6 +548,10 @@ export default function Billing({ user, apiUrl, authFetch }) {
             onSuccess={() => { setShowContactForm(false); setContactSuccess(true); }}
           />
         )}
+
+        {/* Scale quote modal — this branch returns before the pricing grid, so it needs
+            its own copy or the "Get a Scale quote" button opens nothing. */}
+        {showScaleQuote && <ScaleQuoteModal apiUrl={apiUrl} authFetch={authFetch} onClose={() => setShowScaleQuote(false)} />}
       </div>
     );
   }
@@ -526,7 +562,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
       id: 'pro',
       name: 'Pro',
       tagline: 'Full AI automation for growth',
-      price: 99.95,
+      price: 195,
       icon: Crown,
       gradient: 'from-blue-500 to-purple-600',
       popular: true,
@@ -549,40 +585,24 @@ export default function Billing({ user, apiUrl, authFetch }) {
     {
       id: 'scale',
       name: 'Scale',
-      tagline: 'Higher limits for busy businesses',
-      price: 175.95,
+      tagline: 'For businesses past what Pro can hold',
+      // No price: Scale is quoted against the customer's volume, so the card asks for
+      // the numbers instead of pretending there's an amount to click.
+      price: null,
+      priceNote: PRICE_NOTE,
       icon: TrendingUp,
       gradient: 'from-purple-500 to-pink-600',
-      trial: '1-week free trial',
-      smsLimit: 500,
       features: [
         { text: 'Everything in Pro', included: true, bold: true },
-        { text: '500 SMS / month (5× more)', included: true, highlight: true },
+        { text: 'SMS volume set to your business, from 500 / month', included: true, highlight: true },
         { text: 'Unlimited chat agent responses', included: true, highlight: true },
+        { text: 'Multi-location support', included: true, highlight: true },
         { text: 'White-label options', included: true, soon: true },
         { text: 'Dedicated account manager', included: true, soon: true },
         { text: 'Custom API integrations', included: true, soon: true },
       ],
-      cta: 'Start free trial',
-    },
-    {
-      id: 'enterprise',
-      name: 'Enterprise',
-      tagline: 'Custom solutions for large businesses',
-      price: null,
-      icon: Star,
-      gradient: 'from-gray-700 to-gray-900',
-      features: [
-        { text: 'Everything in Scale', included: true, bold: true },
-        { text: 'Unlimited SMS & chat responses', included: true, highlight: true },
-        { text: 'Multi-location support', included: true, highlight: true },
-        { text: 'White-label branding', included: true, highlight: true },
-        { text: 'Dedicated account manager', included: true },
-        { text: 'Custom API integrations', included: true },
-        { text: 'Custom onboarding & training', included: true },
-      ],
-      cta: 'Contact Sales',
-      enterprise: true,
+      cta: 'Get a quote',
+      quoted: true,
     },
   ];
 
@@ -623,13 +643,13 @@ export default function Billing({ user, apiUrl, authFetch }) {
         </div>
         <p className="text-center text-sm text-gray-600 mt-4">
           Total standalone value: <span className="font-bold text-gray-900 line-through">$427/mo</span>
-          {' '}→ <span className="font-bold text-green-600">$99.95/mo with Pro</span>
-          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">76% OFF</span>
+          {' '}→ <span className="font-bold text-green-600">$195/mo with Pro</span>
+          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">54% OFF</span>
         </p>
       </div>
 
-      {/* Plans grid */}
-      <div className="grid md:grid-cols-3 gap-6">
+      {/* Plans grid — two plans, so keep them from stretching the full width */}
+      <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
         {plans.map(plan => {
           const bp = basePlan || currentPlan;
           const isActive = bp === plan.id;
@@ -657,10 +677,17 @@ export default function Billing({ user, apiUrl, authFetch }) {
                   </div>
                 </div>
                 <div className="mb-6">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
-                    <span className="text-gray-500 text-sm">/month</span>
-                  </div>
+                  {plan.price != null ? (
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-4xl font-bold text-gray-900">${plan.price}</span>
+                      <span className="text-gray-500 text-sm">/month</span>
+                    </div>
+                  ) : (
+                    <div>
+                      <span className="text-4xl font-bold text-gray-900">Custom</span>
+                      <p className="text-sm text-gray-600 mt-1">{plan.priceNote}</p>
+                    </div>
+                  )}
                   {plan.trial && <p className="text-xs text-green-600 font-semibold mt-1 bg-green-50 inline-block px-2 py-0.5 rounded-full">{plan.trial}</p>}
                 </div>
                 <div className="space-y-2 mb-7">
@@ -677,11 +704,11 @@ export default function Billing({ user, apiUrl, authFetch }) {
                   ))}
                 </div>
                 <button
-                  onClick={() => plan.enterprise ? setShowEnterprise(true) : handleUpgrade(plan.id)}
-                  disabled={isActive || (loading && !plan.enterprise)}
+                  onClick={() => plan.quoted ? setShowScaleQuote(true) : handleUpgrade(plan.id)}
+                  disabled={isActive || (loading && !plan.quoted)}
                   className={`w-full py-3 rounded-xl font-bold transition-all text-sm ${isActive ? 'bg-green-100 text-green-700 cursor-default' : `bg-gradient-to-r ${plan.gradient} text-white hover:shadow-lg hover:scale-105`}`}
                 >
-                  {isActive ? '✓ Current Plan' : (loading && !plan.enterprise) ? 'Processing...' : plan.enterprise ? 'Contact Sales' : isUpgrade ? `Upgrade to ${plan.name}` : isDowngrade ? `Switch to ${plan.name}` : plan.cta}
+                  {isActive ? '✓ Current Plan' : plan.quoted ? plan.cta : loading ? 'Processing...' : isUpgrade ? `Upgrade to ${plan.name}` : isDowngrade ? `Switch to ${plan.name}` : plan.cta}
                 </button>
               </div>
             </div>
@@ -695,8 +722,8 @@ export default function Billing({ user, apiUrl, authFetch }) {
         <span className="flex items-center gap-1.5"><Check className="w-4 h-4 text-green-500" />No setup fees</span>
       </div>
 
-      {/* Enterprise modal */}
-      {showEnterprise && <EnterpriseInquiryModal apiUrl={apiUrl} authFetch={authFetch} onClose={() => setShowEnterprise(false)} />}
+      {/* Scale quote modal */}
+      {showScaleQuote && <ScaleQuoteModal apiUrl={apiUrl} authFetch={authFetch} onClose={() => setShowScaleQuote(false)} />}
     </div>
   );
 }
