@@ -30,6 +30,30 @@ import {
   Target
 } from 'lucide-react';
 
+// Standing fees (processing fee, supplies) applied to staff-created bookings.
+// MIRRORS utils/catalogFees.js buildFeeLines on the backend, which is the source of
+// truth for what actually gets charged — fixed fees first, then percentage fees on the
+// service subtotal PLUS those fixed fees, so a percentage is never taken on tax and two
+// percentage fees can't compound. Keep the two in step.
+function computeFeeLines(catalog, base) {
+  const round2 = v => Math.round((parseFloat(v) || 0) * 100) / 100;
+  const usable = (catalog || []).filter(c => {
+    const amount = parseFloat(c?.amount);
+    return c?.name && Number.isFinite(amount) && amount > 0;
+  });
+  const isPercent = c => c.amount_type === 'percentage' || c.amount_type === 'percent';
+
+  const lines = usable.filter(c => !isPercent(c)).map(c => ({
+    name: c.name, amount: round2(c.amount), taxable: !!c.taxable,
+  }));
+  const percentBase = round2(base + lines.reduce((sum, l) => sum + l.amount, 0));
+  for (const c of usable.filter(isPercent)) {
+    const amount = round2(percentBase * (parseFloat(c.amount) / 100));
+    if (amount > 0) lines.push({ name: c.name, amount, taxable: !!c.taxable });
+  }
+  return lines;
+}
+
 // Display names for payment processors. Clover is absent on purpose — it can't
 // create invoices via API, so it never appears as a draft target.
 const processorLabels = {
@@ -122,6 +146,9 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   // Result of the last draft, surfaced as a banner with a link. A toast can't carry a
   // clickable link and window.open after an await gets popup-blocked.
   const [draftResult, setDraftResult] = useState(null);
+  // Standing fees this business charges. The booking form has to show them or staff
+  // quote a total lower than the one that gets saved.
+  const [feeCatalog, setFeeCatalog] = useState([]);
 
   const isBookingDirty = () => bookingFormSnapshot && JSON.stringify(newBooking) !== bookingFormSnapshot;
 
@@ -247,6 +274,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     fetchGroups();
     fetchDescriptionPresets();
     fetchDraftTargets();
+    fetchFeeCatalog();
   }, []);
 
   // The draft banner belongs to one booking — drop it when a different one is opened,
@@ -261,6 +289,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     } catch (error) {
       // Non-fatal: the description box still works as free text without presets.
       console.error('Error fetching description presets:', error);
+    }
+  };
+
+  const fetchFeeCatalog = async () => {
+    try {
+      const response = await authFetch(`${apiUrl}/api/invoices/catalog`);
+      const data = await response.json();
+      setFeeCatalog(Array.isArray(data?.items) ? data.items : []);
+    } catch (error) {
+      console.error('Error fetching fee catalog:', error);
     }
   };
 
@@ -1881,23 +1919,45 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     ))}
                     {(() => {
                       const itemsSubtotal = selectedBooking.items.reduce((sum, it) => sum + (parseFloat(it.price) || 0), 0);
-                      const subtotal = parseFloat(selectedBooking.subtotal) || itemsSubtotal || 0;
-                      const totalAmount = parseFloat(selectedBooking.total_amount) || subtotal;
+                      // bookings.subtotal is pre-tax but fee-INCLUSIVE, so the fee portion is
+                      // backed out to give a service subtotal the rows below actually add up
+                      // from. Left in, the fee would sit inside "Subtotal" unlabelled.
+                      const storedSubtotal = parseFloat(selectedBooking.subtotal) || itemsSubtotal || 0;
+                      const feeLines = Array.isArray(selectedBooking.fees) ? selectedBooking.fees : [];
+                      const feeTotal = parseFloat(selectedBooking.fee_total) || 0;
+                      const subtotal = Math.max(0, storedSubtotal - feeTotal);
+                      const totalAmount = parseFloat(selectedBooking.total_amount) || storedSubtotal;
                       const taxRate = parseFloat(selectedBooking.tax_rate) || 0;
-                      const taxAmount = parseFloat(selectedBooking.tax_amount) || (taxRate > 0 ? subtotal * taxRate : (totalAmount > subtotal + 0.005 ? totalAmount - subtotal : 0));
-                      const total = taxAmount > 0 ? subtotal + taxAmount : totalAmount;
+                      const taxAmount = parseFloat(selectedBooking.tax_amount) || (taxRate > 0 ? subtotal * taxRate : (totalAmount > storedSubtotal + 0.005 ? totalAmount - storedSubtotal : 0));
+                      const total = (taxAmount > 0 || feeTotal > 0) ? subtotal + feeTotal + taxAmount : totalAmount;
                       return (
                         <div className="pt-3 border-t border-amber-200 space-y-1">
-                          {taxAmount > 0 && (
+                          {(taxAmount > 0 || feeTotal > 0) && (
                             <>
                               <div className="flex justify-between items-center text-sm">
                                 <span className="text-gray-600">Subtotal</span>
                                 <span className="text-gray-700">${subtotal.toFixed(2)}</span>
                               </div>
-                              <div className="flex justify-between items-center text-sm">
-                                <span className="text-gray-600">Tax{taxRate > 0 ? ` (${(taxRate * 100).toFixed(1)}%)` : ''}</span>
-                                <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
-                              </div>
+                              {feeLines.map((fee, i) => (
+                                <div key={`bfee-${i}`} className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-600">{fee.name}</span>
+                                  <span className="text-gray-700">${(parseFloat(fee.amount) || 0).toFixed(2)}</span>
+                                </div>
+                              ))}
+                              {/* A booking taken before the fee was itemised still has a
+                                  fee_total but no per-fee breakdown to show. */}
+                              {feeLines.length === 0 && feeTotal > 0 && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-600">Fees</span>
+                                  <span className="text-gray-700">${feeTotal.toFixed(2)}</span>
+                                </div>
+                              )}
+                              {taxAmount > 0 && (
+                                <div className="flex justify-between items-center text-sm">
+                                  <span className="text-gray-600">Tax{taxRate > 0 ? ` (${(taxRate * 100).toFixed(1)}%)` : ''}</span>
+                                  <span className="text-gray-700">${taxAmount.toFixed(2)}</span>
+                                </div>
+                              )}
                             </>
                           )}
                           <div className="flex justify-between items-center">
@@ -2537,8 +2597,16 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     return sum + (Number.isFinite(parsed) ? parsed : 0);
                   }, 0);
                   const taxRate = parseFloat(user?.default_tax_rate) || 0;
-                  const taxAmount = subtotal * taxRate;
-                  const total = subtotal + taxAmount;
+                  // Standing fees are charged on staff-created bookings, so they belong in
+                  // the quoted total. Fees marked "No Tax" stay out of the tax base, which
+                  // is the same rule the backend and every processor apply.
+                  const feeLines = computeFeeLines(feeCatalog, subtotal);
+                  const feeTotal = feeLines.reduce((sum, f) => sum + f.amount, 0);
+                  const taxableBase = subtotal + feeLines
+                    .filter(f => f.taxable)
+                    .reduce((sum, f) => sum + f.amount, 0);
+                  const taxAmount = taxableBase * taxRate;
+                  const total = subtotal + feeTotal + taxAmount;
                   return (
                     <div className="mt-4 bg-green-100 rounded-lg p-3">
                       <div className="flex justify-between items-center text-sm mb-2">
@@ -2554,6 +2622,14 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                           <span className="text-gray-500">Subtotal:</span>
                           <span className="text-gray-700">${subtotal.toFixed(2)}</span>
                         </div>
+                        {/* Each fee on its own line — a charge folded into the subtotal is
+                            one the customer can't account for when they see the invoice. */}
+                        {feeLines.map((fee, i) => (
+                          <div key={`fee-${i}`} className="flex justify-between items-center text-sm">
+                            <span className="text-gray-500">{fee.name}:</span>
+                            <span className="text-gray-700">${fee.amount.toFixed(2)}</span>
+                          </div>
+                        ))}
                         {taxRate > 0 && (
                           <div className="flex justify-between items-center text-sm">
                             <span className="text-gray-500">Tax ({(taxRate * 100).toFixed(1)}%):</span>
