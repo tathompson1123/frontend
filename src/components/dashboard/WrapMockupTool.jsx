@@ -31,6 +31,8 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   // photos give the design something true to work with.
   const [images, setImages] = useState([]);
   const [autoColors, setAutoColors] = useState(true);
+  // How far the design may depart from what the customer already has.
+  const [designMode, setDesignMode] = useState('reinvent');
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -101,6 +103,7 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
       // Same field name repeated — multer's .array() collects them.
       images.forEach(({ file }) => body.append('images', file));
       body.append('autoColors', autoColors ? 'true' : 'false');
+      body.append('designMode', designMode);
 
       // No Content-Type header — the browser must set the multipart boundary itself.
       const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
@@ -263,6 +266,29 @@ ${form.phone}` : '';
           </p>
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickImages} className="hidden" />
 
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+            How far should we go?
+          </label>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <ModeButton
+              active={designMode === 'evolve'}
+              onClick={() => setDesignMode('evolve')}
+              title="Keep close to reference"
+              blurb="Their palette, their logo, their character — cleaned up and laid out properly."
+            />
+            <ModeButton
+              active={designMode === 'reinvent'}
+              onClick={() => setDesignMode('reinvent')}
+              title="Completely redesign"
+              blurb="Start over. New colour strategy, bold layout, their logo as one element."
+            />
+          </div>
+          <p className="text-[11px] text-gray-400 mb-4">
+            {designMode === 'evolve'
+              ? 'Every colour will trace back to the artwork you upload — nothing new invented.'
+              : 'Goes for a dark base with one high-contrast accent. This is where the bold results come from.'}
+          </p>
+
           <div className="grid grid-cols-2 gap-3">
             <Field label="Year" value={form.year} onChange={update('year')} placeholder="2023" />
             <Field label="Make" value={form.make} onChange={update('make')} placeholder="Ford" />
@@ -311,6 +337,23 @@ ${form.phone}` : '';
                 )}
                 {result.brandRead && (
                   <p className="text-xs text-gray-500 italic mb-2">{result.brandRead}</p>
+                )}
+                {result.ctaType && (
+                  <p className="text-xs text-gray-400 mb-2">
+                    Leads with the <span className="font-semibold text-gray-600">{result.ctaType}</span>
+                    {result.ctaType === 'phone' ? ' — urgent trade' : ' — considered purchase'}
+                  </p>
+                )}
+                {/* The logo is the seed of the brand: a generic mark caps how good any wrap
+                    can be, and that's worth telling the customer before they spend on vinyl. */}
+                {result.brandWarning && (
+                  <div className="flex items-start gap-2 p-3 mt-2 bg-amber-50 border border-amber-200 rounded-lg">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+                    <div>
+                      <p className="text-xs font-semibold text-amber-900 mb-0.5">Worth raising with them</p>
+                      <p className="text-xs text-amber-800">{result.brandWarning}</p>
+                    </div>
+                  </div>
                 )}
                 {result.creativeSummary && (
                   <p className="text-sm text-gray-600">{result.creativeSummary}</p>
@@ -455,5 +498,21 @@ function Swatch({ hex, label }) {
         <span className="block text-[10px] text-gray-400">{label}</span>
       </div>
     </div>
+  );
+}
+
+function ModeButton({ active, onClick, title, blurb }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`text-left p-3 rounded-lg border-2 transition ${
+        active ? 'border-amber-500 bg-amber-50' : 'border-gray-200 bg-white hover:border-gray-300'
+      }`}
+    >
+      <span className={`block text-xs font-bold mb-0.5 ${active ? 'text-amber-800' : 'text-gray-800'}`}>
+        {title}
+      </span>
+      <span className="block text-[11px] leading-snug text-gray-500">{blurb}</span>
+    </button>
   );
 }
