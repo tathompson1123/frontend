@@ -27,6 +27,7 @@ import {
   Search,
   Link,
   HelpCircle,
+  Truck,
 } from 'lucide-react';
 
 // Component imports
@@ -48,6 +49,7 @@ import FeatureGate from '../components/dashboard/FeatureGate';
 import Invoices from '../components/dashboard/Invoices';
 import Estimates from '../components/dashboard/Estimates';
 import PaymentProcessors from '../components/dashboard/PaymentSettings';
+import WrapMockupTool from '../components/dashboard/WrapMockupTool';
 import Transactions from '../components/dashboard/Transactions';
 import TaxFees from '../components/dashboard/TaxFees';
 import DomainPolicyModal from '../components/dashboard/DomainPolicyModal';
@@ -163,6 +165,9 @@ export default function Dashboard() {
     return !!u.questionnaire_completed && !isOnboardingComplete();
   });
   const [justConnectedProcessor, setJustConnectedProcessor] = useState(null);
+  // Limited-release Tools tab. The server decides — this only hides the entry point,
+  // and every /api/tools route re-checks the flag on its own.
+  const [toolsEnabled, setToolsEnabled] = useState(false);
   const [savedFlash, setSavedFlash] = useState(false);
 
   // Unsaved changes tracking
@@ -523,6 +528,19 @@ useEffect(() => {
     setPendingView(null);
   };
 
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch(`${apiUrl}/api/tools/access`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setToolsEnabled(data.enabled === true);
+      } catch { /* stays hidden */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   const topMenuItems = [
     { id: 'overview', icon: Home, label: 'Overview' },
     { id: 'website', icon: Globe, label: 'Embed Website' },
@@ -544,12 +562,14 @@ useEffect(() => {
     { id: 'google-business', icon: MapPin, label: 'Google Business' },
     { id: 'seo-audit', icon: Search, label: 'SEO Audit' },
     { id: 'market-research', icon: TrendingUp, label: 'Upsell Potential' },
+    // Only rendered for accounts with the flag on.
+    ...(toolsEnabled ? [{ id: 'tools', icon: Truck, label: 'Tools' }] : []),
   ];
 
   // Auto-open Pro section when navigating to a Pro view
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (['ai-agents', 'email-campaigns', 'google-business', 'seo-audit', 'market-research'].includes(currentView)) {
+    if (['ai-agents', 'email-campaigns', 'google-business', 'seo-audit', 'market-research', 'tools'].includes(currentView)) {
       setProOpen(true);
     }
   }, [currentView]);
@@ -667,6 +687,10 @@ useEffect(() => {
       {currentView === 'seo-audit' && (
         <SEOAudit apiUrl={apiUrl} user={user} authFetch={authFetch} inOnboarding={inOnboarding} />
       )}
+      {currentView === 'tools' && toolsEnabled && (
+        <WrapMockupTool apiUrl={apiUrl} authFetch={authFetch} user={user} />
+      )}
+
       {currentView === 'payment-settings' && (
         <PaymentSettingsPage
           apiUrl={apiUrl}
