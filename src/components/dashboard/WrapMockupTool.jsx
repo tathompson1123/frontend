@@ -28,8 +28,10 @@ const emptyForm = {
 
 export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   const [form, setForm] = useState(emptyForm);
-  const [logo, setLogo] = useState(null);
-  const [logoPreview, setLogoPreview] = useState(null);
+  // Several images: a logo plus real job photos. The logo drives brand colour, the
+  // photos give the design something true to work with.
+  const [images, setImages] = useState([]);
+  const [autoColors, setAutoColors] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -52,22 +54,36 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
     } catch (err) { console.error(err); }
   };
 
-  const pickLogo = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Logo must be under 5 MB.');
+  const MAX_IMAGES = 5;
+
+  const pickImages = (e) => {
+    const picked = Array.from(e.target.files || []);
+    if (picked.length === 0) return;
+    const room = MAX_IMAGES - images.length;
+    if (room <= 0) {
+      setError(`Up to ${MAX_IMAGES} images.`);
       return;
     }
-    setLogo(file);
-    setLogoPreview(URL.createObjectURL(file));
+    const tooBig = picked.find(f => f.size > 5 * 1024 * 1024);
+    if (tooBig) {
+      setError(`"${tooBig.name}" is over 5 MB.`);
+      return;
+    }
+    setImages(prev => [
+      ...prev,
+      ...picked.slice(0, room).map(file => ({ file, preview: URL.createObjectURL(file) })),
+    ]);
+    // Reset the input so re-picking the same file still fires onChange.
+    if (fileRef.current) fileRef.current.value = '';
   };
 
-  const clearLogo = () => {
-    setLogo(null);
-    if (logoPreview) URL.revokeObjectURL(logoPreview);
-    setLogoPreview(null);
-    if (fileRef.current) fileRef.current.value = '';
+  const removeImage = (idx) => {
+    setImages(prev => {
+      const next = [...prev];
+      const [gone] = next.splice(idx, 1);
+      if (gone?.preview) URL.revokeObjectURL(gone.preview);
+      return next;
+    });
   };
 
   const generate = async () => {
@@ -84,7 +100,9 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
       // multipart, so the optional logo rides along with the fields.
       const body = new FormData();
       Object.entries(form).forEach(([k, v]) => body.append(k, v ?? ''));
-      if (logo) body.append('logo', logo);
+      // Same field name repeated — multer's .array() collects them.
+      images.forEach(({ file }) => body.append('images', file));
+      body.append('autoColors', autoColors ? 'true' : 'false');
 
       // No Content-Type header — the browser must set the multipart boundary itself.
       const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
@@ -155,31 +173,92 @@ ${form.phone}` : '';
           <Field label="Phone" value={form.phone} onChange={update('phone')} placeholder="(360) 555-0142" />
           <Field label="Website" value={form.website} onChange={update('website')} placeholder="summitroofing.com" />
 
-          <div className="flex gap-3 mb-4">
-            <ColorField label="Brand color" value={form.primaryColor} onChange={update('primaryColor')} />
-            <ColorField label="Accent color" value={form.accentColor} onChange={update('accentColor')} />
-          </div>
+          {/* Brand colours. When artwork is uploaded these are sampled from it, so the
+              pickers act as an override rather than the source of truth. */}
+          <label className="flex items-center gap-2 mb-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={autoColors}
+              onChange={(e) => setAutoColors(e.target.checked)}
+              className="w-4 h-4 accent-amber-600"
+            />
+            <span className="text-xs font-semibold text-gray-600">
+              Pull brand colors from the uploaded images
+            </span>
+          </label>
 
-          {/* Logo — passed to the image model as a reference so the real mark is used
-              rather than an invented one. */}
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Logo (optional)</label>
-          {logoPreview ? (
-            <div className="flex items-center gap-3 mb-4 p-2 border border-gray-200 rounded-lg">
-              <img src={logoPreview} alt="Logo preview" className="w-12 h-12 object-contain rounded" />
-              <span className="text-xs text-gray-500 truncate flex-1">{logo?.name}</span>
-              <button onClick={clearLogo} className="text-gray-400 hover:text-red-600">
-                <X className="w-4 h-4" />
-              </button>
+          {autoColors ? (
+            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
+              {result?.brandColors?.source === 'artwork' ? (
+                <>
+                  <p className="text-xs text-gray-500 mb-2">Sampled from the artwork:</p>
+                  <div className="flex items-center gap-2">
+                    <Swatch hex={result.brandColors.primary} label="Brand" />
+                    <Swatch
+                      hex={result.brandColors.accent}
+                      label={result.brandColors.accentDerived ? 'Accent (derived)' : 'Accent'}
+                    />
+                  </div>
+                  {result.brandColors.palette?.length > 2 && (
+                    <div className="flex gap-1 mt-2">
+                      {result.brandColors.palette.map(hex => (
+                        <span key={hex} title={hex} className="w-4 h-4 rounded-sm border border-gray-300" style={{ background: hex }} />
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-gray-500">
+                  {images.length > 0
+                    ? 'Colors will be sampled from your images when you generate.'
+                    : 'Upload a logo below and its colors will be used automatically.'}
+                </p>
+              )}
             </div>
           ) : (
+            <div className="flex gap-3 mb-4">
+              <ColorField label="Brand color" value={form.primaryColor} onChange={update('primaryColor')} />
+              <ColorField label="Accent color" value={form.accentColor} onChange={update('accentColor')} />
+            </div>
+          )}
+
+          {/* Artwork — passed to the image model as references, so the customer's real
+              logo is reproduced rather than an invented one. */}
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+            Logo &amp; photos (up to {MAX_IMAGES})
+          </label>
+          {images.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              {images.map((img, i) => (
+                <div key={img.preview} className="relative group">
+                  <img src={img.preview} alt={img.file.name} className="w-full h-16 object-contain bg-gray-50 rounded border border-gray-200" />
+                  <button
+                    onClick={() => removeImage(i)}
+                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-500 hover:text-red-600 hover:border-red-300"
+                    title={`Remove ${img.file.name}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                  {i === 0 && (
+                    <span className="absolute bottom-0 left-0 px-1 text-[10px] bg-amber-600 text-white rounded-tr">logo</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {images.length < MAX_IMAGES && (
             <button
               onClick={() => fileRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-4 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-amber-400 hover:text-amber-700 transition"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-1 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-amber-400 hover:text-amber-700 transition"
             >
-              <Upload className="w-4 h-4" /> Upload logo
+              <Upload className="w-4 h-4" /> {images.length === 0 ? 'Upload logo / photos' : 'Add another'}
             </button>
           )}
-          <input ref={fileRef} type="file" accept="image/*" onChange={pickLogo} className="hidden" />
+          <p className="text-[11px] text-gray-400 mb-4">
+            First image is treated as the logo. Job photos help — they're used small, behind
+            a contrast panel, never under text.
+          </p>
+          <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickImages} className="hidden" />
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Year" value={form.year} onChange={update('year')} placeholder="2023" />
@@ -350,6 +429,18 @@ function ColorField({ label, value, onChange }) {
       <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2 py-1.5">
         <input type="color" value={value} onChange={onChange} className="w-7 h-7 border-0 bg-transparent p-0 cursor-pointer" />
         <span className="font-mono text-xs text-gray-500">{value}</span>
+      </div>
+    </div>
+  );
+}
+
+function Swatch({ hex, label }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span className="w-6 h-6 rounded border border-gray-300" style={{ background: hex }} />
+      <div className="leading-tight">
+        <span className="block font-mono text-[10px] text-gray-600">{hex}</span>
+        <span className="block text-[10px] text-gray-400">{label}</span>
       </div>
     </div>
   );

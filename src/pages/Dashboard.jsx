@@ -116,11 +116,17 @@ function PaymentSettingsPage({ apiUrl, user, authFetch, initialSubTab, justConne
 // Helper function for authenticated API calls
 const authFetch = async (url, options = {}) => {
   const token = localStorage.getItem('token');
-  
+
+  // A FormData body must NOT carry a Content-Type header: only the browser can add
+  // the multipart boundary, and hard-coding application/json here meant Express's
+  // JSON parser tried to parse the form body and died on the boundary
+  // ("Unexpected token '-', \"------WebK\"..."). Let the browser set it.
+  const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
+
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       'Authorization': `Bearer ${token}`,
       ...options.headers,
     },
