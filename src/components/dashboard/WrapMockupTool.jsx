@@ -14,7 +14,6 @@ import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, Ale
 const emptyForm = {
   businessName: '',
   service: '',
-  tagline: '',
   phone: '',
   website: '',
   primaryColor: '#FF6B1A',
@@ -89,7 +88,6 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   const generate = async () => {
     setError(null);
     if (!form.businessName.trim()) return setError('Business name is required.');
-    if (!form.service.trim()) return setError('Enter the main service to lead with.');
     if (!form.year || !form.make.trim() || !form.model.trim()) {
       return setError('Vehicle year, make and model are required.');
     }
@@ -147,8 +145,8 @@ ${form.phone}` : '';
       </div>
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Wrap Mockup Generator</h1>
       <p className="text-gray-500 mb-8 max-w-2xl">
-        Enter the customer's business and their exact vehicle. Three wrap directions get
-        rendered onto a photo of that vehicle, ready to send.
+        Name, phone, website, their logo, and the vehicle. The trade, palette and layout are
+        designed from the artwork — three directions rendered onto a photo of that vehicle.
         <span className="block text-xs text-gray-400 mt-1">
           These are concepts for winning the job — not print-ready artwork for an installer.
         </span>
@@ -167,11 +165,15 @@ ${form.phone}` : '';
       <div className="grid lg:grid-cols-[360px_1fr] gap-8 items-start">
         {/* Inputs */}
         <div className="bg-white rounded-xl border-2 border-gray-200 p-6 lg:sticky lg:top-6">
-          <Field label="Business name" value={form.businessName} onChange={update('businessName')} placeholder="Summit Roofing Co." />
-          <Field label="Main service to lead with" value={form.service} onChange={update('service')} placeholder="Roofing & storm repair" />
-          <Field label="Tagline / credential (optional)" value={form.tagline} onChange={update('tagline')} placeholder="Licensed & insured since 2012" />
-          <Field label="Phone" value={form.phone} onChange={update('phone')} placeholder="(360) 555-0142" />
-          <Field label="Website" value={form.website} onChange={update('website')} placeholder="summitroofing.com" />
+          <Field label="Business name" value={form.businessName} onChange={update('businessName')} placeholder="American Plumbing" />
+          <Field label="Phone" value={form.phone} onChange={update('phone')} placeholder="(360) 438-0611" />
+          <Field label="Website" value={form.website} onChange={update('website')} placeholder="americanplumbingwa.com" />
+          <Field
+            label="Trade — only if the name doesn't say it"
+            value={form.service}
+            onChange={update('service')}
+            placeholder="usually read from the logo"
+          />
 
           {/* Brand colours. When artwork is uploaded these are sampled from it, so the
               pickers act as an override rather than the source of truth. */}
@@ -299,8 +301,16 @@ ${form.phone}` : '';
                 <div className="text-xs font-mono text-gray-400 mb-2">
                   CONCEPTS FOR — {result.vehicle?.toUpperCase()}
                 </div>
+                {result.inferredTrade && (
+                  <p className="text-xs text-gray-500 mb-2">
+                    Read as: <span className="font-semibold text-gray-900">{result.inferredTrade}</span>
+                  </p>
+                )}
                 {result.dominantMessage && (
                   <p className="text-sm text-gray-900 font-semibold mb-1">{result.dominantMessage}</p>
+                )}
+                {result.brandRead && (
+                  <p className="text-xs text-gray-500 italic mb-2">{result.brandRead}</p>
                 )}
                 {result.creativeSummary && (
                   <p className="text-sm text-gray-600">{result.creativeSummary}</p>
