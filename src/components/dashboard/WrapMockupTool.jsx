@@ -256,7 +256,8 @@ ${form.phone}` : '';
           )}
           <p className="text-[11px] text-gray-400 mb-4">
             First image is treated as the logo. Job photos help — they're used small, behind
-            a contrast panel, never under text.
+            a contrast panel, never under text. These are references for the design; they
+            aren't rendered as concepts themselves.
           </p>
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickImages} className="hidden" />
 
@@ -280,8 +281,8 @@ ${form.phone}` : '';
           </button>
           {generating && (
             <p className="text-xs text-gray-400 text-center mt-2">
-              Four images to render — usually a minute or two, longer if Google throttles
-              and it has to wait out a rate limit.
+              Rendering the vehicle photo, then 3 wrap concepts on it. Usually a minute or
+              two, longer if Google throttles and it has to wait out a rate limit.
             </p>
           )}
         </div>
