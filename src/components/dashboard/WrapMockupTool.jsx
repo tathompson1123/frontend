@@ -280,7 +280,8 @@ ${form.phone}` : '';
           </button>
           {generating && (
             <p className="text-xs text-gray-400 text-center mt-2">
-              Four images to render — this usually takes a minute or two.
+              Four images to render — usually a minute or two, longer if Google throttles
+              and it has to wait out a rate limit.
             </p>
           )}
         </div>
