@@ -33,6 +33,9 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   const [autoColors, setAutoColors] = useState(true);
   // How far the design may depart from what the customer already has.
   const [designMode, setDesignMode] = useState('reinvent');
+  // Separate axis from designMode: one is how far to depart from their artwork, the
+  // other is how loud the result should be.
+  const [designIntensity, setDesignIntensity] = useState('bold');
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -104,6 +107,7 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
       images.forEach(({ file }) => body.append('images', file));
       body.append('autoColors', autoColors ? 'true' : 'false');
       body.append('designMode', designMode);
+      body.append('designIntensity', designIntensity);
 
       // No Content-Type header — the browser must set the multipart boundary itself.
       const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
@@ -286,7 +290,30 @@ ${form.phone}` : '';
           <p className="text-[11px] text-gray-400 mb-4">
             {designMode === 'evolve'
               ? 'Every colour will trace back to the artwork you upload — nothing new invented.'
-              : 'Goes for a dark base with one high-contrast accent. This is where the bold results come from.'}
+              : 'Builds a new colour strategy and layout, using their logo as one element.'}
+          </p>
+
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+            How loud?
+          </label>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <ModeButton
+              active={designIntensity === 'bold'}
+              onClick={() => setDesignIntensity('bold')}
+              title="Go bold"
+              blurb="Saturated colour, an oversized signature, real visual energy."
+            />
+            <ModeButton
+              active={designIntensity === 'simple'}
+              onClick={() => setDesignIntensity('simple')}
+              title="Keep it simple"
+              blurb="Two colours, one quiet mark, lots of space. Restrained, not timid."
+            />
+          </div>
+          <p className="text-[11px] text-gray-400 mb-4">
+            {designIntensity === 'simple'
+              ? 'Drops mascots and ornament, but still commits hard on colour — a washed-out van is never the goal.'
+              : 'Best for trades that need to be noticed. Most home services want this.'}
           </p>
 
           <div className="grid grid-cols-2 gap-3">
@@ -384,6 +411,16 @@ ${form.phone}` : '';
                       <span className="text-xs font-mono text-amber-600">{String(i + 1).padStart(2, '0')}</span>
                       <h3 className="font-bold text-gray-900">{variant.label}</h3>
                       {variant.rationale && <p className="text-sm text-gray-500">{variant.rationale}</p>}
+                      {variant.signature && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          <span className="font-semibold text-gray-700">Signature:</span> {variant.signature}
+                        </p>
+                      )}
+                      {variant.color_strategy && (
+                        <span className="inline-block mt-1.5 px-2 py-0.5 bg-gray-100 rounded text-[10px] font-mono text-gray-600">
+                          {variant.color_strategy}
+                        </span>
+                      )}
                     </div>
                     <a
                       href={variant.imageUrl}
