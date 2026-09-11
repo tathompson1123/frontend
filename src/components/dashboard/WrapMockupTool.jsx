@@ -5,9 +5,10 @@ import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, Ale
 //
 // Replaces the prototype's generic SVG silhouettes: the backend generates a real
 // three-view layout sheet — side, front and rear — of the customer's actual vehicle, has
-// Claude decide the single message to lead with, then paints three directions onto that
-// same sheet. One base sheet for all three, so the concepts are comparable rather than
-// three different vans, and the rear panel gets designed instead of guessed at.
+// Claude decide the single message to lead with, then paints two directions onto that
+// same sheet — one built around an original character, one without — so the concepts are
+// comparable rather than two different vans, and the rear panel gets designed instead of
+// guessed at.
 //
 // These are SALES mockups for winning the job, not print-ready artwork — worth saying
 // out loud in the UI so nobody forwards one to a wrap shop as a spec.
@@ -73,11 +74,14 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   const [scanning, setScanning] = useState(false);
   const [scanError, setScanError] = useState(null);
   const [scanNote, setScanNote] = useState(null); // { source, missing } — shown once, dismissible
-  const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState(null);
+  // Queued runs. Newest first. A run no longer blocks the form: hitting Generate snapshots
+  // the current business, fires it in the background, and clears the form immediately so
+  // the next one can be typed while this one is still rendering.
+  const [jobs, setJobs] = useState([]);
+  const [queuedNote, setQueuedNote] = useState(null); // business name of the run just queued
   const [error, setError] = useState(null);
   const [history, setHistory] = useState([]);
-  const [emailOpen, setEmailOpen] = useState(false);
+  const [emailJobId, setEmailJobId] = useState(null); // which job's email modal is open
   const [copied, setCopied] = useState(false);
   const fileRef = useRef(null);
 
@@ -119,6 +123,30 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   };
 
   const contentCount = services.length + badges.length + customBadges.length;
+
+  /** A plain <a download> is silently ignored for a cross-origin URL — Cloudinary is a
+      different origin from this app, so it was falling back to just opening the image in a
+      new tab. Fetching the bytes and downloading a blob: URL instead works regardless of
+      origin, as long as the response can be read at all (Cloudinary's delivery URLs are
+      served with permissive CORS). If that fetch fails for some reason, opening the image
+      in a new tab is the fallback — no worse than what this replaces. */
+  const downloadImage = async (url, filename) => {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`fetch failed: ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(blobUrl);
+    } catch {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
 
   /** data:mime;base64,... -> File, so a scanned image can ride in the same multipart field
       a manually picked file would. */
@@ -248,55 +276,114 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
     });
   };
 
-  const generate = async () => {
+  // The success banner is a confirmation, not a status board — it names the business that
+  // was just queued and then gets out of the way on its own.
+  useEffect(() => {
+    if (!queuedNote) return;
+    const t = setTimeout(() => setQueuedNote(null), 5000);
+    return () => clearTimeout(t);
+  }, [queuedNote]);
+
+  /** Fires the actual request for one job and updates it in place when it settles. Split
+      out from queueGenerate so a failed run's exact original snapshot (images, services,
+      badges included) can be resubmitted from a Retry button without the salesperson
+      re-entering anything. */
+  const runJob = async (jobId, snapshot) => {
+    try {
+      const body = new FormData();
+      Object.entries(snapshot.form).forEach(([k, v]) => body.append(k, v ?? ''));
+      // Same field name repeated — multer's .array() collects them.
+      snapshot.images.forEach(file => body.append('images', file));
+      body.append('autoColors', snapshot.autoColors ? 'true' : 'false');
+      body.append('designMode', snapshot.designMode);
+      body.append('designIntensity', snapshot.designIntensity);
+      body.append('services', JSON.stringify(snapshot.services));
+      body.append('badges', JSON.stringify(snapshot.badges));
+
+      // No Content-Type header — the browser must set the multipart boundary itself.
+      const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to generate mockups');
+      setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'done', data, error: null } : j)));
+      fetchHistory();
+    } catch (err) {
+      setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'error', error: err.message } : j)));
+    }
+  };
+
+  const queueGenerate = () => {
     setError(null);
     if (!form.businessName.trim()) return setError('Business name is required.');
     if (!form.year || !form.make.trim() || !form.model.trim()) {
       return setError('Vehicle year, make and model are required.');
     }
 
-    setGenerating(true);
-    setResult(null);
-    try {
-      // multipart, so the optional logo rides along with the fields.
-      const body = new FormData();
-      Object.entries(form).forEach(([k, v]) => body.append(k, v ?? ''));
-      // Same field name repeated — multer's .array() collects them.
-      images.forEach(({ file }) => body.append('images', file));
-      body.append('autoColors', autoColors ? 'true' : 'false');
-      body.append('designMode', designMode);
-      body.append('designIntensity', designIntensity);
-      // JSON rather than repeated fields: the backend accepts either, and a single value
-      // keeps a service containing a comma intact.
-      body.append('services', JSON.stringify(services));
-      body.append('badges', JSON.stringify([...badges, ...customBadges]));
+    // Snapshot everything the request needs before the form gets cleared out from under it.
+    const snapshot = {
+      form: { ...form },
+      images: images.map(img => img.file),
+      autoColors, designMode, designIntensity,
+      services: [...services],
+      badges: [...badges, ...customBadges],
+    };
+    const vehicle = [snapshot.form.year, snapshot.form.make, snapshot.form.model, snapshot.form.trim]
+      .filter(Boolean).join(' ');
+    const jobId = typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `job-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
-      // No Content-Type header — the browser must set the multipart boundary itself.
-      const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Failed to generate mockups');
-      setResult(data);
-      fetchHistory();
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setGenerating(false);
-    }
+    setJobs(prev => [{
+      id: jobId, status: 'generating',
+      businessName: snapshot.form.businessName, vehicle,
+      phone: snapshot.form.phone, customerEmail: snapshot.form.customerEmail,
+      data: null, error: null, snapshot,
+    }, ...prev]);
+
+    // The preview thumbnails' object URLs are no longer needed — the request already read
+    // the underlying File objects into the snapshot above.
+    images.forEach(img => { if (img.preview) URL.revokeObjectURL(img.preview); });
+
+    // Clear the form for the next business. Standing preferences (mode, intensity,
+    // auto-colours) carry over — they're the salesperson's settings, not a fact about this
+    // one business.
+    setForm(emptyForm);
+    setImages([]);
+    setServices([]);
+    setServiceDraft('');
+    setBadges([]);
+    setCustomBadges([]);
+    setCustomBadgeDraft('');
+    setContentOpen(false);
+    setScanUrl('');
+    setScanNote(null);
+    setScanError(null);
+
+    setQueuedNote(snapshot.form.businessName);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    runJob(jobId, snapshot);
   };
 
-  const emailBody = result ? `Hi there,
+  const retryJob = (job) => {
+    if (!job.snapshot) return;
+    setJobs(prev => prev.map(j => (j.id === job.id ? { ...j, status: 'generating', error: null } : j)));
+    runJob(job.id, job.snapshot);
+  };
 
-Here are a few wrap concepts we put together for your ${result.vehicle}.
+  const emailJob = jobs.find(j => j.id === emailJobId) || null;
+  const emailBody = emailJob?.data ? `Hi there,
 
-${result.creativeSummary || ''}
+Here are a few wrap concepts we put together for your ${emailJob.data.vehicle}.
 
-${result.variants.map((v, i) => `${i + 1}. ${v.label} — ${v.rationale || ''}`).join('\n')}
+${emailJob.data.creativeSummary || ''}
+
+${emailJob.data.variants.map((v, i) => `${i + 1}. ${v.label} — ${v.rationale || ''}`).join('\n')}
 
 Each one is built to read at a glance from other drivers, with the phone number where it actually gets seen in traffic. Let us know which direction feels right, or if you'd like elements blended from a couple of them.
 
 Best,
 ${user?.businessName || ''}
-${form.phone}` : '';
+${emailJob.phone || ''}` : '';
 
   const copyEmail = () => {
     navigator.clipboard.writeText(emailBody);
@@ -315,8 +402,8 @@ ${form.phone}` : '';
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Wrap Mockup Generator</h1>
       <p className="text-gray-500 mb-8 max-w-2xl">
         Name, phone, website, their logo, and the vehicle. The trade, palette and layout are
-        designed from the artwork — three directions, each rendered as the side, front and
-        rear of that vehicle.
+        designed from the artwork — two directions, one with a character and one without,
+        each rendered as the side, front and rear of that vehicle.
         <span className="block text-xs text-gray-400 mt-1">
           These are concepts for winning the job — not print-ready artwork for an installer.
         </span>
@@ -327,6 +414,19 @@ ${form.phone}` : '';
           <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
           <span>{error}</span>
           <button onClick={() => setError(null)} className="ml-auto text-red-400 hover:text-red-600">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {queuedNote && (
+        <div className="mb-6 flex items-center gap-2 p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-sm text-emerald-800">
+          <Check className="w-4 h-4 flex-shrink-0" />
+          <span>
+            Generating mockups for <strong>{queuedNote}</strong> — it'll land at the top of
+            the list on the right when it's ready. Keep going with the next business.
+          </span>
+          <button onClick={() => setQueuedNote(null)} className="ml-auto text-emerald-400 hover:text-emerald-600 flex-shrink-0">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -413,31 +513,15 @@ ${form.phone}` : '';
 
           {autoColors ? (
             <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              {result?.brandColors?.source === 'artwork' ? (
-                <>
-                  <p className="text-xs text-gray-500 mb-2">Sampled from the artwork:</p>
-                  <div className="flex items-center gap-2">
-                    <Swatch hex={result.brandColors.primary} label="Brand" />
-                    <Swatch
-                      hex={result.brandColors.accent}
-                      label={result.brandColors.accentDerived ? 'Accent (derived)' : 'Accent'}
-                    />
-                  </div>
-                  {result.brandColors.palette?.length > 2 && (
-                    <div className="flex gap-1 mt-2">
-                      {result.brandColors.palette.map(hex => (
-                        <span key={hex} title={hex} className="w-4 h-4 rounded-sm border border-gray-300" style={{ background: hex }} />
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <p className="text-xs text-gray-500">
-                  {images.length > 0
-                    ? 'Colors will be sampled from your images when you generate.'
-                    : 'Upload a logo below and its colors will be used automatically.'}
-                </p>
-              )}
+              {/* The sampled palette used to be shown here once a run finished, but the form
+                  is cleared the moment a run is queued — by the time colours would be known,
+                  this business's fields are already gone. The palette itself still shows up
+                  per job, under its render, once it's ready. */}
+              <p className="text-xs text-gray-500">
+                {images.length > 0
+                  ? 'Colors will be sampled from your images when you generate.'
+                  : 'Upload a logo below and its colors will be used automatically.'}
+              </p>
             </div>
           ) : (
             <div className="flex gap-3 mb-4">
@@ -667,149 +751,34 @@ ${form.phone}` : '';
           <Field label="Customer email (optional)" value={form.customerEmail} onChange={update('customerEmail')} placeholder="customer@email.com" />
 
           <button
-            onClick={generate}
-            disabled={generating}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg font-semibold text-sm hover:bg-amber-700 transition disabled:opacity-60"
+            onClick={queueGenerate}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg font-semibold text-sm hover:bg-amber-700 transition"
           >
-            {generating
-              ? <><RefreshCw className="w-4 h-4 animate-spin" /> Rendering concepts…</>
-              : <><Sparkles className="w-4 h-4" /> Generate mockups</>}
+            <Sparkles className="w-4 h-4" /> Generate mockups
           </button>
-          {generating && (
-            <p className="text-xs text-gray-400 text-center mt-2">
-              Rendering the vehicle sheet, then 3 wrap concepts on it. Usually a minute or
-              two, longer if Google throttles and it has to wait out a rate limit.
-            </p>
-          )}
+          <p className="text-xs text-gray-400 text-center mt-2">
+            Runs in the background — usually a minute or two, longer if Google throttles.
+            Queue up the next business as soon as this one starts.
+          </p>
         </div>
 
-        {/* Results */}
+        {/* Results — a queue, not a single slot. Newest first, so the run just started lands
+            at the top where the scroll-to-top on submit already puts the viewport. */}
         <div>
-          {!result ? (
+          {jobs.length === 0 ? (
             <div className="border-2 border-dashed border-gray-200 rounded-xl p-16 text-center text-gray-400">
-              Fill in the customer's details and generate to see three directions here.
+              Fill in the customer's details and generate to see both directions here.
             </div>
           ) : (
             <div className="space-y-6">
-              <div className="bg-white rounded-xl border-2 border-gray-200 p-5">
-                <div className="text-xs font-mono text-gray-400 mb-2">
-                  CONCEPTS FOR — {result.vehicle?.toUpperCase()}
-                </div>
-                {result.inferredTrade && (
-                  <p className="text-xs text-gray-500 mb-2">
-                    Read as: <span className="font-semibold text-gray-900">{result.inferredTrade}</span>
-                  </p>
-                )}
-                {result.dominantMessage && (
-                  <p className="text-sm text-gray-900 font-semibold mb-1">{result.dominantMessage}</p>
-                )}
-                {result.brandRead && (
-                  <p className="text-xs text-gray-500 italic mb-2">{result.brandRead}</p>
-                )}
-                {result.ctaType && (
-                  <p className="text-xs text-gray-400 mb-2">
-                    Leads with the <span className="font-semibold text-gray-600">{result.ctaType}</span>
-                    {result.ctaType === 'phone' ? ' — urgent trade' : ' — considered purchase'}
-                  </p>
-                )}
-                {/* The logo is the seed of the brand: a generic mark caps how good any wrap
-                    can be, and that's worth telling the customer before they spend on vinyl. */}
-                {result.brandWarning && (
-                  <div className="flex items-start gap-2 p-3 mt-2 bg-amber-50 border border-amber-200 rounded-lg">
-                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
-                    <div>
-                      <p className="text-xs font-semibold text-amber-900 mb-0.5">Worth raising with them</p>
-                      <p className="text-xs text-amber-800">{result.brandWarning}</p>
-                    </div>
-                  </div>
-                )}
-                {result.creativeSummary && (
-                  <p className="text-sm text-gray-600">{result.creativeSummary}</p>
-                )}
-                <button
-                  onClick={() => setEmailOpen(true)}
-                  className="mt-4 flex items-center gap-2 px-3 py-2 text-sm font-semibold text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition"
-                >
-                  <Mail className="w-4 h-4" /> Draft customer email
-                </button>
-              </div>
-
-              {/* Fewer than three came back — said plainly rather than quietly showing two. */}
-              {result.partial && (
-                <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
-                  <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                  <span>
-                    {result.partial.length} of 3 directions failed to render
-                    ({result.partial.map(f => f.label).join(', ')}). The rest are below — generate again to retry.
-                  </span>
-                </div>
-              )}
-
-              {result.variants.map((variant, i) => (
-                <div key={variant.id} className="bg-white rounded-xl border-2 border-gray-200 p-5">
-                  <div className="flex items-start justify-between gap-4 mb-3">
-                    <div>
-                      <span className="text-xs font-mono text-amber-600">{String(i + 1).padStart(2, '0')}</span>
-                      <h3 className="font-bold text-gray-900">{variant.label}</h3>
-                      {variant.rationale && <p className="text-sm text-gray-500">{variant.rationale}</p>}
-                      {variant.signature && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          <span className="font-semibold text-gray-700">Signature:</span> {variant.signature}
-                        </p>
-                      )}
-                      {variant.color_strategy && (
-                        <span className="inline-block mt-1.5 px-2 py-0.5 bg-gray-100 rounded text-[10px] font-mono text-gray-600">
-                          {variant.color_strategy}
-                        </span>
-                      )}
-                    </div>
-                    <a
-                      href={variant.imageUrl}
-                      download={`${form.businessName.replace(/\s+/g, '-').toLowerCase()}-${variant.id}.png`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition whitespace-nowrap"
-                    >
-                      <Download className="w-3.5 h-3.5" /> PNG
-                    </a>
-                  </div>
-                  <img src={variant.imageUrl} alt={variant.label} className="w-full rounded-lg bg-gray-100" />
-
-                  {/* What the design was told to print. Worth showing next to the render
-                      because the image model can drop or garble a string, and this is the
-                      list to check it against before anything is sent to a customer. */}
-                  {(variant.palette?.length > 0 || variant.wordmark || variant.mascot) && (
-                    <div className="mt-3 pt-3 border-t border-gray-100">
-                      {variant.palette?.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-2">
-                          {variant.palette.map((c, j) => (
-                            <span key={`${c.hex}-${j}`} className="inline-flex items-center gap-1.5">
-                              <span
-                                className="w-4 h-4 rounded border border-gray-200"
-                                style={{ backgroundColor: c.hex }}
-                              />
-                              <span className="text-[10px] font-mono text-gray-500">
-                                {c.role} {c.hex}
-                              </span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <dl className="text-[11px] text-gray-500 space-y-0.5">
-                        {variant.tagline && <ManifestRow label="Tagline" value={variant.tagline} />}
-                        {variant.servicesShown?.length > 0 && (
-                          <ManifestRow label="Services" value={variant.servicesShown.join(' · ')} />
-                        )}
-                        {variant.credentialsShown?.length > 0 && (
-                          <ManifestRow label="Badges" value={variant.credentialsShown.join(' · ')} />
-                        )}
-                        {variant.phoneDisplay && <ManifestRow label="Phone" value={variant.phoneDisplay} />}
-                        {variant.websiteDisplay && <ManifestRow label="Web" value={variant.websiteDisplay} />}
-                        {variant.mascot && <ManifestRow label="Mascot" value={variant.mascot} />}
-                      </dl>
-                    </div>
-                  )}
-                </div>
+              {jobs.map(job => (
+                <JobCard
+                  key={job.id}
+                  job={job}
+                  onEmail={() => setEmailJobId(job.id)}
+                  onRetry={() => retryJob(job)}
+                  onDownload={downloadImage}
+                />
               ))}
             </div>
           )}
@@ -818,35 +787,59 @@ ${form.phone}` : '';
             <div className="mt-10">
               <h3 className="text-sm font-semibold text-gray-500 mb-3">Previous runs</h3>
               <div className="grid sm:grid-cols-2 gap-3">
-                {history.map(h => (
-                  <button
-                    key={h.id}
-                    onClick={() => setResult({
-                      vehicle: h.vehicle,
-                      creativeSummary: h.creative_summary,
-                      dominantMessage: h.dominant_message,
-                      variants: Array.isArray(h.variants) ? h.variants : [],
-                    })}
-                    className="text-left p-3 bg-white border border-gray-200 rounded-lg hover:border-amber-300 transition"
-                  >
-                    <p className="text-sm font-semibold text-gray-900 truncate">{h.business_name}</p>
-                    <p className="text-xs text-gray-500 truncate">{h.vehicle}</p>
-                    <p className="text-xs text-gray-400">{new Date(h.created_at).toLocaleDateString()}</p>
-                  </button>
-                ))}
+                {history.map(h => {
+                  const loadable = h.status === 'done' || !h.status;
+                  return (
+                    <button
+                      key={h.id}
+                      disabled={!loadable}
+                      onClick={() => {
+                        if (!loadable) return;
+                        const historyJobId = `history-${h.id}`;
+                        setJobs(prev => (prev.some(j => j.id === historyJobId) ? prev : [{
+                          id: historyJobId, status: 'done',
+                          businessName: h.business_name, vehicle: h.vehicle,
+                          phone: '', customerEmail: h.customer_email || '',
+                          data: {
+                            vehicle: h.vehicle,
+                            creativeSummary: h.creative_summary,
+                            dominantMessage: h.dominant_message,
+                            variants: Array.isArray(h.variants) ? h.variants : [],
+                          },
+                          error: null,
+                          // No snapshot — a past run's original artwork isn't available to
+                          // resend, so this entry has no Retry.
+                          snapshot: null,
+                        }, ...prev]));
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className={`text-left p-3 bg-white border rounded-lg transition ${
+                        loadable ? 'border-gray-200 hover:border-amber-300' : 'border-gray-200 opacity-50 cursor-not-allowed'
+                      }`}
+                    >
+                      <p className="text-sm font-semibold text-gray-900 truncate">{h.business_name}</p>
+                      <p className="text-xs text-gray-500 truncate">{h.vehicle}</p>
+                      <p className="text-xs text-gray-400">
+                        {new Date(h.created_at).toLocaleDateString()}
+                        {h.status === 'generating' && <span className="ml-1 text-amber-500">· interrupted</span>}
+                        {h.status === 'failed' && <span className="ml-1 text-red-500">· failed</span>}
+                      </p>
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
         </div>
       </div>
 
-      {emailOpen && (
+      {emailJob && (
         <div
-          onClick={() => setEmailOpen(false)}
+          onClick={() => setEmailJobId(null)}
           className="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50"
         >
           <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-xl p-6 w-full max-w-xl">
-            <h3 className="font-bold text-gray-900 mb-3">Email draft</h3>
+            <h3 className="font-bold text-gray-900 mb-3">Email draft — {emailJob.businessName}</h3>
             <textarea
               readOnly
               value={emailBody}
@@ -863,7 +856,7 @@ ${form.phone}` : '';
                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />} {copied ? 'Copied' : 'Copy text'}
               </button>
               <a
-                href={`mailto:${form.customerEmail}?subject=${encodeURIComponent(`Wrap concepts for ${form.businessName}`)}&body=${encodeURIComponent(emailBody)}`}
+                href={`mailto:${emailJob.customerEmail || ''}?subject=${encodeURIComponent(`Wrap concepts for ${emailJob.businessName}`)}&body=${encodeURIComponent(emailBody)}`}
                 className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-amber-600 text-white rounded-lg font-semibold text-sm hover:bg-amber-700 transition"
               >
                 <Mail className="w-4 h-4" /> Open in email
@@ -872,6 +865,176 @@ ${form.phone}` : '';
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** One queued run — generating, failed, or the finished pair of concepts. */
+function JobCard({ job, onEmail, onRetry, onDownload }) {
+  if (job.status === 'generating') {
+    return (
+      <div className="bg-white rounded-xl border-2 border-gray-200 p-5">
+        <div className="flex items-center gap-3">
+          <RefreshCw className="w-5 h-5 text-amber-600 animate-spin flex-shrink-0" />
+          <div>
+            <h3 className="font-bold text-gray-900">{job.businessName}</h3>
+            <p className="text-xs text-gray-500">{job.vehicle}</p>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          Rendering the vehicle sheet, then 2 wrap concepts on it — usually a minute or two,
+          longer if Google throttles and it has to wait out a rate limit.
+        </p>
+      </div>
+    );
+  }
+
+  if (job.status === 'error') {
+    return (
+      <div className="bg-white rounded-xl border-2 border-red-200 p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h3 className="font-bold text-gray-900">{job.businessName}</h3>
+            <p className="text-xs text-gray-500 mb-2">{job.vehicle}</p>
+            <p className="text-sm text-red-700">{job.error}</p>
+          </div>
+          {job.snapshot && (
+            <button
+              onClick={onRetry}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-900 transition whitespace-nowrap flex-shrink-0"
+            >
+              <RefreshCw className="w-3.5 h-3.5" /> Retry
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  const result = job.data;
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border-2 border-gray-200 p-5">
+        <div className="text-xs font-mono text-gray-400 mb-2">
+          CONCEPTS FOR — {job.businessName} — {result.vehicle?.toUpperCase()}
+        </div>
+        {result.inferredTrade && (
+          <p className="text-xs text-gray-500 mb-2">
+            Read as: <span className="font-semibold text-gray-900">{result.inferredTrade}</span>
+          </p>
+        )}
+        {result.dominantMessage && (
+          <p className="text-sm text-gray-900 font-semibold mb-1">{result.dominantMessage}</p>
+        )}
+        {result.brandRead && (
+          <p className="text-xs text-gray-500 italic mb-2">{result.brandRead}</p>
+        )}
+        {result.ctaType && (
+          <p className="text-xs text-gray-400 mb-2">
+            Leads with the <span className="font-semibold text-gray-600">{result.ctaType}</span>
+            {result.ctaType === 'phone' ? ' — urgent trade' : ' — considered purchase'}
+          </p>
+        )}
+        {/* The logo is the seed of the brand: a generic mark caps how good any wrap
+            can be, and that's worth telling the customer before they spend on vinyl. */}
+        {result.brandWarning && (
+          <div className="flex items-start gap-2 p-3 mt-2 bg-amber-50 border border-amber-200 rounded-lg">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-amber-600" />
+            <div>
+              <p className="text-xs font-semibold text-amber-900 mb-0.5">Worth raising with them</p>
+              <p className="text-xs text-amber-800">{result.brandWarning}</p>
+            </div>
+          </div>
+        )}
+        {result.creativeSummary && (
+          <p className="text-sm text-gray-600">{result.creativeSummary}</p>
+        )}
+        <button
+          onClick={onEmail}
+          className="mt-4 flex items-center gap-2 px-3 py-2 text-sm font-semibold text-amber-700 bg-amber-50 rounded-lg hover:bg-amber-100 transition"
+        >
+          <Mail className="w-4 h-4" /> Draft customer email
+        </button>
+      </div>
+
+      {/* One of the two failed to render — said plainly rather than quietly hiding it. */}
+      {result.partial && (
+        <div className="flex items-start gap-2 p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>
+            {result.partial.length} of {result.variants.length + result.partial.length} directions
+            failed to render ({result.partial.map(f => f.label).join(', ')}). The rest are below
+            {job.snapshot ? ' — Retry to try the missing one again.' : '.'}
+          </span>
+        </div>
+      )}
+
+      {result.variants.map((variant, i) => (
+        <div key={variant.id} className="bg-white rounded-xl border-2 border-gray-200 p-5">
+          <div className="flex items-start justify-between gap-4 mb-3">
+            <div>
+              <span className="text-xs font-mono text-amber-600">{String(i + 1).padStart(2, '0')}</span>
+              <h3 className="font-bold text-gray-900">{variant.label}</h3>
+              {variant.rationale && <p className="text-sm text-gray-500">{variant.rationale}</p>}
+              {variant.signature && (
+                <p className="text-xs text-gray-500 mt-1">
+                  <span className="font-semibold text-gray-700">Signature:</span> {variant.signature}
+                </p>
+              )}
+              {variant.color_strategy && (
+                <span className="inline-block mt-1.5 px-2 py-0.5 bg-gray-100 rounded text-[10px] font-mono text-gray-600">
+                  {variant.color_strategy}
+                </span>
+              )}
+            </div>
+            <button
+              onClick={() => onDownload(
+                variant.imageUrl,
+                `${job.businessName.replace(/\s+/g, '-').toLowerCase()}-${variant.id}.png`
+              )}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition whitespace-nowrap"
+            >
+              <Download className="w-3.5 h-3.5" /> PNG
+            </button>
+          </div>
+          <img src={variant.imageUrl} alt={variant.label} className="w-full rounded-lg bg-gray-100" />
+
+          {/* What the design was told to print. Worth showing next to the render
+              because the image model can drop or garble a string, and this is the
+              list to check it against before anything is sent to a customer. */}
+          {(variant.palette?.length > 0 || variant.wordmark || variant.mascot) && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              {variant.palette?.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {variant.palette.map((c, j) => (
+                    <span key={`${c.hex}-${j}`} className="inline-flex items-center gap-1.5">
+                      <span
+                        className="w-4 h-4 rounded border border-gray-200"
+                        style={{ backgroundColor: c.hex }}
+                      />
+                      <span className="text-[10px] font-mono text-gray-500">
+                        {c.role} {c.hex}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              )}
+              <dl className="text-[11px] text-gray-500 space-y-0.5">
+                {variant.tagline && <ManifestRow label="Tagline" value={variant.tagline} />}
+                {variant.servicesShown?.length > 0 && (
+                  <ManifestRow label="Services" value={variant.servicesShown.join(' · ')} />
+                )}
+                {variant.credentialsShown?.length > 0 && (
+                  <ManifestRow label="Badges" value={variant.credentialsShown.join(' · ')} />
+                )}
+                {variant.phoneDisplay && <ManifestRow label="Phone" value={variant.phoneDisplay} />}
+                {variant.websiteDisplay && <ManifestRow label="Web" value={variant.websiteDisplay} />}
+                {variant.mascot && <ManifestRow label="Mascot" value={variant.mascot} />}
+              </dl>
+            </div>
+          )}
+        </div>
+      ))}
     </div>
   );
 }
