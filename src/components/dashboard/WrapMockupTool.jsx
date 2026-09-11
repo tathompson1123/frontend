@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
-import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, AlertTriangle } from 'lucide-react';
+import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, AlertTriangle, ChevronDown } from 'lucide-react';
 
 // Vehicle wrap concept generator.
 //
 // Replaces the prototype's generic SVG silhouettes: the backend generates a real
-// side-profile photo of the customer's actual vehicle, has Claude decide the single
-// message to lead with, then paints three directions onto that same photo. One base
-// photo for all three, so the concepts are comparable rather than three different vans.
+// three-view layout sheet — side, front and rear — of the customer's actual vehicle, has
+// Claude decide the single message to lead with, then paints three directions onto that
+// same sheet. One base sheet for all three, so the concepts are comparable rather than
+// three different vans, and the rear panel gets designed instead of guessed at.
 //
 // These are SALES mockups for winning the job, not print-ready artwork — worth saying
 // out loud in the UI so nobody forwards one to a wrap shop as a spec.
@@ -23,7 +24,25 @@ const emptyForm = {
   model: '',
   trim: '',
   customerEmail: '',
+  serviceArea: '',
+  yearsInBusiness: '',
+  socialHandle: '',
 };
+
+// Credentials the customer ticks rather than the model inventing. A wrap runs for five
+// years, so "Licensed & Insured" on a van belonging to a business that never claimed it is
+// not a design flourish — the backend and the prompt both refuse to print any of these
+// unless they arrive from here.
+const BADGE_OPTIONS = [
+  'Licensed & Insured',
+  '24/7 Emergency Service',
+  'Free Estimates',
+  'Family Owned & Operated',
+  'Financing Available',
+  'Veteran Owned',
+];
+
+const MAX_SERVICES = 7;
 
 export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   const [form, setForm] = useState(emptyForm);
@@ -36,6 +55,14 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   // Separate axis from designMode: one is how far to depart from their artwork, the
   // other is how loud the result should be.
   const [designIntensity, setDesignIntensity] = useState('bold');
+  // What actually gets printed on the panels. The dense look is mostly a content problem:
+  // with only a name and a phone number there is nothing to fill a van with, and the design
+  // comes back padded with empty colour.
+  const [services, setServices] = useState([]);
+  const [serviceDraft, setServiceDraft] = useState('');
+  const [badges, setBadges] = useState([]);
+  const [customBadge, setCustomBadge] = useState('');
+  const [contentOpen, setContentOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -46,6 +73,26 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
 
   const update = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
   const vehicleLabel = [form.year, form.make, form.model, form.trim].filter(Boolean).join(' ');
+
+  const addService = (raw) => {
+    // A pasted "furnaces, boilers, mini splits" should become three chips, not one.
+    const next = String(raw).split(',').map(s => s.trim()).filter(Boolean);
+    if (next.length === 0) return;
+    setServices(prev => {
+      const merged = [...prev];
+      for (const item of next) {
+        if (merged.length >= MAX_SERVICES) break;
+        if (!merged.some(s => s.toLowerCase() === item.toLowerCase())) merged.push(item);
+      }
+      return merged;
+    });
+    setServiceDraft('');
+  };
+
+  const toggleBadge = (badge) =>
+    setBadges(prev => (prev.includes(badge) ? prev.filter(b => b !== badge) : [...prev, badge]));
+
+  const contentCount = services.length + badges.length + (customBadge.trim() ? 1 : 0);
 
   useEffect(() => { fetchHistory(); }, []);
 
@@ -108,6 +155,12 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
       body.append('autoColors', autoColors ? 'true' : 'false');
       body.append('designMode', designMode);
       body.append('designIntensity', designIntensity);
+      // JSON rather than repeated fields: the backend accepts either, and a single value
+      // keeps a service containing a comma intact.
+      body.append('services', JSON.stringify(services));
+      body.append('badges', JSON.stringify(
+        customBadge.trim() ? [...badges, customBadge.trim()] : badges
+      ));
 
       // No Content-Type header — the browser must set the multipart boundary itself.
       const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
@@ -153,7 +206,8 @@ ${form.phone}` : '';
       <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-1">Wrap Mockup Generator</h1>
       <p className="text-gray-500 mb-8 max-w-2xl">
         Name, phone, website, their logo, and the vehicle. The trade, palette and layout are
-        designed from the artwork — three directions rendered onto a photo of that vehicle.
+        designed from the artwork — three directions, each rendered as the side, front and
+        rear of that vehicle.
         <span className="block text-xs text-gray-400 mt-1">
           These are concepts for winning the job — not print-ready artwork for an installer.
         </span>
@@ -264,9 +318,10 @@ ${form.phone}` : '';
             </button>
           )}
           <p className="text-[11px] text-gray-400 mb-4">
-            First image is treated as the logo. Job photos help — they're used small, behind
-            a contrast panel, never under text. These are references for the design; they
-            aren't rendered as concepts themselves.
+            First image is treated as the logo, and it's reproduced as-is — never redrawn or
+            recoloured. Job photos help: they're used full-bleed and tinted, never as small
+            insets. These are references for the design; they aren't rendered as concepts
+            themselves.
           </p>
           <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickImages} className="hidden" />
 
@@ -312,9 +367,107 @@ ${form.phone}` : '';
           </div>
           <p className="text-[11px] text-gray-400 mb-4">
             {designIntensity === 'simple'
-              ? 'Drops mascots and ornament, but still commits hard on colour — a washed-out van is never the goal.'
-              : 'Best for trades that need to be noticed. Most home services want this.'}
+              ? 'Drops mascots, service lists and ornament for a narrow palette and lots of space. Restrained, not timid.'
+              : 'The full trade-truck treatment: every panel wrapped, an illustrated mascot, services and contact at full size.'}
           </p>
+
+          {/* Wrap content. Collapsed by default so a quick run still only needs a name and a
+              vehicle, but this is the section that decides whether the panels come back full
+              or padded with empty colour. */}
+          <button
+            type="button"
+            onClick={() => setContentOpen(o => !o)}
+            className="w-full flex items-center justify-between px-3 py-2.5 mb-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
+          >
+            <span className="text-xs font-semibold text-gray-600">
+              What goes on the wrap
+              {contentCount > 0 && (
+                <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold">
+                  {contentCount}
+                </span>
+              )}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${contentOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {contentOpen && (
+            <div className="mb-4 px-3 py-3 rounded-lg border border-gray-200">
+              <p className="text-[11px] text-gray-400 mb-3">
+                All optional — but a wrap with nothing to say comes back sparse. Nothing here
+                is invented for you: a credential you don't tick never gets printed.
+              </p>
+
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                Services ({services.length}/{MAX_SERVICES})
+              </label>
+              {services.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {services.map((s, i) => (
+                    <span
+                      key={`${s}-${i}`}
+                      className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-800"
+                    >
+                      {s}
+                      <button
+                        type="button"
+                        onClick={() => setServices(prev => prev.filter((_, j) => j !== i))}
+                        className="p-0.5 rounded hover:bg-amber-200"
+                        aria-label={`Remove ${s}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {services.length < MAX_SERVICES && (
+                <input
+                  value={serviceDraft}
+                  onChange={(e) => setServiceDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ',') {
+                      e.preventDefault();
+                      addService(serviceDraft);
+                    }
+                  }}
+                  // Not losing a half-typed service to a stray click is worth more than
+                  // the tidiness of only committing on Enter.
+                  onBlur={() => addService(serviceDraft)}
+                  placeholder="Furnaces, boilers, mini splits…  (Enter to add)"
+                  className="w-full px-3 py-2 mb-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              )}
+
+              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                Credentials they actually have
+              </label>
+              <div className="grid grid-cols-1 gap-1 mb-2">
+                {BADGE_OPTIONS.map(badge => (
+                  <label key={badge} className="flex items-center gap-2 cursor-pointer text-[12px] text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={badges.includes(badge)}
+                      onChange={() => toggleBadge(badge)}
+                      className="rounded border-gray-300 text-amber-600 focus:ring-amber-400"
+                    />
+                    {badge}
+                  </label>
+                ))}
+              </div>
+              <input
+                value={customBadge}
+                onChange={(e) => setCustomBadge(e.target.value)}
+                placeholder="Anything else — 4.9★ on Google, BBB A+…"
+                className="w-full px-3 py-2 mb-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+              />
+
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Service area" value={form.serviceArea} onChange={update('serviceArea')} placeholder="Whatcom County" />
+                <Field label="Established" value={form.yearsInBusiness} onChange={update('yearsInBusiness')} placeholder="Since 2009" />
+              </div>
+              <Field label="Social handle" value={form.socialHandle} onChange={update('socialHandle')} placeholder="@bayviewhvac" />
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <Field label="Year" value={form.year} onChange={update('year')} placeholder="2023" />
@@ -336,7 +489,7 @@ ${form.phone}` : '';
           </button>
           {generating && (
             <p className="text-xs text-gray-400 text-center mt-2">
-              Rendering the vehicle photo, then 3 wrap concepts on it. Usually a minute or
+              Rendering the vehicle sheet, then 3 wrap concepts on it. Usually a minute or
               two, longer if Google throttles and it has to wait out a rate limit.
             </p>
           )}
@@ -433,6 +586,41 @@ ${form.phone}` : '';
                     </a>
                   </div>
                   <img src={variant.imageUrl} alt={variant.label} className="w-full rounded-lg bg-gray-100" />
+
+                  {/* What the design was told to print. Worth showing next to the render
+                      because the image model can drop or garble a string, and this is the
+                      list to check it against before anything is sent to a customer. */}
+                  {(variant.palette?.length > 0 || variant.wordmark || variant.mascot) && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      {variant.palette?.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-2">
+                          {variant.palette.map((c, j) => (
+                            <span key={`${c.hex}-${j}`} className="inline-flex items-center gap-1.5">
+                              <span
+                                className="w-4 h-4 rounded border border-gray-200"
+                                style={{ backgroundColor: c.hex }}
+                              />
+                              <span className="text-[10px] font-mono text-gray-500">
+                                {c.role} {c.hex}
+                              </span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <dl className="text-[11px] text-gray-500 space-y-0.5">
+                        {variant.tagline && <ManifestRow label="Tagline" value={variant.tagline} />}
+                        {variant.servicesShown?.length > 0 && (
+                          <ManifestRow label="Services" value={variant.servicesShown.join(' · ')} />
+                        )}
+                        {variant.credentialsShown?.length > 0 && (
+                          <ManifestRow label="Badges" value={variant.credentialsShown.join(' · ')} />
+                        )}
+                        {variant.phoneDisplay && <ManifestRow label="Phone" value={variant.phoneDisplay} />}
+                        {variant.websiteDisplay && <ManifestRow label="Web" value={variant.websiteDisplay} />}
+                        {variant.mascot && <ManifestRow label="Mascot" value={variant.mascot} />}
+                      </dl>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -496,6 +684,16 @@ ${form.phone}` : '';
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** One line of the printed-copy manifest under a render. */
+function ManifestRow({ label, value }) {
+  return (
+    <div className="flex gap-2">
+      <dt className="flex-shrink-0 w-14 font-semibold text-gray-400">{label}</dt>
+      <dd className="text-gray-600">{value}</dd>
     </div>
   );
 }
