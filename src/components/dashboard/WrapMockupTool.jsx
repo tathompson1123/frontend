@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, AlertTriangle, ChevronDown, Search } from 'lucide-react';
 
 // Vehicle wrap concept generator.
 //
@@ -61,8 +61,18 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   const [services, setServices] = useState([]);
   const [serviceDraft, setServiceDraft] = useState('');
   const [badges, setBadges] = useState([]);
-  const [customBadge, setCustomBadge] = useState('');
+  // Credentials that don't match one of the standard checkboxes — a chip list rather than a
+  // single field, because a site scan can hand back several at once ("No Overtime Charges",
+  // "Same-Day Service") and a lone text box can only ever hold one of them cleanly.
+  const [customBadges, setCustomBadges] = useState([]);
+  const [customBadgeDraft, setCustomBadgeDraft] = useState('');
   const [contentOpen, setContentOpen] = useState(false);
+  // Website scan — reads the wrap content off the business's own site so the salesperson
+  // isn't typing seven services from memory.
+  const [scanUrl, setScanUrl] = useState('');
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState(null);
+  const [scanNote, setScanNote] = useState(null); // { source, missing } — shown once, dismissible
   const [generating, setGenerating] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -92,7 +102,108 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   const toggleBadge = (badge) =>
     setBadges(prev => (prev.includes(badge) ? prev.filter(b => b !== badge) : [...prev, badge]));
 
-  const contentCount = services.length + badges.length + (customBadge.trim() ? 1 : 0);
+  const addCustomBadge = (raw) => {
+    const next = String(raw).split(',').map(s => s.trim()).filter(Boolean);
+    if (next.length === 0) return;
+    setCustomBadges(prev => {
+      const merged = [...prev];
+      for (const item of next) {
+        if (!merged.some(b => b.toLowerCase() === item.toLowerCase())
+          && !badges.some(b => b.toLowerCase() === item.toLowerCase())) {
+          merged.push(item);
+        }
+      }
+      return merged;
+    });
+    setCustomBadgeDraft('');
+  };
+
+  const contentCount = services.length + badges.length + customBadges.length;
+
+  /** data:mime;base64,... -> File, so a scanned image can ride in the same multipart field
+      a manually picked file would. */
+  const dataUrlToFile = async (dataUrl, name) => {
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    return new File([blob], name || 'image', { type: blob.type || 'image/png' });
+  };
+
+  const scanSite = async () => {
+    const target = scanUrl.trim();
+    if (!target) return setScanError('Enter a website address first.');
+    setScanError(null);
+    setScanning(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/tools/brand-scan`, {
+        method: 'POST',
+        body: JSON.stringify({ url: target }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not read that site');
+
+      // Fill in whatever came back without clobbering something already typed — a
+      // salesperson who filled in the phone by hand before remembering the site exists
+      // shouldn't have it overwritten by a scan that read the same number anyway.
+      setForm(f => ({
+        ...f,
+        businessName: f.businessName || data.businessName || f.businessName,
+        service: f.service || data.trade || f.service,
+        phone: f.phone || data.phone || f.phone,
+        website: f.website || data.website || target,
+        serviceArea: f.serviceArea || data.serviceArea || f.serviceArea,
+        yearsInBusiness: f.yearsInBusiness || data.yearsInBusiness || f.yearsInBusiness,
+        socialHandle: f.socialHandle || data.socialHandle || f.socialHandle,
+      }));
+
+      if (data.services?.length) {
+        setServices(prev => {
+          const merged = [...prev];
+          for (const s of data.services) {
+            if (merged.length >= MAX_SERVICES) break;
+            if (!merged.some(x => x.toLowerCase() === s.toLowerCase())) merged.push(s);
+          }
+          return merged;
+        });
+      }
+      if (data.credentials?.length) {
+        const standard = new Set(BADGE_OPTIONS.map(b => b.toLowerCase()));
+        const matched = data.credentials.filter(c => standard.has(c.toLowerCase()));
+        const extra = data.credentials.filter(c => !standard.has(c.toLowerCase()));
+        if (matched.length) {
+          setBadges(prev => Array.from(new Set([...prev,
+            ...matched.map(m => BADGE_OPTIONS.find(b => b.toLowerCase() === m.toLowerCase()))])));
+        }
+        if (extra.length) addCustomBadge(extra.join(','));
+      }
+
+      // The logo becomes the first upload (treated as the logo by the backend), job photos
+      // follow. Any download the frontend itself failed on (blob() throwing) is skipped
+      // rather than sinking the whole scan.
+      const newImages = [];
+      if (data.logo) {
+        try { newImages.push(await dataUrlToFile(data.logo.dataUrl, data.logo.name)); }
+        catch { /* one bad image shouldn't lose the rest of the scan */ }
+      }
+      for (const photo of data.photos || []) {
+        try { newImages.push(await dataUrlToFile(photo.dataUrl, photo.name)); }
+        catch { /* same */ }
+      }
+      if (newImages.length) {
+        setImages(prev => {
+          const room = MAX_IMAGES - prev.length;
+          if (room <= 0) return prev;
+          return [...prev, ...newImages.slice(0, room).map(file => ({ file, preview: URL.createObjectURL(file) }))];
+        });
+      }
+
+      if (data.services?.length || data.credentials?.length) setContentOpen(true);
+      setScanNote({ source: data.sourceUrl || target, missing: data.missing || [] });
+    } catch (err) {
+      setScanError(err.message);
+    } finally {
+      setScanning(false);
+    }
+  };
 
   useEffect(() => { fetchHistory(); }, []);
 
@@ -158,9 +269,7 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
       // JSON rather than repeated fields: the backend accepts either, and a single value
       // keeps a service containing a comma intact.
       body.append('services', JSON.stringify(services));
-      body.append('badges', JSON.stringify(
-        customBadge.trim() ? [...badges, customBadge.trim()] : badges
-      ));
+      body.append('badges', JSON.stringify([...badges, ...customBadges]));
 
       // No Content-Type header — the browser must set the multipart boundary itself.
       const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
@@ -226,6 +335,58 @@ ${form.phone}` : '';
       <div className="grid lg:grid-cols-[360px_1fr] gap-8 items-start">
         {/* Inputs */}
         <div className="bg-white rounded-xl border-2 border-gray-200 p-6 lg:sticky lg:top-6">
+          {/* Read the wrap content off their own website rather than typing it from memory —
+              logo, services, credentials they actually claim, service area, socials. Fills
+              the fields below; nothing here generates anything, so it's still all editable
+              before a run gets spent on it. */}
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+            Have their website? Scan it first
+          </label>
+          <div className="flex gap-2 mb-1">
+            <input
+              value={scanUrl}
+              onChange={(e) => setScanUrl(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); scanSite(); } }}
+              placeholder="theirbusiness.com"
+              disabled={scanning}
+              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-gray-50"
+            />
+            <button
+              onClick={scanSite}
+              disabled={scanning || !scanUrl.trim()}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-900 transition disabled:opacity-50 whitespace-nowrap"
+            >
+              {scanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+              {scanning ? 'Scanning…' : 'Scan'}
+            </button>
+          </div>
+          <p className="text-[11px] text-gray-400 mb-3">
+            Pulls their logo, services and any credentials they actually state — never invents
+            one. Fills the fields below without overwriting anything you've already typed.
+          </p>
+
+          {scanError && (
+            <div className="flex items-start gap-2 p-2.5 mb-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+              <span>{scanError}</span>
+            </div>
+          )}
+          {scanNote && (
+            <div className="p-2.5 mb-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
+              <div className="flex items-start justify-between gap-2">
+                <span>Read from {scanNote.source}</span>
+                <button onClick={() => setScanNote(null)} className="text-emerald-400 hover:text-emerald-600 flex-shrink-0">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+              {scanNote.missing?.length > 0 && (
+                <ul className="mt-1.5 pl-4 list-disc space-y-0.5 text-emerald-700">
+                  {scanNote.missing.map((m, i) => <li key={i}>{m}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+
           <Field label="Business name" value={form.businessName} onChange={update('businessName')} placeholder="American Plumbing" />
           <Field label="Phone" value={form.phone} onChange={update('phone')} placeholder="(360) 438-0611" />
           <Field label="Website" value={form.website} onChange={update('website')} placeholder="americanplumbingwa.com" />
@@ -454,10 +615,37 @@ ${form.phone}` : '';
                   </label>
                 ))}
               </div>
+              {customBadges.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {customBadges.map((b, i) => (
+                    <span
+                      key={`${b}-${i}`}
+                      className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-800"
+                    >
+                      {b}
+                      <button
+                        type="button"
+                        onClick={() => setCustomBadges(prev => prev.filter((_, j) => j !== i))}
+                        className="p-0.5 rounded hover:bg-amber-200"
+                        aria-label={`Remove ${b}`}
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
               <input
-                value={customBadge}
-                onChange={(e) => setCustomBadge(e.target.value)}
-                placeholder="Anything else — 4.9★ on Google, BBB A+…"
+                value={customBadgeDraft}
+                onChange={(e) => setCustomBadgeDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ',') {
+                    e.preventDefault();
+                    addCustomBadge(customBadgeDraft);
+                  }
+                }}
+                onBlur={() => addCustomBadge(customBadgeDraft)}
+                placeholder="Anything else — 4.9★ on Google, BBB A+…  (Enter to add)"
                 className="w-full px-3 py-2 mb-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
               />
 
