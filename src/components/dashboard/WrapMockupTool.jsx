@@ -472,6 +472,14 @@ ${emailJob.phone || ''}` : '';
               {scanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
               {scanning ? 'Scanning…' : 'Scan'}
             </button>
+            {/* Same action as the button at the bottom of the form — here too so scan then
+                generate doesn't mean scrolling down every time. */}
+            <button
+              onClick={queueGenerate}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition whitespace-nowrap"
+            >
+              <Sparkles className="w-3.5 h-3.5" /> Generate
+            </button>
           </div>
           <p className="text-[11px] text-gray-400 mb-3">
             Pulls their logo, services and any credentials they actually state — never invents
