@@ -286,6 +286,14 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
     return () => clearTimeout(t);
   }, [queuedNote]);
 
+  /** Once a run finishes it's already saved server-side and reachable from Previous runs
+      below, so keeping it in the working list too just means finished designs pile up next
+      to the one actually being reviewed. A still-generating or failed job is left alone
+      (it needs attention or hasn't reached the database yet) — only completed jobs other
+      than the one that just finished get dropped. */
+  const keepOnlyLatestDone = (list, justCompletedId) =>
+    list.filter(j => j.status !== 'done' || j.id === justCompletedId);
+
   /** Fires the actual request for one job and updates it in place when it settles. Split
       out from queueGenerate so a failed run's exact original snapshot (images, services,
       badges included) can be resubmitted from a Retry button without the salesperson
@@ -306,7 +314,10 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
       const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup`, { method: 'POST', body });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed to generate mockups');
-      setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'done', data, error: null } : j)));
+      setJobs(prev => keepOnlyLatestDone(
+        prev.map(j => (j.id === jobId ? { ...j, status: 'done', data, error: null } : j)),
+        jobId
+      ));
       fetchHistory();
     } catch (err) {
       setJobs(prev => prev.map(j => (j.id === jobId ? { ...j, status: 'error', error: err.message } : j)));
@@ -798,21 +809,23 @@ ${emailJob.phone || ''}` : '';
                       onClick={() => {
                         if (!loadable) return;
                         const historyJobId = `history-${h.id}`;
-                        setJobs(prev => (prev.some(j => j.id === historyJobId) ? prev : [{
-                          id: historyJobId, status: 'done',
-                          businessName: h.business_name, vehicle: h.vehicle,
-                          phone: '', customerEmail: h.customer_email || '',
-                          data: {
-                            vehicle: h.vehicle,
-                            creativeSummary: h.creative_summary,
-                            dominantMessage: h.dominant_message,
-                            variants: Array.isArray(h.variants) ? h.variants : [],
-                          },
-                          error: null,
-                          // No snapshot — a past run's original artwork isn't available to
-                          // resend, so this entry has no Retry.
-                          snapshot: null,
-                        }, ...prev]));
+                        setJobs(prev => (prev.some(j => j.id === historyJobId)
+                          ? prev
+                          : keepOnlyLatestDone([{
+                            id: historyJobId, status: 'done',
+                            businessName: h.business_name, vehicle: h.vehicle,
+                            phone: '', customerEmail: h.customer_email || '',
+                            data: {
+                              vehicle: h.vehicle,
+                              creativeSummary: h.creative_summary,
+                              dominantMessage: h.dominant_message,
+                              variants: Array.isArray(h.variants) ? h.variants : [],
+                            },
+                            error: null,
+                            // No snapshot — a past run's original artwork isn't available to
+                            // resend, so this entry has no Retry.
+                            snapshot: null,
+                          }, ...prev], historyJobId)));
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }}
                       className={`text-left p-3 bg-white border rounded-lg transition ${
