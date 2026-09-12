@@ -20,9 +20,11 @@ const emptyForm = {
   website: '',
   primaryColor: '#FF6B1A',
   accentColor: '#FFC53D',
-  year: '',
-  make: '',
-  model: '',
+  // Most runs are for the same style of vehicle, so default to a common one rather than
+  // making every business start from a blank vehicle section — still fully editable.
+  year: '2020',
+  make: 'Ford',
+  model: 'F150',
   trim: '',
   customerEmail: '',
   serviceArea: '',
