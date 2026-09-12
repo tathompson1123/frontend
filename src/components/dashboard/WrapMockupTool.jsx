@@ -445,69 +445,94 @@ ${emailJob.phone || ''}` : '';
         </div>
       )}
 
-      <div className="grid lg:grid-cols-[360px_1fr] gap-8 items-start">
-        {/* Inputs */}
-        <div className="bg-white rounded-xl border-2 border-gray-200 p-6 lg:sticky lg:top-6">
-          {/* Read the wrap content off their own website rather than typing it from memory —
-              logo, services, credentials they actually claim, service area, socials. Fills
-              the fields below; nothing here generates anything, so it's still all editable
-              before a run gets spent on it. */}
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            Have their website? Scan it first
-          </label>
-          <div className="flex gap-2 mb-1">
-            <input
-              value={scanUrl}
-              onChange={(e) => setScanUrl(e.target.value)}
-              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); scanSite(); } }}
-              placeholder="theirbusiness.com"
-              disabled={scanning}
-              className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-gray-50"
-            />
-            <button
-              onClick={scanSite}
-              disabled={scanning || !scanUrl.trim()}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-900 transition disabled:opacity-50 whitespace-nowrap"
-            >
-              {scanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-              {scanning ? 'Scanning…' : 'Scan'}
-            </button>
-            {/* Same action as the button at the bottom of the form — here too so scan then
-                generate doesn't mean scrolling down every time. */}
-            <button
-              onClick={queueGenerate}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition whitespace-nowrap"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> Generate
-            </button>
+      {/* Results — a queue, not a single slot, and on top rather than beside the form so a
+          finished (or generating) render is the first thing on the page, not something to
+          scroll or look sideways for. Newest first, so the run just started lands at the
+          top where the scroll-to-top on submit already puts the viewport. */}
+      <div className="mb-8">
+        {jobs.length === 0 ? (
+          <div className="border-2 border-dashed border-gray-200 rounded-xl p-16 text-center text-gray-400">
+            Fill in the customer's details and generate to see both directions here.
           </div>
-          <p className="text-[11px] text-gray-400 mb-3">
-            Pulls their logo, services and any credentials they actually state — never invents
-            one. Fills the fields below without overwriting anything you've already typed.
-          </p>
+        ) : (
+          <div className="space-y-6">
+            {jobs.map(job => (
+              <JobCard
+                key={job.id}
+                job={job}
+                onEmail={() => setEmailJobId(job.id)}
+                onRetry={() => retryJob(job)}
+                onDownload={downloadImage}
+              />
+            ))}
+          </div>
+        )}
+      </div>
 
-          {scanError && (
-            <div className="flex items-start gap-2 p-2.5 mb-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
-              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
-              <span>{scanError}</span>
-            </div>
-          )}
-          {scanNote && (
-            <div className="p-2.5 mb-3 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
-              <div className="flex items-start justify-between gap-2">
-                <span>Read from {scanNote.source}</span>
-                <button onClick={() => setScanNote(null)} className="text-emerald-400 hover:text-emerald-600 flex-shrink-0">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-              {scanNote.missing?.length > 0 && (
-                <ul className="mt-1.5 pl-4 list-disc space-y-0.5 text-emerald-700">
-                  {scanNote.missing.map((m, i) => <li key={i}>{m}</li>)}
-                </ul>
-              )}
-            </div>
-          )}
+      {/* Inputs — full page width now rather than a narrow sidebar, so related fields sit
+          side by side instead of stacking one to a row all the way down. */}
+      <div className="bg-white rounded-xl border-2 border-gray-200 p-6 mb-10">
+        {/* Read the wrap content off their own website rather than typing it from memory —
+            logo, services, credentials they actually claim, service area, socials. Fills
+            the fields below; nothing here generates anything, so it's still all editable
+            before a run gets spent on it. */}
+        <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+          Have their website? Scan it first
+        </label>
+        <div className="flex gap-2 mb-1">
+          <input
+            value={scanUrl}
+            onChange={(e) => setScanUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); scanSite(); } }}
+            placeholder="theirbusiness.com"
+            disabled={scanning}
+            className="flex-1 max-w-md px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:bg-gray-50"
+          />
+          <button
+            onClick={scanSite}
+            disabled={scanning || !scanUrl.trim()}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-gray-800 rounded-lg hover:bg-gray-900 transition disabled:opacity-50 whitespace-nowrap"
+          >
+            {scanning ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
+            {scanning ? 'Scanning…' : 'Scan'}
+          </button>
+          {/* Same action as the button at the bottom of the form — here too so scan then
+              generate doesn't mean scrolling down every time. */}
+          <button
+            onClick={queueGenerate}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition whitespace-nowrap"
+          >
+            <Sparkles className="w-3.5 h-3.5" /> Generate
+          </button>
+        </div>
+        <p className="text-[11px] text-gray-400 mb-3">
+          Pulls their logo, services and any credentials they actually state — never invents
+          one. Fills the fields below without overwriting anything you've already typed.
+        </p>
 
+        {scanError && (
+          <div className="flex items-start gap-2 p-2.5 mb-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+            <span>{scanError}</span>
+          </div>
+        )}
+        {scanNote && (
+          <div className="p-2.5 mb-4 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
+            <div className="flex items-start justify-between gap-2">
+              <span>Read from {scanNote.source}</span>
+              <button onClick={() => setScanNote(null)} className="text-emerald-400 hover:text-emerald-600 flex-shrink-0">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {scanNote.missing?.length > 0 && (
+              <ul className="mt-1.5 pl-4 list-disc space-y-0.5 text-emerald-700">
+                {scanNote.missing.map((m, i) => <li key={i}>{m}</li>)}
+              </ul>
+            )}
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Field label="Business name" value={form.businessName} onChange={update('businessName')} placeholder="American Plumbing" />
           <Field label="Phone" value={form.phone} onChange={update('phone')} placeholder="(360) 438-0611" />
           <Field label="Website" value={form.website} onChange={update('website')} placeholder="americanplumbingwa.com" />
@@ -517,344 +542,340 @@ ${emailJob.phone || ''}` : '';
             onChange={update('service')}
             placeholder="usually read from the logo"
           />
+        </div>
 
-          {/* Brand colours. When artwork is uploaded these are sampled from it, so the
-              pickers act as an override rather than the source of truth. */}
-          <label className="flex items-center gap-2 mb-3 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={autoColors}
-              onChange={(e) => setAutoColors(e.target.checked)}
-              className="w-4 h-4 accent-amber-600"
-            />
-            <span className="text-xs font-semibold text-gray-600">
-              Pull brand colors from the uploaded images
-            </span>
-          </label>
-
-          {autoColors ? (
-            <div className="mb-4 p-3 bg-gray-50 border border-gray-200 rounded-lg">
-              {/* The sampled palette used to be shown here once a run finished, but the form
-                  is cleared the moment a run is queued — by the time colours would be known,
-                  this business's fields are already gone. The palette itself still shows up
-                  per job, under its render, once it's ready. */}
-              <p className="text-xs text-gray-500">
-                {images.length > 0
-                  ? 'Colors will be sampled from your images when you generate.'
-                  : 'Upload a logo below and its colors will be used automatically.'}
-              </p>
-            </div>
-          ) : (
-            <div className="flex gap-3 mb-4">
-              <ColorField label="Brand color" value={form.primaryColor} onChange={update('primaryColor')} />
-              <ColorField label="Accent color" value={form.accentColor} onChange={update('accentColor')} />
-            </div>
-          )}
-
-          {/* Artwork — passed to the image model as references, so the customer's real
-              logo is reproduced rather than an invented one. */}
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            Logo &amp; photos (up to {MAX_IMAGES})
-          </label>
-          {images.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mb-2">
-              {images.map((img, i) => (
-                <div key={img.preview} className="relative group">
-                  <img src={img.preview} alt={img.file.name} className="w-full h-16 object-contain bg-gray-50 rounded border border-gray-200" />
-                  <button
-                    onClick={() => removeImage(i)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-500 hover:text-red-600 hover:border-red-300"
-                    title={`Remove ${img.file.name}`}
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                  {i === 0 && (
-                    <span className="absolute bottom-0 left-0 px-1 text-[10px] bg-amber-600 text-white rounded-tr">logo</span>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-          {images.length < MAX_IMAGES && (
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-1 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-amber-400 hover:text-amber-700 transition"
-            >
-              <Upload className="w-4 h-4" /> {images.length === 0 ? 'Upload logo / photos' : 'Add another'}
-            </button>
-          )}
-          <p className="text-[11px] text-gray-400 mb-4">
-            First image is treated as the logo, and it's reproduced as-is — never redrawn or
-            recoloured. Job photos help: they're used full-bleed and tinted, never as small
-            insets. These are references for the design; they aren't rendered as concepts
-            themselves.
-          </p>
-          <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickImages} className="hidden" />
-
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            How far should we go?
-          </label>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <ModeButton
-              active={designMode === 'evolve'}
-              onClick={() => setDesignMode('evolve')}
-              title="Keep close to reference"
-              blurb="Their palette, their logo, their character — cleaned up and laid out properly."
-            />
-            <ModeButton
-              active={designMode === 'reinvent'}
-              onClick={() => setDesignMode('reinvent')}
-              title="Completely redesign"
-              blurb="Start over. New colour strategy, bold layout, their logo as one element."
-            />
-          </div>
-          <p className="text-[11px] text-gray-400 mb-4">
-            {designMode === 'evolve'
-              ? 'Every colour will trace back to the artwork you upload — nothing new invented.'
-              : 'Builds a new colour strategy and layout, using their logo as one element.'}
-          </p>
-
-          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-            How loud?
-          </label>
-          <div className="grid grid-cols-2 gap-2 mb-2">
-            <ModeButton
-              active={designIntensity === 'bold'}
-              onClick={() => setDesignIntensity('bold')}
-              title="Go bold"
-              blurb="Saturated colour, an oversized signature, real visual energy."
-            />
-            <ModeButton
-              active={designIntensity === 'simple'}
-              onClick={() => setDesignIntensity('simple')}
-              title="Keep it simple"
-              blurb="Two colours, one quiet mark, lots of space. Restrained, not timid."
-            />
-          </div>
-          <p className="text-[11px] text-gray-400 mb-4">
-            {designIntensity === 'simple'
-              ? 'Drops mascots, service lists and ornament for a narrow palette and lots of space. Restrained, not timid.'
-              : 'The full trade-truck treatment: every panel wrapped, an illustrated mascot, services and contact at full size.'}
-          </p>
-
-          {/* Wrap content. Collapsed by default so a quick run still only needs a name and a
-              vehicle, but this is the section that decides whether the panels come back full
-              or padded with empty colour. */}
-          <button
-            type="button"
-            onClick={() => setContentOpen(o => !o)}
-            className="w-full flex items-center justify-between px-3 py-2.5 mb-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
-          >
-            <span className="text-xs font-semibold text-gray-600">
-              What goes on the wrap
-              {contentCount > 0 && (
-                <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold">
-                  {contentCount}
-                </span>
-              )}
-            </span>
-            <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${contentOpen ? 'rotate-180' : ''}`} />
-          </button>
-
-          {contentOpen && (
-            <div className="mb-4 px-3 py-3 rounded-lg border border-gray-200">
-              <p className="text-[11px] text-gray-400 mb-3">
-                All optional — but a wrap with nothing to say comes back sparse. Nothing here
-                is invented for you: a credential you don't tick never gets printed.
-              </p>
-
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                Services ({services.length}/{MAX_SERVICES})
-              </label>
-              {services.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {services.map((s, i) => (
-                    <span
-                      key={`${s}-${i}`}
-                      className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-800"
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
+          <div>
+            {/* Artwork — passed to the image model as references, so the customer's real
+                logo is reproduced rather than an invented one. */}
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              Logo &amp; photos (up to {MAX_IMAGES})
+            </label>
+            {images.length > 0 && (
+              <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-2">
+                {images.map((img, i) => (
+                  <div key={img.preview} className="relative group">
+                    <img src={img.preview} alt={img.file.name} className="w-full h-16 object-contain bg-gray-50 rounded border border-gray-200" />
+                    <button
+                      onClick={() => removeImage(i)}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white border border-gray-300 flex items-center justify-center text-gray-500 hover:text-red-600 hover:border-red-300"
+                      title={`Remove ${img.file.name}`}
                     >
-                      {s}
-                      <button
-                        type="button"
-                        onClick={() => setServices(prev => prev.filter((_, j) => j !== i))}
-                        className="p-0.5 rounded hover:bg-amber-200"
-                        aria-label={`Remove ${s}`}
+                      <X className="w-3 h-3" />
+                    </button>
+                    {i === 0 && (
+                      <span className="absolute bottom-0 left-0 px-1 text-[10px] bg-amber-600 text-white rounded-tr">logo</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            {images.length < MAX_IMAGES && (
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2.5 mb-1 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-amber-400 hover:text-amber-700 transition"
+              >
+                <Upload className="w-4 h-4" /> {images.length === 0 ? 'Upload logo / photos' : 'Add another'}
+              </button>
+            )}
+            <p className="text-[11px] text-gray-400">
+              First image is treated as the logo, and it's reproduced as-is — never redrawn or
+              recoloured. Job photos help: they're used full-bleed and tinted, never as small
+              insets. These are references for the design; they aren't rendered as concepts
+              themselves.
+            </p>
+            <input ref={fileRef} type="file" accept="image/*" multiple onChange={pickImages} className="hidden" />
+          </div>
+
+          <div>
+            {/* Brand colours. When artwork is uploaded these are sampled from it, so the
+                pickers act as an override rather than the source of truth. */}
+            <label className="flex items-center gap-2 mb-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={autoColors}
+                onChange={(e) => setAutoColors(e.target.checked)}
+                className="w-4 h-4 accent-amber-600"
+              />
+              <span className="text-xs font-semibold text-gray-600">
+                Pull brand colors from the uploaded images
+              </span>
+            </label>
+
+            {autoColors ? (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
+                {/* The sampled palette used to be shown here once a run finished, but the
+                    form is cleared the moment a run is queued — by the time colours would be
+                    known, this business's fields are already gone. The palette itself still
+                    shows up per job, under its render, once it's ready. */}
+                <p className="text-xs text-gray-500">
+                  {images.length > 0
+                    ? 'Colors will be sampled from your images when you generate.'
+                    : 'Upload a logo and its colors will be used automatically.'}
+                </p>
+              </div>
+            ) : (
+              <div className="flex gap-3">
+                <ColorField label="Brand color" value={form.primaryColor} onChange={update('primaryColor')} />
+                <ColorField label="Accent color" value={form.accentColor} onChange={update('accentColor')} />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              How far should we go?
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <ModeButton
+                active={designMode === 'evolve'}
+                onClick={() => setDesignMode('evolve')}
+                title="Keep close to reference"
+                blurb="Their palette, their logo, their character — cleaned up and laid out properly."
+              />
+              <ModeButton
+                active={designMode === 'reinvent'}
+                onClick={() => setDesignMode('reinvent')}
+                title="Completely redesign"
+                blurb="Start over. New colour strategy, bold layout, their logo as one element."
+              />
+            </div>
+            <p className="text-[11px] text-gray-400">
+              {designMode === 'evolve'
+                ? 'Every colour will trace back to the artwork you upload — nothing new invented.'
+                : 'Builds a new colour strategy and layout, using their logo as one element.'}
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+              How loud?
+            </label>
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <ModeButton
+                active={designIntensity === 'bold'}
+                onClick={() => setDesignIntensity('bold')}
+                title="Go bold"
+                blurb="Saturated colour, an oversized signature, real visual energy."
+              />
+              <ModeButton
+                active={designIntensity === 'simple'}
+                onClick={() => setDesignIntensity('simple')}
+                title="Keep it simple"
+                blurb="Two colours, one quiet mark, lots of space. Restrained, not timid."
+              />
+            </div>
+            <p className="text-[11px] text-gray-400">
+              {designIntensity === 'simple'
+                ? 'Drops mascots, service lists and ornament for a narrow palette and lots of space. Restrained, not timid.'
+                : 'The full trade-truck treatment: every panel wrapped, an illustrated mascot, services and contact at full size.'}
+            </p>
+          </div>
+        </div>
+
+        {/* Wrap content. Collapsed by default so a quick run still only needs a name and a
+            vehicle, but this is the section that decides whether the panels come back full
+            or padded with empty colour. */}
+        <button
+          type="button"
+          onClick={() => setContentOpen(o => !o)}
+          className="w-full flex items-center justify-between px-3 py-2.5 mt-4 mb-2 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition"
+        >
+          <span className="text-xs font-semibold text-gray-600">
+            What goes on the wrap
+            {contentCount > 0 && (
+              <span className="ml-2 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold">
+                {contentCount}
+              </span>
+            )}
+          </span>
+          <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${contentOpen ? 'rotate-180' : ''}`} />
+        </button>
+
+        {contentOpen && (
+          <div className="mb-4 px-3 py-3 rounded-lg border border-gray-200">
+            <p className="text-[11px] text-gray-400 mb-3">
+              All optional — but a wrap with nothing to say comes back sparse. Nothing here
+              is invented for you: a credential you don't tick never gets printed.
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                  Services ({services.length}/{MAX_SERVICES})
+                </label>
+                {services.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {services.map((s, i) => (
+                      <span
+                        key={`${s}-${i}`}
+                        className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-800"
                       >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
+                        {s}
+                        <button
+                          type="button"
+                          onClick={() => setServices(prev => prev.filter((_, j) => j !== i))}
+                          className="p-0.5 rounded hover:bg-amber-200"
+                          aria-label={`Remove ${s}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {services.length < MAX_SERVICES && (
+                  <input
+                    value={serviceDraft}
+                    onChange={(e) => setServiceDraft(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ',') {
+                        e.preventDefault();
+                        addService(serviceDraft);
+                      }
+                    }}
+                    // Not losing a half-typed service to a stray click is worth more than
+                    // the tidiness of only committing on Enter.
+                    onBlur={() => addService(serviceDraft)}
+                    placeholder="Furnaces, boilers, mini splits…  (Enter to add)"
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+                  Credentials they actually have
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 mb-2">
+                  {BADGE_OPTIONS.map(badge => (
+                    <label key={badge} className="flex items-center gap-2 cursor-pointer text-[12px] text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={badges.includes(badge)}
+                        onChange={() => toggleBadge(badge)}
+                        className="rounded border-gray-300 text-amber-600 focus:ring-amber-400"
+                      />
+                      {badge}
+                    </label>
                   ))}
                 </div>
-              )}
-              {services.length < MAX_SERVICES && (
+                {customBadges.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {customBadges.map((b, i) => (
+                      <span
+                        key={`${b}-${i}`}
+                        className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-800"
+                      >
+                        {b}
+                        <button
+                          type="button"
+                          onClick={() => setCustomBadges(prev => prev.filter((_, j) => j !== i))}
+                          className="p-0.5 rounded hover:bg-amber-200"
+                          aria-label={`Remove ${b}`}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
                 <input
-                  value={serviceDraft}
-                  onChange={(e) => setServiceDraft(e.target.value)}
+                  value={customBadgeDraft}
+                  onChange={(e) => setCustomBadgeDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === ',') {
                       e.preventDefault();
-                      addService(serviceDraft);
+                      addCustomBadge(customBadgeDraft);
                     }
                   }}
-                  // Not losing a half-typed service to a stray click is worth more than
-                  // the tidiness of only committing on Enter.
-                  onBlur={() => addService(serviceDraft)}
-                  placeholder="Furnaces, boilers, mini splits…  (Enter to add)"
-                  className="w-full px-3 py-2 mb-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  onBlur={() => addCustomBadge(customBadgeDraft)}
+                  placeholder="Anything else — 4.9★ on Google, BBB A+…  (Enter to add)"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
                 />
-              )}
-
-              <label className="block text-xs font-semibold text-gray-500 mb-1.5">
-                Credentials they actually have
-              </label>
-              <div className="grid grid-cols-1 gap-1 mb-2">
-                {BADGE_OPTIONS.map(badge => (
-                  <label key={badge} className="flex items-center gap-2 cursor-pointer text-[12px] text-gray-600">
-                    <input
-                      type="checkbox"
-                      checked={badges.includes(badge)}
-                      onChange={() => toggleBadge(badge)}
-                      className="rounded border-gray-300 text-amber-600 focus:ring-amber-400"
-                    />
-                    {badge}
-                  </label>
-                ))}
               </div>
-              {customBadges.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  {customBadges.map((b, i) => (
-                    <span
-                      key={`${b}-${i}`}
-                      className="inline-flex items-center gap-1 pl-2 pr-1 py-1 rounded bg-amber-50 border border-amber-200 text-[11px] text-amber-800"
-                    >
-                      {b}
-                      <button
-                        type="button"
-                        onClick={() => setCustomBadges(prev => prev.filter((_, j) => j !== i))}
-                        className="p-0.5 rounded hover:bg-amber-200"
-                        aria-label={`Remove ${b}`}
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <input
-                value={customBadgeDraft}
-                onChange={(e) => setCustomBadgeDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ',') {
-                    e.preventDefault();
-                    addCustomBadge(customBadgeDraft);
-                  }
-                }}
-                onBlur={() => addCustomBadge(customBadgeDraft)}
-                placeholder="Anything else — 4.9★ on Google, BBB A+…  (Enter to add)"
-                className="w-full px-3 py-2 mb-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-              />
+            </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Service area" value={form.serviceArea} onChange={update('serviceArea')} placeholder="Whatcom County" />
-                <Field label="Established" value={form.yearsInBusiness} onChange={update('yearsInBusiness')} placeholder="Since 2009" />
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-3">
+              <Field label="Service area" value={form.serviceArea} onChange={update('serviceArea')} placeholder="Whatcom County" />
+              <Field label="Established" value={form.yearsInBusiness} onChange={update('yearsInBusiness')} placeholder="Since 2009" />
               <Field label="Social handle" value={form.socialHandle} onChange={update('socialHandle')} placeholder="@bayviewhvac" />
             </div>
-          )}
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Year" value={form.year} onChange={update('year')} placeholder="2023" />
-            <Field label="Make" value={form.make} onChange={update('make')} placeholder="Ford" />
-            <Field label="Model" value={form.model} onChange={update('model')} placeholder="Transit" />
-            <Field label="Trim" value={form.trim} onChange={update('trim')} placeholder="XLT" />
           </div>
+        )}
 
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-4">
+          <Field label="Year" value={form.year} onChange={update('year')} placeholder="2023" />
+          <Field label="Make" value={form.make} onChange={update('make')} placeholder="Ford" />
+          <Field label="Model" value={form.model} onChange={update('model')} placeholder="Transit" />
+          <Field label="Trim" value={form.trim} onChange={update('trim')} placeholder="XLT" />
           <Field label="Customer email (optional)" value={form.customerEmail} onChange={update('customerEmail')} placeholder="customer@email.com" />
-
-          <button
-            onClick={queueGenerate}
-            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-lg font-semibold text-sm hover:bg-amber-700 transition"
-          >
-            <Sparkles className="w-4 h-4" /> Generate mockups
-          </button>
-          <p className="text-xs text-gray-400 text-center mt-2">
-            Runs in the background — usually a minute or two, longer if Google throttles.
-            Queue up the next business as soon as this one starts.
-          </p>
         </div>
 
-        {/* Results — a queue, not a single slot. Newest first, so the run just started lands
-            at the top where the scroll-to-top on submit already puts the viewport. */}
-        <div>
-          {jobs.length === 0 ? (
-            <div className="border-2 border-dashed border-gray-200 rounded-xl p-16 text-center text-gray-400">
-              Fill in the customer's details and generate to see both directions here.
-            </div>
-          ) : (
-            <div className="space-y-6">
-              {jobs.map(job => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onEmail={() => setEmailJobId(job.id)}
-                  onRetry={() => retryJob(job)}
-                  onDownload={downloadImage}
-                />
-              ))}
-            </div>
-          )}
-
-          {history.length > 0 && (
-            <div className="mt-10">
-              <h3 className="text-sm font-semibold text-gray-500 mb-3">Previous runs</h3>
-              <div className="grid sm:grid-cols-2 gap-3">
-                {history.map(h => {
-                  const loadable = h.status === 'done' || !h.status;
-                  return (
-                    <button
-                      key={h.id}
-                      disabled={!loadable}
-                      onClick={() => {
-                        if (!loadable) return;
-                        const historyJobId = `history-${h.id}`;
-                        setJobs(prev => (prev.some(j => j.id === historyJobId)
-                          ? prev
-                          : keepOnlyLatestDone([{
-                            id: historyJobId, status: 'done',
-                            businessName: h.business_name, vehicle: h.vehicle,
-                            phone: '', customerEmail: h.customer_email || '',
-                            data: {
-                              vehicle: h.vehicle,
-                              creativeSummary: h.creative_summary,
-                              dominantMessage: h.dominant_message,
-                              variants: Array.isArray(h.variants) ? h.variants : [],
-                            },
-                            error: null,
-                            // No snapshot — a past run's original artwork isn't available to
-                            // resend, so this entry has no Retry.
-                            snapshot: null,
-                          }, ...prev], historyJobId)));
-                        window.scrollTo({ top: 0, behavior: 'smooth' });
-                      }}
-                      className={`text-left p-3 bg-white border rounded-lg transition ${
-                        loadable ? 'border-gray-200 hover:border-amber-300' : 'border-gray-200 opacity-50 cursor-not-allowed'
-                      }`}
-                    >
-                      <p className="text-sm font-semibold text-gray-900 truncate">{h.business_name}</p>
-                      <p className="text-xs text-gray-500 truncate">{h.vehicle}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(h.created_at).toLocaleDateString()}
-                        {h.status === 'generating' && <span className="ml-1 text-amber-500">· interrupted</span>}
-                        {h.status === 'failed' && <span className="ml-1 text-red-500">· failed</span>}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={queueGenerate}
+          className="w-full flex items-center justify-center gap-2 px-4 py-3 mt-2 bg-amber-600 text-white rounded-lg font-semibold text-sm hover:bg-amber-700 transition"
+        >
+          <Sparkles className="w-4 h-4" /> Generate mockups
+        </button>
+        <p className="text-xs text-gray-400 text-center mt-2">
+          Runs in the background — usually a minute or two, longer if Google throttles.
+          Queue up the next business as soon as this one starts.
+        </p>
       </div>
+
+      {/* Previous runs — last on the page, below the working list and the form. */}
+      {history.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 mb-3">Previous runs</h3>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {history.map(h => {
+              const loadable = h.status === 'done' || !h.status;
+              return (
+                <button
+                  key={h.id}
+                  disabled={!loadable}
+                  onClick={() => {
+                    if (!loadable) return;
+                    const historyJobId = `history-${h.id}`;
+                    setJobs(prev => (prev.some(j => j.id === historyJobId)
+                      ? prev
+                      : keepOnlyLatestDone([{
+                        id: historyJobId, status: 'done',
+                        businessName: h.business_name, vehicle: h.vehicle,
+                        phone: '', customerEmail: h.customer_email || '',
+                        data: {
+                          vehicle: h.vehicle,
+                          creativeSummary: h.creative_summary,
+                          dominantMessage: h.dominant_message,
+                          variants: Array.isArray(h.variants) ? h.variants : [],
+                        },
+                        error: null,
+                        // No snapshot — a past run's original artwork isn't available to
+                        // resend, so this entry has no Retry.
+                        snapshot: null,
+                      }, ...prev], historyJobId)));
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                  className={`text-left p-3 bg-white border rounded-lg transition ${
+                    loadable ? 'border-gray-200 hover:border-amber-300' : 'border-gray-200 opacity-50 cursor-not-allowed'
+                  }`}
+                >
+                  <p className="text-sm font-semibold text-gray-900 truncate">{h.business_name}</p>
+                  <p className="text-xs text-gray-500 truncate">{h.vehicle}</p>
+                  <p className="text-xs text-gray-400">
+                    {new Date(h.created_at).toLocaleDateString()}
+                    {h.status === 'generating' && <span className="ml-1 text-amber-500">· interrupted</span>}
+                    {h.status === 'failed' && <span className="ml-1 text-red-500">· failed</span>}
+                  </p>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {emailJob && (
         <div
