@@ -58,6 +58,9 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
   // Separate axis from designMode: one is how far to depart from their artwork, the
   // other is how loud the result should be.
   const [designIntensity, setDesignIntensity] = useState('bold');
+  // A third, independent axis: how much of the vehicle gets wrapped at all, as opposed to
+  // how busy the wrapped area is. Full is the common case, so it stays the default.
+  const [wrapCoverage, setWrapCoverage] = useState('full');
   // What actually gets printed on the panels. The dense look is mostly a content problem:
   // with only a name and a phone number there is nothing to fill a van with, and the design
   // comes back padded with empty colour.
@@ -307,6 +310,7 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
       body.append('autoColors', snapshot.autoColors ? 'true' : 'false');
       body.append('designMode', snapshot.designMode);
       body.append('designIntensity', snapshot.designIntensity);
+      body.append('wrapCoverage', snapshot.wrapCoverage);
       body.append('services', JSON.stringify(snapshot.services));
       body.append('badges', JSON.stringify(snapshot.badges));
 
@@ -335,7 +339,7 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
     const snapshot = {
       form: { ...form },
       images: images.map(img => img.file),
-      autoColors, designMode, designIntensity,
+      autoColors, designMode, designIntensity, wrapCoverage,
       services: [...services],
       badges: [...badges, ...customBadges],
     };
@@ -673,6 +677,47 @@ ${emailJob.phone || ''}` : '';
                 : 'The full trade-truck treatment: every panel wrapped, an illustrated mascot, services and contact at full size.'}
             </p>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">
+            How much of the vehicle?
+          </label>
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <ModeButton
+              active={wrapCoverage === 'full'}
+              onClick={() => setWrapCoverage('full')}
+              title="Full wrap"
+              blurb="Every panel, edge to edge — hood, roof, doors, bumpers and rear."
+            />
+            <ModeButton
+              active={wrapCoverage === 'sides'}
+              onClick={() => setWrapCoverage('sides')}
+              title="Sides only"
+              blurb="Doors and quarter panels only. Hood, roof and rear stay bare."
+            />
+            <ModeButton
+              active={wrapCoverage === 'sides_rear'}
+              onClick={() => setWrapCoverage('sides_rear')}
+              title="Sides + rear"
+              blurb="Doors and the full rear wrapped. Hood and roof stay bare."
+            />
+            <ModeButton
+              active={wrapCoverage === 'spot'}
+              onClick={() => setWrapCoverage('spot')}
+              title="Spot graphics"
+              blurb="Logo and name on the front doors only — a decal, not a wrap."
+            />
+          </div>
+          <p className="text-[11px] text-gray-400">
+            {wrapCoverage === 'full'
+              ? 'The full-vehicle wrap treatment — this is what most trade customers are buying.'
+              : wrapCoverage === 'sides'
+              ? 'A common way to cut cost: only the sides carry graphics, everything else stays in the vehicle\'s own paint.'
+              : wrapCoverage === 'sides_rear'
+              ? 'Sides and the full rear carry graphics — good when the rear needs to work as a billboard too. Front stays bare.'
+              : 'Logo and business name applied like a real vinyl decal on the front doors — the rest of the vehicle stays bare.'}
+          </p>
         </div>
 
         {/* Wrap content. Collapsed by default so a quick run still only needs a name and a
