@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, AlertTriangle, ChevronDown, Search } from 'lucide-react';
+import { Truck, Sparkles, RefreshCw, Mail, Copy, Check, Download, Upload, X, AlertTriangle, ChevronDown, Search, Pencil, Wand2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 // Vehicle wrap concept generator.
 //
@@ -249,6 +249,43 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
     } catch (err) { console.error(err); }
   };
 
+  /** Populates the form above from a previous run's original request, so it can be tweaked
+      and resubmitted rather than only viewed. Rows from before request_context existed have
+      nothing to load from. Artwork itself can't be restored — it was never kept as
+      re-uploadable files, only as the Cloudinary URLs already shown under the render. */
+  const loadIntoForm = (h) => {
+    const ctx = h.request_context;
+    if (!ctx) {
+      setError('This run predates the reload feature and has nothing to load — its images are still viewable above.');
+      return;
+    }
+    setForm({
+      businessName: ctx.businessName || '',
+      service: ctx.service || '',
+      phone: ctx.phone || '',
+      website: ctx.website || '',
+      primaryColor: ctx.primaryColor || emptyForm.primaryColor,
+      accentColor: ctx.accentColor || emptyForm.accentColor,
+      year: ctx.year || emptyForm.year,
+      make: ctx.make || emptyForm.make,
+      model: ctx.model || emptyForm.model,
+      trim: ctx.trim || '',
+      customerEmail: ctx.customerEmail || '',
+      serviceArea: ctx.serviceArea || '',
+      yearsInBusiness: ctx.yearsInBusiness || '',
+      socialHandle: ctx.socialHandle || '',
+    });
+    setAutoColors(ctx.autoColors !== false);
+    setDesignMode(ctx.designMode === 'evolve' ? 'evolve' : 'reinvent');
+    setDesignIntensity(ctx.designIntensity === 'simple' ? 'simple' : 'bold');
+    setWrapCoverage(['sides', 'sides_rear', 'spot'].includes(ctx.wrapCoverage) ? ctx.wrapCoverage : 'full');
+    setServices(Array.isArray(ctx.services) ? ctx.services : []);
+    setBadges((Array.isArray(ctx.badges) ? ctx.badges : []).filter(b => BADGE_OPTIONS.includes(b)));
+    setCustomBadges((Array.isArray(ctx.badges) ? ctx.badges : []).filter(b => !BADGE_OPTIONS.includes(b)));
+    setError(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const MAX_IMAGES = 5;
 
   const pickImages = (e) => {
@@ -387,6 +424,27 @@ export default function WrapMockupTool({ apiUrl, authFetch, user }) {
     runJob(job.id, job.snapshot);
   };
 
+  /** Tweaks one already-rendered variant rather than re-rolling the whole run. Returns the
+      updated variant (with its revision history) so the card can jump straight to showing
+      it; throws on failure so the card can show the error inline instead of losing the
+      typed instruction. */
+  const refineVariant = async (job, variantId, instruction) => {
+    const mockupId = job.data?.mockupId;
+    if (!mockupId) throw new Error('This run has no id to refine — only runs from this session or Previous runs can be refined.');
+    const res = await authFetch(`${apiUrl}/api/tools/wrap-mockup/${mockupId}/refine`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ variantId, instruction }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to refine mockup');
+    setJobs(prev => prev.map(j => (j.id !== job.id ? j : {
+      ...j,
+      data: { ...j.data, variants: j.data.variants.map(v => (v.id === variantId ? data.variant : v)) },
+    })));
+    return data.variant;
+  };
+
   const emailJob = jobs.find(j => j.id === emailJobId) || null;
   const emailBody = emailJob?.data ? `Hi there,
 
@@ -467,6 +525,7 @@ ${emailJob.phone || ''}` : '';
                 onEmail={() => setEmailJobId(job.id)}
                 onRetry={() => retryJob(job)}
                 onDownload={downloadImage}
+                onRefine={(variantId, instruction) => refineVariant(job, variantId, instruction)}
               />
             ))}
           </div>
@@ -879,43 +938,55 @@ ${emailJob.phone || ''}` : '';
             {history.map(h => {
               const loadable = h.status === 'done' || !h.status;
               return (
-                <button
-                  key={h.id}
-                  disabled={!loadable}
-                  onClick={() => {
-                    if (!loadable) return;
-                    const historyJobId = `history-${h.id}`;
-                    setJobs(prev => (prev.some(j => j.id === historyJobId)
-                      ? prev
-                      : keepOnlyLatestDone([{
-                        id: historyJobId, status: 'done',
-                        businessName: h.business_name, vehicle: h.vehicle,
-                        phone: '', customerEmail: h.customer_email || '',
-                        data: {
-                          vehicle: h.vehicle,
-                          creativeSummary: h.creative_summary,
-                          dominantMessage: h.dominant_message,
-                          variants: Array.isArray(h.variants) ? h.variants : [],
-                        },
-                        error: null,
-                        // No snapshot — a past run's original artwork isn't available to
-                        // resend, so this entry has no Retry.
-                        snapshot: null,
-                      }, ...prev], historyJobId)));
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                  className={`text-left p-3 bg-white border rounded-lg transition ${
-                    loadable ? 'border-gray-200 hover:border-amber-300' : 'border-gray-200 opacity-50 cursor-not-allowed'
-                  }`}
-                >
-                  <p className="text-sm font-semibold text-gray-900 truncate">{h.business_name}</p>
-                  <p className="text-xs text-gray-500 truncate">{h.vehicle}</p>
-                  <p className="text-xs text-gray-400">
-                    {new Date(h.created_at).toLocaleDateString()}
-                    {h.status === 'generating' && <span className="ml-1 text-amber-500">· interrupted</span>}
-                    {h.status === 'failed' && <span className="ml-1 text-red-500">· failed</span>}
-                  </p>
-                </button>
+                <div key={h.id} className="relative group">
+                  <button
+                    disabled={!loadable}
+                    onClick={() => {
+                      if (!loadable) return;
+                      const historyJobId = `history-${h.id}`;
+                      setJobs(prev => (prev.some(j => j.id === historyJobId)
+                        ? prev
+                        : keepOnlyLatestDone([{
+                          id: historyJobId, status: 'done',
+                          businessName: h.business_name, vehicle: h.vehicle,
+                          phone: '', customerEmail: h.customer_email || '',
+                          data: {
+                            mockupId: h.id,
+                            vehicle: h.vehicle,
+                            creativeSummary: h.creative_summary,
+                            dominantMessage: h.dominant_message,
+                            variants: Array.isArray(h.variants) ? h.variants : [],
+                          },
+                          error: null,
+                          // No snapshot — a past run's original artwork isn't available to
+                          // resend, so this entry has no Retry.
+                          snapshot: null,
+                        }, ...prev], historyJobId)));
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className={`w-full text-left p-3 pr-9 bg-white border rounded-lg transition ${
+                      loadable ? 'border-gray-200 hover:border-amber-300' : 'border-gray-200 opacity-50 cursor-not-allowed'
+                    }`}
+                  >
+                    <p className="text-sm font-semibold text-gray-900 truncate">{h.business_name}</p>
+                    <p className="text-xs text-gray-500 truncate">{h.vehicle}</p>
+                    <p className="text-xs text-gray-400">
+                      {new Date(h.created_at).toLocaleDateString()}
+                      {h.status === 'generating' && <span className="ml-1 text-amber-500">· interrupted</span>}
+                      {h.status === 'failed' && <span className="ml-1 text-red-500">· failed</span>}
+                    </p>
+                  </button>
+                  {/* Separate from the card's own click (which loads the results view) —
+                      this loads the ORIGINAL inputs into the form above so the run can be
+                      tweaked and resubmitted. */}
+                  <button
+                    title="Load into form to tweak and rerun"
+                    onClick={(e) => { e.stopPropagation(); loadIntoForm(h); }}
+                    className="absolute top-2 right-2 p-1.5 rounded-md text-gray-400 hover:text-amber-700 hover:bg-amber-50 transition"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               );
             })}
           </div>
@@ -959,7 +1030,7 @@ ${emailJob.phone || ''}` : '';
 }
 
 /** One queued run — generating, failed, or the finished pair of concepts. */
-function JobCard({ job, onEmail, onRetry, onDownload }) {
+function JobCard({ job, onEmail, onRetry, onDownload, onRefine }) {
   if (job.status === 'generating') {
     return (
       <div className="bg-white rounded-xl border-2 border-gray-200 p-5">
@@ -1059,71 +1130,166 @@ function JobCard({ job, onEmail, onRetry, onDownload }) {
       )}
 
       {result.variants.map((variant, i) => (
-        <div key={variant.id} className="bg-white rounded-xl border-2 border-gray-200 p-5">
-          <div className="flex items-start justify-between gap-4 mb-3">
-            <div>
-              <span className="text-xs font-mono text-amber-600">{String(i + 1).padStart(2, '0')}</span>
-              <h3 className="font-bold text-gray-900">{variant.label}</h3>
-              {variant.rationale && <p className="text-sm text-gray-500">{variant.rationale}</p>}
-              {variant.signature && (
-                <p className="text-xs text-gray-500 mt-1">
-                  <span className="font-semibold text-gray-700">Signature:</span> {variant.signature}
-                </p>
-              )}
-              {variant.color_strategy && (
-                <span className="inline-block mt-1.5 px-2 py-0.5 bg-gray-100 rounded text-[10px] font-mono text-gray-600">
-                  {variant.color_strategy}
-                </span>
-              )}
-            </div>
-            <button
-              onClick={() => onDownload(
-                variant.imageUrl,
-                `${job.businessName.replace(/\s+/g, '-').toLowerCase()}-${variant.id}.png`
-              )}
-              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition whitespace-nowrap"
-            >
-              <Download className="w-3.5 h-3.5" /> PNG
-            </button>
-          </div>
-          <img src={variant.imageUrl} alt={variant.label} className="w-full rounded-lg bg-gray-100" />
+        <VariantCard
+          key={variant.id}
+          job={job}
+          variant={variant}
+          index={i}
+          onDownload={onDownload}
+          onRefine={onRefine}
+        />
+      ))}
+    </div>
+  );
+}
 
-          {/* What the design was told to print. Worth showing next to the render
-              because the image model can drop or garble a string, and this is the
-              list to check it against before anything is sent to a customer. */}
-          {(variant.palette?.length > 0 || variant.wordmark || variant.mascot) && (
-            <div className="mt-3 pt-3 border-t border-gray-100">
-              {variant.palette?.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {variant.palette.map((c, j) => (
-                    <span key={`${c.hex}-${j}`} className="inline-flex items-center gap-1.5">
-                      <span
-                        className="w-4 h-4 rounded border border-gray-200"
-                        style={{ backgroundColor: c.hex }}
-                      />
-                      <span className="text-[10px] font-mono text-gray-500">
-                        {c.role} {c.hex}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              )}
-              <dl className="text-[11px] text-gray-500 space-y-0.5">
-                {variant.tagline && <ManifestRow label="Tagline" value={variant.tagline} />}
-                {variant.servicesShown?.length > 0 && (
-                  <ManifestRow label="Services" value={variant.servicesShown.join(' · ')} />
-                )}
-                {variant.credentialsShown?.length > 0 && (
-                  <ManifestRow label="Badges" value={variant.credentialsShown.join(' · ')} />
-                )}
-                {variant.phoneDisplay && <ManifestRow label="Phone" value={variant.phoneDisplay} />}
-                {variant.websiteDisplay && <ManifestRow label="Web" value={variant.websiteDisplay} />}
-                {variant.mascot && <ManifestRow label="Mascot" value={variant.mascot} />}
-              </dl>
-            </div>
+/**
+ * One wrap direction, plus the refine loop: a free-text tweak instruction, and — once at
+ * least one refinement has been made — a stepper through that variant's revision history so
+ * a tweak that makes things worse can be stepped back from without calling the server again.
+ */
+function VariantCard({ job, variant, index, onDownload, onRefine }) {
+  const revisions = variant.revisions || [];
+  // Land on the latest revision by default; stepping back is a local display choice only.
+  const [revisionIndex, setRevisionIndex] = useState(revisions.length > 0 ? revisions.length - 1 : -1);
+  const [instruction, setInstruction] = useState('');
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState(null);
+
+  const shown = revisionIndex >= 0 && revisions[revisionIndex] ? revisions[revisionIndex] : variant;
+
+  const handleRefine = async () => {
+    if (!instruction.trim() || refining) return;
+    setRefining(true);
+    setRefineError(null);
+    try {
+      const updated = await onRefine(variant.id, instruction.trim());
+      setInstruction('');
+      setRevisionIndex((updated.revisions?.length || 1) - 1);
+    } catch (err) {
+      setRefineError(err.message);
+    } finally {
+      setRefining(false);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border-2 border-gray-200 p-5">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div>
+          <span className="text-xs font-mono text-amber-600">{String(index + 1).padStart(2, '0')}</span>
+          <h3 className="font-bold text-gray-900">{shown.label}</h3>
+          {shown.rationale && <p className="text-sm text-gray-500">{shown.rationale}</p>}
+          {shown.signature && (
+            <p className="text-xs text-gray-500 mt-1">
+              <span className="font-semibold text-gray-700">Signature:</span> {shown.signature}
+            </p>
+          )}
+          {shown.color_strategy && (
+            <span className="inline-block mt-1.5 px-2 py-0.5 bg-gray-100 rounded text-[10px] font-mono text-gray-600">
+              {shown.color_strategy}
+            </span>
           )}
         </div>
-      ))}
+        <button
+          onClick={() => onDownload(
+            shown.imageUrl,
+            `${job.businessName.replace(/\s+/g, '-').toLowerCase()}-${variant.id}${revisionIndex > 0 ? `-r${revisionIndex}` : ''}.png`
+          )}
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-gray-700 border border-gray-200 rounded-lg hover:bg-gray-50 transition whitespace-nowrap"
+        >
+          <Download className="w-3.5 h-3.5" /> PNG
+        </button>
+      </div>
+      <img src={shown.imageUrl} alt={shown.label} className="w-full rounded-lg bg-gray-100" />
+
+      {/* Revision stepper — only worth showing once there's more than one to step between. */}
+      {revisions.length > 1 && (
+        <div className="flex items-center justify-center gap-3 mt-3">
+          <button
+            disabled={revisionIndex <= 0}
+            onClick={() => setRevisionIndex(idx => Math.max(0, idx - 1))}
+            className="p-1 rounded text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:hover:text-gray-400"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+          <span className="text-xs text-gray-400">
+            {revisionIndex === 0 ? 'Original' : `Revision ${revisionIndex}`} · {revisionIndex + 1}/{revisions.length}
+          </span>
+          <button
+            disabled={revisionIndex >= revisions.length - 1}
+            onClick={() => setRevisionIndex(idx => Math.min(revisions.length - 1, idx + 1))}
+            className="p-1 rounded text-gray-400 hover:text-gray-700 disabled:opacity-30 disabled:hover:text-gray-400"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      {shown.instruction && (
+        <p className="text-xs text-gray-400 italic mt-1.5 text-center">"{shown.instruction}"</p>
+      )}
+
+      {/* What the design was told to print. Worth showing next to the render
+          because the image model can drop or garble a string, and this is the
+          list to check it against before anything is sent to a customer. */}
+      {(shown.palette?.length > 0 || shown.wordmark || shown.mascot) && (
+        <div className="mt-3 pt-3 border-t border-gray-100">
+          {shown.palette?.length > 0 && (
+            <div className="flex flex-wrap gap-2 mb-2">
+              {shown.palette.map((c, j) => (
+                <span key={`${c.hex}-${j}`} className="inline-flex items-center gap-1.5">
+                  <span
+                    className="w-4 h-4 rounded border border-gray-200"
+                    style={{ backgroundColor: c.hex }}
+                  />
+                  <span className="text-[10px] font-mono text-gray-500">
+                    {c.role} {c.hex}
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+          <dl className="text-[11px] text-gray-500 space-y-0.5">
+            {shown.tagline && <ManifestRow label="Tagline" value={shown.tagline} />}
+            {shown.servicesShown?.length > 0 && (
+              <ManifestRow label="Services" value={shown.servicesShown.join(' · ')} />
+            )}
+            {shown.credentialsShown?.length > 0 && (
+              <ManifestRow label="Badges" value={shown.credentialsShown.join(' · ')} />
+            )}
+            {shown.phoneDisplay && <ManifestRow label="Phone" value={shown.phoneDisplay} />}
+            {shown.websiteDisplay && <ManifestRow label="Web" value={shown.websiteDisplay} />}
+            {shown.mascot && <ManifestRow label="Mascot" value={shown.mascot} />}
+          </dl>
+        </div>
+      )}
+
+      {/* Refine loop — a specific tweak rather than re-rolling the whole run. */}
+      {onRefine && (
+        <div className="mt-4 pt-4 border-t border-gray-100">
+          <label className="block text-xs font-semibold text-gray-500 mb-1.5">Refine this design</label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={instruction}
+              onChange={(e) => setInstruction(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleRefine(); }}
+              placeholder="e.g. make the mascot bigger, change the accent to teal"
+              disabled={refining}
+              className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-lg focus:border-amber-400 focus:outline-none disabled:bg-gray-50"
+            />
+            <button
+              onClick={handleRefine}
+              disabled={refining || !instruction.trim()}
+              className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-white bg-amber-600 rounded-lg hover:bg-amber-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+            >
+              {refining ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Wand2 className="w-3.5 h-3.5" />}
+              {refining ? 'Refining…' : 'Refine'}
+            </button>
+          </div>
+          {refineError && <p className="text-xs text-red-600 mt-1.5">{refineError}</p>}
+        </div>
+      )}
     </div>
   );
 }
