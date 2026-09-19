@@ -2468,12 +2468,11 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                     );
                   };
 
-                  // Selected-IDs across both buckets so the "add" dropdowns can hide them.
-                  const usedIds = new Set([
-                    ...newBooking.mainServices.map(l => Number(l.id)),
-                    ...newBooking.additionalServices.map(l => Number(l.id)),
-                  ]);
-                  const availableServices = (services || []).filter(s => !usedIds.has(Number(s.id)));
+                  // Every service stays pickable even after being added — a customer can
+                  // need the same service twice (e.g. two vehicles getting the same detail),
+                  // and each pick becomes its own line card (keyed by index, not service id),
+                  // so duplicates are safe both here and on the backend.
+                  const availableServices = services || [];
 
                   // "Add a service" dropdown — appears in both tabs, writes to the right bucket.
                   const renderAddPicker = (bucketKey, label) => {
