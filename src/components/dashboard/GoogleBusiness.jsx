@@ -999,37 +999,18 @@ const rateIncentiveNow = async () => {
                         <div className="rounded-xl border border-gray-200 bg-gray-50 p-4">
                           <p className="text-sm font-semibold text-gray-900 mb-1">Your review link</p>
                           <p className="text-xs text-gray-600">
-                            Texts include a tracked link carrying your business name, so customers
-                            recognise it:
+                            Texts include your actual Google review link, straight through — no
+                            tracking redirect — so it reads as trustworthy as a link from a friend:
                           </p>
                           <p className="font-mono text-xs text-gray-800 bg-white border border-gray-200 rounded-lg px-3 py-2 mt-2 break-all">
-                            sorceintegrations.com/r/{(user?.businessName || user?.business_name || 'your-business')
-                              .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'your-business'}/k3f9qa
+                            {reviewLink || 'Set your Google review link above'}
                           </p>
                           <p className="text-xs text-gray-500 mt-2">
-                            Set up automatically — nothing for you to configure. One tap takes them
-                            straight to your Google review page, and we record the click.
+                            Since the link itself isn't tracked, we can't tell who actually left a
+                            review. If the Monthly Raffle below is turned on, the text asks the
+                            customer to reply with a screenshot as proof once they've posted it —
+                            that's what enters them in the raffle and confirms the review for you.
                           </p>
-                          <details className="mt-3">
-                            <summary className="text-xs text-gray-400 cursor-pointer hover:text-gray-600">
-                              Advanced: use my own domain instead
-                            </summary>
-                            <div className="mt-2 space-y-2">
-                              <input
-                                type="text"
-                                value={reviewConfig.reviewLinkBase}
-                                onChange={(e) => setReviewConfig({ ...reviewConfig, reviewLinkBase: e.target.value })}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                placeholder="e.g., https://thompsonsautodetailing.com/googlereview"
-                              />
-                              <p className="text-xs text-gray-500">
-                                Only worth it if you want your own domain in the text. Requires a
-                                wildcard redirect from <span className="font-mono">/googlereview/*</span> →
-                                <span className="font-mono"> https://sorceintegrations.com/r/*</span> on your
-                                host. Leave blank to use the link above.
-                              </p>
-                            </div>
-                          </details>
                         </div>
 
                         <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
@@ -1263,7 +1244,7 @@ const rateIncentiveNow = async () => {
                   <div className="p-8">
                     <div className="text-center mb-6">
                       <h3 className="text-xl font-bold text-gray-900">Monthly Raffle <span className="text-sm font-medium text-gray-400">(optional)</span></h3>
-                      <p className="text-gray-500 mt-1">Draw one winner a month from everyone who left a review</p>
+                      <p className="text-gray-500 mt-1">Draw one winner a month from everyone who proved they left a review</p>
                     </div>
 
                     <div className="space-y-6">
@@ -1276,10 +1257,12 @@ const rateIncentiveNow = async () => {
                           <div className="flex-1">
                             <h4 className="font-bold text-gray-900">Monthly Review Raffle</h4>
                             <p className="text-sm text-gray-600 mt-1">
-                              On the 1st of each month we automatically draw <strong>one winner</strong> from everyone who left a
-                              Google review the previous month, and text the whole group. The winner gets your incentive reward;
-                              everyone else gets your consolation offer. Entrants are customers who tapped their review link
-                              (each person enters once, and past winners are excluded).
+                              On the 1st of each month we automatically draw <strong>one winner</strong> from everyone who
+                              proved they left a Google review the previous month, and text the whole group. The winner
+                              gets your reward below; everyone else gets your consolation offer. Since review links
+                              aren't tracked, the review-request text asks customers to reply with a screenshot once
+                              they've posted their review — that screenshot is what enters them (each person enters
+                              once, and past winners are excluded).
                             </p>
                           </div>
                         </div>
@@ -1298,6 +1281,10 @@ const rateIncentiveNow = async () => {
                               <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                             </label>
                           </div>
+                          <p className="text-xs text-gray-500 -mt-2">
+                            Turning this on adds a line to the review-request text asking for a screenshot in
+                            exchange for a raffle entry — that line is only sent when this is enabled.
+                          </p>
 
                           <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2 flex items-center gap-2">
@@ -1311,7 +1298,7 @@ const rateIncentiveNow = async () => {
                               placeholder="e.g., a FREE Full Detail"
                             />
                             <p className="text-xs text-gray-500 mt-1">
-                              Used <strong>only</strong> in the winner's text: "You WON … {reviewConfig.raffleReward || 'a FREE Full Detail'}". Phrase it as the prize (a noun), e.g. <em>"a FREE Full Detail"</em> — not "you won," which the message already says. This is separate from the review-request incentive in the previous step.
+                              Used <strong>both</strong> in the screenshot ask ("...to be entered to win {reviewConfig.raffleReward || 'a FREE Full Detail'}") and in the winner's text ("You WON … {reviewConfig.raffleReward || 'a FREE Full Detail'}"). Phrase it as the prize (a noun), e.g. <em>"a FREE Full Detail"</em> — not "you won," which the winner text already says. This is separate from the review-request incentive in the previous step.
                             </p>
                           </div>
 
@@ -1380,7 +1367,7 @@ const rateIncentiveNow = async () => {
                                 </div>
                               </>
                             ) : (
-                              <p className="text-sm text-gray-500 py-4">No entrants yet this month. Customers who tap their review link will appear here.</p>
+                              <p className="text-sm text-gray-500 py-4">No entrants yet this month. Customers who text in a screenshot of their review will appear here.</p>
                             )}
                           </div>
 
