@@ -24,10 +24,12 @@ const REVENUE_BANDS = [
 const TOTAL_STEPS = 4;
 
 // ── Video placeholder — swap `src` for a real file/embed when it's ready ─────
+// Kept dark regardless of page theme: video thumbnails read as a screen, and a
+// dark frame is what makes the play button pop against a light page.
 function VideoPlaceholder({ label, aspect = 'aspect-video', className = '' }) {
   return (
-    <div className={`relative ${aspect} w-full rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 border border-white/10 overflow-hidden flex items-center justify-center group cursor-pointer ${className}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(230,111,81,0.15),transparent_60%)]" />
+    <div className={`relative ${aspect} w-full rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl overflow-hidden flex items-center justify-center group cursor-pointer ${className}`}>
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(230,111,81,0.2),transparent_60%)]" />
       <div className="relative flex flex-col items-center gap-3 text-center px-4">
         <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur flex items-center justify-center group-hover:bg-primary-600/80 transition">
           <Play className="w-7 h-7 text-white ml-1" fill="currentColor" />
@@ -324,19 +326,21 @@ export default function LearnMorePage() {
   const [quizOpen, setQuizOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
       {/* Nav */}
-      <nav className="border-b border-white/10">
+      <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-accent-600 rounded-lg flex items-center justify-center">
               <Zap className="w-5 h-5 text-white" fill="currentColor" />
             </div>
-            <span className="text-xl font-bold">SORCE</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
+              SORCE
+            </span>
           </Link>
           <button
             onClick={() => setQuizOpen(true)}
-            className="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-accent-600 rounded-xl font-semibold text-sm hover:shadow-lg transition"
+            className="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg transition"
           >
             See If We're a Fit
           </button>
@@ -345,22 +349,22 @@ export default function LearnMorePage() {
 
       {/* Hero */}
       <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 text-center">
-        <p className="text-amber-400 font-semibold tracking-wide uppercase text-sm mb-4">For Service Businesses</p>
-        <h1 className="text-4xl md:text-6xl font-bold leading-tight max-w-4xl mx-auto mb-6">
+        <p className="text-primary-600 font-semibold tracking-wide uppercase text-sm mb-4">For Service Businesses</p>
+        <h1 className="text-4xl md:text-6xl font-bold leading-tight max-w-4xl mx-auto mb-6 text-gray-900">
           Get More Jobs With AI, a Website That Converts, and{' '}
-          <span className="bg-gradient-to-r from-amber-400 to-primary-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
             5-Star Reviews
           </span>{' '}
           — On Autopilot
         </h1>
-        <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
+        <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
           SORCE runs the lead-gen, follow-up and review requests behind the scenes, so you spend less time chasing
           customers and more time on the job.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
           <button
             onClick={() => setQuizOpen(true)}
-            className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 rounded-xl font-bold text-lg hover:shadow-2xl hover:shadow-primary-600/30 transition flex items-center gap-2"
+            className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition flex items-center gap-2"
           >
             See If We're a Fit <ArrowRight className="w-5 h-5" />
           </button>
@@ -371,93 +375,95 @@ export default function LearnMorePage() {
       </section>
 
       {/* How it works */}
-      <section className="bg-white text-gray-900 py-20">
-        <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">How SORCE Works</h2>
-          <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">
-            Three systems running quietly in the background of your business, every single day.
-          </p>
-          <div className="grid md:grid-cols-3 gap-8">
-            {HOW_IT_WORKS.map(({ icon: Icon, title, body }) => (
-              <div key={title} className="bg-gray-50 border border-gray-200 rounded-2xl p-7">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center mb-5">
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">How SORCE Works</h2>
+        <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">
+          Three systems running quietly in the background of your business, every single day.
+        </p>
+        <div className="grid md:grid-cols-3 gap-8">
+          {HOW_IT_WORKS.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="bg-white rounded-2xl p-7 shadow-lg hover:shadow-xl transition-shadow">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center mb-5">
+                <Icon className="w-6 h-6 text-white" />
               </div>
-            ))}
-          </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Video testimonials */}
-      <section className="max-w-6xl mx-auto px-6 py-20">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2">What Business Owners Are Saying</h2>
-        <p className="text-gray-400 text-center mb-14 max-w-xl mx-auto">
+      <section className="max-w-6xl mx-auto px-6 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">What Business Owners Are Saying</h2>
+        <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">
           Swap these placeholders for real customer video testimonials.
         </p>
         <div className="grid md:grid-cols-3 gap-6">
           {TESTIMONIAL_PLACEHOLDERS.map((t, i) => (
-            <div key={i} className="bg-white/5 border border-white/10 rounded-2xl p-5">
+            <div key={i} className="bg-white rounded-2xl p-5 shadow-lg">
               <VideoPlaceholder label="Add testimonial video" aspect="aspect-[4/5]" />
               <div className="flex gap-0.5 mt-4 mb-2">
                 {Array.from({ length: 5 }).map((_, s) => (
-                  <Star key={s} className="w-4 h-4 text-amber-400" fill="currentColor" />
+                  <Star key={s} className="w-4 h-4 text-amber-500" fill="currentColor" />
                 ))}
               </div>
-              <p className="font-semibold text-white text-sm">{t.name}</p>
-              <p className="text-xs text-gray-400">{t.business}</p>
+              <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
+              <p className="text-xs text-gray-500">{t.business}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* Stats strip */}
-      <section className="border-y border-white/10 bg-white/5">
-        <div className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-3 gap-6 text-center">
-          <div>
-            <div className="flex items-center justify-center gap-2 text-3xl font-bold text-amber-400">
-              <Users className="w-6 h-6" /> —
+      <section className="max-w-6xl mx-auto px-6 py-8">
+        <div className="bg-gradient-to-br from-primary-600 to-accent-600 rounded-3xl p-10 text-white">
+          <div className="grid grid-cols-3 gap-6 text-center">
+            <div>
+              <div className="flex items-center justify-center gap-2 text-3xl font-bold">
+                <Users className="w-6 h-6" /> —
+              </div>
+              <p className="text-xs text-primary-100 mt-1 uppercase tracking-wide">Businesses served</p>
             </div>
-            <p className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Businesses served</p>
-          </div>
-          <div>
-            <div className="flex items-center justify-center gap-2 text-3xl font-bold text-amber-400">
-              <TrendingUp className="w-6 h-6" /> —
+            <div>
+              <div className="flex items-center justify-center gap-2 text-3xl font-bold">
+                <TrendingUp className="w-6 h-6" /> —
+              </div>
+              <p className="text-xs text-primary-100 mt-1 uppercase tracking-wide">Leads generated</p>
             </div>
-            <p className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Leads generated</p>
-          </div>
-          <div>
-            <div className="flex items-center justify-center gap-2 text-3xl font-bold text-amber-400">
-              <Repeat className="w-6 h-6" /> —
+            <div>
+              <div className="flex items-center justify-center gap-2 text-3xl font-bold">
+                <Repeat className="w-6 h-6" /> —
+              </div>
+              <p className="text-xs text-primary-100 mt-1 uppercase tracking-wide">Reviews collected</p>
             </div>
-            <p className="text-xs text-gray-400 mt-1 uppercase tracking-wide">Reviews collected</p>
           </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <h2 className="text-3xl md:text-5xl font-bold mb-5">Ready to grow?</h2>
-        <p className="text-lg text-gray-300 mb-10 max-w-xl mx-auto">
-          Take the 60-second quiz and see if SORCE is the right fit for your business.
-        </p>
-        <button
-          onClick={() => setQuizOpen(true)}
-          className="px-10 py-5 bg-gradient-to-r from-primary-600 to-accent-600 rounded-xl font-bold text-lg hover:shadow-2xl hover:shadow-primary-600/30 transition inline-flex items-center gap-2"
-        >
-          See If We're a Fit <ArrowRight className="w-5 h-5" />
-        </button>
+      <section className="max-w-4xl mx-auto px-6 py-16">
+        <div className="bg-white rounded-3xl p-12 shadow-xl text-center">
+          <h2 className="text-3xl md:text-5xl font-bold mb-5 text-gray-900">Ready to grow?</h2>
+          <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto">
+            Take the 60-second quiz and see if SORCE is the right fit for your business.
+          </p>
+          <button
+            onClick={() => setQuizOpen(true)}
+            className="px-10 py-5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:shadow-2xl transition inline-flex items-center gap-2"
+          >
+            See If We're a Fit <ArrowRight className="w-5 h-5" />
+          </button>
+        </div>
       </section>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-8">
-        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-500">
+      <footer className="bg-gray-900 text-white py-8">
+        <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-400">
           <span>© {new Date().getFullYear()} SORCE Integrations. All rights reserved.</span>
           <div className="flex items-center gap-5">
-            <Link to="/privacy" className="hover:text-gray-300">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-gray-300">Terms</Link>
+            <Link to="/privacy" className="hover:text-white">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-white">Terms</Link>
           </div>
         </div>
       </footer>
