@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Zap, Play, ArrowRight, ChevronLeft, Check, Loader2, Star,
-  MessageCircle, Globe, Repeat, Users, TrendingUp, Award,
+  Zap, Play, ArrowRight, ChevronLeft, ChevronDown, Check, Loader2, Star,
+  MessageCircle, Globe, Repeat, Users, TrendingUp, Award, CheckCircle2, XCircle,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
@@ -309,21 +309,80 @@ const HOW_IT_WORKS = [
     icon: Globe,
     title: 'A website that actually converts',
     body: 'Visitors land on a fast, mobile-ready site with AI chat and smart forms built to turn traffic into booked jobs — not just page views.',
+    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80',
   },
   {
     icon: MessageCircle,
     title: 'Every lead gets followed up, instantly',
     body: 'New leads get a personal text within seconds and automatic follow-up until they book, so nobody slips through the cracks.',
+    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=80',
   },
   {
     icon: Award,
     title: '5-star reviews, on autopilot',
     body: 'A review request goes out after every job automatically, building the reputation that gets you picked over the competition.',
+    image: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&q=80',
   },
 ];
 
+// ── Placeholder social proof photos — swap for real customer photos later ────
+const SOCIAL_PROOF_PHOTOS = [
+  { image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80', caption: 'Add a customer photo' },
+  { image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80', caption: 'Add a customer photo' },
+  { image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80', caption: 'Add a customer photo' },
+];
+
+const GOOD_FIT = [
+  'Already getting some jobs, but following up is eating your time',
+  'Doing $10k/mo or more and ready to systemize growth',
+  'Willing to let a system handle the busywork so you can run the business',
+];
+
+const NOT_A_FIT = [
+  'Pre-revenue or just getting started',
+  'Not ready to change how leads get handled day to day',
+  'Looking for a one-time fix, not an ongoing system',
+];
+
+const FAQ_ITEMS = [
+  {
+    q: 'What exactly is included?',
+    a: 'A converting website with AI chat, instant lead follow-up by text, automated review requests after every job, and a dashboard to manage all of it from one place.',
+  },
+  {
+    q: 'How fast will I see results?',
+    a: "Most businesses start seeing more booked jobs within the first few weeks, once leads are flowing through the system instead of sitting in a missed-call voicemail.",
+  },
+  {
+    q: 'Is this right for my business size?',
+    a: "Built for home service and local service businesses typically doing $10k–$100k+/mo who are ready to stop manually chasing every lead.",
+  },
+  {
+    q: 'How much does it cost?',
+    a: "It depends on your business and what you need automated — that's exactly what the free call is for. No pressure, no obligation.",
+  },
+];
+
+function FaqAccordionItem({ item, open, onToggle }) {
+  return (
+    <div className="border-b border-gray-200">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-4 py-5 text-left"
+      >
+        <span className="font-semibold text-gray-900">{item.q}</span>
+        <ChevronDown className={`w-5 h-5 flex-shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <p className="text-gray-600 text-sm leading-relaxed pb-5 pr-8">{item.a}</p>
+      )}
+    </div>
+  );
+}
+
 export default function LearnMorePage() {
   const [quizOpen, setQuizOpen] = useState(false);
+  const [openFaq, setOpenFaq] = useState(0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
@@ -374,22 +433,57 @@ export default function LearnMorePage() {
         <VideoPlaceholder label="Drop in your main demo / VSL video here" className="max-w-3xl mx-auto" />
       </section>
 
-      {/* How it works */}
+      {/* Social proof photo strip */}
+      <section className="bg-white py-14">
+        <div className="max-w-6xl mx-auto px-6">
+          <p className="text-center text-sm font-semibold text-gray-400 uppercase tracking-wide mb-8">What people are saying</p>
+          <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-2xl mx-auto">
+            {SOCIAL_PROOF_PHOTOS.map((p, i) => (
+              <div key={i} className="text-center">
+                <img
+                  src={p.image}
+                  alt={p.caption}
+                  className="w-full aspect-square object-cover rounded-2xl shadow-md mb-2"
+                />
+                <p className="text-[11px] text-gray-400">{p.caption}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* How it works — numbered benefit cards */}
       <section className="max-w-6xl mx-auto px-6 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">How SORCE Works</h2>
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">What you get with SORCE</h2>
         <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">
           Three systems running quietly in the background of your business, every single day.
         </p>
         <div className="grid md:grid-cols-3 gap-8">
-          {HOW_IT_WORKS.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="bg-white rounded-2xl p-7 shadow-lg hover:shadow-xl transition-shadow">
-              <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center mb-5">
-                <Icon className="w-6 h-6 text-white" />
+          {HOW_IT_WORKS.map(({ icon: Icon, title, body, image }, i) => (
+            <div key={title} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
+              <div className="relative">
+                <img src={image} alt={title} className="w-full aspect-video object-cover" />
+                <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-gray-900/80 backdrop-blur text-white font-bold flex items-center justify-center text-sm">
+                  {i + 1}
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-              <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+              <div className="p-7">
+                <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center mb-5 -mt-16 relative shadow-lg border-4 border-white">
+                  <Icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+              </div>
             </div>
           ))}
+        </div>
+        <div className="text-center mt-12">
+          <button
+            onClick={() => setQuizOpen(true)}
+            className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold hover:shadow-xl transition inline-flex items-center gap-2"
+          >
+            See If We're a Fit <ArrowRight className="w-5 h-5" />
+          </button>
         </div>
       </section>
 
@@ -441,6 +535,53 @@ export default function LearnMorePage() {
         </div>
       </section>
 
+      {/* Who this is for */}
+      <section className="max-w-5xl mx-auto px-6 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">Is this for you?</h2>
+        <p className="text-gray-500 text-center mb-10 max-w-xl mx-auto">
+          We'd rather tell you now than waste your time on the call.
+        </p>
+        <div className="grid sm:grid-cols-2 gap-6">
+          <div className="bg-white rounded-2xl p-7 shadow-lg border border-green-100">
+            <p className="font-bold text-gray-900 mb-4">This is a good fit if you're:</p>
+            <ul className="space-y-3">
+              {GOOD_FIT.map((t) => (
+                <li key={t} className="flex items-start gap-2.5 text-sm text-gray-700">
+                  <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="bg-white rounded-2xl p-7 shadow-lg border border-gray-100">
+            <p className="font-bold text-gray-900 mb-4">Probably not a fit if you're:</p>
+            <ul className="space-y-3">
+              {NOT_A_FIT.map((t) => (
+                <li key={t} className="flex items-start gap-2.5 text-sm text-gray-700">
+                  <XCircle className="w-5 h-5 text-gray-300 flex-shrink-0 mt-0.5" />
+                  {t}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="max-w-3xl mx-auto px-6 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">Common questions</h2>
+        <div className="bg-white rounded-2xl shadow-lg px-6 sm:px-8">
+          {FAQ_ITEMS.map((item, i) => (
+            <FaqAccordionItem
+              key={item.q}
+              item={item}
+              open={openFaq === i}
+              onToggle={() => setOpenFaq((cur) => (cur === i ? -1 : i))}
+            />
+          ))}
+        </div>
+      </section>
+
       {/* Final CTA */}
       <section className="max-w-4xl mx-auto px-6 py-16">
         <div className="bg-white rounded-3xl p-12 shadow-xl text-center">
@@ -455,6 +596,15 @@ export default function LearnMorePage() {
             See If We're a Fit <ArrowRight className="w-5 h-5" />
           </button>
         </div>
+      </section>
+
+      {/* Disclaimer */}
+      <section className="max-w-4xl mx-auto px-6 pb-12">
+        <p className="text-xs text-gray-400 text-center leading-relaxed">
+          Results vary by business, market, effort and execution. SORCE does not guarantee specific lead volume,
+          booking numbers or revenue outcomes. Any results referenced on this page are individual examples and are
+          not a guarantee of future performance for your business.
+        </p>
       </section>
 
       {/* Footer */}
