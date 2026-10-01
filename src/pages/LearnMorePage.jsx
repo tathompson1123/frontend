@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Zap, Play, ArrowRight, ChevronLeft, ChevronDown, Check, Loader2, Star,
+  Play, ArrowRight, ChevronLeft, ChevronDown, Check, Loader2, Star,
   MessageCircle, Globe, Repeat, Users, TrendingUp, Award, CheckCircle2, XCircle,
 } from 'lucide-react';
 
@@ -38,6 +38,29 @@ function VideoPlaceholder({ label, aspect = 'aspect-video', className = '' }) {
         <p className="text-sm text-white/70 max-w-[220px]">{label}</p>
       </div>
     </div>
+  );
+}
+
+// Hand-drawn style curvy arrow, pointing from a caption down into the video below it.
+function CurvyArrow({ className }) {
+  return (
+    <svg viewBox="0 0 140 150" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 8 C 55 18, 68 55, 40 78 C 18 96, 40 112, 72 118"
+        stroke="currentColor"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <path
+        d="M54 108 L72 118 L68 98"
+        stroke="currentColor"
+        strokeWidth="3.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        fill="none"
+      />
+    </svg>
   );
 }
 
@@ -385,42 +408,27 @@ export default function LearnMorePage() {
   const [openFaq, setOpenFaq] = useState(0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-accent-50 to-highlight-50">
-      {/* Nav */}
-      <nav className="bg-white shadow-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 bg-gradient-to-br from-primary-600 to-accent-600 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-white" fill="currentColor" />
-            </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-              SORCE
-            </span>
-          </Link>
-          <button
-            onClick={() => setQuizOpen(true)}
-            className="px-5 py-2.5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg transition"
-          >
-            See If We're a Fit
-          </button>
-        </div>
-      </nav>
-
+    <div className="min-h-screen bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {/* Hero */}
-      <section className="max-w-6xl mx-auto px-6 pt-16 pb-20 text-center">
-        <p className="text-primary-600 font-semibold tracking-wide uppercase text-sm mb-4">For Service Businesses</p>
-        <h1 className="text-4xl md:text-6xl font-bold leading-tight max-w-4xl mx-auto mb-6 text-gray-900">
-          Get More Jobs With AI, a Website That Converts, and{' '}
-          <span className="bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">
-            5-Star Reviews
-          </span>{' '}
-          — On Autopilot
+      <section className="max-w-5xl mx-auto px-6 pt-20 pb-20 text-center">
+        <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] max-w-4xl mx-auto mb-6 text-gray-900 tracking-tight">
+          Stop spending more on ads.
+          <br />
+          Start building a recurring revenue system.
         </h1>
-        <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-          SORCE runs the lead-gen, follow-up and review requests behind the scenes, so you spend less time chasing
-          customers and more time on the job.
+        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-2">
+          You can double your revenue without spending a dime on ads.
         </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-4">
+        <div className="relative inline-block mb-10">
+          <span className="text-2xl text-gray-900" style={{ fontFamily: "'Caveat', cursive" }}>
+            Watch here to learn how
+          </span>
+          <CurvyArrow className="absolute left-full top-1/2 w-20 md:w-28 h-auto text-gray-400 -translate-y-2 ml-1 hidden sm:block" />
+        </div>
+
+        <VideoPlaceholder label="Drop in your main demo / VSL video here" className="max-w-3xl mx-auto" />
+
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 mb-4">
           <button
             onClick={() => setQuizOpen(true)}
             className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition flex items-center gap-2"
@@ -428,13 +436,11 @@ export default function LearnMorePage() {
             See If We're a Fit <ArrowRight className="w-5 h-5" />
           </button>
         </div>
-        <p className="text-sm text-gray-500 mb-12">60-second quiz · No commitment</p>
-
-        <VideoPlaceholder label="Drop in your main demo / VSL video here" className="max-w-3xl mx-auto" />
+        <p className="text-sm text-gray-500">60-second quiz · No commitment</p>
       </section>
 
       {/* Social proof photo strip */}
-      <section className="bg-white py-14">
+      <section className="bg-gray-50 py-14">
         <div className="max-w-6xl mx-auto px-6">
           <p className="text-center text-sm font-semibold text-gray-400 uppercase tracking-wide mb-8">What people are saying</p>
           <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-2xl mx-auto">
@@ -488,7 +494,8 @@ export default function LearnMorePage() {
       </section>
 
       {/* Video testimonials */}
-      <section className="max-w-6xl mx-auto px-6 py-16">
+      <section className="bg-gray-50 py-16">
+        <div className="max-w-6xl mx-auto px-6">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">What Business Owners Are Saying</h2>
         <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">
           Swap these placeholders for real customer video testimonials.
@@ -506,6 +513,7 @@ export default function LearnMorePage() {
               <p className="text-xs text-gray-500">{t.business}</p>
             </div>
           ))}
+        </div>
         </div>
       </section>
 
@@ -568,25 +576,27 @@ export default function LearnMorePage() {
       </section>
 
       {/* FAQ */}
-      <section className="max-w-3xl mx-auto px-6 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">Common questions</h2>
-        <div className="bg-white rounded-2xl shadow-lg px-6 sm:px-8">
-          {FAQ_ITEMS.map((item, i) => (
-            <FaqAccordionItem
-              key={item.q}
-              item={item}
-              open={openFaq === i}
-              onToggle={() => setOpenFaq((cur) => (cur === i ? -1 : i))}
-            />
-          ))}
+      <section className="bg-gray-50 py-16">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">Common questions</h2>
+          <div className="bg-white rounded-2xl shadow-lg px-6 sm:px-8">
+            {FAQ_ITEMS.map((item, i) => (
+              <FaqAccordionItem
+                key={item.q}
+                item={item}
+                open={openFaq === i}
+                onToggle={() => setOpenFaq((cur) => (cur === i ? -1 : i))}
+              />
+            ))}
+          </div>
         </div>
       </section>
 
       {/* Final CTA */}
-      <section className="max-w-4xl mx-auto px-6 py-16">
-        <div className="bg-white rounded-3xl p-12 shadow-xl text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-5 text-gray-900">Ready to grow?</h2>
-          <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto">
+      <section className="bg-gray-900 py-20 text-center">
+        <div className="max-w-3xl mx-auto px-6">
+          <h2 className="text-3xl md:text-5xl font-bold mb-5 text-white">Ready to grow?</h2>
+          <p className="text-lg text-gray-300 mb-10 max-w-xl mx-auto">
             Take the 60-second quiz and see if SORCE is the right fit for your business.
           </p>
           <button
@@ -599,8 +609,8 @@ export default function LearnMorePage() {
       </section>
 
       {/* Disclaimer */}
-      <section className="max-w-4xl mx-auto px-6 pb-12">
-        <p className="text-xs text-gray-400 text-center leading-relaxed">
+      <section className="bg-gray-900 px-6 pb-12">
+        <p className="text-xs text-gray-500 text-center leading-relaxed max-w-4xl mx-auto">
           Results vary by business, market, effort and execution. SORCE does not guarantee specific lead volume,
           booking numbers or revenue outcomes. Any results referenced on this page are individual examples and are
           not a guarantee of future performance for your business.
