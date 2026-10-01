@@ -57,6 +57,54 @@ function fmtTime(ts) {
   return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
 }
 
+// Renders an MMS attachment. Twilio's media URLs require Twilio account auth to
+// fetch, so they're pulled through our authenticated proxy as a blob rather than
+// used directly as an <img src> (which would 401). Outgoing media (Cloudinary) is
+// already public and skips the proxy.
+function SmsMediaImage({ url, authFetch, apiUrl, alt }) {
+  const [src, setSrc] = useState(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let objectUrl = null;
+    let cancelled = false;
+    setFailed(false);
+    setSrc(null);
+    if (!url) return;
+
+    let isTwilioMedia = false;
+    try { isTwilioMedia = new URL(url).hostname === 'api.twilio.com'; } catch {}
+
+    if (!isTwilioMedia) {
+      setSrc(url);
+      return;
+    }
+
+    (async () => {
+      try {
+        const res = await authFetch(`${apiUrl}/api/sms/media-proxy?url=${encodeURIComponent(url)}`);
+        if (!res.ok) throw new Error('Media fetch failed');
+        const blob = await res.blob();
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setSrc(objectUrl);
+      } catch {
+        if (!cancelled) setFailed(true);
+      }
+    })();
+
+    return () => { cancelled = true; if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [url, authFetch, apiUrl]);
+
+  if (failed) return <p className="text-xs text-gray-400 italic mb-2">Couldn't load attachment</p>;
+  if (!src) return <div className="w-28 h-28 rounded-lg bg-gray-200 animate-pulse mb-2" />;
+  return (
+    <a href={src} target="_blank" rel="noopener noreferrer">
+      <img src={src} alt={alt || 'Attachment'} className="rounded-lg max-w-full max-h-64 mb-2 object-contain" />
+    </a>
+  );
+}
+
 function fmtDateTime(ts, tz) {
   const d = parseTS(ts);
   return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true, timeZone: tz || undefined });
@@ -360,6 +408,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [loadingReviewConvos, setLoadingReviewConvos] = useState(false);
   const [selectedReviewConvo, setSelectedReviewConvo] = useState(null);
   const [reviewConvoMessages, setReviewConvoMessages] = useState([]);
+  const [sendingReviewAsk, setSendingReviewAsk] = useState(false);
   const [smsLeads, setSmsLeads] = useState([]);
   const [selectedSmsLead, setSelectedSmsLead] = useState(null);
   const [smsLeadMessages, setSmsLeadMessages] = useState([]);
@@ -1325,10 +1374,36 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     } catch (e) { console.error('Error fetching review thread:', e); }
   };
 
+  // Owner-triggered send for a "needs attention" reply — they've read what the
+  // customer actually said and decided it's worth asking for a review anyway.
+  const sendManualReviewAsk = async (reviewRequestId) => {
+    if (!reviewRequestId || sendingReviewAsk) return;
+    setSendingReviewAsk(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/google-business/review-requests/${reviewRequestId}/send-ask`, {
+        method: 'POST',
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setSelectedReviewConvo(c => c ? { ...c, status: 'replied_positive' } : c);
+        setReviewConvos(cs => cs.map(c => c.review_request_id === reviewRequestId ? { ...c, status: 'replied_positive' } : c));
+        fetchReviewThread(reviewRequestId);
+      } else {
+        alert(data.error || 'Could not send that review request');
+      }
+    } catch (e) {
+      console.error('Error sending manual review ask:', e);
+      alert('Could not send that review request');
+    } finally {
+      setSendingReviewAsk(false);
+    }
+  };
+
   const reviewStatusLabel = (s) => ({
     awaiting_reply: 'Awaiting reply',
     replied_positive: '👍 Positive',
     replied_negative: '👎 Negative',
+    needs_attention: '🟡 Needs attention',
     replied_neutral: 'Replied',
     sent: 'Sent',
     pending: 'Queued',
@@ -2891,7 +2966,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                                       {src.label}
                                     </span>
                                   </div>
-                                  <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                                  {msg.media_url && (
+                                    <SmsMediaImage url={msg.media_url} authFetch={authFetch} apiUrl={apiUrl} alt="Attachment" />
+                                  )}
+                                  {msg.message && !(msg.media_url && msg.message === '[screenshot]') && (
+                                    <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                                  )}
                                   <p
                                     className={`text-xs mt-2 ${inbound ? 'text-gray-400' : 'text-green-200'}`}
                                     title={fmtDateTime(msg.created_at)}
@@ -2919,12 +2999,25 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 </div>
               ) : (
                 <div className="flex-1 flex flex-col overflow-hidden">
-                  <div className="p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
-                    <div>
+                  <div className="p-3 border-b border-gray-200 bg-gray-50 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
                       <p className="text-sm font-semibold text-gray-700">{selectedReviewConvo.customer_name || 'Customer'} · Review SMS</p>
                       <p className="text-xs text-gray-400">{selectedReviewConvo.customer_phone || ''} · {reviewStatusLabel(selectedReviewConvo.status)}</p>
                     </div>
-                    <button onClick={() => { setSelectedReviewConvo(null); setReviewConvoMessages([]); }} className="p-1 text-gray-400 hover:text-gray-600 rounded transition"><X className="w-3.5 h-3.5" /></button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {selectedReviewConvo.status === 'needs_attention' && (
+                        <button
+                          onClick={() => sendManualReviewAsk(selectedReviewConvo.review_request_id)}
+                          disabled={sendingReviewAsk}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-amber-500 text-white hover:bg-amber-600 disabled:opacity-60 rounded-lg transition"
+                          title="Read what they said, then send the review ask yourself if it's worth it"
+                        >
+                          <Star className="w-3.5 h-3.5" />
+                          {sendingReviewAsk ? 'Sending…' : 'Send Review Request'}
+                        </button>
+                      )}
+                      <button onClick={() => { setSelectedReviewConvo(null); setReviewConvoMessages([]); }} className="p-1 text-gray-400 hover:text-gray-600 rounded transition"><X className="w-3.5 h-3.5" /></button>
+                    </div>
                   </div>
                   <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3">
                     {reviewConvoMessages.length === 0 ? (
@@ -2934,7 +3027,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                         <div key={idx} className={`flex ${msg.direction === 'incoming' ? 'justify-start' : 'justify-end'}`}>
                           <div className={`max-w-[75%] rounded-2xl px-4 py-3 ${msg.direction === 'incoming' ? 'bg-white border border-gray-200 text-gray-900' : 'bg-amber-500 text-white'}`}>
                             <div className={`text-xs font-medium mb-1 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-amber-100'}`}>{msg.direction === 'incoming' ? 'Customer' : 'You'}</div>
-                            <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            {msg.media_url && (
+                              <SmsMediaImage url={msg.media_url} authFetch={authFetch} apiUrl={apiUrl} alt="Attachment" />
+                            )}
+                            {msg.message && !(msg.media_url && msg.message === '[screenshot]') && (
+                              <p className="text-sm whitespace-pre-wrap">{msg.message}</p>
+                            )}
                             <p className={`text-xs mt-2 ${msg.direction === 'incoming' ? 'text-gray-400' : 'text-amber-100'}`}>{fmtTime(msg.created_at)}</p>
                           </div>
                         </div>
