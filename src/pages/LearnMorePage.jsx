@@ -543,10 +543,12 @@ const HOW_IT_WORKS = [
 ];
 
 // ── Placeholder social proof photos — swap for real customer photos later ────
+// Placeholder names/quotes — FAKE, for layout purposes only. Swap for real
+// customers and real quotes before this page runs any traffic.
 const SOCIAL_PROOF_PHOTOS = [
-  { image: testimonial1Img, caption: 'Add a customer photo' },
-  { image: testimonial2Img, caption: 'Add a customer photo' },
-  { image: testimonial3Img, caption: 'Add a customer photo' },
+  { image: testimonial1Img, name: 'Mike R.', business: 'Landscaping', quote: 'Leads stopped slipping through the cracks the first week.' },
+  { image: testimonial2Img, name: 'Sarah T.', business: 'Auto Detailing', quote: 'We picked up 11 new jobs last month without spending more on ads.' },
+  { image: testimonial3Img, name: 'Dave K.', business: 'HVAC', quote: 'My Google reviews tripled and the phone hasn\'t stopped ringing.' },
 ];
 
 const GOOD_FIT = [
@@ -635,15 +637,17 @@ export default function LearnMorePage() {
       <section className="bg-gray-50 py-14">
         <div className="max-w-6xl mx-auto px-6">
           <p className="text-center text-sm font-semibold text-gray-400 uppercase tracking-wide mb-8">What people are saying</p>
-          <div className="grid grid-cols-3 gap-4 sm:gap-8 max-w-2xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-4xl mx-auto">
             {SOCIAL_PROOF_PHOTOS.map((p, i) => (
               <div key={i} className="text-center">
                 <img
                   src={p.image}
-                  alt={p.caption}
-                  className="w-full aspect-square object-cover rounded-2xl shadow-md mb-2"
+                  alt={p.name}
+                  className="w-20 h-20 mx-auto object-cover rounded-full shadow-md mb-3"
                 />
-                <p className="text-[11px] text-gray-400">{p.caption}</p>
+                <p className="text-sm text-gray-700 italic mb-2">"{p.quote}"</p>
+                <p className="text-xs font-semibold text-gray-900">{p.name}</p>
+                <p className="text-[11px] text-gray-400">{p.business}</p>
               </div>
             ))}
           </div>
