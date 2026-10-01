@@ -4,6 +4,12 @@ import {
   Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2, Star,
   MessageCircle, Globe, Repeat, Users, TrendingUp, Award, CheckCircle2, XCircle, Calendar,
 } from 'lucide-react';
+import bookingAgentImg from '../assets/learnmore/booking-agent.png';
+import smsWinbackImg from '../assets/learnmore/sms-winback.png';
+import googleReviewImg from '../assets/learnmore/google-review.png';
+import testimonial1Img from '../assets/learnmore/testimonial-1.png';
+import testimonial2Img from '../assets/learnmore/testimonial-2.png';
+import testimonial3Img from '../assets/learnmore/testimonial-3.png';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -520,27 +526,27 @@ const HOW_IT_WORKS = [
     icon: Globe,
     title: 'A website that actually converts',
     body: 'Visitors land on a fast, mobile-ready site with AI chat and smart forms built to turn traffic into booked jobs — not just page views.',
-    image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80',
+    image: bookingAgentImg,
   },
   {
     icon: MessageCircle,
-    title: 'Every lead gets followed up, instantly',
-    body: 'New leads get a personal text within seconds and automatic follow-up until they book, so nobody slips through the cracks.',
-    image: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=800&q=80',
+    title: 'Win back past customers, automatically',
+    body: 'An automatic text goes out with a personal offer, and when they reply, it\'s already booked — no manual outreach needed.',
+    image: smsWinbackImg,
   },
   {
     icon: Award,
     title: '5-star reviews, on autopilot',
     body: 'A review request goes out after every job automatically, building the reputation that gets you picked over the competition.',
-    image: 'https://images.unsplash.com/photo-1553877522-43269d4ea984?w=800&q=80',
+    image: googleReviewImg,
   },
 ];
 
 // ── Placeholder social proof photos — swap for real customer photos later ────
 const SOCIAL_PROOF_PHOTOS = [
-  { image: 'https://images.unsplash.com/photo-1521791136064-7986c2920216?w=800&q=80', caption: 'Add a customer photo' },
-  { image: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=800&q=80', caption: 'Add a customer photo' },
-  { image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80', caption: 'Add a customer photo' },
+  { image: testimonial1Img, caption: 'Add a customer photo' },
+  { image: testimonial2Img, caption: 'Add a customer photo' },
+  { image: testimonial3Img, caption: 'Add a customer photo' },
 ];
 
 const GOOD_FIT = [

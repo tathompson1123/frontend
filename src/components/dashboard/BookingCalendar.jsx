@@ -1371,92 +1371,116 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 })}
               </div>
 
-              {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((hour) => (
-                <div key={hour} className="grid grid-cols-8 border-b border-gray-100 min-w-[640px]">
-                  <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
-                    {hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`}
+              {(() => {
+                // A booking whose end_time is chronologically before its start_time ran
+                // past midnight (e.g. 6pm + 8 hours = 2am), so it's split into two render
+                // segments here: one filling to midnight on the start date, one picking up
+                // at midnight on the next date — otherwise it rendered as a single bar with
+                // negative height on the start day alone, invisible past the day boundary.
+                const weekBookingSegments = [];
+                allBookings.forEach(booking => {
+                  if (!booking.start_time || !booking.end_time) return;
+                  const dateStr = booking.booking_date.split('T')[0];
+                  const [startHour, startMin] = booking.start_time.split(':').map(Number);
+                  const [endHour, endMin] = booking.end_time.split(':').map(Number);
+                  const startMinutes = startHour * 60 + startMin;
+                  const endMinutes = endHour * 60 + endMin;
+
+                  if (endMinutes > startMinutes) {
+                    weekBookingSegments.push({ booking, dateStr, startMinutes, durationMinutes: endMinutes - startMinutes, continuesNextDay: false, isContinuation: false });
+                  } else {
+                    weekBookingSegments.push({ booking, dateStr, startMinutes, durationMinutes: 1440 - startMinutes, continuesNextDay: true, isContinuation: false });
+                    const next = new Date(`${dateStr}T00:00:00`);
+                    next.setDate(next.getDate() + 1);
+                    const nextDateStr = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+                    weekBookingSegments.push({ booking, dateStr: nextDateStr, startMinutes: 0, durationMinutes: endMinutes, continuesNextDay: false, isContinuation: true });
+                  }
+                });
+
+                return [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23].map((hour) => (
+                  <div key={hour} className="grid grid-cols-8 border-b border-gray-100 min-w-[640px]">
+                    <div className="bg-gray-50 p-3 text-sm text-gray-600 border-r border-gray-200">
+                      {hour === 0 ? '12:00 AM' : hour < 12 ? `${hour}:00 AM` : hour === 12 ? '12:00 PM' : `${hour - 12}:00 PM`}
+                    </div>
+                    {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
+                      const year = currentDate.getFullYear();
+                      const month = currentDate.getMonth();
+                      const day = currentDate.getDate();
+                      const baseDate = new Date(year, month, day);
+                      const dayOfWeek = baseDate.getDay();
+                      const date = new Date(year, month, day - dayOfWeek + offset);
+                      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+                      const daySegments = weekBookingSegments.filter(seg =>
+                        seg.dateStr === dateStr && Math.floor(seg.startMinutes / 60) === hour
+                      );
+
+                      return (
+                        <div
+                          key={offset}
+                          className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
+                        >
+                          {daySegments.map((seg, segIndex) => {
+                            const booking = seg.booking;
+                            const startMin = seg.startMinutes % 60;
+                            const heightPerMinute = 80 / 60;
+                            const blockHeight = seg.durationMinutes * heightPerMinute;
+                            const topOffset = startMin * heightPerMinute;
+                            const employee = employees?.find(emp => emp.id === booking.employee_id);
+                            const employeeColor = employee?.color || '#3b82f6';
+                            const employeeName = employee?.name || 'Unassigned';
+                            const total = daySegments.length;
+                            const colWidthPct = 100 / total;
+                            const leftPct = (segIndex / total) * 100;
+                            // One continuous bar split across the midnight line reads as
+                            // such when the split edge isn't rounded off on either half.
+                            const roundingClass = seg.continuesNextDay ? 'rounded-t' : seg.isContinuation ? 'rounded-b' : 'rounded';
+
+                            return (
+                              <button
+                                key={booking.id + (seg.isContinuation ? '-cont' : '')}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedBooking(booking);
+                                  setBookingNotes(booking.job_notes || '');
+                                  setShowBookingModal(true);
+                                  setEditingNotes(false);
+                                }}
+                                className={`absolute ${roundingClass} text-white text-xs cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden shadow-md border-l-4 z-10`}
+                                style={{
+                                  top: `${topOffset}px`,
+                                  height: `${Math.max(blockHeight, 40)}px`,
+                                  backgroundColor: employeeColor,
+                                  borderLeftColor: employeeColor,
+                                  filter: 'brightness(0.95)',
+                                  left: `calc(${leftPct}% + 4px)`,
+                                  width: `calc(${colWidthPct}% - 8px)`
+                                }}
+                              >
+                                <div className="p-2 h-full flex flex-col pointer-events-none">
+                                  <div className="font-semibold truncate">
+                                    {seg.isContinuation ? '↳ ' : ''}{booking.customer_name}
+                                  </div>
+                                  <div className="truncate opacity-90 text-[10px]">
+                                    {booking.items?.[0]?.service_name}
+                                  </div>
+                                  <div className="flex items-center gap-1 mt-auto">
+                                    <User className="w-3 h-3 opacity-75" />
+                                    <span className="text-[10px] opacity-90 truncate">{employeeName}</span>
+                                  </div>
+                                  <div className="text-[10px] opacity-75">
+                                    {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
+                                  </div>
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
                   </div>
-                  {[0, 1, 2, 3, 4, 5, 6].map((offset) => {
-                    const year = currentDate.getFullYear();
-                    const month = currentDate.getMonth();
-                    const day = currentDate.getDate();
-                    const baseDate = new Date(year, month, day);
-                    const dayOfWeek = baseDate.getDay();
-                    const date = new Date(year, month, day - dayOfWeek + offset);
-                    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-                    const dayBookings = allBookings.filter(booking => {
-                      const bookingDateOnly = booking.booking_date.split('T')[0];
-                      if (bookingDateOnly !== dateStr) return false;
-                      const startHour = parseInt(booking.start_time.split(':')[0]);
-                      return startHour === hour;
-                    });
-
-                    return (
-                      <div
-                        key={offset}
-                        className={`p-2 min-h-[80px] hover:bg-gray-50 transition relative ${offset !== 6 ? 'border-r border-gray-200' : ''}`}
-                      >
-                        {dayBookings.map((booking, bookingIndex) => {
-                          const [startHour, startMin] = booking.start_time.split(':').map(Number);
-                          const [endHour, endMin] = booking.end_time.split(':').map(Number);
-                          const startMinutes = startHour * 60 + startMin;
-                          const endMinutes = endHour * 60 + endMin;
-                          const durationMinutes = endMinutes - startMinutes;
-                          const heightPerMinute = 80 / 60;
-                          const blockHeight = durationMinutes * heightPerMinute;
-                          const topOffset = startMin * heightPerMinute;
-                          const employee = employees?.find(emp => emp.id === booking.employee_id);
-                          const employeeColor = employee?.color || '#3b82f6';
-                          const employeeName = employee?.name || 'Unassigned';
-                          const total = dayBookings.length;
-                          const colWidthPct = 100 / total;
-                          const leftPct = (bookingIndex / total) * 100;
-
-                          return (
-                            <button
-                              key={booking.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedBooking(booking);
-                                setBookingNotes(booking.job_notes || '');
-                                setShowBookingModal(true);
-                                setEditingNotes(false);
-                              }}
-                              className="absolute rounded text-white text-xs cursor-pointer hover:brightness-110 active:scale-[0.98] transition-all overflow-hidden shadow-md border-l-4 z-10"
-                              style={{
-                                top: `${topOffset}px`,
-                                height: `${Math.max(blockHeight, 40)}px`,
-                                backgroundColor: employeeColor,
-                                borderLeftColor: employeeColor,
-                                filter: 'brightness(0.95)',
-                                left: `calc(${leftPct}% + 4px)`,
-                                width: `calc(${colWidthPct}% - 8px)`
-                              }}
-                            >
-                              <div className="p-2 h-full flex flex-col pointer-events-none">
-                                <div className="font-semibold truncate">
-                                  {booking.customer_name}
-                                </div>
-                                <div className="truncate opacity-90 text-[10px]">
-                                  {booking.items?.[0]?.service_name}
-                                </div>
-                                <div className="flex items-center gap-1 mt-auto">
-                                  <User className="w-3 h-3 opacity-75" />
-                                  <span className="text-[10px] opacity-90 truncate">{employeeName}</span>
-                                </div>
-                                <div className="text-[10px] opacity-75">
-                                  {formatTime(booking.start_time)} - {formatTime(booking.end_time)}
-                                </div>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
+                ));
+              })()}
             </div>
           </div>
           </>
