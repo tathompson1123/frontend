@@ -1,11 +1,16 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Play, ArrowRight, ChevronLeft, ChevronDown, Check, Loader2, Star,
-  MessageCircle, Globe, Repeat, Users, TrendingUp, Award, CheckCircle2, XCircle,
+  Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2, Star,
+  MessageCircle, Globe, Repeat, Users, TrendingUp, Award, CheckCircle2, XCircle, Calendar,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+
+const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const sameDay = (a, b) =>
+  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 const BUSINESS_TYPES = [
   'Landscaping', 'Auto Detailing', 'HVAC', 'Plumbing', 'Electrical',
@@ -44,23 +49,186 @@ function VideoPlaceholder({ label, aspect = 'aspect-video', className = '' }) {
 // Hand-drawn style curvy arrow, pointing from a caption down into the video below it.
 function CurvyArrow({ className }) {
   return (
-    <svg viewBox="0 0 140 150" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg viewBox="0 0 80 100" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
       <path
-        d="M12 8 C 55 18, 68 55, 40 78 C 18 96, 40 112, 72 118"
+        d="M16 6 C 62 16, 4 46, 46 58 C 60 65, 38 76, 40 90"
         stroke="currentColor"
-        strokeWidth="3.5"
+        strokeWidth="4"
         strokeLinecap="round"
         fill="none"
       />
       <path
-        d="M54 108 L72 118 L68 98"
+        d="M27 80 L40 92 L51 78"
         stroke="currentColor"
-        strokeWidth="3.5"
+        strokeWidth="4"
         strokeLinecap="round"
         strokeLinejoin="round"
         fill="none"
       />
     </svg>
+  );
+}
+
+// Embedded calendar + slot picker for the quiz's success step. Mirrors BookCallPage's
+// calendar, but skips re-asking for name/email/phone — the quiz already has them — and
+// books straight from a slot tap. Hits the same /api/public/discovery/* endpoints, so
+// a booking here creates the real Zoom meeting and merges into the sorce_leads row the
+// quiz submission already created (matched by email/phone), same as BookCallPage.
+function DiscoveryBookingCalendar({ prefill, onBooked }) {
+  const [month, setMonth] = useState(() => startOfMonth(new Date()));
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [slots, setSlots] = useState([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+  const [chosen, setChosen] = useState(null);
+  const [booking, setBooking] = useState(false);
+  const [error, setError] = useState('');
+
+  const loadSlots = useCallback(async (date) => {
+    setLoadingSlots(true);
+    setSlots([]);
+    setChosen(null);
+    try {
+      const res = await fetch(`${API_URL}/api/public/discovery/slots?date=${ymd(date)}`);
+      const data = await res.json();
+      setSlots(data.slots || []);
+    } catch {
+      setSlots([]);
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedDate) loadSlots(selectedDate);
+  }, [selectedDate, loadSlots]);
+
+  const grid = (() => {
+    const first = startOfMonth(month);
+    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+    const cells = Array.from({ length: first.getDay() }, () => null);
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(month.getFullYear(), month.getMonth(), d));
+    return cells;
+  })();
+
+  const confirmBooking = async () => {
+    if (!chosen) return;
+    setBooking(true);
+    setError('');
+    try {
+      const res = await fetch(`${API_URL}/api/public/discovery/book`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: prefill.name, email: prefill.email, phone: prefill.phone,
+          scheduledAt: chosen.iso,
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not book that call');
+      onBooked(chosen.iso);
+    } catch (err) {
+      setError(err.message);
+      if (selectedDate) loadSlots(selectedDate);
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
+          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+        >
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <span className="font-bold text-gray-900 text-sm">
+          {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+        </span>
+        <button
+          onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
+          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
+        >
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 mb-1">
+        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
+          <div key={i} className="text-center text-[10px] font-semibold text-gray-400 py-1">{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {grid.map((day, i) => {
+          if (!day) return <div key={i} />;
+          const past = day < new Date(new Date().setHours(0, 0, 0, 0));
+          const isSelected = selectedDate && sameDay(day, selectedDate);
+          return (
+            <button
+              key={i}
+              disabled={past}
+              onClick={() => setSelectedDate(day)}
+              className={`aspect-square rounded-lg text-sm font-medium transition ${
+                isSelected ? 'bg-amber-600 text-white'
+                : past ? 'text-gray-300 cursor-not-allowed'
+                : 'text-gray-700 hover:bg-amber-50 hover:text-amber-700'
+              }`}
+            >
+              {day.getDate()}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-gray-100">
+        {!selectedDate ? (
+          <p className="text-sm text-gray-400 text-center py-3 flex items-center justify-center gap-2">
+            <Calendar className="w-4 h-4" /> Pick a day to see available times
+          </p>
+        ) : loadingSlots ? (
+          <div className="flex justify-center py-3"><Loader2 className="w-5 h-5 animate-spin text-amber-600" /></div>
+        ) : slots.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-3">Nothing free that day — try another.</p>
+        ) : (
+          <>
+            <p className="text-xs font-semibold text-gray-600 mb-2">
+              {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+            <div className="grid grid-cols-3 gap-2 max-h-36 overflow-y-auto">
+              {slots.map(slot => (
+                <button
+                  key={slot.iso}
+                  onClick={() => setChosen(slot)}
+                  className={`py-2 rounded-lg text-sm font-medium border-2 transition ${
+                    chosen?.iso === slot.iso
+                      ? 'border-amber-600 bg-amber-600 text-white'
+                      : 'border-gray-200 text-gray-700 hover:border-amber-400'
+                  }`}
+                >
+                  {new Date(slot.iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                </button>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 mt-3">{error}</div>
+      )}
+
+      <button
+        onClick={confirmBooking}
+        disabled={!chosen || booking}
+        className="w-full mt-4 py-3.5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+      >
+        {booking
+          ? <><Loader2 className="w-5 h-5 animate-spin" /> Booking...</>
+          : <>Confirm my call <Check className="w-4 h-4" /></>}
+      </button>
+    </div>
   );
 }
 
@@ -75,6 +243,7 @@ function QuizModal({ open, onClose }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [done, setDone] = useState(false);
+  const [callBooked, setCallBooked] = useState(null);
 
   if (!open) return null;
 
@@ -83,6 +252,7 @@ function QuizModal({ open, onClose }) {
     setForm({ businessType: '', businessTypeOther: '', struggle: '', struggleOther: '', revenue: '', name: '', email: '', phone: '' });
     setError('');
     setDone(false);
+    setCallBooked(null);
   };
 
   const close = () => { reset(); onClose(); };
@@ -126,7 +296,7 @@ function QuizModal({ open, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={close}>
       <div
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
+        className={`bg-white rounded-3xl shadow-2xl w-full overflow-hidden transition-all ${done && !callBooked ? 'max-w-xl' : 'max-w-lg'}`}
         onClick={(e) => e.stopPropagation()}
       >
         {!done && (
@@ -139,29 +309,47 @@ function QuizModal({ open, onClose }) {
 
         <div className="p-6 sm:p-8">
           {done ? (
-            <div className="text-center py-4">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                <Check className="w-8 h-8 text-green-600" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">You're all set!</h3>
-              <p className="text-gray-600 mb-6">
-                Our team will reach out shortly to get a call on the books. Want to grab a time right now instead?
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  to="/book-a-call"
-                  className="flex-1 py-3 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold hover:shadow-lg transition text-center"
-                >
-                  Pick a time now
-                </Link>
+            callBooked ? (
+              <div className="text-center py-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+                  <Check className="w-8 h-8 text-green-600" />
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">You're booked in!</h3>
+                <p className="text-gray-600 mb-6">
+                  {new Date(callBooked).toLocaleString('en-US', {
+                    weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
+                  })}
+                  <br />
+                  We'll text your Zoom link to {form.phone} and email the details to {form.email}.
+                </p>
                 <button
                   onClick={close}
-                  className="flex-1 py-3 border-2 border-gray-200 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition"
+                  className="w-full py-3 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
                 >
-                  I'll wait to hear from you
+                  Done
                 </button>
               </div>
-            </div>
+            ) : (
+              <div>
+                <div className="text-center mb-5">
+                  <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Check className="w-7 h-7 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">You're qualified — grab a time 🎉</h3>
+                  <p className="text-sm text-gray-500">Pick a day and time below to lock in your free call.</p>
+                </div>
+                <DiscoveryBookingCalendar
+                  prefill={{ name: form.name, email: form.email, phone: form.phone }}
+                  onBooked={(iso) => setCallBooked(iso)}
+                />
+                <button
+                  onClick={close}
+                  className="w-full mt-3 py-2.5 text-sm text-gray-400 hover:text-gray-600 transition"
+                >
+                  I'll wait to hear from you instead
+                </button>
+              </div>
+            )
           ) : (
             <>
               {step > 0 && (
@@ -419,12 +607,10 @@ export default function LearnMorePage() {
         <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-2">
           You can double your revenue without spending a dime on ads.
         </p>
-        <div className="relative inline-block mb-10">
-          <span className="text-2xl text-gray-900" style={{ fontFamily: "'Caveat', cursive" }}>
-            Watch here to learn how
-          </span>
-          <CurvyArrow className="absolute left-full top-1/2 w-20 md:w-28 h-auto text-gray-400 -translate-y-2 ml-1 hidden sm:block" />
-        </div>
+        <span className="block text-2xl text-gray-900 mb-1" style={{ fontFamily: "'Caveat', cursive" }}>
+          Watch here to learn how
+        </span>
+        <CurvyArrow className="mx-auto w-14 h-16 text-gray-400 mb-4" />
 
         <VideoPlaceholder label="Drop in your main demo / VSL video here" className="max-w-3xl mx-auto" />
 
