@@ -607,10 +607,9 @@ export default function LearnMorePage() {
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-6 pt-20 pb-20 text-center">
-        <h1 className="text-4xl md:text-6xl font-bold leading-[1.1] max-w-4xl mx-auto mb-6 text-gray-900 tracking-tight">
-          Stop spending more on ads.
-          <br />
-          Start building a recurring revenue system.
+        <h1 className="text-4xl md:text-6xl font-bold max-w-4xl mx-auto mb-6 text-gray-900 tracking-tight">
+          <span className="block leading-[1.1]">Stop spending more on ads.</span>
+          <span className="block leading-[1.1] mt-3 md:mt-4">Start building a recurring revenue system.</span>
         </h1>
         <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-2">
           You can double your revenue without spending a dime on ads.
