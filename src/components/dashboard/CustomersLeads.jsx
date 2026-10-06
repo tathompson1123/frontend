@@ -409,6 +409,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [selectedReviewConvo, setSelectedReviewConvo] = useState(null);
   const [reviewConvoMessages, setReviewConvoMessages] = useState([]);
   const [sendingReviewAsk, setSendingReviewAsk] = useState(false);
+  const [stoppingReview, setStoppingReview] = useState(false);
   const [smsLeads, setSmsLeads] = useState([]);
   const [selectedSmsLead, setSelectedSmsLead] = useState(null);
   const [smsLeadMessages, setSmsLeadMessages] = useState([]);
@@ -1399,7 +1400,29 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
+  const stopReviewTexts = async (reviewRequestId) => {
+    if (!reviewRequestId || stoppingReview) return;
+    if (!window.confirm("Stop all review texts to this customer? They won't get the \"how did it go?\" text or any follow-ups.")) return;
+    setStoppingReview(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/google-business/review-requests/${reviewRequestId}/stop`, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        setSelectedReviewConvo(c => c ? { ...c, status: 'stopped' } : c);
+        setReviewConvos(cs => cs.map(c => c.review_request_id === reviewRequestId ? { ...c, status: 'stopped' } : c));
+      } else {
+        alert(data.error || 'Could not stop review texts');
+      }
+    } catch (e) {
+      console.error('Error stopping review texts:', e);
+      alert('Could not stop review texts');
+    } finally {
+      setStoppingReview(false);
+    }
+  };
+
   const reviewStatusLabel = (s) => ({
+    stopped: '⛔ Stopped',
     awaiting_reply: 'Awaiting reply',
     replied_positive: '👍 Positive',
     replied_negative: '👎 Negative',
@@ -3014,6 +3037,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                         >
                           <Star className="w-3.5 h-3.5" />
                           {sendingReviewAsk ? 'Sending…' : 'Send Review Request'}
+                        </button>
+                      )}
+                      {selectedReviewConvo.status !== 'stopped' && (
+                        <button
+                          onClick={() => stopReviewTexts(selectedReviewConvo.review_request_id)}
+                          disabled={stoppingReview}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-red-50 text-red-600 hover:bg-red-100 disabled:opacity-60 rounded-lg transition"
+                          title="Stop review texts and follow-ups to this customer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                          {stoppingReview ? 'Stopping…' : 'Stop Texts'}
                         </button>
                       )}
                       <button onClick={() => { setSelectedReviewConvo(null); setReviewConvoMessages([]); }} className="p-1 text-gray-400 hover:text-gray-600 rounded transition"><X className="w-3.5 h-3.5" /></button>
