@@ -7,7 +7,7 @@ const PLAN_LEVEL = { pro: 1, scale: 2 };
 // figure for it — show PRICE_NOTE instead.
 const PLAN_META = {
   basic:  { name: 'Basic',  price: 29.95,  color: 'from-gray-500 to-gray-600',    icon: Sparkles,   smsLimit: 100,  chatLimit: 200  }, // legacy
-  pro:    { name: 'Pro',    price: 195,    color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 100,  chatLimit: 500  },
+  pro:    { name: 'Pro',    price: 250,    color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 100,  chatLimit: 99999 },
   scale:  { name: 'Scale',  price: null,   color: 'from-purple-500 to-pink-600',   icon: TrendingUp, smsLimit: 500,  chatLimit: 99999 },
   expert: { name: 'Expert', price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 200,  chatLimit: 500  }, // legacy
 };
@@ -423,7 +423,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
             <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-red-800 text-sm">Approaching your plan limits</p>
-              <p className="text-red-600 text-xs mt-0.5">Upgrade to Scale for 5x more SMS and unlimited chat responses.</p>
+              <p className="text-red-600 text-xs mt-0.5">Upgrade to Scale for a higher SMS allowance built around your volume.</p>
             </div>
           </div>
         )}
@@ -439,6 +439,7 @@ export default function Billing({ user, apiUrl, authFetch }) {
               color="blue"
               upgradeNote={smsPct >= 80 ? 'Upgrade for 500/mo' : null}
             />
+            <p className="text-xs text-gray-400 -mt-2 px-1">Lead follow-up and review texts. SMS marketing campaigns are billed separately, below.</p>
             {chatCostLimit != null ? (
               <UsageMeter
                 label="AI Usage"
@@ -459,6 +460,25 @@ export default function Billing({ user, apiUrl, authFetch }) {
           </div>
         </div>
 
+        {/* SMS campaign billing — blasts to their own customers are charged per text and
+            added to the next Stripe invoice, so they see what they owe before it lands. */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-6 shadow-sm">
+          <h2 className="font-bold text-gray-900 mb-1">SMS Marketing Campaigns</h2>
+          <p className="text-sm text-gray-500 mb-4">
+            Texts you send to your customer list are billed at ${((usage?.campaignRateCents ?? 3) / 100).toFixed(2)} per text and added to your next invoice.
+          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <p className="text-xs text-gray-500">Campaign texts this month</p>
+              <p className="text-2xl font-bold text-gray-900">{(usage?.campaignTextsMonth ?? 0).toLocaleString()}</p>
+            </div>
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">
+              <p className="text-xs text-gray-500">Added to your next invoice</p>
+              <p className="text-2xl font-bold text-gray-900">${((usage?.campaignChargeCentsMonth ?? 0) / 100).toFixed(2)}</p>
+            </div>
+          </div>
+        </div>
+
         {/* Upgrade to Scale */}
         {isProOrBelow && (
           <div className="bg-gradient-to-br from-purple-50 to-pink-50 border-2 border-purple-200 rounded-2xl p-6 mb-6">
@@ -468,11 +488,10 @@ export default function Billing({ user, apiUrl, authFetch }) {
                   <TrendingUp className="w-5 h-5 text-purple-600" />
                   <h3 className="font-bold text-gray-900">Move up to Scale — {PRICE_NOTE.toLowerCase()}</h3>
                 </div>
-                <p className="text-sm text-gray-600 mb-3">Remove your SMS and chat limits and unlock everything at full capacity. We price it against the volume you actually do, so tell us your numbers and we'll quote it.</p>
+                <p className="text-sm text-gray-600 mb-3">Remove your SMS limits and unlock everything at full capacity. We price it against the volume you actually do, so tell us your numbers and we'll quote it.</p>
                 <div className="space-y-1.5">
                   {[
                     'SMS volume set to your business, starting at 500 / month',
-                    'Unlimited chat agent responses',
                     'Higher priority support',
                   ].map(f => (
                     <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
@@ -562,19 +581,20 @@ export default function Billing({ user, apiUrl, authFetch }) {
       id: 'pro',
       name: 'Pro',
       tagline: 'Full AI automation for growth',
-      price: 195,
+      price: 250,
       icon: Crown,
       gradient: 'from-blue-500 to-purple-600',
       popular: true,
       trial: '1-week free trial',
       smsLimit: 100,
-      chatLimit: 500,
+      chatLimit: 99999,
       features: [
         { text: 'Everything in Basic', included: true, bold: true },
         { text: 'AI Chat Agent (24/7 on your website)', included: true, highlight: true },
         { text: 'SMS Lead Follow-Up Agent', included: true, highlight: true },
-        { text: '100 SMS / month', included: true, highlight: true },
-        { text: '500 chat AI responses / month', included: true, highlight: true },
+        { text: '100 lead & review texts / month', included: true, highlight: true },
+        { text: 'Unlimited AI usage', included: true, highlight: true },
+        { text: 'SMS marketing campaigns at $0.03 / text', included: true },
         { text: 'Automated Google Review Requests', included: true, highlight: true },
         { text: 'Weekly AI Email Marketing', included: true, highlight: true },
         { text: 'Market Research Reports', included: true },
@@ -595,7 +615,6 @@ export default function Billing({ user, apiUrl, authFetch }) {
       features: [
         { text: 'Everything in Pro', included: true, bold: true },
         { text: 'SMS volume set to your business, from 500 / month', included: true, highlight: true },
-        { text: 'Unlimited chat agent responses', included: true, highlight: true },
         { text: 'Multi-location support', included: true, highlight: true },
         { text: 'White-label options', included: true, soon: true },
         { text: 'Dedicated account manager', included: true, soon: true },
@@ -643,8 +662,8 @@ export default function Billing({ user, apiUrl, authFetch }) {
         </div>
         <p className="text-center text-sm text-gray-600 mt-4">
           Total standalone value: <span className="font-bold text-gray-900 line-through">$427/mo</span>
-          {' '}→ <span className="font-bold text-green-600">$195/mo with Pro</span>
-          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">54% OFF</span>
+          {' '}→ <span className="font-bold text-green-600">$250/mo with Pro</span>
+          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">41% OFF</span>
         </p>
       </div>
 

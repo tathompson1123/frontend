@@ -410,6 +410,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [reviewConvoMessages, setReviewConvoMessages] = useState([]);
   const [sendingReviewAsk, setSendingReviewAsk] = useState(false);
   const [stoppingReview, setStoppingReview] = useState(false);
+  const [approvingShot, setApprovingShot] = useState(false);
   const [smsLeads, setSmsLeads] = useState([]);
   const [selectedSmsLead, setSelectedSmsLead] = useState(null);
   const [smsLeadMessages, setSmsLeadMessages] = useState([]);
@@ -1397,6 +1398,29 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       alert('Could not send that review request');
     } finally {
       setSendingReviewAsk(false);
+    }
+  };
+
+  // Owner override: the AI didn't accept the screenshot, but they've looked and it's real.
+  const approveScreenshot = async (reviewRequestId) => {
+    if (!reviewRequestId || approvingShot) return;
+    if (!window.confirm('Count this screenshot as a raffle entry?')) return;
+    setApprovingShot(true);
+    try {
+      const response = await authFetch(`${apiUrl}/api/google-business/review-requests/${reviewRequestId}/approve-screenshot`, { method: 'POST' });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        const patch = { review_completed: true, screenshot_verdict: 'approved_manual' };
+        setSelectedReviewConvo(c => c ? { ...c, ...patch } : c);
+        setReviewConvos(cs => cs.map(c => c.review_request_id === reviewRequestId ? { ...c, ...patch } : c));
+      } else {
+        alert(data.error || 'Could not approve that screenshot');
+      }
+    } catch (e) {
+      console.error('Error approving screenshot:', e);
+      alert('Could not approve that screenshot');
+    } finally {
+      setApprovingShot(false);
     }
   };
 
@@ -3037,6 +3061,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                         >
                           <Star className="w-3.5 h-3.5" />
                           {sendingReviewAsk ? 'Sending…' : 'Send Review Request'}
+                        </button>
+                      )}
+                      {selectedReviewConvo.screenshot_url && !selectedReviewConvo.review_completed
+                        && ['invalid', 'unclear', 'error'].includes(selectedReviewConvo.screenshot_verdict) && (
+                        <button
+                          onClick={() => approveScreenshot(selectedReviewConvo.review_request_id)}
+                          disabled={approvingShot}
+                          className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 bg-green-600 text-white hover:bg-green-700 disabled:opacity-60 rounded-lg transition"
+                          title="The AI didn't accept their screenshot. If it's a real review, enter them in the raffle."
+                        >
+                          {approvingShot ? 'Approving…' : 'Approve Screenshot'}
                         </button>
                       )}
                       {selectedReviewConvo.status !== 'stopped' && (

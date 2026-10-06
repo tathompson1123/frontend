@@ -14,7 +14,7 @@ const STRIPE_PK =
 // Scale is `quoted` — it has no list price, so picking it asks for the monthly amount
 // agreed on the call rather than charging a number nobody agreed to.
 const PLANS = [
-  { id: 'pro',   label: 'Pro',   price: 195 },
+  { id: 'pro',   label: 'Pro',   price: 250 },
   { id: 'scale', label: 'Scale', quoted: true },
   { id: '',      label: 'No plan — offer only', price: 0 },
 ];

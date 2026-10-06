@@ -155,7 +155,7 @@ export default function PricingPage() {
     {
       id: 'pro',
       name: 'Pro',
-      price: 195,
+      price: 250,
       description: 'Full AI automation for growing businesses',
       icon: Crown,
       gradient: 'from-blue-600 to-purple-600',
@@ -167,6 +167,8 @@ export default function PricingPage() {
         { text: 'AI Chat Agent — 24/7 lead capture & booking', included: true, highlight: true },
         { text: 'SMS Lead Agent — texts leads within 60s', included: true, highlight: true },
         { text: '100 SMS follow-ups / month', included: true, highlight: true },
+        { text: 'Unlimited AI usage — never run out', included: true, highlight: true },
+        { text: 'SMS marketing campaigns at $0.03 / text', included: true },
         { text: 'Automated Google Review Requests', included: true, highlight: true },
         { text: 'Embed on Wix, Squarespace & WordPress', included: true, highlight: true },
         { text: 'Weekly AI Email Marketing Campaigns', included: true, highlight: true },
@@ -225,7 +227,7 @@ export default function PricingPage() {
 
         {/* Value breakdown */}
         <div className="bg-white rounded-2xl shadow-lg p-8 mb-12 border border-blue-100">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Pro Plan = $427/month of tools for $195 — try free for 1 week</h2>
+          <h2 className="text-2xl font-bold text-center text-gray-900 mb-2">Pro Plan = $427/month of tools for $250 — try free for 1 week</h2>
           <p className="text-center text-gray-500 text-sm mb-8">Everything bundled — no separate subscriptions needed</p>
           <div className="grid md:grid-cols-4 gap-4">
             {valueItems.map((item) => {
@@ -245,8 +247,8 @@ export default function PricingPage() {
           <div className="text-center mt-6">
             <span className="text-gray-500 line-through mr-2">$427/month</span>
             <ArrowRight className="inline w-4 h-4 text-gray-400 mr-2" />
-            <span className="text-2xl font-bold text-green-600">$195/month</span>
-            <span className="ml-3 bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full">Save 54%</span>
+            <span className="text-2xl font-bold text-green-600">$250/month</span>
+            <span className="ml-3 bg-green-100 text-green-700 text-sm font-bold px-3 py-1 rounded-full">Save 41%</span>
           </div>
         </div>
 
