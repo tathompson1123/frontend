@@ -22,10 +22,13 @@ import BookCallPage from './pages/BookCallPage';
 import LearnMorePage from './pages/LearnMorePage';
 import OnboardingQuestionnairePage from './pages/OnboardingQuestionnairePage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import ImpersonatePage from './pages/ImpersonatePage';
+import ImpersonationBanner from './components/ImpersonationBanner';
 
 function App() {
   return (
     <Router>
+      <ImpersonationBanner />
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/loading" element={<WebsiteLoading />} />
@@ -54,6 +57,7 @@ function App() {
         <Route path="/learnmore" element={<LearnMorePage />} />
         <Route path="/onboarding" element={<OnboardingQuestionnairePage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/impersonate" element={<ImpersonatePage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>

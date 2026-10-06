@@ -164,6 +164,23 @@ export default function DiscoveryCalls({ token, isAdmin }) {
     }
   };
 
+  // Builds the prospect's account from the call form (if it doesn't exist yet) and opens
+  // their real dashboard in a new tab so the rep can screenshare it.
+  const openAccount = async (id) => {
+    try {
+      const res = await fetch(`${API_URL}/api/discovery/calls/${id}/open-account`, {
+        method: 'POST', headers: authHeaders,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not open the account');
+      const hash = new URLSearchParams({ token: data.token, user: JSON.stringify(data.user) }).toString();
+      window.open(`/impersonate#${hash}`, '_blank');
+      flash(data.created ? 'Account created — opening it' : 'Opening their account');
+    } catch (err) {
+      flash(err.message, 'error');
+    }
+  };
+
   const openNewCall = (date) => {
     setFormDate(date || new Date());
     setShowForm(true);
@@ -417,6 +434,7 @@ export default function DiscoveryCalls({ token, isAdmin }) {
           onPatch={patch}
           onDelete={removeCall}
           onResend={resend}
+          onOpenAccount={() => openAccount(selected.id)}
           onCollect={() => setCollectFor(selected)}
         />
       )}
@@ -459,7 +477,7 @@ export default function DiscoveryCalls({ token, isAdmin }) {
   );
 }
 
-function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onResend, onCollect }) {
+function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onResend, onCollect, onOpenAccount }) {
   const [noteDraft, setNoteDraft] = useState(call.notes || '');
   const [noteSaved, setNoteSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -588,6 +606,16 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
             >
               <Video className="w-4 h-4" /> Join the Zoom call with {call.name.split(' ')[0]}
             </a>
+          )}
+
+          {call.email && (
+            <button
+              onClick={onOpenAccount}
+              className="w-full py-3 bg-amber-500 text-white rounded-xl font-semibold text-sm hover:bg-amber-600 transition flex items-center justify-center gap-2"
+              title="Creates their account from this booking (if needed) and opens it to screenshare"
+            >
+              <User className="w-4 h-4" /> Open {call.name.split(' ')[0]}'s account to demo
+            </button>
           )}
 
           <div className="flex items-center gap-2 text-xs flex-wrap">
