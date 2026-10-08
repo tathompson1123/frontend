@@ -34,6 +34,58 @@ const REVENUE_BANDS = [
 
 const TOTAL_STEPS = 4;
 
+// ── Main VSL (vertical 9:16) ─────────────────────────────────────────────────
+// Shows our own thumbnail first and only loads the Vimeo player on click, which keeps
+// the page fast and lets us control the first frame people see. Drop the thumbnail at
+// public/vsl-thumbnail.jpg (9:16, e.g. 1080x1920); until it exists the dark card below
+// shows instead. The box is capped by viewport height so a vertical video never runs
+// off a laptop screen, and stays full-width-ish on a phone.
+const VSL_VIMEO_ID = '1233896654';
+const VSL_THUMBNAIL = '/vsl-thumbnail.jpg';
+
+function VslPlayer() {
+  const [playing, setPlaying] = useState(false);
+  const [thumbOk, setThumbOk] = useState(true);
+  return (
+    <div
+      className="relative mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-xl bg-black"
+      style={{ width: 'min(100%, 380px, calc(78vh * 9 / 16))' }}
+    >
+      {playing ? (
+        <iframe
+          src={`https://player.vimeo.com/video/${VSL_VIMEO_ID}?autoplay=1&dnt=1&title=0&byline=0&portrait=0`}
+          title="SORCE — how it works"
+          allow="autoplay; fullscreen; picture-in-picture"
+          allowFullScreen
+          className="absolute inset-0 w-full h-full border-0"
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPlaying(true)}
+          aria-label="Play the video"
+          className="absolute inset-0 w-full h-full group cursor-pointer bg-gradient-to-br from-gray-800 to-gray-900"
+        >
+          {thumbOk && (
+            <img
+              src={VSL_THUMBNAIL}
+              alt=""
+              onError={() => setThumbOk(false)}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          )}
+          <span className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition" />
+          <span className="absolute inset-0 flex items-center justify-center">
+            <span className="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition">
+              <Play className="w-9 h-9 text-gray-900 ml-1" fill="currentColor" />
+            </span>
+          </span>
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Video placeholder — swap `src` for a real file/embed when it's ready ─────
 // Kept dark regardless of page theme: video thumbnails read as a screen, and a
 // dark frame is what makes the play button pop against a light page.
@@ -619,15 +671,7 @@ export default function LearnMorePage() {
         </span>
         <CurvyArrow className="mx-auto w-14 h-16 text-gray-400 mb-4" />
 
-        <div className="relative aspect-video w-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-xl bg-black">
-          <iframe
-            src="https://player.vimeo.com/video/1233896654?dnt=1&title=0&byline=0&portrait=0"
-            title="SORCE — how it works"
-            allow="autoplay; fullscreen; picture-in-picture"
-            allowFullScreen
-            className="absolute inset-0 w-full h-full border-0"
-          />
-        </div>
+        <VslPlayer />
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 mb-4">
           <button
