@@ -619,7 +619,15 @@ export default function LearnMorePage() {
         </span>
         <CurvyArrow className="mx-auto w-14 h-16 text-gray-400 mb-4" />
 
-        <VideoPlaceholder label="Drop in your main demo / VSL video here" className="max-w-3xl mx-auto" />
+        <div className="relative aspect-video w-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-xl bg-black">
+          <iframe
+            src="https://player.vimeo.com/video/1233896654?dnt=1&title=0&byline=0&portrait=0"
+            title="SORCE — how it works"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+            className="absolute inset-0 w-full h-full border-0"
+          />
+        </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 mb-4">
           <button
