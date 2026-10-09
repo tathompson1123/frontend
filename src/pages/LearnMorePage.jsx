@@ -7,9 +7,14 @@ import {
 import bookingAgentImg from '../assets/learnmore/booking-agent.png';
 import smsWinbackImg from '../assets/learnmore/sms-winback.png';
 import googleReviewImg from '../assets/learnmore/google-review.png';
-import testimonial1Img from '../assets/learnmore/testimonial-1.png';
-import testimonial2Img from '../assets/learnmore/testimonial-2.png';
-import testimonial3Img from '../assets/learnmore/testimonial-3.png';
+import logoLandscapingImg from '../assets/learnmore/logo-landscaping.png';
+import logoHvacImg from '../assets/learnmore/logo-hvac.png';
+
+// Thompson's Auto Detailing logo is dropped in by hand as
+// src/assets/learnmore/logo-thompsons.(png|jpg|webp|svg). Globbed rather than imported
+// so the build still works before the file exists — the card shows initials until then.
+const thompsonsLogoFiles = import.meta.glob('../assets/learnmore/logo-thompsons.*', { eager: true, import: 'default' });
+const logoThompsonsImg = Object.values(thompsonsLogoFiles)[0] || null;
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -598,9 +603,9 @@ const HOW_IT_WORKS = [
 // Placeholder names/quotes — FAKE, for layout purposes only. Swap for real
 // customers and real quotes before this page runs any traffic.
 const SOCIAL_PROOF_PHOTOS = [
-  { image: testimonial1Img, name: 'Mike R.', business: 'Landscaping', quote: 'Leads stopped slipping through the cracks the first week.' },
-  { image: testimonial2Img, name: 'Sarah T.', business: 'Auto Detailing', quote: 'We picked up 11 new jobs last month without spending more on ads.' },
-  { image: testimonial3Img, name: 'Dave K.', business: 'HVAC', quote: 'My Google reviews tripled and the phone hasn\'t stopped ringing.' },
+  { image: logoLandscapingImg, name: 'Mike R.', business: 'Evergreen Edge Lawn Care', quote: 'Leads stopped slipping through the cracks the first week.' },
+  { image: logoThompsonsImg, name: 'Sarah T.', business: "Thompson's Auto Detailing", quote: 'We picked up 11 new jobs last month without spending more on ads.' },
+  { image: logoHvacImg, name: 'Dave K.', business: 'Summit Comfort Heating & Air', quote: 'My Google reviews tripled and the phone hasn\'t stopped ringing.' },
 ];
 
 const GOOD_FIT = [
@@ -691,11 +696,20 @@ export default function LearnMorePage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-4xl mx-auto">
             {SOCIAL_PROOF_PHOTOS.map((p, i) => (
               <div key={i} className="text-center">
-                <img
-                  src={p.image}
-                  alt={p.name}
-                  className="w-20 h-20 mx-auto object-cover rounded-full shadow-md mb-3"
-                />
+                {p.image ? (
+                  <img
+                    src={p.image}
+                    alt={`${p.business} logo`}
+                    className="w-20 h-20 mx-auto object-contain rounded-full bg-white border border-gray-200 shadow-md mb-3"
+                  />
+                ) : (
+                  <div
+                    aria-label={`${p.business} logo`}
+                    className="w-20 h-20 mx-auto rounded-full bg-gray-900 text-white shadow-md mb-3 flex items-center justify-center text-xl font-bold"
+                  >
+                    {p.business.split(' ').slice(0, 2).map(w => w[0]).join('')}
+                  </div>
+                )}
                 <p className="text-sm text-gray-700 italic mb-2">"{p.quote}"</p>
                 <p className="text-xs font-semibold text-gray-900">{p.name}</p>
                 <p className="text-[11px] text-gray-400">{p.business}</p>
