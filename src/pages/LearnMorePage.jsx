@@ -517,20 +517,24 @@ function QuizModal({ open, onClose }) {
   );
 }
 
-// Bold black emphasis for the "what you get on the call" copy (one or two phrases per line).
+// Emphasis for the "what you get on the call" copy: { hl } is brand orange + bold
+// (paragraphs), { b } is bold black (the three bullets).
 function Hl({ children }) {
-  return <strong className="font-extrabold text-black">{children}</strong>;
+  return <strong className="font-bold text-primary-600">{children}</strong>;
 }
 
-// A line is an array of plain strings and { hl: '...' } highlighted runs.
 function Rich({ parts }) {
-  return parts.map((p, i) => (typeof p === 'string' ? <span key={i}>{p}</span> : <Hl key={i}>{p.hl}</Hl>));
+  return parts.map((p, i) => {
+    if (typeof p === 'string') return <span key={i}>{p}</span>;
+    if (p.b) return <strong key={i} className="font-extrabold text-black">{p.b}</strong>;
+    return <Hl key={i}>{p.hl}</Hl>;
+  });
 }
 
 const CALL_BULLETS = [
-  ['A ', { hl: 'live demo' }, ' showing you exactly how you can ', { hl: 'pull cash from past customers' }, '.'],
-  ['Your complete ', { hl: 'google review system' }, ' that runs on ', { hl: 'auto pilot' }, '.'],
-  ['Your Live chat agent that ', { hl: 'grabs customers phone numbers' }, ' and ', { hl: 'books them in the minute they step onto your site' }, '.'],
+  ['A ', { b: 'live demo' }, ' showing you exactly how you can pull cash from past customers.'],
+  ['Your complete google review system that runs on ', { b: 'auto pilot' }, '.'],
+  ['Your ', { b: 'Live chat agent' }, ' that grabs customers phone numbers and books them in the minute they step onto your site.'],
 ];
 
 const CALL_PARAGRAPHS = [
@@ -674,10 +678,10 @@ export default function LearnMorePage() {
       {/* What you get on the call — copy, not cards. Hard-hitting words are the brand orange. */}
       <section className="max-w-3xl mx-auto px-6 py-16">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
-          What you get with SORCE on the 20 minute call
+          What you get with SORCE on the <Hl>20 minute call</Hl>
         </h2>
 
-        <ul className="space-y-8 text-lg md:text-xl text-gray-600 leading-loose mb-8">
+        <ul className="space-y-8 text-lg md:text-xl text-gray-900 leading-loose mb-8">
           {CALL_BULLETS.map((parts, i) => (
             <li key={i} className="flex items-start gap-4">
               <span className="mt-[0.9em] w-2.5 h-2.5 rounded-full bg-black flex-shrink-0" aria-hidden="true" />
@@ -686,7 +690,7 @@ export default function LearnMorePage() {
           ))}
         </ul>
 
-        <div className="space-y-8 text-lg md:text-xl text-gray-600 leading-loose">
+        <div className="space-y-8 text-lg md:text-xl text-gray-900 leading-loose">
           {CALL_PARAGRAPHS.map((parts, i) => (
             <p key={i}><Rich parts={parts} /></p>
           ))}
