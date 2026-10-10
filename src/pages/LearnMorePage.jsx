@@ -2,11 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2,
-  MessageCircle, Globe, Award, CheckCircle2, XCircle, Calendar,
+  CheckCircle2, XCircle, Calendar,
 } from 'lucide-react';
-import bookingAgentImg from '../assets/learnmore/booking-agent.png';
-import smsWinbackImg from '../assets/learnmore/sms-winback.png';
-import googleReviewImg from '../assets/learnmore/google-review.png';
 import logoLandscapingImg from '../assets/learnmore/logo-landscaping.png';
 import logoHvacImg from '../assets/learnmore/logo-hvac.png';
 
@@ -34,7 +31,7 @@ const STRUGGLES = [
 ];
 
 const REVENUE_BANDS = [
-  'Under $10k/mo', '$10k – $20k/mo', '$20k – $50k/mo', '$50k – $100k/mo', '$100k+/mo',
+  'Under $5k/mo', '$5k – $20k/mo', '$20k – $50k/mo', '$50k – $100k/mo', '$100k+/mo',
 ];
 
 const TOTAL_STEPS = 4;
@@ -520,25 +517,31 @@ function QuizModal({ open, onClose }) {
   );
 }
 
-const HOW_IT_WORKS = [
-  {
-    icon: Globe,
-    title: 'A website that actually converts',
-    body: 'Visitors land on a fast, mobile-ready site with AI chat and smart forms built to turn traffic into booked jobs — not just page views.',
-    image: bookingAgentImg,
-  },
-  {
-    icon: MessageCircle,
-    title: 'Win back past customers, automatically',
-    body: 'An automatic text goes out with a personal offer, and when they reply, it\'s already booked — no manual outreach needed.',
-    image: smsWinbackImg,
-  },
-  {
-    icon: Award,
-    title: '5-star reviews, on autopilot',
-    body: 'A review request goes out after every job automatically, building the reputation that gets you picked over the competition.',
-    image: googleReviewImg,
-  },
+// Brand-orange emphasis for the "what you get on the call" copy.
+function Hl({ children }) {
+  return <strong className="font-bold text-primary-600">{children}</strong>;
+}
+
+// A line is an array of plain strings and { hl: '...' } highlighted runs.
+function Rich({ parts }) {
+  return parts.map((p, i) => (typeof p === 'string' ? <span key={i}>{p}</span> : <Hl key={i}>{p.hl}</Hl>));
+}
+
+const CALL_BULLETS = [
+  ['A ', { hl: 'live demo' }, ' showing you exactly how you can ', { hl: 'pull cash from past customers' }, '.'],
+  ['Your complete ', { hl: 'google review system' }, ' that runs on ', { hl: 'auto pilot' }, '.'],
+  ['Your ', { hl: 'Live chat agent' }, ' that ', { hl: 'grabs customers phone numbers' }, ' and ', { hl: 'books them in the minute they step onto your site' }, '.'],
+];
+
+const CALL_PARAGRAPHS = [
+  ['Before you commit to anything, we know how important it is to ', { hl: 'see what you\'re getting into' }, '.'],
+  ['We want you to ', { hl: 'leave the call gaining real value' }, ' and hopefully even ', { hl: 'landing a sale live on the call' }, '.'],
+  [
+    'So if you\'re a service business owner who wants to ', { hl: 'get ahead of your competition' },
+    ' and ', { hl: 'capture more cash from your local market' },
+    ' while everyone else scrambles to run more ads, then ', { hl: 'book the call' },
+    ' with us and ', { hl: 'run this live with us' }, '. ', { hl: 'See you then.' },
+  ],
 ];
 
 // ── Placeholder social proof photos — swap for real customer photos later ────
@@ -552,7 +555,7 @@ const SOCIAL_PROOF_PHOTOS = [
 
 const GOOD_FIT = [
   'Already getting some jobs, but following up is eating your time',
-  'Doing $10k/mo or more and ready to systemize growth',
+  'Doing $5k/mo or more and ready to systemize growth',
   'Willing to let a system handle the busywork so you can run the business',
 ];
 
@@ -573,7 +576,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Is this right for my business size?',
-    a: "Built for home service and local service businesses typically doing $10k–$100k+/mo who are ready to stop manually chasing every lead.",
+    a: "Built for home service and local service businesses typically doing $5k–$100k+/mo who are ready to stop manually chasing every lead.",
   },
   {
     q: 'How much does it cost?',
@@ -668,31 +671,27 @@ export default function LearnMorePage() {
         </div>
       </section>
 
-      {/* How it works — numbered benefit cards */}
-      <section className="max-w-6xl mx-auto px-6 py-16">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">What you get with SORCE</h2>
-        <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">
-          Three systems running quietly in the background of your business, every single day.
-        </p>
-        <div className="grid md:grid-cols-3 gap-8">
-          {HOW_IT_WORKS.map(({ icon: Icon, title, body, image }, i) => (
-            <div key={title} className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow overflow-hidden">
-              <div className="relative">
-                <img src={image} alt={title} className="w-full aspect-video object-cover" />
-                <div className="absolute top-3 left-3 w-9 h-9 rounded-full bg-gray-900/80 backdrop-blur text-white font-bold flex items-center justify-center text-sm">
-                  {i + 1}
-                </div>
-              </div>
-              <div className="p-7">
-                <div className="w-12 h-12 bg-gradient-to-br from-primary-600 to-accent-600 rounded-xl flex items-center justify-center mb-5 -mt-16 relative shadow-lg border-4 border-white">
-                  <Icon className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
-              </div>
-            </div>
+      {/* What you get on the call — copy, not cards. Hard-hitting words are the brand orange. */}
+      <section className="max-w-3xl mx-auto px-6 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
+          What you get with SORCE on the <Hl>20 minute call</Hl>
+        </h2>
+
+        <ul className="space-y-8 text-lg md:text-xl text-gray-700 leading-loose mb-8">
+          {CALL_BULLETS.map((parts, i) => (
+            <li key={i} className="flex items-start gap-4">
+              <span className="mt-[0.9em] w-2.5 h-2.5 rounded-full bg-primary-600 flex-shrink-0" aria-hidden="true" />
+              <span><Rich parts={parts} /></span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="space-y-8 text-lg md:text-xl text-gray-700 leading-loose">
+          {CALL_PARAGRAPHS.map((parts, i) => (
+            <p key={i}><Rich parts={parts} /></p>
           ))}
         </div>
+
         <div className="text-center mt-12">
           <button
             onClick={() => setQuizOpen(true)}
