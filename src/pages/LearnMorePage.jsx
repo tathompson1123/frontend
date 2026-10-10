@@ -538,8 +538,8 @@ const CALL_BULLETS = [
 ];
 
 const CALL_PARAGRAPHS = [
-  ['Before you commit to anything, we know how important it is to ', { hl: 'see what you\'re getting into' }, '.'],
-  ['We want you to ', { hl: 'leave the call gaining real value' }, ' and hopefully even ', { hl: 'landing a sale live on the call' }, '.'],
+  ['Before you commit to anything, we know how important it is to ', 'see what you\'re getting into', '.'],
+  ['We want you to ', 'leave the call gaining real value', ' and hopefully even ', { hl: 'landing a sale live on the call' }, '.'],
   [
     'So if you\'re a service business owner who wants to get ahead of your competition and ',
     { hl: 'capture more cash from your local market' },
@@ -678,7 +678,7 @@ export default function LearnMorePage() {
       {/* What you get on the call — copy, not cards. Hard-hitting words are the brand orange. */}
       <section className="max-w-3xl mx-auto px-6 py-16">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
-          What you get with SORCE on the <Hl>20 minute call</Hl>
+          What you get with <Hl>SORCE</Hl> on the 20 minute call
         </h2>
 
         <ul className="space-y-8 text-lg md:text-xl text-gray-900 leading-loose mb-8">
