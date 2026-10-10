@@ -517,9 +517,9 @@ function QuizModal({ open, onClose }) {
   );
 }
 
-// Brand-orange emphasis for the "what you get on the call" copy.
+// Bold black emphasis for the "what you get on the call" copy (one or two phrases per line).
 function Hl({ children }) {
-  return <strong className="font-bold text-primary-600">{children}</strong>;
+  return <strong className="font-extrabold text-black">{children}</strong>;
 }
 
 // A line is an array of plain strings and { hl: '...' } highlighted runs.
@@ -530,17 +530,17 @@ function Rich({ parts }) {
 const CALL_BULLETS = [
   ['A ', { hl: 'live demo' }, ' showing you exactly how you can ', { hl: 'pull cash from past customers' }, '.'],
   ['Your complete ', { hl: 'google review system' }, ' that runs on ', { hl: 'auto pilot' }, '.'],
-  ['Your ', { hl: 'Live chat agent' }, ' that ', { hl: 'grabs customers phone numbers' }, ' and ', { hl: 'books them in the minute they step onto your site' }, '.'],
+  ['Your Live chat agent that ', { hl: 'grabs customers phone numbers' }, ' and ', { hl: 'books them in the minute they step onto your site' }, '.'],
 ];
 
 const CALL_PARAGRAPHS = [
   ['Before you commit to anything, we know how important it is to ', { hl: 'see what you\'re getting into' }, '.'],
   ['We want you to ', { hl: 'leave the call gaining real value' }, ' and hopefully even ', { hl: 'landing a sale live on the call' }, '.'],
   [
-    'So if you\'re a service business owner who wants to ', { hl: 'get ahead of your competition' },
-    ' and ', { hl: 'capture more cash from your local market' },
+    'So if you\'re a service business owner who wants to get ahead of your competition and ',
+    { hl: 'capture more cash from your local market' },
     ' while everyone else scrambles to run more ads, then ', { hl: 'book the call' },
-    ' with us and ', { hl: 'run this live with us' }, '. ', { hl: 'See you then.' },
+    ' with us and run this live with us. See you then.',
   ],
 ];
 
@@ -674,19 +674,19 @@ export default function LearnMorePage() {
       {/* What you get on the call — copy, not cards. Hard-hitting words are the brand orange. */}
       <section className="max-w-3xl mx-auto px-6 py-16">
         <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 text-gray-900">
-          What you get with SORCE on the <Hl>20 minute call</Hl>
+          What you get with SORCE on the 20 minute call
         </h2>
 
-        <ul className="space-y-8 text-lg md:text-xl text-gray-700 leading-loose mb-8">
+        <ul className="space-y-8 text-lg md:text-xl text-gray-600 leading-loose mb-8">
           {CALL_BULLETS.map((parts, i) => (
             <li key={i} className="flex items-start gap-4">
-              <span className="mt-[0.9em] w-2.5 h-2.5 rounded-full bg-primary-600 flex-shrink-0" aria-hidden="true" />
+              <span className="mt-[0.9em] w-2.5 h-2.5 rounded-full bg-black flex-shrink-0" aria-hidden="true" />
               <span><Rich parts={parts} /></span>
             </li>
           ))}
         </ul>
 
-        <div className="space-y-8 text-lg md:text-xl text-gray-700 leading-loose">
+        <div className="space-y-8 text-lg md:text-xl text-gray-600 leading-loose">
           {CALL_PARAGRAPHS.map((parts, i) => (
             <p key={i}><Rich parts={parts} /></p>
           ))}
