@@ -181,6 +181,22 @@ export default function DiscoveryCalls({ token, isAdmin }) {
     }
   };
 
+  // Payment collected → turn the demo into a real account (removes the example data).
+  const convertDemo = async (id) => {
+    if (!window.confirm('Convert this demo account to a real account? The example service, contacts and location are removed.')) return;
+    try {
+      const res = await fetch(`${API_URL}/api/discovery/calls/${id}/convert-demo`, {
+        method: 'POST', headers: authHeaders,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not convert the account');
+      setCalls(prev => prev.map(c => (c.id === id ? { ...c, demo_is_demo: false } : c)));
+      flash(data.needsDedicatedNumber ? 'Converted — their own number is bought on first payment' : 'Converted to a real account');
+    } catch (err) {
+      flash(err.message, 'error');
+    }
+  };
+
   const openNewCall = (date) => {
     setFormDate(date || new Date());
     setShowForm(true);
@@ -435,6 +451,7 @@ export default function DiscoveryCalls({ token, isAdmin }) {
           onDelete={removeCall}
           onResend={resend}
           onOpenAccount={() => openAccount(selected.id)}
+          onConvertDemo={() => convertDemo(selected.id)}
           onCollect={() => setCollectFor(selected)}
         />
       )}
@@ -477,7 +494,7 @@ export default function DiscoveryCalls({ token, isAdmin }) {
   );
 }
 
-function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onResend, onCollect, onOpenAccount }) {
+function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onResend, onCollect, onOpenAccount, onConvertDemo }) {
   const [noteDraft, setNoteDraft] = useState(call.notes || '');
   const [noteSaved, setNoteSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -615,6 +632,15 @@ function CallDetailModal({ call, team, isAdmin, onClose, onPatch, onDelete, onRe
               title="Creates their account from this booking (if needed) and opens it to screenshare"
             >
               <User className="w-4 h-4" /> Open {call.name.split(' ')[0]}'s account to demo
+            </button>
+          )}
+          {call.demo_is_demo === true && (
+            <button
+              onClick={onConvertDemo}
+              className="w-full py-2.5 bg-green-600 text-white rounded-xl font-semibold text-sm hover:bg-green-700 transition flex items-center justify-center gap-2"
+              title="Use once payment is collected: lifts demo limits and removes the example data"
+            >
+              <Check className="w-4 h-4" /> Convert demo to real account
             </button>
           )}
 

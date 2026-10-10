@@ -27,7 +27,7 @@ export default function BookCallPage() {
     setSlots([]);
     setChosen(null);
     try {
-      const res = await fetch(`${API_URL}/api/public/discovery/slots?date=${ymd(date)}`);
+      const res = await fetch(`${API_URL}/api/public/discovery/slots?date=${ymd(date)}&tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`);
       const data = await res.json();
       setSlots(data.slots || []);
     } catch {

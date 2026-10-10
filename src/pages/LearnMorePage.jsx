@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2, Star,
-  MessageCircle, Globe, Repeat, Users, TrendingUp, Award, CheckCircle2, XCircle, Calendar,
+  Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2,
+  MessageCircle, Globe, Award, CheckCircle2, XCircle, Calendar,
 } from 'lucide-react';
 import bookingAgentImg from '../assets/learnmore/booking-agent.png';
 import smsWinbackImg from '../assets/learnmore/sms-winback.png';
@@ -40,71 +40,25 @@ const REVENUE_BANDS = [
 const TOTAL_STEPS = 4;
 
 // ── Main VSL (vertical 9:16) ─────────────────────────────────────────────────
-// Shows our own thumbnail first and only loads the Vimeo player on click, which keeps
-// the page fast and lets us control the first frame people see. Drop the thumbnail at
-// public/vsl-thumbnail.jpg (9:16, e.g. 1080x1920); until it exists the dark card below
-// shows instead. The box is capped by viewport height so a vertical video never runs
-// off a laptop screen, and stays full-width-ish on a phone.
+// Vimeo's own player, so the thumbnail is whatever is set on the video in Vimeo
+// (Vimeo → video → Settings → Thumbnail). The box is capped by viewport height so a
+// vertical video never runs off a laptop screen, and stays full-width-ish on a phone.
 const VSL_VIMEO_ID = '1233896654';
-const VSL_THUMBNAIL = '/vsl-thumbnail.jpg';
 
 function VslPlayer() {
-  const [playing, setPlaying] = useState(false);
-  const [thumbOk, setThumbOk] = useState(true);
   return (
     <div
       className="relative mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-xl bg-black"
       style={{ width: 'min(100%, 380px, calc(78vh * 9 / 16))' }}
     >
-      {playing ? (
-        <iframe
-          src={`https://player.vimeo.com/video/${VSL_VIMEO_ID}?autoplay=1&dnt=1&title=0&byline=0&portrait=0`}
-          title="SORCE — how it works"
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-          className="absolute inset-0 w-full h-full border-0"
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setPlaying(true)}
-          aria-label="Play the video"
-          className="absolute inset-0 w-full h-full group cursor-pointer bg-gradient-to-br from-gray-800 to-gray-900"
-        >
-          {thumbOk && (
-            <img
-              src={VSL_THUMBNAIL}
-              alt=""
-              onError={() => setThumbOk(false)}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          )}
-          <span className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition" />
-          <span className="absolute inset-0 flex items-center justify-center">
-            <span className="w-20 h-20 rounded-full bg-white/90 flex items-center justify-center shadow-lg group-hover:scale-110 transition">
-              <Play className="w-9 h-9 text-gray-900 ml-1" fill="currentColor" />
-            </span>
-          </span>
-        </button>
-      )}
-    </div>
-  );
-}
-
-// ── Video placeholder — swap `src` for a real file/embed when it's ready ─────
-// Kept dark regardless of page theme: video thumbnails read as a screen, and a
-// dark frame is what makes the play button pop against a light page.
-function VideoPlaceholder({ label, aspect = 'aspect-video', className = '' }) {
-  return (
-    <div className={`relative ${aspect} w-full rounded-2xl bg-gradient-to-br from-gray-800 to-gray-900 shadow-xl overflow-hidden flex items-center justify-center group cursor-pointer ${className}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(230,111,81,0.2),transparent_60%)]" />
-      <div className="relative flex flex-col items-center gap-3 text-center px-4">
-        <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur flex items-center justify-center group-hover:bg-primary-600/80 transition">
-          <Play className="w-7 h-7 text-white ml-1" fill="currentColor" />
-        </div>
-        <p className="text-xs font-medium text-white/50 uppercase tracking-wide">Video placeholder</p>
-        <p className="text-sm text-white/70 max-w-[220px]">{label}</p>
-      </div>
+      <iframe
+        src={`https://player.vimeo.com/video/${VSL_VIMEO_ID}?dnt=1&title=0&byline=0&portrait=0`}
+        title="SORCE — how it works"
+        loading="lazy"
+        allow="autoplay; fullscreen; picture-in-picture"
+        allowFullScreen
+        className="absolute inset-0 w-full h-full border-0"
+      />
     </div>
   );
 }
@@ -151,7 +105,7 @@ function DiscoveryBookingCalendar({ prefill, onBooked }) {
     setSlots([]);
     setChosen(null);
     try {
-      const res = await fetch(`${API_URL}/api/public/discovery/slots?date=${ymd(date)}`);
+      const res = await fetch(`${API_URL}/api/public/discovery/slots?date=${ymd(date)}&tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`);
       const data = await res.json();
       setSlots(data.slots || []);
     } catch {
@@ -405,12 +359,6 @@ function QuizModal({ open, onClose }) {
                   prefill={{ name: form.name, email: form.email, phone: form.phone }}
                   onBooked={(iso) => setCallBooked(iso)}
                 />
-                <button
-                  onClick={close}
-                  className="w-full mt-3 py-2.5 text-sm text-gray-400 hover:text-gray-600 transition"
-                >
-                  I'll wait to hear from you instead
-                </button>
               </div>
             )
           ) : (
@@ -571,12 +519,6 @@ function QuizModal({ open, onClose }) {
     </div>
   );
 }
-
-const TESTIMONIAL_PLACEHOLDERS = [
-  { name: 'Add customer name', business: 'Add business type' },
-  { name: 'Add customer name', business: 'Add business type' },
-  { name: 'Add customer name', business: 'Add business type' },
-];
 
 const HOW_IT_WORKS = [
   {
@@ -751,56 +693,6 @@ export default function LearnMorePage() {
           >
             See If We're a Fit <ArrowRight className="w-5 h-5" />
           </button>
-        </div>
-      </section>
-
-      {/* Video testimonials */}
-      <section className="bg-gray-50 py-16">
-        <div className="max-w-6xl mx-auto px-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-center mb-2 text-gray-900">What Business Owners Are Saying</h2>
-        <p className="text-gray-500 text-center mb-14 max-w-xl mx-auto">
-          Swap these placeholders for real customer video testimonials.
-        </p>
-        <div className="grid md:grid-cols-3 gap-6">
-          {TESTIMONIAL_PLACEHOLDERS.map((t, i) => (
-            <div key={i} className="bg-white rounded-2xl p-5 shadow-lg">
-              <VideoPlaceholder label="Add testimonial video" aspect="aspect-[4/5]" />
-              <div className="flex gap-0.5 mt-4 mb-2">
-                {Array.from({ length: 5 }).map((_, s) => (
-                  <Star key={s} className="w-4 h-4 text-amber-500" fill="currentColor" />
-                ))}
-              </div>
-              <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
-              <p className="text-xs text-gray-500">{t.business}</p>
-            </div>
-          ))}
-        </div>
-        </div>
-      </section>
-
-      {/* Stats strip */}
-      <section className="max-w-6xl mx-auto px-6 py-8">
-        <div className="bg-gradient-to-br from-primary-600 to-accent-600 rounded-3xl p-10 text-white">
-          <div className="grid grid-cols-3 gap-6 text-center">
-            <div>
-              <div className="flex items-center justify-center gap-2 text-3xl font-bold">
-                <Users className="w-6 h-6" /> —
-              </div>
-              <p className="text-xs text-primary-100 mt-1 uppercase tracking-wide">Businesses served</p>
-            </div>
-            <div>
-              <div className="flex items-center justify-center gap-2 text-3xl font-bold">
-                <TrendingUp className="w-6 h-6" /> —
-              </div>
-              <p className="text-xs text-primary-100 mt-1 uppercase tracking-wide">Leads generated</p>
-            </div>
-            <div>
-              <div className="flex items-center justify-center gap-2 text-3xl font-bold">
-                <Repeat className="w-6 h-6" /> —
-              </div>
-              <p className="text-xs text-primary-100 mt-1 uppercase tracking-wide">Reviews collected</p>
-            </div>
-          </div>
         </div>
       </section>
 
