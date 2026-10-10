@@ -49,7 +49,7 @@ function VslPlayer() {
   return (
     <div
       className="relative mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-xl bg-black"
-      style={{ width: 'min(100%, 380px, calc(78vh * 9 / 16))' }}
+      style={{ width: 'min(100%, 380px, max(230px, calc((100vh - 210px) * 9 / 16)))' }}
     >
       <iframe
         src={`https://player.vimeo.com/video/${VSL_VIMEO_ID}?dnt=1&title=0&byline=0&portrait=0`}
@@ -604,31 +604,38 @@ export default function LearnMorePage() {
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      {/* Hero */}
-      <section className="max-w-5xl mx-auto px-6 pt-20 pb-20 text-center">
-        <h1 className="text-4xl md:text-6xl font-bold max-w-4xl mx-auto mb-6 text-gray-900 tracking-tight">
-          <span className="block leading-[1.1]">Stop spending more on ads.</span>
-          <span className="block leading-[1.1] mt-3 md:mt-4">Start building a recurring revenue system.</span>
-        </h1>
-        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-2">
-          You can double your revenue without spending a dime on ads.
-        </p>
-        <span className="block text-2xl text-gray-900 mb-1" style={{ fontFamily: "'Caveat', cursive" }}>
-          Watch here to learn how
-        </span>
-        <CurvyArrow className="mx-auto w-14 h-16 text-gray-400 mb-4" />
+      {/* Hero — on desktop the headline sits beside the video so the whole video is in
+          frame on arrival; on mobile it stacks: headline, video, then the button. */}
+      <section className="max-w-6xl mx-auto px-6 pt-12 lg:pt-10 pb-16 lg:pb-14">
+        <div className="grid lg:grid-cols-2 lg:gap-x-12 gap-y-8 lg:items-center">
+          <div className="text-center lg:text-left lg:col-start-1 lg:row-start-1 lg:self-end">
+            <h1 className="text-4xl md:text-6xl lg:text-5xl xl:text-6xl font-bold mb-6 text-gray-900 tracking-tight">
+              <span className="block leading-[1.1]">Stop spending more on ads.</span>
+              <span className="block leading-[1.1] mt-3 md:mt-4">Start building a recurring revenue system.</span>
+            </h1>
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0">
+              You can double your revenue without spending a dime on ads.
+            </p>
+          </div>
 
-        <VslPlayer />
+          <div className="text-center lg:col-start-2 lg:row-start-1 lg:row-span-2">
+            <span className="block text-2xl text-gray-900 mb-1" style={{ fontFamily: "'Caveat', cursive" }}>
+              Watch here to learn how
+            </span>
+            <CurvyArrow className="mx-auto w-14 h-16 lg:h-12 text-gray-400 mb-3" />
+            <VslPlayer />
+          </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-10 mb-4">
-          <button
-            onClick={() => setQuizOpen(true)}
-            className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition flex items-center gap-2"
-          >
-            See If We're a Fit <ArrowRight className="w-5 h-5" />
-          </button>
+          <div className="text-center lg:text-left lg:col-start-1 lg:row-start-2 lg:self-start">
+            <button
+              onClick={() => setQuizOpen(true)}
+              className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition inline-flex items-center gap-2"
+            >
+              See If We're a Fit <ArrowRight className="w-5 h-5" />
+            </button>
+            <p className="text-sm text-gray-500 mt-3">60-second quiz · No commitment</p>
+          </div>
         </div>
-        <p className="text-sm text-gray-500">60-second quiz · No commitment</p>
       </section>
 
       {/* Social proof photo strip */}
