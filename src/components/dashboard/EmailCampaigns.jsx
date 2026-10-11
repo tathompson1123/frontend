@@ -273,7 +273,9 @@ function SettingsModal({ config, onSave, onClose }) {
 // ── Block y-position map (% down the email each block typically appears) ─────
 const BLOCK_Y_PCT = {
   header:         5,
-  offer_headline: 24,
+  offer_headline: 14,
+  offer_cards:    48,
+  cta_buttons:    86,
   offer_list:     52,
   cta_button:     78,
   footer:         94,
