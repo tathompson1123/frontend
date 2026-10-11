@@ -272,14 +272,17 @@ function SettingsModal({ config, onSave, onClose }) {
 
 // ── Block y-position map (% down the email each block typically appears) ─────
 const BLOCK_Y_PCT = {
-  header:       4,
-  hero_image:   22,
-  urgency_bar:  36,
-  body:         52,
-  offer_box:    67,
-  cta_button:   80,
-  signoff:      90,
-  footer:       96,
+  header:         5,
+  offer_headline: 24,
+  offer_list:     52,
+  cta_button:     78,
+  footer:         94,
+  // older emails
+  hero_image:     22,
+  urgency_bar:    36,
+  body:           52,
+  offer_box:      67,
+  signoff:        90,
 };
 
 // ── Annotation ink colors ────────────────────────────────────
@@ -568,6 +571,11 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
   const [sending, setSending] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
+  // "Describe your offer" box + auto-generate switch
+  const [offerBrief, setOfferBrief] = useState('');
+  const [generatingOffer, setGeneratingOffer] = useState(false);
+  const [togglingAuto, setTogglingAuto] = useState(false);
+
   // Feedback input
   const [feedback, setFeedback] = useState('');
   const feedbackRef = useRef(null);
@@ -695,7 +703,7 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
       const savedConfig = configData.config || {};
       const bizInfo = bizData.businessInfo || {};
       setConfig({
-        enabled: false, send_day: 'monday', send_hour: 9,
+        enabled: true, send_day: 'monday', send_hour: 9,
         ...savedConfig,
         from_name: savedConfig.from_name || user?.business_name || '',
         from_email: savedConfig.from_email || bizInfo.email || user?.email || '',
@@ -777,22 +785,56 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
     }
   };
 
+  // Generate an email from whatever is typed in the offer box (or a fresh one if it's empty).
+  // Always an explicit action, so it works whether or not auto-generate is switched on.
+  const generateFromOffer = async ({ successMsg } = {}) => {
+    const r = await authFetch(`${apiUrl}/api/email-campaigns/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ offerDetails: { offer: offerBrief.trim(), ctaLink: ctaLink.trim() || undefined } }),
+    });
+    const data = await r.json();
+    if (data.success && data.campaign) {
+      setCampaign({ ...data.campaign, id: data.draftId });
+      setDraftId(data.draftId);
+      showToast(successMsg || 'Email drafted — edit it however you like');
+    } else {
+      showToast(data.error || 'Could not generate an email', 'error');
+    }
+  };
+
+  const handleGenerateOffer = async () => {
+    setGeneratingOffer(true);
+    try { await generateFromOffer(); }
+    catch { showToast('Could not generate an email', 'error'); }
+    finally { setGeneratingOffer(false); }
+  };
+
   const handleRegenerate = async () => {
     setRegenerating(true);
+    try { await generateFromOffer({ successMsg: 'Fresh email generated' }); }
+    catch { showToast('Could not generate an email', 'error'); }
+    finally { setRegenerating(false); }
+  };
+
+  const handleToggleAutoGenerate = async () => {
+    const next = !config.enabled;
+    setTogglingAuto(true);
+    setConfig(p => ({ ...p, enabled: next })); // optimistic
     try {
-      // Delete current draft then fetch a new one
-      if (draftId) {
-        await authFetch(`${apiUrl}/api/email-campaigns/drafts/${draftId}`, { method: 'DELETE' }).catch(() => {});
-      }
-      const r = await authFetch(`${apiUrl}/api/email-campaigns/current-draft`);
+      const r = await authFetch(`${apiUrl}/api/email-campaigns/auto-generate`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ enabled: next }),
+      });
       const data = await r.json();
-      if (data.campaign) {
-        setCampaign(data.campaign);
-        setDraftId(data.campaign.id);
-        showToast('Fresh campaign generated');
-      }
+      if (!data.success) throw new Error(data.error || 'failed');
+      showToast(next ? 'Auto-generate is on — SORCE drafts a new email every week' : 'Auto-generate is off — emails are only made when you generate them');
+    } catch {
+      setConfig(p => ({ ...p, enabled: !next }));
+      showToast('Could not change auto-generate', 'error');
     } finally {
-      setRegenerating(false);
+      setTogglingAuto(false);
     }
   };
 
@@ -1052,6 +1094,54 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
                 </div>
               </div>
             </div>
+
+            {/* Auto-generate switch */}
+            <button
+              type="button"
+              role="switch"
+              aria-checked={!!config.enabled}
+              onClick={handleToggleAutoGenerate}
+              disabled={togglingAuto}
+              title={config.enabled ? 'SORCE drafts a new email every week' : 'Emails are only made when you generate them'}
+              className="flex items-center gap-2.5 flex-shrink-0 disabled:opacity-60"
+            >
+              <span className="text-right leading-tight">
+                <span className="block text-xs font-bold text-gray-800">Auto-generate</span>
+                <span className={`block text-[11px] ${config.enabled ? 'text-green-600 font-semibold' : 'text-gray-400'}`}>{config.enabled ? 'On' : 'Off'}</span>
+              </span>
+              <span className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${config.enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${config.enabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* ── Describe your offer (same idea as the SMS composer) ── */}
+        <div className="max-w-2xl mx-auto w-full px-4 pb-4">
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+            <label className="block text-xs font-semibold text-gray-600 mb-1.5">What offer do you want to send?</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={offerBrief}
+                onChange={e => setOfferBrief(e.target.value.slice(0, 600))}
+                onKeyDown={e => { if (e.key === 'Enter' && !generatingOffer) handleGenerateOffer(); }}
+                placeholder="e.g. 20% off a full detail this week, or free window tint with ceramic coating"
+                disabled={generatingOffer}
+                className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 outline-none disabled:opacity-60"
+              />
+              <button
+                onClick={handleGenerateOffer}
+                disabled={generatingOffer}
+                className="flex items-center gap-1.5 px-4 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 disabled:opacity-50 transition-all flex-shrink-0"
+              >
+                {generatingOffer ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
+                {generatingOffer ? 'Generating…' : 'Generate'}
+              </button>
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              Leave it blank and SORCE will come up with an offer. Every email is the offer, what they get, and one button.
+            </p>
           </div>
         </div>
 
@@ -1225,19 +1315,15 @@ export default function EmailCampaigns({ apiUrl, authFetch, user, inOnboarding }
           ) : (
             /* No campaign state */
             <div className="max-w-2xl mx-auto bg-white rounded-2xl border border-gray-200 p-12 text-center">
-              <div className="w-14 h-14 bg-green-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-7 h-7 text-green-500" />
+              <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Mail className="w-7 h-7 text-blue-500" />
               </div>
-              <p className="font-semibold text-gray-700">Campaign sent!</p>
-              <p className="text-sm text-gray-400 mt-1 mb-5">Next week's campaign will appear here automatically.</p>
-              <button
-                onClick={handleRegenerate}
-                disabled={regenerating}
-                className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-semibold hover:bg-blue-700 disabled:opacity-50 transition-all mx-auto"
-              >
-                {regenerating ? <Loader className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                {regenerating ? 'Generating…' : 'Generate Now'}
-              </button>
+              <p className="font-semibold text-gray-700">{config.enabled ? 'Your next email will appear here' : 'No email drafted'}</p>
+              <p className="text-sm text-gray-400 mt-1">
+                {config.enabled
+                  ? 'SORCE drafts a new one every week, or describe an offer above to make one now.'
+                  : 'Auto-generate is off. Describe an offer above and press Generate.'}
+              </p>
             </div>
           )}
 
