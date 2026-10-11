@@ -1,3 +1,4 @@
+import { sanitizeHtml } from '../../utils/safeHtml';
 import { useState, useEffect } from 'react';
 import {
   Link, CheckCircle, AlertCircle, AlertTriangle, ExternalLink,
@@ -585,7 +586,7 @@ function ContentTab({ apiUrl, authFetch }) {
                   ))}
                 </div>
                 <div className="prose prose-sm max-w-none text-gray-700 bg-gray-50 rounded-xl p-4 max-h-80 overflow-y-auto text-sm"
-                  dangerouslySetInnerHTML={{ __html: `<h2>${result.contentPiece.headline}</h2><p><em>${result.contentPiece.subheadline}</em></p>${result.contentPiece.body}<p>${result.contentPiece.cta}</p>` }} />
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(`<h2>${result.contentPiece.headline}</h2><p><em>${result.contentPiece.subheadline}</em></p>${result.contentPiece.body}<p>${result.contentPiece.cta}</p>`) }} />
                 <p className="text-xs text-gray-400">Suggested URL: <code className="bg-gray-100 px-1.5 rounded">/{result.contentPiece.suggestedSlug}</code></p>
               </div>
             )}

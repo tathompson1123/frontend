@@ -1,3 +1,4 @@
+import { sanitizeHtml, escapeHtml } from '../../utils/safeHtml';
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, ChevronDown, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 
@@ -20,11 +21,11 @@ function AssistantMessage({ content }) {
       {lines.map((line, i) => {
         if (!line.trim()) return <div key={i} className="h-1" />;
         // Bold text between **
-        const formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        const formatted = escapeHtml(line).replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
         // Inline code
         const withCode = formatted.replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 py-0.5 rounded text-xs font-mono">$1</code>');
         return (
-          <p key={i} dangerouslySetInnerHTML={{ __html: withCode }} />
+          <p key={i} dangerouslySetInnerHTML={{ __html: sanitizeHtml(withCode) }} />
         );
       })}
     </div>

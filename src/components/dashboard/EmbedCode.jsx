@@ -1,3 +1,4 @@
+import { sanitizeHtml } from '../../utils/safeHtml';
 import { useState, useEffect } from 'react';
 import { Copy, Check, Code, MessageCircle, Calendar, Mail, ChevronRight, ChevronLeft, ExternalLink, Bot, FileText, Settings, Sparkles, Plus, X, Eye, AlertTriangle, Globe, CheckCircle } from 'lucide-react';
 
@@ -448,7 +449,7 @@ export default function EmbedCode({ apiUrl, authFetch, setCurrentView, inOnboard
                         </div>
                       </div>
                     ) : (
-                      <span className="text-gray-700 text-sm leading-relaxed pt-1" dangerouslySetInnerHTML={{ __html: s }} />
+                      <span className="text-gray-700 text-sm leading-relaxed pt-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(s) }} />
                     )}
                   </li>
                 ))}

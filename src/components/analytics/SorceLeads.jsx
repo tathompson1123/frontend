@@ -165,7 +165,9 @@ export default function SorceLeads({ token, onGoToCalls }) {
   const remove = async (id) => {
     if (!confirm('Delete this lead? This cannot be undone.')) return;
     try {
-      await fetch(`${API_URL}/api/discovery/leads/${id}`, { method: 'DELETE', headers: authHeaders });
+      const res = await fetch(`${API_URL}/api/discovery/leads/${id}`, { method: 'DELETE', headers: authHeaders });
+      if (res.status === 403) { notify('Only an admin can delete leads'); return; }
+      if (!res.ok) throw new Error('delete failed');
       setEditing(null);
       notify('Lead deleted');
       load();

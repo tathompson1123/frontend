@@ -1,3 +1,4 @@
+import { sanitizeHtml } from '../../utils/safeHtml';
 import { useState, useEffect } from 'react';
 import {
   Search,
@@ -995,7 +996,7 @@ function SeoEmbedResult({ headCode, llmsTxtContent, apiUrl, authFetch }) {
                 ) : (
                   <li key={i} className="flex items-start gap-3">
                     <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                    <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: step }} />
+                    <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: sanitizeHtml(step) }} />
                   </li>
                 )
               )}
@@ -1112,7 +1113,7 @@ function SeoEmbedResult({ headCode, llmsTxtContent, apiUrl, authFetch }) {
                   ) : (
                     <li key={i} className="flex items-start gap-3">
                       <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-600 text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                      <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: step }} />
+                      <p className="text-sm text-gray-700" dangerouslySetInnerHTML={{ __html: sanitizeHtml(step) }} />
                     </li>
                   )
                 )}
@@ -1605,7 +1606,7 @@ function SeoContentCard({ apiUrl, authFetch, audit }) {
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">HTML Content</p>
             <div
               className="text-sm text-gray-700 bg-gray-50 border border-gray-100 rounded-xl p-4 max-h-72 overflow-y-auto prose prose-sm"
-              dangerouslySetInnerHTML={{ __html: result.htmlContent }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(result.htmlContent) }}
             />
           </div>
 

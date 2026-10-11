@@ -1,3 +1,4 @@
+import { sanitizeHtml } from '../../utils/safeHtml';
 import { useState, useEffect, useRef } from 'react';
 import {
   Sparkles, Star, RefreshCw, Copy, CheckCircle, MessageSquare,
@@ -861,7 +862,7 @@ const rateIncentiveNow = async () => {
                             <span className="flex-shrink-0 w-7 h-7 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center text-sm font-bold mt-0.5">
                               {i + 1}
                             </span>
-                            <span className="text-gray-700 text-sm leading-relaxed pt-1" dangerouslySetInnerHTML={{ __html: s }} />
+                            <span className="text-gray-700 text-sm leading-relaxed pt-1" dangerouslySetInnerHTML={{ __html: sanitizeHtml(s) }} />
                           </li>
                         ))}
                       </ol>
