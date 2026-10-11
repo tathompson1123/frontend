@@ -605,9 +605,38 @@ function FaqAccordionItem({ item, open, onToggle }) {
   );
 }
 
+// Meta Pixel — loaded only on this page (the app is a SPA, so putting it in index.html
+// would track every route). The script lands in <head> via insertBefore, same as Meta's snippet.
+const META_PIXEL_ID = '1581971773185076';
+
+function loadMetaPixel() {
+  if (typeof window === 'undefined') return;
+  if (!window.fbq) {
+    const f = window;
+    const n = (f.fbq = function () {
+      n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+    });
+    if (!f._fbq) f._fbq = n;
+    n.push = n;
+    n.loaded = true;
+    n.version = '2.0';
+    n.queue = [];
+    const t = document.createElement('script');
+    t.async = true;
+    t.src = 'https://connect.facebook.net/en_US/fbevents.js';
+    document.head.appendChild(t);
+    window.fbq('init', META_PIXEL_ID);
+  }
+  window.fbq('track', 'PageView');
+}
+
 export default function LearnMorePage() {
   const [quizOpen, setQuizOpen] = useState(false);
   const [openFaq, setOpenFaq] = useState(0);
+
+  useEffect(() => {
+    loadMetaPixel();
+  }, []);
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
