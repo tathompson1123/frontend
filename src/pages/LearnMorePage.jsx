@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import Player from '@vimeo/player';
+import { startLandingTracking, track, pixel } from '../utils/landingTrack';
 import { Link } from 'react-router-dom';
 import {
   Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2,
@@ -43,12 +45,35 @@ const TOTAL_STEPS = 4;
 const VSL_VIMEO_ID = '1233896654';
 
 function VslPlayer() {
+  const frameRef = useRef(null);
+
+  // The video lives in Vimeo's iframe, so clicks inside it can't be seen from here; the
+  // player API reports play and progress instead.
+  useEffect(() => {
+    if (!frameRef.current) return undefined;
+    let player;
+    try {
+      player = new Player(frameRef.current);
+      const reached = new Set();
+      let played = false;
+      player.on('play', () => { if (!played) { played = true; track('video_play'); } });
+      player.on('timeupdate', ({ percent }) => {
+        for (const m of [25, 50, 75]) {
+          if (percent * 100 >= m && !reached.has(m)) { reached.add(m); track('video_progress', m); }
+        }
+      });
+      player.on('ended', () => track('video_complete'));
+    } catch { /* tracking must never break the page */ }
+    return () => { try { player && player.destroy(); } catch { /* ignore */ } };
+  }, []);
+
   return (
     <div
       className="relative mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-xl bg-black"
       style={{ width: 'min(100%, 380px, max(230px, calc((100vh - 210px) * 9 / 16)))' }}
     >
       <iframe
+        ref={frameRef}
         src={`https://player.vimeo.com/video/${VSL_VIMEO_ID}?dnt=1&title=0&byline=0&portrait=0`}
         title="SORCE — how it works"
         loading="lazy"
@@ -150,7 +175,7 @@ function DiscoveryBookingCalendar({ prefill, onBooked }) {
   };
 
   return (
-    <div>
+    <div data-track-skip="true">
       <div className="flex items-center justify-between mb-4">
         <button
           onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
@@ -259,6 +284,10 @@ function QuizModal({ open, onClose }) {
   const [done, setDone] = useState(false);
   const [callBooked, setCallBooked] = useState(null);
 
+  // Funnel events: the quiz opening, and each step the visitor reaches.
+  useEffect(() => { if (open) track('quiz_open'); }, [open]);
+  useEffect(() => { if (open) track('quiz_step', step + 1); }, [open, step]);
+
   if (!open) return null;
 
   const reset = () => {
@@ -299,6 +328,8 @@ function QuizModal({ open, onClose }) {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Something went wrong — please try again.');
+      track('quiz_submit');
+      pixel('Lead');
       setDone(true);
     } catch (err) {
       setError(err.message);
@@ -354,7 +385,7 @@ function QuizModal({ open, onClose }) {
                 </div>
                 <DiscoveryBookingCalendar
                   prefill={{ name: form.name, email: form.email, phone: form.phone }}
-                  onBooked={(iso) => setCallBooked(iso)}
+                  onBooked={(iso) => { track('call_booked'); pixel('Schedule'); setCallBooked(iso); }}
                 />
               </div>
             )
@@ -636,6 +667,7 @@ export default function LearnMorePage() {
 
   useEffect(() => {
     loadMetaPixel();
+    return startLandingTracking();
   }, []);
 
   return (

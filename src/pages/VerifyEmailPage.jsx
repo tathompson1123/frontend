@@ -28,8 +28,10 @@ export default function VerifyEmailPage() {
   useEffect(() => {
     if (!localStorage.getItem('token')) { navigate('/', { replace: true }); return; }
     if (user.email_verified) { navigate('/onboarding', { replace: true }); return; }
-    // Auto-send a fresh verification code — if DB says already_verified, sync localStorage and redirect
-    authFetch('/api/auth/resend-verification', { method: 'POST' })
+    // Signup already emailed a code, so this page must not send another one. { auto: true }
+    // only asks the server to check verification status (and to send a code if, and only if,
+    // this account has none) — a new email goes out when the person presses "send again".
+    authFetch('/api/auth/resend-verification', { method: 'POST', body: JSON.stringify({ auto: true }) })
       .then(r => r.json())
       .then(data => {
         if (data.already_verified) {
@@ -98,8 +100,12 @@ export default function VerifyEmailPage() {
     setResending(true);
     setError('');
     try {
-      const res = await authFetch('/api/auth/resend-verification', { method: 'POST' });
+      const res = await authFetch('/api/auth/resend-verification', { method: 'POST', body: JSON.stringify({}) });
       const data = await res.json();
+      if (data.throttled) {
+        setError(`Please wait ${data.retryAfter || 30} seconds before sending another code.`);
+        return;
+      }
       if (data.already_verified) {
         // Already verified in DB — sync and redirect
         const u = JSON.parse(localStorage.getItem('user') || '{}');

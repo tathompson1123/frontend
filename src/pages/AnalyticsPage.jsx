@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   Users, DollarSign, TrendingDown, TrendingUp,
   LogOut, RefreshCw, Search, MessageCircle, Phone, ChevronUp, ChevronDown, Minus,
-  CheckCircle, XCircle, ShieldCheck, BarChart3, CalendarDays, UsersRound, UserPlus
+  CheckCircle, XCircle, ShieldCheck, BarChart3, CalendarDays, UsersRound, UserPlus, MousePointerClick
 } from 'lucide-react';
 import DiscoveryCalls from '../components/analytics/DiscoveryCalls';
 import SorceLeads from '../components/analytics/SorceLeads';
 import TeamMembers from '../components/analytics/TeamMembers';
+import LandingMetrics from '../components/analytics/LandingMetrics';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -254,6 +255,7 @@ export default function AnalyticsPage() {
             // No adminOnly — the whole team sells, so members need the pipeline the
             // same way they need the discovery calendar.
             { id: 'leads', label: 'Leads', icon: UserPlus },
+            { id: 'landing', label: 'Landing Page', icon: MousePointerClick, adminOnly: true },
             { id: 'team', label: 'Team', icon: UsersRound, adminOnly: true },
           ].filter(t => isAdmin || !t.adminOnly).map(t => {
             const Icon = t.icon;
@@ -285,6 +287,12 @@ export default function AnalyticsPage() {
           {/* Booking a call from a lead writes it into Discovery Calls, so the
               confirmation can offer to take you there. */}
           <SorceLeads token={token} onGoToCalls={() => setTab('discovery')} />
+        </main>
+      )}
+
+      {tab === 'landing' && (
+        <main className="max-w-screen-2xl mx-auto px-6 py-8">
+          <LandingMetrics token={token} />
         </main>
       )}
 
