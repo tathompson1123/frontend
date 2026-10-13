@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Player from '@vimeo/player';
 import { startLandingTracking, track, pixel, flush } from '../utils/landingTrack';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2,
-  CheckCircle2, XCircle, Calendar,
+  Play, ArrowRight, ChevronLeft, ChevronDown, Loader2,
+  CheckCircle2, XCircle,
 } from 'lucide-react';
 import logoLandscapingImg from '../assets/learnmore/logo-landscaping.png';
 import logoHvacImg from '../assets/learnmore/logo-hvac.png';
@@ -16,11 +16,6 @@ const thompsonsLogoFiles = import.meta.glob('../assets/learnmore/logo-thompsons.
 const logoThompsonsImg = Object.values(thompsonsLogoFiles)[0] || null;
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-
-const startOfMonth = (d) => new Date(d.getFullYear(), d.getMonth(), 1);
-const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const sameDay = (a, b) =>
-  a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 const BUSINESS_TYPES = [
   'Landscaping', 'Auto Detailing', 'HVAC', 'Plumbing', 'Electrical',
@@ -45,13 +40,15 @@ const QUIZ_STAGES = ['1 Business type', '2 Struggle', '3 Revenue', '4 Contact de
 // vertical video never runs off a laptop screen, and stays full-width-ish on a phone.
 const VSL_VIMEO_ID = '1233896654';
 
-function VslPlayer() {
+// locked: the video is blurred and can't be played; tapping it calls onLockedClick (the
+// landing page opens the form there). Unlocked, it's the normal Vimeo player.
+export function VslPlayer({ locked = false, onLockedClick }) {
   const frameRef = useRef(null);
 
   // The video lives in Vimeo's iframe, so clicks inside it can't be seen from here; the
   // player API reports play and progress instead.
   useEffect(() => {
-    if (!frameRef.current) return undefined;
+    if (locked || !frameRef.current) return undefined;
     let player;
     try {
       player = new Player(frameRef.current);
@@ -66,7 +63,7 @@ function VslPlayer() {
       player.on('ended', () => track('video_complete'));
     } catch { /* tracking must never break the page */ }
     return () => { try { player && player.destroy(); } catch { /* ignore */ } };
-  }, []);
+  }, [locked]);
 
   return (
     <div
@@ -80,8 +77,21 @@ function VslPlayer() {
         loading="lazy"
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
-        className="absolute inset-0 w-full h-full border-0"
+        className={`absolute inset-0 w-full h-full border-0 ${locked ? 'blur-xl scale-110 pointer-events-none' : ''}`}
+        tabIndex={locked ? -1 : undefined}
       />
+      {locked && (
+        <button
+          type="button"
+          onClick={onLockedClick}
+          aria-label="Play video"
+          className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/25 group"
+        >
+          <span className="w-20 h-20 rounded-full bg-white/95 shadow-2xl flex items-center justify-center group-hover:scale-105 transition">
+            <Play className="w-9 h-9 text-primary-600 ml-1" fill="currentColor" />
+          </span>
+        </button>
+      )}
     </div>
   );
 }
@@ -109,189 +119,24 @@ function CurvyArrow({ className }) {
   );
 }
 
-// Embedded calendar + slot picker for the quiz's success step. Mirrors BookCallPage's
-// calendar, but skips re-asking for name/email/phone — the quiz already has them — and
-// books straight from a slot tap. Hits the same /api/public/discovery/* endpoints, so
-// a booking here creates the real Zoom meeting and merges into the sorce_leads row the
-// quiz submission already created (matched by email/phone), same as BookCallPage.
-function DiscoveryBookingCalendar({ prefill, onBooked }) {
-  const [month, setMonth] = useState(() => startOfMonth(new Date()));
-  const [selectedDate, setSelectedDate] = useState(null);
-  const [slots, setSlots] = useState([]);
-  const [loadingSlots, setLoadingSlots] = useState(false);
-  const [chosen, setChosen] = useState(null);
-  const [booking, setBooking] = useState(false);
-  const [error, setError] = useState('');
-
-  const loadSlots = useCallback(async (date) => {
-    setLoadingSlots(true);
-    setSlots([]);
-    setChosen(null);
-    try {
-      const res = await fetch(`${API_URL}/api/public/discovery/slots?date=${ymd(date)}&tz=${encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)}`);
-      const data = await res.json();
-      setSlots(data.slots || []);
-    } catch {
-      setSlots([]);
-    } finally {
-      setLoadingSlots(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (selectedDate) loadSlots(selectedDate);
-  }, [selectedDate, loadSlots]);
-
-  const grid = (() => {
-    const first = startOfMonth(month);
-    const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
-    const cells = Array.from({ length: first.getDay() }, () => null);
-    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(month.getFullYear(), month.getMonth(), d));
-    return cells;
-  })();
-
-  const confirmBooking = async () => {
-    if (!chosen) return;
-    setBooking(true);
-    setError('');
-    try {
-      const res = await fetch(`${API_URL}/api/public/discovery/book`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: prefill.name, email: prefill.email, phone: prefill.phone,
-          scheduledAt: chosen.iso,
-          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || 'Could not book that call');
-      onBooked(chosen.iso);
-    } catch (err) {
-      setError(err.message);
-      if (selectedDate) loadSlots(selectedDate);
-    } finally {
-      setBooking(false);
-    }
-  };
-
-  return (
-    <div data-track-skip="true">
-      <div className="flex items-center justify-between mb-4">
-        <button
-          onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
-          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-        <span className="font-bold text-gray-900 text-sm">
-          {month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-        </span>
-        <button
-          onClick={() => setMonth(m => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
-          className="p-1.5 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition"
-        >
-          <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="grid grid-cols-7 gap-1 mb-1">
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <div key={i} className="text-center text-[10px] font-semibold text-gray-400 py-1">{d}</div>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {grid.map((day, i) => {
-          if (!day) return <div key={i} />;
-          const past = day < new Date(new Date().setHours(0, 0, 0, 0));
-          const isSelected = selectedDate && sameDay(day, selectedDate);
-          return (
-            <button
-              key={i}
-              disabled={past}
-              onClick={() => setSelectedDate(day)}
-              className={`aspect-square rounded-lg text-sm font-medium transition ${
-                isSelected ? 'bg-amber-600 text-white'
-                : past ? 'text-gray-300 cursor-not-allowed'
-                : 'text-gray-700 hover:bg-amber-50 hover:text-amber-700'
-              }`}
-            >
-              {day.getDate()}
-            </button>
-          );
-        })}
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        {!selectedDate ? (
-          <p className="text-sm text-gray-400 text-center py-3 flex items-center justify-center gap-2">
-            <Calendar className="w-4 h-4" /> Pick a day to see available times
-          </p>
-        ) : loadingSlots ? (
-          <div className="flex justify-center py-3"><Loader2 className="w-5 h-5 animate-spin text-amber-600" /></div>
-        ) : slots.length === 0 ? (
-          <p className="text-sm text-gray-500 text-center py-3">Nothing free that day — try another.</p>
-        ) : (
-          <>
-            <p className="text-xs font-semibold text-gray-600 mb-2">
-              {selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-            <div className="grid grid-cols-3 gap-2 max-h-36 overflow-y-auto">
-              {slots.map(slot => (
-                <button
-                  key={slot.iso}
-                  onClick={() => setChosen(slot)}
-                  className={`py-2 rounded-lg text-sm font-medium border-2 transition ${
-                    chosen?.iso === slot.iso
-                      ? 'border-amber-600 bg-amber-600 text-white'
-                      : 'border-gray-200 text-gray-700 hover:border-amber-400'
-                  }`}
-                >
-                  {new Date(slot.iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700 mt-3">{error}</div>
-      )}
-
-      <button
-        onClick={confirmBooking}
-        disabled={!chosen || booking}
-        className="w-full mt-4 py-3.5 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-      >
-        {booking
-          ? <><Loader2 className="w-5 h-5 animate-spin" /> Booking...</>
-          : <>Confirm my call <Check className="w-4 h-4" /></>}
-      </button>
-    </div>
-  );
-}
-
 function QuizModal({ open, onClose }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
     businessType: '', businessTypeOther: '',
     struggle: '', struggleOther: '',
     revenue: '',
-    name: '', email: '', phone: '',
+    name: '', phone: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [done, setDone] = useState(false);
-  const [callBooked, setCallBooked] = useState(null);
+  const navigate = useNavigate();
 
   // Funnel events: the quiz opening, and each step the visitor reaches.
   useEffect(() => { if (open) track('quiz_open'); }, [open]);
   useEffect(() => { if (open) track('quiz_step', step + 1); }, [open, step]);
 
-  // Where they left: the step they were on when they closed the quiz or the page, or the
-  // calendar if they'd submitted the quiz but never picked a time. Nothing once booked.
-  const stage = done ? (callBooked ? null : 'Calendar - no time picked') : QUIZ_STAGES[step];
+  // Where they left: the step they were on when they closed the quiz or the page.
+  const stage = QUIZ_STAGES[step];
   const stageRef = useRef(null);
   stageRef.current = open ? stage : null;
   const abandonSent = useRef(false);
@@ -313,10 +158,8 @@ function QuizModal({ open, onClose }) {
 
   const reset = () => {
     setStep(0);
-    setForm({ businessType: '', businessTypeOther: '', struggle: '', struggleOther: '', revenue: '', name: '', email: '', phone: '' });
+    setForm({ businessType: '', businessTypeOther: '', struggle: '', struggleOther: '', revenue: '', name: '', phone: '' });
     setError('');
-    setDone(false);
-    setCallBooked(null);
   };
 
   const close = () => { reportAbandon(); reset(); onClose(); };
@@ -331,8 +174,8 @@ function QuizModal({ open, onClose }) {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.name.trim() || !form.email.trim() || !form.phone.trim()) {
-      setError('Please fill in your name, email and phone.');
+    if (!form.name.trim() || !form.phone.trim()) {
+      setError('Please fill in your name and phone number.');
       return;
     }
     setSubmitting(true);
@@ -341,7 +184,7 @@ function QuizModal({ open, onClose }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name, email: form.email, phone: form.phone,
+          name: form.name, phone: form.phone,
           businessType: form.businessType === 'Other' ? form.businessTypeOther : form.businessType,
           struggle: form.struggle === 'Other' ? form.struggleOther : form.struggle,
           revenue: form.revenue,
@@ -351,7 +194,9 @@ function QuizModal({ open, onClose }) {
       if (!res.ok) throw new Error(data.error || 'Something went wrong — please try again.');
       track('quiz_submit');
       pixel('Lead');
-      setDone(true);
+      abandonSent.current = true; // they finished — not a drop-off
+      flush();
+      navigate('/watch');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -362,55 +207,17 @@ function QuizModal({ open, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm" onClick={close}>
       <div
-        className={`bg-white rounded-3xl shadow-2xl w-full overflow-hidden transition-all ${done && !callBooked ? 'max-w-xl' : 'max-w-lg'}`}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        {!done && (
-          <div className="flex items-center gap-2 px-6 pt-6">
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <div key={i} className={`h-1.5 flex-1 rounded-full transition ${i <= step ? 'bg-amber-500' : 'bg-gray-150 bg-gray-200'}`} />
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2 px-6 pt-6">
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
+            <div key={i} className={`h-1.5 flex-1 rounded-full transition ${i <= step ? 'bg-amber-500' : 'bg-gray-200'}`} />
+          ))}
+        </div>
 
         <div className="p-6 sm:p-8">
-          {done ? (
-            callBooked ? (
-              <div className="text-center py-4">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-                  <Check className="w-8 h-8 text-green-600" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">You're booked in!</h3>
-                <p className="text-gray-600 mb-6">
-                  {new Date(callBooked).toLocaleString('en-US', {
-                    weekday: 'long', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit',
-                  })}
-                  <br />
-                  We'll text your Zoom link to {form.phone} and email the details to {form.email}.
-                </p>
-                <button
-                  onClick={close}
-                  className="w-full py-3 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-semibold hover:shadow-lg transition"
-                >
-                  Done
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div className="text-center mb-5">
-                  <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Check className="w-7 h-7 text-green-600" />
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">You're qualified — grab a time 🎉</h3>
-                  <p className="text-sm text-gray-500">Pick a day and time below to lock in your free call.</p>
-                </div>
-                <DiscoveryBookingCalendar
-                  prefill={{ name: form.name, email: form.email, phone: form.phone }}
-                  onBooked={(iso) => { track('call_booked'); pixel('Schedule'); setCallBooked(iso); }}
-                />
-              </div>
-            )
-          ) : (
+          {(
             <>
               {step > 0 && (
                 <button
@@ -509,17 +316,12 @@ function QuizModal({ open, onClose }) {
                 <form onSubmit={submit}>
                   <h3 className="text-xl font-bold text-gray-900 mb-1">You're qualified — we can help! 🎉</h3>
                   <p className="text-sm text-gray-500 mb-5">
-                    Book a call to see if we're the right partner to help you grow.
+                    Enter your name and number to unlock the video.
                   </p>
                   <div className="space-y-3">
                     <input
                       required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="Your name"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
-                    />
-                    <input
-                      required type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                      placeholder="Email address"
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
                     />
                     <input
@@ -530,7 +332,7 @@ function QuizModal({ open, onClose }) {
                   </div>
 
                   <p className="text-xs text-gray-400 mt-3 leading-relaxed">
-                    By submitting, you agree to be contacted by SORCE about your results — including by text.
+                    By submitting, you agree to be contacted by SORCE about your results — by call and text.
                     Message and data rates may apply. Reply STOP to opt out. See our{' '}
                     <a href="/terms" className="underline hover:text-gray-600">Terms</a> and{' '}
                     <a href="/privacy" className="underline hover:text-gray-600">Privacy Policy</a>.
@@ -547,7 +349,7 @@ function QuizModal({ open, onClose }) {
                   >
                     {submitting
                       ? <><Loader2 className="w-5 h-5 animate-spin" /> Submitting...</>
-                      : <>Get My Free Consultation <ArrowRight className="w-4 h-4" /></>}
+                      : <>Unlock the Video <ArrowRight className="w-4 h-4" /></>}
                   </button>
                 </form>
               )}
@@ -603,7 +405,7 @@ const CALL_PARAGRAPHS = [
 // ── Placeholder social proof photos — swap for real customer photos later ────
 // Placeholder names/quotes — FAKE, for layout purposes only. Swap for real
 // customers and real quotes before this page runs any traffic.
-const SOCIAL_PROOF_PHOTOS = [
+export const SOCIAL_PROOF_PHOTOS = [
   { image: logoLandscapingImg, name: 'Mike R.', business: 'Evergreen Edge Lawn Care', quote: 'Leads stopped slipping through the cracks the first week.' },
   { image: logoThompsonsImg, name: 'Sarah T.', business: "Thompson's Auto Detailing", quote: 'We picked up 11 new jobs last month without spending more on ads.' },
   { image: logoHvacImg, name: 'Dave K.', business: 'Summit Comfort Heating & Air', quote: 'My Google reviews tripled and the phone hasn\'t stopped ringing.' },
@@ -712,7 +514,7 @@ export default function LearnMorePage() {
               Watch here to learn how
             </span>
             <CurvyArrow className="mx-auto w-14 h-16 lg:h-12 text-gray-400 mb-3" />
-            <VslPlayer />
+            <VslPlayer locked onLockedClick={() => setQuizOpen(true)} />
           </div>
 
           <div className="text-center lg:text-left lg:col-start-1 lg:row-start-2 lg:self-start">

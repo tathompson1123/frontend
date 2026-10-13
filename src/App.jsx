@@ -19,6 +19,7 @@ import AnalyticsLogin from './pages/AnalyticsLogin';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AnalyticsAcceptInvite from './pages/AnalyticsAcceptInvite';
 import BookCallPage from './pages/BookCallPage';
+import WatchPage from './pages/WatchPage';
 import LearnMorePage from './pages/LearnMorePage';
 import OnboardingQuestionnairePage from './pages/OnboardingQuestionnairePage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
@@ -55,6 +56,7 @@ function App() {
         <Route path="/analytics" element={<AnalyticsPage />} />
         <Route path="/book-a-call" element={<BookCallPage />} />
         <Route path="/learnmore" element={<LearnMorePage />} />
+        <Route path="/watch" element={<WatchPage />} />
         <Route path="/onboarding" element={<OnboardingQuestionnairePage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         <Route path="/impersonate" element={<ImpersonatePage />} />
