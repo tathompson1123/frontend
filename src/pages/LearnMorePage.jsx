@@ -77,7 +77,7 @@ export function VslPlayer({ locked = false, onLockedClick }) {
         loading="lazy"
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
-        className={`absolute inset-0 w-full h-full border-0 ${locked ? 'blur-xl scale-110 pointer-events-none' : ''}`}
+        className={`absolute inset-0 w-full h-full border-0 ${locked ? 'blur-md scale-105 pointer-events-none' : ''}`}
         tabIndex={locked ? -1 : undefined}
       />
       {locked && (
@@ -125,7 +125,7 @@ function QuizModal({ open, onClose }) {
     businessType: '', businessTypeOther: '',
     struggle: '', struggleOther: '',
     revenue: '',
-    name: '', phone: '',
+    name: '', company: '', phone: '',
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -158,7 +158,7 @@ function QuizModal({ open, onClose }) {
 
   const reset = () => {
     setStep(0);
-    setForm({ businessType: '', businessTypeOther: '', struggle: '', struggleOther: '', revenue: '', name: '', phone: '' });
+    setForm({ businessType: '', businessTypeOther: '', struggle: '', struggleOther: '', revenue: '', name: '', company: '', phone: '' });
     setError('');
   };
 
@@ -174,8 +174,8 @@ function QuizModal({ open, onClose }) {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.name.trim() || !form.phone.trim()) {
-      setError('Please fill in your name and phone number.');
+    if (!form.name.trim() || !form.company.trim() || !form.phone.trim()) {
+      setError('Please fill in your name, business name and phone number.');
       return;
     }
     setSubmitting(true);
@@ -184,7 +184,7 @@ function QuizModal({ open, onClose }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: form.name, phone: form.phone,
+          name: form.name, company: form.company, phone: form.phone,
           businessType: form.businessType === 'Other' ? form.businessTypeOther : form.businessType,
           struggle: form.struggle === 'Other' ? form.struggleOther : form.struggle,
           revenue: form.revenue,
@@ -314,14 +314,15 @@ function QuizModal({ open, onClose }) {
 
               {step === 3 && (
                 <form onSubmit={submit}>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">You're qualified — we can help! 🎉</h3>
-                  <p className="text-sm text-gray-500 mb-5">
-                    Enter your name and number to unlock the video.
-                  </p>
                   <div className="space-y-3">
                     <input
                       required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                       placeholder="Your name"
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                    />
+                    <input
+                      required value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                      placeholder="Business name"
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
                     />
                     <input
