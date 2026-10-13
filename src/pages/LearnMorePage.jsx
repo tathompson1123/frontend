@@ -3,7 +3,7 @@ import Player from '@vimeo/player';
 import { startLandingTracking, track, pixel, flush } from '../utils/landingTrack';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Play, ArrowRight, ChevronLeft, ChevronDown, Loader2,
+  Zap, Play, ArrowRight, ChevronLeft, ChevronDown, Loader2,
   CheckCircle2, XCircle,
 } from 'lucide-react';
 import logoLandscapingImg from '../assets/learnmore/logo-landscaping.png';
@@ -496,9 +496,15 @@ export default function LearnMorePage() {
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
+      <div className="flex items-center justify-center gap-1.5 pt-5">
+        <div className="w-5 h-5 bg-gradient-to-br from-primary-600 to-accent-600 rounded flex items-center justify-center">
+          <Zap className="w-3 h-3 text-white" fill="currentColor" />
+        </div>
+        <span className="text-sm font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">SORCE</span>
+      </div>
       {/* Hero — on desktop the headline sits beside the video so the whole video is in
           frame on arrival; on mobile it stacks: headline, video, then the button. */}
-      <section className="max-w-6xl mx-auto px-6 pt-12 lg:pt-10 pb-16 lg:pb-14">
+      <section className="max-w-6xl mx-auto px-6 pt-6 lg:pt-6 pb-16 lg:pb-14">
         <div className="grid lg:grid-cols-2 lg:gap-x-16 gap-y-8 lg:items-center">
           <div className="text-center lg:text-left lg:col-start-1 lg:row-start-1 lg:self-end">
             <h1 className="text-3xl md:text-5xl lg:text-[2.5rem] xl:text-5xl font-bold mb-7 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>

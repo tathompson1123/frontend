@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, Phone } from 'lucide-react';
+import { ArrowDown, Phone, Zap } from 'lucide-react';
 import { startLandingTracking } from '../utils/landingTrack';
 import { VslPlayer, SOCIAL_PROOF_PHOTOS } from './LearnMorePage';
 
@@ -24,7 +24,13 @@ export default function WatchPage() {
 
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
-      <section className="max-w-3xl mx-auto px-6 pt-12 pb-16 text-center">
+      <div className="flex items-center justify-center gap-1.5 pt-5">
+        <div className="w-5 h-5 bg-gradient-to-br from-primary-600 to-accent-600 rounded flex items-center justify-center">
+          <Zap className="w-3 h-3 text-white" fill="currentColor" />
+        </div>
+        <span className="text-sm font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">SORCE</span>
+      </div>
+      <section className="max-w-3xl mx-auto px-6 pt-6 pb-16 text-center">
         <h1 className="text-3xl md:text-5xl font-bold mb-10 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
           We implement recurring revenue systems for home service businesses without you spending a dime on ads.
         </h1>
