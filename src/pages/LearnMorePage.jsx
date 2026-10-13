@@ -77,7 +77,7 @@ export function VslPlayer({ locked = false, onLockedClick }) {
         loading="lazy"
         allow="autoplay; fullscreen; picture-in-picture"
         allowFullScreen
-        className={`absolute inset-0 w-full h-full border-0 ${locked ? 'blur-md scale-105 pointer-events-none' : ''}`}
+        className={`absolute inset-0 w-full h-full border-0 ${locked ? 'blur-[3px] scale-[1.02] pointer-events-none' : ''}`}
         tabIndex={locked ? -1 : undefined}
       />
       {locked && (
