@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Loader2, Eye, Users, MousePointerClick, Target, RefreshCw, Smartphone, Monitor, Tablet } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const PAGES = [{ key: 'learnmore', label: '/learnmore' }, { key: 'book-a-call', label: '/book-a-call' }];
+const PAGES = [{ key: 'learnmore', label: '/learnmore' }, { key: 'watch', label: '/watch' }, { key: 'book-a-call', label: '/book-a-call' }];
 const RANGES = [{ days: 7, label: '7 days' }, { days: 30, label: '30 days' }, { days: 90, label: '90 days' }];
 const DEVICE_ICONS = { mobile: Smartphone, tablet: Tablet, desktop: Monitor };
 
@@ -66,7 +66,7 @@ export default function LandingMetrics({ token }) {
   const scrollMap = Object.fromEntries((data?.scroll || []).map(r => [r.target, r.people]));
   const videoMap = Object.fromEntries((data?.video || []).map(r => [r.target, r.people]));
   const quizDone = data?.funnel?.find(f => f.key === 'quiz_done')?.people || 0;
-  const booked = data?.funnel?.find(f => f.key === 'booked')?.people || 0;
+  const watchedVideo = data?.funnel?.find(f => f.key === 'played')?.people || 0;
   const clicked = data?.funnel?.find(f => f.key === 'clicked')?.people || 0;
   const maxClicks = Math.max(1, ...(data?.clicks || []).map(c => c.clicks));
 
@@ -114,9 +114,13 @@ export default function LandingMetrics({ token }) {
         <>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Kpi icon={Users} label="Visitors" value={data.totals.visitors.toLocaleString()} sub={`${data.totals.pageviews.toLocaleString()} page views`} />
-            <Kpi icon={MousePointerClick} label="Clicked something" value={pct(clicked, funnelTop)} sub={`${clicked.toLocaleString()} people`} />
-            <Kpi icon={Target} label="Quiz completed" value={quizDone.toLocaleString()} sub={`${pct(quizDone, funnelTop)} of visitors`} />
-            <Kpi icon={Eye} label="Calls booked" value={booked.toLocaleString()} sub={`${pct(booked, funnelTop)} of visitors`} />
+            {page !== 'watch' && <Kpi icon={MousePointerClick} label="Clicked something" value={pct(clicked, funnelTop)} sub={`${clicked.toLocaleString()} people`} />}
+            {page === 'watch'
+              ? <Kpi icon={Eye} label="Played the video" value={watchedVideo.toLocaleString()} sub={`${pct(watchedVideo, funnelTop)} of visitors`} />
+              : <>
+                  <Kpi icon={Target} label="Form submitted" value={quizDone.toLocaleString()} sub={`${pct(quizDone, funnelTop)} of visitors`} />
+                  <Kpi icon={Eye} label="Played the video" value={watchedVideo.toLocaleString()} sub={`${pct(watchedVideo, funnelTop)} of visitors`} />
+                </>}
           </div>
 
           <Card title="Funnel" subtitle="How many visitors reached each step (each person counted once).">
@@ -161,20 +165,19 @@ export default function LandingMetrics({ token }) {
             </Card>
           )}
 
-          {page === 'learnmore' && <Card title="Where they leave the quiz" subtitle="Last place people were when they closed the quiz or the page without booking. Anyone who booked later is excluded.">
+          {page === 'learnmore' && <Card title="Where they leave the form" subtitle="Last place people were when they closed the form or the page without submitting. Anyone who submitted later is excluded.">
             {(() => {
               const reached = Object.fromEntries((data.quizReached || []).map(r => [r.target, r.people]));
               const stages = [
-                ['1 Business type', '1'], ['2 Struggle', '2'], ['3 Revenue', '3'], ['4 Contact details', '4'],
+                ['1 Business type', '1'], ['2 Struggle', '2'], ['3 Revenue', '3'], ['4 Name', '4'], ['5 Business name', '5'], ['6 Phone', '6'],
               ];
               const left = Object.fromEntries((data.quizAbandon || []).map(r => [r.target, r.people]));
-              const calendarLeft = left['Calendar - no time picked'] || 0;
               if (!(data.quizReached || []).length && !(data.quizAbandon || []).length) return <Empty />;
               return (
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-xs text-gray-500 text-left">
-                      <th className="pb-2 font-semibold">Quiz step</th>
+                      <th className="pb-2 font-semibold">Form step</th>
                       <th className="pb-2 font-semibold text-right">Reached</th>
                       <th className="pb-2 font-semibold text-right">Left here</th>
                     </tr>
@@ -189,13 +192,6 @@ export default function LandingMetrics({ token }) {
                         </td>
                       </tr>
                     ))}
-                    <tr className="border-t border-gray-100">
-                      <td className="py-2 text-gray-800">Calendar (quiz done, no time picked)</td>
-                      <td className="py-2 text-right text-gray-600">{quizDone}</td>
-                      <td className="py-2 text-right font-semibold text-gray-900">
-                        {calendarLeft} <span className="text-xs text-gray-500 font-normal">{pct(calendarLeft, quizDone)}</span>
-                      </td>
-                    </tr>
                   </tbody>
                 </table>
               );
@@ -261,14 +257,14 @@ export default function LandingMetrics({ token }) {
             <Card title="Where visitors come from" subtitle="From the ad's UTM source, or the site that sent them.">
               {data.sources.length === 0 ? <Empty /> : (
                 <table className="w-full text-sm">
-                  <thead><tr className="text-xs text-gray-500 text-left"><th className="pb-2 font-semibold">Source</th><th className="pb-2 font-semibold text-right">Visitors</th><th className="pb-2 font-semibold text-right">Quiz</th><th className="pb-2 font-semibold text-right">Booked</th></tr></thead>
+                  <thead><tr className="text-xs text-gray-500 text-left"><th className="pb-2 font-semibold">Source</th><th className="pb-2 font-semibold text-right">Visitors</th><th className="pb-2 font-semibold text-right">Form</th><th className="pb-2 font-semibold text-right">Watched</th></tr></thead>
                   <tbody>
                     {data.sources.map(r => (
                       <tr key={r.source} className="border-t border-gray-100">
                         <td className="py-2 text-gray-800">{r.source}</td>
                         <td className="py-2 text-right font-semibold text-gray-900">{r.visitors}</td>
                         <td className="py-2 text-right text-gray-600">{r.leads}</td>
-                        <td className="py-2 text-right text-gray-600">{r.booked}</td>
+                        <td className="py-2 text-right text-gray-600">{r.watched}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -279,14 +275,14 @@ export default function LandingMetrics({ token }) {
             <Card title="Ad campaigns" subtitle="Needs UTM tags on the ad link, e.g. ?utm_source=facebook&utm_campaign=fall-offer.">
               {data.campaigns.length === 0 ? <Empty>No tagged campaigns yet. Add utm_campaign to your ad links.</Empty> : (
                 <table className="w-full text-sm">
-                  <thead><tr className="text-xs text-gray-500 text-left"><th className="pb-2 font-semibold">Campaign</th><th className="pb-2 font-semibold text-right">Visitors</th><th className="pb-2 font-semibold text-right">Quiz</th><th className="pb-2 font-semibold text-right">Booked</th></tr></thead>
+                  <thead><tr className="text-xs text-gray-500 text-left"><th className="pb-2 font-semibold">Campaign</th><th className="pb-2 font-semibold text-right">Visitors</th><th className="pb-2 font-semibold text-right">Form</th><th className="pb-2 font-semibold text-right">Watched</th></tr></thead>
                   <tbody>
                     {data.campaigns.map(r => (
                       <tr key={r.campaign} className="border-t border-gray-100">
                         <td className="py-2 text-gray-800 truncate max-w-[220px]" title={r.campaign}>{r.campaign}</td>
                         <td className="py-2 text-right font-semibold text-gray-900">{r.visitors}</td>
                         <td className="py-2 text-right text-gray-600">{r.leads}</td>
-                        <td className="py-2 text-right text-gray-600">{r.booked}</td>
+                        <td className="py-2 text-right text-gray-600">{r.watched}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -297,7 +293,7 @@ export default function LandingMetrics({ token }) {
 
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2">
-              <Card title="Visitors per day" subtitle="Pacific time. Orange marks days with a completed quiz.">
+              <Card title="Visitors per day" subtitle="Pacific time. Orange marks days with a submitted form.">
                 {data.daily.length === 0 ? <Empty /> : (
                   <div className="flex items-end gap-1 h-36">
                     {data.daily.map(d => (
@@ -307,7 +303,7 @@ export default function LandingMetrics({ token }) {
                           style={{ height: `${Math.max(3, (d.visitors / maxDaily) * 100)}%` }}
                         />
                         <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 hidden group-hover:block bg-gray-900 text-white text-[11px] rounded px-2 py-1 whitespace-nowrap z-10">
-                          {d.day}: {d.visitors} visitors{d.leads ? `, ${d.leads} quiz` : ''}
+                          {d.day}: {d.visitors} visitors{d.leads ? `, ${d.leads} form` : ''}
                         </div>
                       </div>
                     ))}

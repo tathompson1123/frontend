@@ -31,8 +31,8 @@ const REVENUE_BANDS = [
   'Under $5k/mo', '$5k – $20k/mo', '$20k – $50k/mo', '$50k – $100k/mo', '$100k+/mo',
 ];
 
-const TOTAL_STEPS = 4;
-const QUIZ_STAGES = ['1 Business type', '2 Struggle', '3 Revenue', '4 Contact details'];
+const TOTAL_STEPS = 6;
+const QUIZ_STAGES = ['1 Business type', '2 Struggle', '3 Revenue', '4 Name', '5 Business name', '6 Phone'];
 
 // ── Main VSL (vertical 9:16) ─────────────────────────────────────────────────
 // Vimeo's own player, so the thumbnail is whatever is set on the video in Vimeo
@@ -85,6 +85,7 @@ export function VslPlayer({ locked = false, onLockedClick }) {
           type="button"
           onClick={onLockedClick}
           aria-label="Play video"
+          data-track="Play video (locked)"
           className="absolute inset-0 w-full h-full flex items-center justify-center bg-black/25 group"
         >
           <span className="w-20 h-20 rounded-full bg-white/95 shadow-2xl flex items-center justify-center group-hover:scale-105 transition">
@@ -168,6 +169,8 @@ function QuizModal({ open, onClose }) {
     if (step === 0) return form.businessType && (form.businessType !== 'Other' || form.businessTypeOther.trim());
     if (step === 1) return form.struggle && (form.struggle !== 'Other' || form.struggleOther.trim());
     if (step === 2) return !!form.revenue;
+    if (step === 3) return !!form.name.trim();
+    if (step === 4) return !!form.company.trim();
     return true;
   };
 
@@ -313,24 +316,40 @@ function QuizModal({ open, onClose }) {
               )}
 
               {step === 3 && (
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-5">What's your name?</h3>
+                  <input
+                    autoFocus value={form.name}
+                    onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && canAdvance()) setStep(4); }}
+                    placeholder="Your name"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                  />
+                </div>
+              )}
+
+              {step === 4 && (
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-5">What's your business name?</h3>
+                  <input
+                    autoFocus value={form.company}
+                    onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && canAdvance()) setStep(5); }}
+                    placeholder="Business name"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                  />
+                </div>
+              )}
+
+              {step === 5 && (
                 <form onSubmit={submit}>
-                  <div className="space-y-3">
-                    <input
-                      required value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                      placeholder="Your name"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
-                    />
-                    <input
-                      required value={form.company} onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
-                      placeholder="Business name"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
-                    />
-                    <input
-                      required type="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                      placeholder="Phone number"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
-                    />
-                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 mb-5">What's the best number to reach you?</h3>
+                  <input
+                    autoFocus required type="tel" value={form.phone}
+                    onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
+                    placeholder="Phone number"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                  />
 
                   <p className="text-xs text-gray-400 mt-3 leading-relaxed">
                     By submitting, you agree to be contacted by SORCE about your results — by call and text.
@@ -355,7 +374,7 @@ function QuizModal({ open, onClose }) {
                 </form>
               )}
 
-              {step < 3 && (
+              {step < 5 && (
                 <button
                   onClick={() => canAdvance() && setStep((s) => s + 1)}
                   disabled={!canAdvance()}
