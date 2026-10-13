@@ -25,7 +25,7 @@ export default function WatchPage() {
   return (
     <div className="min-h-screen bg-white" style={{ fontFamily: "'Poppins', sans-serif" }}>
       <section className="max-w-3xl mx-auto px-6 pt-12 pb-16 text-center">
-        <h1 className="text-3xl md:text-5xl font-bold mb-10 text-gray-900 tracking-tight leading-[1.15]">
+        <h1 className="text-3xl md:text-5xl font-bold mb-10 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
           We implement recurring revenue systems for home service businesses without you spending a dime on ads.
         </h1>
 

@@ -499,9 +499,9 @@ export default function LearnMorePage() {
       {/* Hero — on desktop the headline sits beside the video so the whole video is in
           frame on arrival; on mobile it stacks: headline, video, then the button. */}
       <section className="max-w-6xl mx-auto px-6 pt-12 lg:pt-10 pb-16 lg:pb-14">
-        <div className="grid lg:grid-cols-2 lg:gap-x-12 gap-y-8 lg:items-center">
+        <div className="grid lg:grid-cols-2 lg:gap-x-16 gap-y-8 lg:items-center">
           <div className="text-center lg:text-left lg:col-start-1 lg:row-start-1 lg:self-end">
-            <h1 className="text-3xl md:text-5xl lg:text-4xl xl:text-5xl font-bold mb-6 text-gray-900 tracking-tight leading-[1.15]">
+            <h1 className="text-3xl md:text-5xl lg:text-[2.5rem] xl:text-5xl font-bold mb-7 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
               We implement recurring revenue systems for home service businesses without you spending a dime on ads.
             </h1>
             <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0">
