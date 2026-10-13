@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import Player from '@vimeo/player';
-import { startLandingTracking, track, pixel } from '../utils/landingTrack';
+import { startLandingTracking, track, pixel, flush } from '../utils/landingTrack';
 import { Link } from 'react-router-dom';
 import {
   Play, ArrowRight, ChevronLeft, ChevronRight, ChevronDown, Check, Loader2,
@@ -37,6 +37,7 @@ const REVENUE_BANDS = [
 ];
 
 const TOTAL_STEPS = 4;
+const QUIZ_STAGES = ['1 Business type', '2 Struggle', '3 Revenue', '4 Contact details'];
 
 // ── Main VSL (vertical 9:16) ─────────────────────────────────────────────────
 // Vimeo's own player, so the thumbnail is whatever is set on the video in Vimeo
@@ -288,6 +289,26 @@ function QuizModal({ open, onClose }) {
   useEffect(() => { if (open) track('quiz_open'); }, [open]);
   useEffect(() => { if (open) track('quiz_step', step + 1); }, [open, step]);
 
+  // Where they left: the step they were on when they closed the quiz or the page, or the
+  // calendar if they'd submitted the quiz but never picked a time. Nothing once booked.
+  const stage = done ? (callBooked ? null : 'Calendar - no time picked') : QUIZ_STAGES[step];
+  const stageRef = useRef(null);
+  stageRef.current = open ? stage : null;
+  const abandonSent = useRef(false);
+  useEffect(() => { if (open) abandonSent.current = false; }, [open]);
+  const reportAbandon = useCallback(() => {
+    if (!stageRef.current || abandonSent.current) return;
+    abandonSent.current = true;
+    track('quiz_abandon', stageRef.current);
+    flush();
+  }, []);
+  // Closing the tab or navigating away while the quiz is open counts too.
+  useEffect(() => {
+    if (!open) return undefined;
+    window.addEventListener('pagehide', reportAbandon);
+    return () => window.removeEventListener('pagehide', reportAbandon);
+  }, [open, reportAbandon]);
+
   if (!open) return null;
 
   const reset = () => {
@@ -298,7 +319,7 @@ function QuizModal({ open, onClose }) {
     setCallBooked(null);
   };
 
-  const close = () => { reset(); onClose(); };
+  const close = () => { reportAbandon(); reset(); onClose(); };
 
   const canAdvance = () => {
     if (step === 0) return form.businessType && (form.businessType !== 'Other' || form.businessTypeOther.trim());

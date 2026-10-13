@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Loader2, Eye, Users, MousePointerClick, Target, RefreshCw, Smartphone, Monitor, Tablet } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const PAGES = [{ key: 'learnmore', label: '/learnmore' }, { key: 'book-a-call', label: '/book-a-call' }];
 const RANGES = [{ days: 7, label: '7 days' }, { days: 30, label: '30 days' }, { days: 90, label: '90 days' }];
 const DEVICE_ICONS = { mobile: Smartphone, tablet: Tablet, desktop: Monitor };
 
@@ -36,6 +37,7 @@ function Empty({ children = 'Nothing yet for this period.' }) {
 
 export default function LandingMetrics({ token }) {
   const [days, setDays] = useState(30);
+  const [page, setPage] = useState('learnmore');
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -46,7 +48,7 @@ export default function LandingMetrics({ token }) {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_URL}/api/landing/summary?page=learnmore&days=${days}`, { headers });
+      const res = await fetch(`${API_URL}/api/landing/summary?page=${page}&days=${days}`, { headers });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Could not load metrics');
       setData(json);
@@ -55,7 +57,7 @@ export default function LandingMetrics({ token }) {
     } finally {
       setLoading(false);
     }
-  }, [days, headers]);
+  }, [days, page, headers]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -72,10 +74,21 @@ export default function LandingMetrics({ token }) {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">/learnmore landing page</h2>
+          <h2 className="text-lg font-bold text-gray-900">{page} page</h2>
           <p className="text-xs text-gray-500">Anonymous visitors only. Your own team's visits are not counted.</p>
         </div>
         <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-xl border border-gray-200 bg-white p-0.5">
+            {PAGES.map(p => (
+              <button
+                key={p.key}
+                onClick={() => { setData(null); setPage(p.key); }}
+                className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${page === p.key ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
           <div className="inline-flex rounded-xl border border-gray-200 bg-white p-0.5">
             {RANGES.map(r => (
               <button
@@ -129,6 +142,65 @@ export default function LandingMetrics({ token }) {
               </div>
             )}
           </Card>
+
+          {page === 'book-a-call' && (
+            <Card title="Where they leave the booking page" subtitle="Furthest point reached when they closed the page without booking. Anyone who booked later is excluded.">
+              {(data.quizAbandon || []).length === 0 ? <Empty /> : (
+                <table className="w-full text-sm">
+                  <thead><tr className="text-xs text-gray-500 text-left"><th className="pb-2 font-semibold">Left at</th><th className="pb-2 font-semibold text-right">People</th></tr></thead>
+                  <tbody>
+                    {[...data.quizAbandon].sort((a, b) => a.target.localeCompare(b.target)).map(r => (
+                      <tr key={r.target} className="border-t border-gray-100">
+                        <td className="py-2 text-gray-800">{r.target}</td>
+                        <td className="py-2 text-right font-semibold text-gray-900">{r.people}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </Card>
+          )}
+
+          {page === 'learnmore' && <Card title="Where they leave the quiz" subtitle="Last place people were when they closed the quiz or the page without booking. Anyone who booked later is excluded.">
+            {(() => {
+              const reached = Object.fromEntries((data.quizReached || []).map(r => [r.target, r.people]));
+              const stages = [
+                ['1 Business type', '1'], ['2 Struggle', '2'], ['3 Revenue', '3'], ['4 Contact details', '4'],
+              ];
+              const left = Object.fromEntries((data.quizAbandon || []).map(r => [r.target, r.people]));
+              const calendarLeft = left['Calendar - no time picked'] || 0;
+              if (!(data.quizReached || []).length && !(data.quizAbandon || []).length) return <Empty />;
+              return (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-xs text-gray-500 text-left">
+                      <th className="pb-2 font-semibold">Quiz step</th>
+                      <th className="pb-2 font-semibold text-right">Reached</th>
+                      <th className="pb-2 font-semibold text-right">Left here</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {stages.map(([label, key]) => (
+                      <tr key={key} className="border-t border-gray-100">
+                        <td className="py-2 text-gray-800">{label}</td>
+                        <td className="py-2 text-right text-gray-600">{reached[key] || 0}</td>
+                        <td className="py-2 text-right font-semibold text-gray-900">
+                          {left[label] || 0} <span className="text-xs text-gray-500 font-normal">{pct(left[label] || 0, reached[key] || 0)}</span>
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-gray-100">
+                      <td className="py-2 text-gray-800">Calendar (quiz done, no time picked)</td>
+                      <td className="py-2 text-right text-gray-600">{quizDone}</td>
+                      <td className="py-2 text-right font-semibold text-gray-900">
+                        {calendarLeft} <span className="text-xs text-gray-500 font-normal">{pct(calendarLeft, quizDone)}</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              );
+            })()}
+          </Card>}
 
           <div className="grid lg:grid-cols-2 gap-6">
             <Card title="Where they click" subtitle="Every button and link, by its label.">

@@ -6,7 +6,7 @@
 // in to the dashboard or /analytics on this browser) are skipped so they don't count.
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
-const PAGE = 'learnmore';
+let PAGE = 'learnmore';
 const FLUSH_MS = 2000;
 
 const safe = (fn, fallback = null) => { try { return fn(); } catch { return fallback; } };
@@ -82,7 +82,7 @@ let queue = [];
 let timer = null;
 let enabled = false;
 
-function flush() {
+export function flush() {
   if (timer) { clearTimeout(timer); timer = null; }
   if (!enabled || queue.length === 0) return;
   const events = queue.splice(0, 20);
@@ -120,7 +120,8 @@ function clickLabel(el) {
 }
 
 /** Start tracking this page. Returns a cleanup function. */
-export function startLandingTracking() {
+export function startLandingTracking(page = 'learnmore') {
+  PAGE = page;
   enabled = !isInternal();
   if (!enabled) return () => {};
 

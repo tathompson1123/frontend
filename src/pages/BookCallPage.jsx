@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
+import { startLandingTracking, track, pixel, flush } from '../utils/landingTrack';
 import {
   Zap, Calendar, ChevronLeft, ChevronRight, Loader2, Check, Clock, Star, Phone, Mail,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ export default function BookCallPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [booked, setBooked] = useState(null);
+  const formStarted = useRef(false);
 
   const loadSlots = useCallback(async (date) => {
     setLoadingSlots(true);
@@ -40,6 +42,25 @@ export default function BookCallPage() {
   useEffect(() => {
     if (selectedDate) loadSlots(selectedDate);
   }, [selectedDate, loadSlots]);
+
+  // Where they left: the furthest point reached, reported when the tab or page closes.
+  const stageRef = useRef('1 Pick a day');
+  stageRef.current = booked ? null
+    : formStarted.current ? '4 Details form'
+    : chosen ? '3 Picked a time'
+    : selectedDate ? '2 Picked a day, no time' : '1 Pick a day';
+  useEffect(() => {
+    const onLeave = () => {
+      if (!stageRef.current) return;
+      track('quiz_abandon', stageRef.current);
+      stageRef.current = null;
+      flush();
+    };
+    window.addEventListener('pagehide', onLeave);
+    return () => { onLeave(); window.removeEventListener('pagehide', onLeave); };
+  }, []);
+  // Declared after the leave handler so, on navigation, it reports before tracking stops.
+  useEffect(() => startLandingTracking('book-a-call'), []);
 
   const grid = (() => {
     const first = startOfMonth(month);
@@ -66,6 +87,8 @@ export default function BookCallPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Could not book that call');
+      track('call_booked');
+      pixel('Schedule');
       setBooked({ when: chosen.iso });
     } catch (err) {
       setError(err.message);
@@ -168,7 +191,7 @@ export default function BookCallPage() {
                   <button
                     key={i}
                     disabled={past}
-                    onClick={() => setSelectedDate(day)}
+                    onClick={() => { track('book_day'); setSelectedDate(day); }}
                     className={`aspect-square rounded-lg text-sm font-medium transition ${
                       isSelected ? 'bg-amber-600 text-white'
                       : past ? 'text-gray-300 cursor-not-allowed'
@@ -201,7 +224,7 @@ export default function BookCallPage() {
                     {slots.map(slot => (
                       <button
                         key={slot.iso}
-                        onClick={() => setChosen(slot)}
+                        onClick={() => { track('book_slot'); setChosen(slot); }}
                         className={`py-2 rounded-lg text-sm font-medium border-2 transition ${
                           chosen?.iso === slot.iso
                             ? 'border-amber-600 bg-amber-600 text-white'
@@ -228,7 +251,11 @@ export default function BookCallPage() {
                 : 'Pick a time on the left, then tell us where to reach you'}
             </p>
 
-            <form onSubmit={submit} className="space-y-4">
+            <form
+              onSubmit={submit}
+              onFocus={() => { if (!formStarted.current) { formStarted.current = true; stageRef.current = '4 Details form'; track('book_form_start'); } }}
+              className="space-y-4"
+            >
               <div>
                 <label className="block text-xs font-semibold text-gray-700 mb-1.5">Your name *</label>
                 <input
