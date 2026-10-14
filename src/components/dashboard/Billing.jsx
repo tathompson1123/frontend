@@ -7,7 +7,7 @@ const PLAN_LEVEL = { pro: 1, scale: 2 };
 // figure for it — show PRICE_NOTE instead.
 const PLAN_META = {
   basic:  { name: 'Basic',  price: 29.95,  color: 'from-gray-500 to-gray-600',    icon: Sparkles,   smsLimit: 100,  chatLimit: 200  }, // legacy
-  pro:    { name: 'Pro',    price: 250,    color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 100,  chatLimit: 99999 },
+  pro:    { name: 'Pro',    price: 199,    color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 500,  chatLimit: 99999 },
   scale:  { name: 'Scale',  price: null,   color: 'from-purple-500 to-pink-600',   icon: TrendingUp, smsLimit: 500,  chatLimit: 99999 },
   expert: { name: 'Expert', price: 99.95,  color: 'from-blue-500 to-purple-600',   icon: Crown,      smsLimit: 200,  chatLimit: 500  }, // legacy
 };
@@ -581,12 +581,12 @@ export default function Billing({ user, apiUrl, authFetch }) {
       id: 'pro',
       name: 'Pro',
       tagline: 'Full AI automation for growth',
-      price: 250,
+      price: 199,
       icon: Crown,
       gradient: 'from-blue-500 to-purple-600',
       popular: true,
       trial: '1-week free trial',
-      smsLimit: 100,
+      smsLimit: 500,
       chatLimit: 99999,
       features: [
         { text: 'Everything in Basic', included: true, bold: true },
@@ -662,8 +662,8 @@ export default function Billing({ user, apiUrl, authFetch }) {
         </div>
         <p className="text-center text-sm text-gray-600 mt-4">
           Total standalone value: <span className="font-bold text-gray-900 line-through">$427/mo</span>
-          {' '}→ <span className="font-bold text-green-600">$250/mo with Pro</span>
-          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">41% OFF</span>
+          {' '}→ <span className="font-bold text-green-600">$199/mo with Pro</span>
+          <span className="ml-2 bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-xs font-bold">53% OFF</span>
         </p>
       </div>
 

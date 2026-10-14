@@ -6,9 +6,11 @@ import {
   Zap, Play, ArrowRight, ChevronLeft, ChevronDown, Loader2,
   CheckCircle2, XCircle, Globe, MessageCircle, Star, Send,
 } from 'lucide-react';
-import wygDetailingImg from '../assets/learnmore/wyg-detailing.jpg';
-import wygWrapsImg from '../assets/learnmore/wyg-wraps.jpg';
+import wygSiteDetailingImg from '../assets/learnmore/wyg-site-detailing.webp';
+import wygSiteWrapsImg from '../assets/learnmore/wyg-site-wraps.webp';
 import wygIphoneImg from '../assets/learnmore/wyg-iphone.webp';
+import wygChatImg from '../assets/learnmore/wyg-chat.webp';
+import wygEmailImg from '../assets/learnmore/wyg-email.webp';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -422,13 +424,14 @@ const WHAT_YOU_GET = [
     icon: Globe,
     title: 'A completely rebuilt website',
     body: 'A new site built to turn visitors into customers, with one-click text and call buttons so booking you takes a single tap.',
-    images: [wygDetailingImg, wygWrapsImg],
+    images: [wygSiteDetailingImg, wygSiteWrapsImg],
     phone: wygIphoneImg,
   },
   {
     icon: MessageCircle,
     title: 'An AI chat agent',
     body: 'It chats with customers, books them in, and grabs their phone number so you can call them back right away.',
+    chat: wygChatImg,
   },
   {
     icon: Star,
@@ -439,6 +442,7 @@ const WHAT_YOU_GET = [
     icon: Send,
     title: 'Remarketing on autopilot',
     body: 'New offers are written for you every week and sent to your whole customer base, so past customers keep coming back.',
+    email: wygEmailImg,
   },
 ];
 
@@ -450,7 +454,7 @@ export function WhatYouGet() {
           What you get
         </h2>
         <div className="grid sm:grid-cols-2 gap-6">
-          {WHAT_YOU_GET.map(({ icon: Icon, title, body, images, phone }, i) => (
+          {WHAT_YOU_GET.map(({ icon: Icon, title, body, images, phone, chat, email }, i) => (
             <div key={title} className="bg-white rounded-2xl p-7 shadow-lg border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-600 to-accent-600 text-white flex items-center justify-center flex-shrink-0">
@@ -460,11 +464,17 @@ export function WhatYouGet() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+              {email && (
+                <img src={email} alt="A weekly offer email generated for a detailing customer base" loading="lazy" className="mt-5 mx-auto w-full max-w-[340px] h-auto" />
+              )}
+              {chat && (
+                <img src={chat} alt="The AI chat agent answering a customer who wants to book an interior detail" loading="lazy" className="mt-5 mx-auto w-full max-w-[300px] h-auto drop-shadow-xl" />
+              )}
               {images && (
                 <div className="mt-5 flex items-center">
                   <div className="grid gap-3 flex-1 min-w-0">
                     {images.map((src) => (
-                      <img key={src} src={src} alt="" loading="lazy" className="w-full aspect-[16/9] object-cover rounded-xl border border-gray-100" />
+                      <img key={src} src={src} alt="" loading="lazy" className="w-full h-auto rounded-xl border border-gray-200 shadow-sm" />
                     ))}
                   </div>
                   {phone && (
@@ -507,7 +517,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'How much does it cost?',
-    a: "It depends on your business and what you need automated — that's exactly what the free call is for. No pressure, no obligation.",
+    a: "SORCE is $199/month. It covers the website, the AI chat agent, automated Google reviews and weekly offers to your past customers.",
   },
 ];
 
