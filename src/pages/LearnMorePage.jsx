@@ -11,6 +11,7 @@ import wygSiteWrapsImg from '../assets/learnmore/wyg-site-wraps.webp';
 import wygIphoneImg from '../assets/learnmore/wyg-iphone.webp';
 import wygChatImg from '../assets/learnmore/wyg-chat.webp';
 import wygEmailImg from '../assets/learnmore/wyg-email.webp';
+import wygReviewsImg from '../assets/learnmore/wyg-reviews.webp';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -408,6 +409,7 @@ const CALL_BULLETS = [
 ];
 
 const CALL_PARAGRAPHS = [
+  ['We\'ll walk you through a ', { hl: 'completely redesigned website' }, ' built for your business, with one-click text buttons so customers can reach you in a single tap.'],
   ['Before you commit to anything, we know how important it is to ', 'see what you\'re getting into', '.'],
   ['We want you to ', 'leave the call gaining real value', ' and hopefully even ', { hl: 'landing a sale live on the call' }, '.'],
   [
@@ -437,6 +439,7 @@ const WHAT_YOU_GET = [
     icon: Star,
     title: 'Automated Google reviews',
     body: 'Every customer gets a Google review request automatically after every single job, so your reviews keep growing without you chasing anyone.',
+    reviews: wygReviewsImg,
   },
   {
     icon: Send,
@@ -454,7 +457,7 @@ export function WhatYouGet() {
           What you get
         </h2>
         <div className="grid sm:grid-cols-2 gap-6">
-          {WHAT_YOU_GET.map(({ icon: Icon, title, body, images, phone, chat, email }, i) => (
+          {WHAT_YOU_GET.map(({ icon: Icon, title, body, images, phone, chat, email, reviews }, i) => (
             <div key={title} className="bg-white rounded-2xl p-7 shadow-lg border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-600 to-accent-600 text-white flex items-center justify-center flex-shrink-0">
@@ -464,6 +467,9 @@ export function WhatYouGet() {
               </div>
               <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+              {reviews && (
+                <img src={reviews} alt="A five-star Google review prompt" loading="lazy" className="mt-5 mx-auto w-full max-w-[300px] h-auto drop-shadow-xl" />
+              )}
               {email && (
                 <img src={email} alt="A weekly offer email generated for a detailing customer base" loading="lazy" className="mt-5 mx-auto w-full max-w-[340px] h-auto" />
               )}
