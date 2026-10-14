@@ -32,7 +32,7 @@ export default function WatchPage() {
       </div>
       <section className="max-w-4xl mx-auto px-6 pt-6 pb-16 text-center">
         <h1 className="text-3xl md:text-5xl font-bold mb-10 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          We implement recurring revenue systems for detailers without you spending a dime on ads.
+          We implement recurring revenue systems for <span className="text-primary-600">detailers</span> without you spending a dime on ads.
         </h1>
 
         <Step n="1">Watch the video</Step>

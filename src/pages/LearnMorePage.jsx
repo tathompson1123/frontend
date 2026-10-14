@@ -521,7 +521,7 @@ export default function LearnMorePage() {
       {/* Hero — everything centered: headline, subheadline, the (horizontal) video, then the button. */}
       <section className="max-w-4xl mx-auto px-6 pt-6 pb-16 text-center">
         <h1 className="text-3xl md:text-5xl font-bold mt-6 mb-5 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          We implement recurring revenue systems for detailers without you spending a dime on ads.
+          We implement recurring revenue systems for <span className="text-primary-600">detailers</span> without you spending a dime on ads.
         </h1>
         <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
           Book extra jobs while saving more time.
