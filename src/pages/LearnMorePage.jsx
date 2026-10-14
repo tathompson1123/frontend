@@ -34,11 +34,11 @@ const REVENUE_BANDS = [
 const TOTAL_STEPS = 6;
 const QUIZ_STAGES = ['1 Business type', '2 Struggle', '3 Revenue', '4 Name', '5 Business name', '6 Phone'];
 
-// ── Main VSL (vertical 9:16) ─────────────────────────────────────────────────
+// ── Main VSL (horizontal, ~2:1) ──────────────────────────────────────────────
 // Vimeo's own player, so the thumbnail is whatever is set on the video in Vimeo
-// (Vimeo → video → Settings → Thumbnail). The box is capped by viewport height so a
-// vertical video never runs off a laptop screen, and stays full-width-ish on a phone.
-const VSL_VIMEO_ID = '1233896654';
+// (Vimeo → video → Settings → Thumbnail). Centered and full-width up to 768px; the ratio
+// matches the video so there are no black bars.
+const VSL_VIMEO_ID = '1235651886';
 
 // locked: the video is blurred and can't be played; tapping it calls onLockedClick (the
 // landing page opens the form there). Unlocked, it's the normal Vimeo player.
@@ -67,8 +67,7 @@ export function VslPlayer({ locked = false, onLockedClick }) {
 
   return (
     <div
-      className="relative mx-auto aspect-[9/16] rounded-2xl overflow-hidden shadow-xl bg-black"
-      style={{ width: 'min(100%, 380px, max(230px, calc((100vh - 210px) * 9 / 16)))' }}
+      className="relative mx-auto w-full max-w-3xl aspect-[426/214] rounded-2xl overflow-hidden shadow-xl bg-black"
     >
       <iframe
         ref={frameRef}
@@ -521,36 +520,29 @@ export default function LearnMorePage() {
         </div>
         <span className="text-sm font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">SORCE</span>
       </div>
-      {/* Hero — on desktop the headline sits beside the video so the whole video is in
-          frame on arrival; on mobile it stacks: headline, video, then the button. */}
-      <section className="max-w-6xl mx-auto px-6 pt-6 lg:pt-6 pb-16 lg:pb-14">
-        <div className="grid lg:grid-cols-2 lg:gap-x-16 gap-y-8 lg:items-center">
-          <div className="text-center lg:text-left lg:col-start-1 lg:row-start-1 lg:self-end">
-            <h1 className="text-3xl md:text-5xl lg:text-[2.5rem] xl:text-5xl font-bold mb-7 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
-              We implement recurring revenue systems for home service businesses without you spending a dime on ads.
-            </h1>
-            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto lg:mx-0">
-              Book extra jobs while saving more time.
-            </p>
-          </div>
+      {/* Hero — everything centered: headline, subheadline, the (horizontal) video, then the button. */}
+      <section className="max-w-4xl mx-auto px-6 pt-6 pb-16 text-center">
+        <h1 className="text-3xl md:text-5xl font-bold mt-6 mb-5 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
+          We implement recurring revenue systems for home service businesses without you spending a dime on ads.
+        </h1>
+        <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
+          Book extra jobs while saving more time.
+        </p>
 
-          <div className="text-center lg:col-start-2 lg:row-start-1 lg:row-span-2">
-            <span className="block text-2xl text-gray-900 mb-1" style={{ fontFamily: "'Caveat', cursive" }}>
-              Watch here to learn how
-            </span>
-            <CurvyArrow className="mx-auto w-14 h-16 lg:h-12 text-gray-400 mb-3" />
-            <VslPlayer locked onLockedClick={() => setQuizOpen(true)} />
-          </div>
+        <span className="block text-2xl text-gray-900 mb-1" style={{ fontFamily: "'Caveat', cursive" }}>
+          Watch here to learn how
+        </span>
+        <CurvyArrow className="mx-auto w-12 h-14 text-gray-400 mb-3" />
+        <VslPlayer locked onLockedClick={() => setQuizOpen(true)} />
 
-          <div className="text-center lg:text-left lg:col-start-1 lg:row-start-2 lg:self-start">
-            <button
-              onClick={() => setQuizOpen(true)}
-              className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition inline-flex items-center gap-2"
-            >
-              See How It Works <ArrowRight className="w-5 h-5" />
-            </button>
-            <p className="text-sm text-gray-500 mt-3">60-second quiz · No commitment</p>
-          </div>
+        <div className="mt-8">
+          <button
+            onClick={() => setQuizOpen(true)}
+            className="px-8 py-4 bg-gradient-to-r from-primary-600 to-accent-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition inline-flex items-center gap-2"
+          >
+            See How It Works <ArrowRight className="w-5 h-5" />
+          </button>
+          <p className="text-sm text-gray-500 mt-3">60-second quiz · No commitment</p>
         </div>
       </section>
 

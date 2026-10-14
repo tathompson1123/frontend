@@ -30,7 +30,7 @@ export default function WatchPage() {
         </div>
         <span className="text-sm font-bold bg-gradient-to-r from-primary-600 to-accent-600 bg-clip-text text-transparent">SORCE</span>
       </div>
-      <section className="max-w-3xl mx-auto px-6 pt-6 pb-16 text-center">
+      <section className="max-w-4xl mx-auto px-6 pt-6 pb-16 text-center">
         <h1 className="text-3xl md:text-5xl font-bold mb-10 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
           We implement recurring revenue systems for home service businesses without you spending a dime on ads.
         </h1>
