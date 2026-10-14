@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import wygDetailingImg from '../assets/learnmore/wyg-detailing.jpg';
 import wygWrapsImg from '../assets/learnmore/wyg-wraps.jpg';
+import wygIphoneImg from '../assets/learnmore/wyg-iphone.webp';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -422,6 +423,7 @@ const WHAT_YOU_GET = [
     title: 'A completely rebuilt website',
     body: 'A new site built to turn visitors into customers, with one-click text and call buttons so booking you takes a single tap.',
     images: [wygDetailingImg, wygWrapsImg],
+    phone: wygIphoneImg,
   },
   {
     icon: MessageCircle,
@@ -431,7 +433,7 @@ const WHAT_YOU_GET = [
   {
     icon: Star,
     title: 'Automated Google reviews',
-    body: 'A review request goes out after every single job. Happy customers get your review link, and unhappy ones come straight to you instead.',
+    body: 'Every customer gets a Google review request automatically after every single job, so your reviews keep growing without you chasing anyone.',
   },
   {
     icon: Send,
@@ -448,7 +450,7 @@ export function WhatYouGet() {
           What you get
         </h2>
         <div className="grid sm:grid-cols-2 gap-6">
-          {WHAT_YOU_GET.map(({ icon: Icon, title, body, images }, i) => (
+          {WHAT_YOU_GET.map(({ icon: Icon, title, body, images, phone }, i) => (
             <div key={title} className="bg-white rounded-2xl p-7 shadow-lg border border-gray-100">
               <div className="flex items-center gap-3 mb-3">
                 <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-600 to-accent-600 text-white flex items-center justify-center flex-shrink-0">
@@ -459,10 +461,15 @@ export function WhatYouGet() {
               <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
               <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
               {images && (
-                <div className={`mt-5 grid gap-3 ${images.length > 1 ? 'grid-cols-2' : ''}`}>
-                  {images.map((src) => (
-                    <img key={src} src={src} alt="" loading="lazy" className="w-full aspect-[4/3] object-cover rounded-xl border border-gray-100" />
-                  ))}
+                <div className="mt-5 flex items-center">
+                  <div className="grid gap-3 flex-1 min-w-0">
+                    {images.map((src) => (
+                      <img key={src} src={src} alt="" loading="lazy" className="w-full aspect-[16/9] object-cover rounded-xl border border-gray-100" />
+                    ))}
+                  </div>
+                  {phone && (
+                    <img src={phone} alt="A customer's text message arriving on an iPhone" loading="lazy" className="w-36 sm:w-40 -ml-8 relative drop-shadow-2xl flex-shrink-0" />
+                  )}
                 </div>
               )}
             </div>
