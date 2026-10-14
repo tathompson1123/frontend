@@ -4,14 +4,10 @@ import { startLandingTracking, track, pixel, flush } from '../utils/landingTrack
 import { Link, useNavigate } from 'react-router-dom';
 import {
   Zap, Play, ArrowRight, ChevronLeft, ChevronDown, Loader2,
-  CheckCircle2, XCircle,
+  CheckCircle2, XCircle, Globe, MessageCircle, Star, Send,
 } from 'lucide-react';
-
-// Thompson's Auto Detailing logo is dropped in by hand as
-// src/assets/learnmore/logo-thompsons.(png|jpg|webp|svg). Globbed rather than imported
-// so the build still works before the file exists — the card shows initials until then.
-const thompsonsLogoFiles = import.meta.glob('../assets/learnmore/logo-thompsons.*', { eager: true, import: 'default' });
-const logoThompsonsImg = Object.values(thompsonsLogoFiles)[0] || null;
+import wygDetailingImg from '../assets/learnmore/wyg-detailing.jpg';
+import wygWrapsImg from '../assets/learnmore/wyg-wraps.jpg';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
@@ -419,14 +415,63 @@ const CALL_PARAGRAPHS = [
   ],
 ];
 
-// ── Placeholder social proof photos — swap for real customer photos later ────
-// Placeholder names/quotes — FAKE, for layout purposes only. Swap for real
-// customers and real quotes before this page runs any traffic.
-export const SOCIAL_PROOF_PHOTOS = [
-  { image: null, name: 'Mike R.', business: 'Evergreen Mobile Detailing', quote: 'Leads stopped slipping through the cracks the first week.' },
-  { image: logoThompsonsImg, name: 'Sarah T.', business: "Thompson's Auto Detailing", quote: 'We picked up 11 new details last month without spending more on ads.' },
-  { image: null, name: 'Dave K.', business: 'Summit Auto Spa', quote: 'My Google reviews tripled and the phone hasn\'t stopped ringing.' },
+// ── What you get ─────────────────────────────────────────────────────────────
+const WHAT_YOU_GET = [
+  {
+    icon: Globe,
+    title: 'A completely rebuilt website',
+    body: 'A new site built to turn visitors into customers, with one-click text and call buttons so booking you takes a single tap.',
+    images: [wygDetailingImg, wygWrapsImg],
+  },
+  {
+    icon: MessageCircle,
+    title: 'An AI chat agent',
+    body: 'It chats with customers, books them in, and grabs their phone number so you can call them back right away.',
+  },
+  {
+    icon: Star,
+    title: 'Automated Google reviews',
+    body: 'A review request goes out after every single job. Happy customers get your review link, and unhappy ones come straight to you instead.',
+  },
+  {
+    icon: Send,
+    title: 'Remarketing on autopilot',
+    body: 'New offers are written for you every week and sent to your whole customer base, so past customers keep coming back.',
+  },
 ];
+
+export function WhatYouGet() {
+  return (
+    <section className="bg-gray-50 py-16">
+      <div className="max-w-5xl mx-auto px-6">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-10 text-gray-900">
+          What you get
+        </h2>
+        <div className="grid sm:grid-cols-2 gap-6">
+          {WHAT_YOU_GET.map(({ icon: Icon, title, body, images }, i) => (
+            <div key={title} className="bg-white rounded-2xl p-7 shadow-lg border border-gray-100">
+              <div className="flex items-center gap-3 mb-3">
+                <span className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary-600 to-accent-600 text-white flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-5 h-5" />
+                </span>
+                <span className="text-xs font-bold text-primary-600 uppercase tracking-wide">{i + 1}</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{title}</h3>
+              <p className="text-sm text-gray-600 leading-relaxed">{body}</p>
+              {images && (
+                <div className={`mt-5 grid gap-3 ${images.length > 1 ? 'grid-cols-2' : ''}`}>
+                  {images.map((src) => (
+                    <img key={src} src={src} alt="" loading="lazy" className="w-full aspect-[4/3] object-cover rounded-xl border border-gray-100" />
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 const GOOD_FIT = [
   'Already getting some jobs, but following up is eating your time',
@@ -544,35 +589,7 @@ export default function LearnMorePage() {
         </div>
       </section>
 
-      {/* Social proof photo strip */}
-      <section className="bg-gray-50 py-14">
-        <div className="max-w-6xl mx-auto px-6">
-          <p className="text-center text-sm font-semibold text-gray-400 uppercase tracking-wide mb-8">What people are saying</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-4xl mx-auto">
-            {SOCIAL_PROOF_PHOTOS.map((p, i) => (
-              <div key={i} className="text-center">
-                {p.image ? (
-                  <img
-                    src={p.image}
-                    alt={`${p.business} logo`}
-                    className="w-20 h-20 mx-auto object-contain rounded-full bg-white border border-gray-200 shadow-md mb-3"
-                  />
-                ) : (
-                  <div
-                    aria-label={`${p.business} logo`}
-                    className="w-20 h-20 mx-auto rounded-full bg-gray-900 text-white shadow-md mb-3 flex items-center justify-center text-xl font-bold"
-                  >
-                    {p.business.split(' ').slice(0, 2).map(w => w[0]).join('')}
-                  </div>
-                )}
-                <p className="text-sm text-gray-700 italic mb-2">"{p.quote}"</p>
-                <p className="text-xs font-semibold text-gray-900">{p.name}</p>
-                <p className="text-[11px] text-gray-400">{p.business}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <WhatYouGet />
 
       {/* What you get on the call — copy, not cards. Hard-hitting words are the brand orange. */}
       <section className="max-w-3xl mx-auto px-6 py-16">

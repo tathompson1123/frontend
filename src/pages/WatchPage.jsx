@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowDown, Phone, Zap } from 'lucide-react';
 import { startLandingTracking } from '../utils/landingTrack';
-import { VslPlayer, SOCIAL_PROOF_PHOTOS } from './LearnMorePage';
+import { VslPlayer, WhatYouGet } from './LearnMorePage';
 
 // The page people land on after the /learnmore form: same headline, then
 // step 1 (watch the video), the unlocked VSL, and step 2 (wait for our call).
@@ -47,34 +47,7 @@ export default function WatchPage() {
         </p>
       </section>
 
-      <section className="bg-gray-50 py-14">
-        <div className="max-w-6xl mx-auto px-6">
-          <p className="text-center text-sm font-semibold text-gray-400 uppercase tracking-wide mb-8">What people are saying</p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-4xl mx-auto">
-            {SOCIAL_PROOF_PHOTOS.map((p, i) => (
-              <div key={i} className="text-center">
-                {p.image ? (
-                  <img
-                    src={p.image}
-                    alt={`${p.business} logo`}
-                    className="w-20 h-20 mx-auto object-contain rounded-full bg-white border border-gray-200 shadow-md mb-3"
-                  />
-                ) : (
-                  <div
-                    aria-label={`${p.business} logo`}
-                    className="w-20 h-20 mx-auto rounded-full bg-gray-900 text-white shadow-md mb-3 flex items-center justify-center text-xl font-bold"
-                  >
-                    {p.business.split(' ').slice(0, 2).map(w => w[0]).join('')}
-                  </div>
-                )}
-                <p className="text-sm text-gray-700 italic mb-2">"{p.quote}"</p>
-                <p className="text-xs font-semibold text-gray-900">{p.name}</p>
-                <p className="text-[11px] text-gray-400">{p.business}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <WhatYouGet />
 
       <footer className="bg-gray-900 text-white py-8">
         <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-sm text-gray-400">
