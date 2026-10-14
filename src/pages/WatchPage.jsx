@@ -20,6 +20,10 @@ function Step({ n, children }) {
 }
 
 export default function WatchPage() {
+  // Arriving from the /learnmore form (a client-side navigation) keeps the old scroll
+  // position, so start at the top, where the headline and the video are.
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
   useEffect(() => startLandingTracking('watch'), []);
 
   return (
