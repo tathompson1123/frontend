@@ -6,8 +6,6 @@ import {
   Zap, Play, ArrowRight, ChevronLeft, ChevronDown, Loader2,
   CheckCircle2, XCircle,
 } from 'lucide-react';
-import logoLandscapingImg from '../assets/learnmore/logo-landscaping.png';
-import logoHvacImg from '../assets/learnmore/logo-hvac.png';
 
 // Thompson's Auto Detailing logo is dropped in by hand as
 // src/assets/learnmore/logo-thompsons.(png|jpg|webp|svg). Globbed rather than imported
@@ -18,8 +16,8 @@ const logoThompsonsImg = Object.values(thompsonsLogoFiles)[0] || null;
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const BUSINESS_TYPES = [
-  'Landscaping', 'Auto Detailing', 'HVAC', 'Plumbing', 'Electrical',
-  'Roofing', 'Cleaning', 'Pest Control', 'Pressure Washing', 'Other',
+  'Mobile Detailing', 'Shop-Based Detailing', 'Ceramic Coating', 'Paint Correction',
+  'Window Tint', 'Paint Protection Film', 'Vehicle Wraps', 'Car Wash', 'Other',
 ];
 
 const STRUGGLES = [
@@ -232,7 +230,7 @@ function QuizModal({ open, onClose }) {
 
               {step === 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">What service business work do you do?</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">What kind of detailing work do you do?</h3>
                   <p className="text-sm text-gray-500 mb-5">Pick the closest match.</p>
                   <div className="grid grid-cols-2 gap-2.5">
                     {BUSINESS_TYPES.map((t) => (
@@ -414,7 +412,7 @@ const CALL_PARAGRAPHS = [
   ['Before you commit to anything, we know how important it is to ', 'see what you\'re getting into', '.'],
   ['We want you to ', 'leave the call gaining real value', ' and hopefully even ', { hl: 'landing a sale live on the call' }, '.'],
   [
-    'So if you\'re a service business owner who wants to get ahead of your competition and ',
+    'So if you\'re a detailer who wants to get ahead of your competition and ',
     { hl: 'capture more cash from your local market' },
     ' while everyone else scrambles to run more ads, then ', { hl: 'book the call' },
     ' with us and run this live with us. See you then.',
@@ -425,9 +423,9 @@ const CALL_PARAGRAPHS = [
 // Placeholder names/quotes — FAKE, for layout purposes only. Swap for real
 // customers and real quotes before this page runs any traffic.
 export const SOCIAL_PROOF_PHOTOS = [
-  { image: logoLandscapingImg, name: 'Mike R.', business: 'Evergreen Edge Lawn Care', quote: 'Leads stopped slipping through the cracks the first week.' },
-  { image: logoThompsonsImg, name: 'Sarah T.', business: "Thompson's Auto Detailing", quote: 'We picked up 11 new jobs last month without spending more on ads.' },
-  { image: logoHvacImg, name: 'Dave K.', business: 'Summit Comfort Heating & Air', quote: 'My Google reviews tripled and the phone hasn\'t stopped ringing.' },
+  { image: null, name: 'Mike R.', business: 'Evergreen Mobile Detailing', quote: 'Leads stopped slipping through the cracks the first week.' },
+  { image: logoThompsonsImg, name: 'Sarah T.', business: "Thompson's Auto Detailing", quote: 'We picked up 11 new details last month without spending more on ads.' },
+  { image: null, name: 'Dave K.', business: 'Summit Auto Spa', quote: 'My Google reviews tripled and the phone hasn\'t stopped ringing.' },
 ];
 
 const GOOD_FIT = [
@@ -453,7 +451,7 @@ const FAQ_ITEMS = [
   },
   {
     q: 'Is this right for my business size?',
-    a: "Built for home service and local service businesses typically doing $5k–$100k+/mo who are ready to stop manually chasing every lead.",
+    a: "Built for auto detailers, tint, wrap and coating shops typically doing $5k–$100k+/mo who are ready to stop manually chasing every lead.",
   },
   {
     q: 'How much does it cost?',
@@ -523,7 +521,7 @@ export default function LearnMorePage() {
       {/* Hero — everything centered: headline, subheadline, the (horizontal) video, then the button. */}
       <section className="max-w-4xl mx-auto px-6 pt-6 pb-16 text-center">
         <h1 className="text-3xl md:text-5xl font-bold mt-6 mb-5 text-gray-900 tracking-normal leading-[1.3]" style={{ fontFamily: "'Inter', sans-serif" }}>
-          We implement recurring revenue systems for home service businesses without you spending a dime on ads.
+          We implement recurring revenue systems for detailers without you spending a dime on ads.
         </h1>
         <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-8">
           Book extra jobs while saving more time.
