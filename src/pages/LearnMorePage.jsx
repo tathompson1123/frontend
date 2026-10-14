@@ -272,7 +272,7 @@ function QuizModal({ open, onClose }) {
                       value={form.struggleOther}
                       onChange={(e) => setForm((f) => ({ ...f, struggleOther: e.target.value }))}
                       placeholder="What's holding you back?"
-                      className="mt-3 w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                      className="mt-3 w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-base"
                     />
                   )}
                 </div>
@@ -308,7 +308,7 @@ function QuizModal({ open, onClose }) {
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     onKeyDown={(e) => { if (e.key === 'Enter' && canAdvance()) setStep(4); }}
                     placeholder="Your name"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-base"
                   />
                 </div>
               )}
@@ -321,7 +321,7 @@ function QuizModal({ open, onClose }) {
                     onChange={(e) => setForm((f) => ({ ...f, company: e.target.value }))}
                     onKeyDown={(e) => { if (e.key === 'Enter' && canAdvance()) setStep(5); }}
                     placeholder="Business name"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-base"
                   />
                 </div>
               )}
@@ -333,7 +333,7 @@ function QuizModal({ open, onClose }) {
                     autoFocus required type="tel" value={form.phone}
                     onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                     placeholder="Phone number"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-base"
                   />
 
                   <p className="text-xs text-gray-400 mt-3 leading-relaxed">
