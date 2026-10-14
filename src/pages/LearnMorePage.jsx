@@ -15,10 +15,7 @@ import wygReviewsImg from '../assets/learnmore/wyg-reviews.webp';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
-const BUSINESS_TYPES = [
-  'Mobile Detailing', 'Shop-Based Detailing', 'Ceramic Coating', 'Paint Correction',
-  'Window Tint', 'Paint Protection Film', 'Vehicle Wraps', 'Car Wash', 'Other',
-];
+const BUSINESS_TYPES = ['Mobile', 'I have a shop', 'Both'];
 
 const STRUGGLES = [
   'Not enough leads', 'Inconsistent bookings', 'Growing too slowly',
@@ -120,7 +117,7 @@ function CurvyArrow({ className }) {
 function QuizModal({ open, onClose }) {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({
-    businessType: '', businessTypeOther: '',
+    businessType: '',
     struggle: '', struggleOther: '',
     revenue: '',
     name: '', company: '', phone: '',
@@ -156,14 +153,14 @@ function QuizModal({ open, onClose }) {
 
   const reset = () => {
     setStep(0);
-    setForm({ businessType: '', businessTypeOther: '', struggle: '', struggleOther: '', revenue: '', name: '', company: '', phone: '' });
+    setForm({ businessType: '', struggle: '', struggleOther: '', revenue: '', name: '', company: '', phone: '' });
     setError('');
   };
 
   const close = () => { reportAbandon(); reset(); onClose(); };
 
   const canAdvance = () => {
-    if (step === 0) return form.businessType && (form.businessType !== 'Other' || form.businessTypeOther.trim());
+    if (step === 0) return !!form.businessType;
     if (step === 1) return form.struggle && (form.struggle !== 'Other' || form.struggleOther.trim());
     if (step === 2) return !!form.revenue;
     if (step === 3) return !!form.name.trim();
@@ -185,7 +182,7 @@ function QuizModal({ open, onClose }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: form.name, company: form.company, phone: form.phone,
-          businessType: form.businessType === 'Other' ? form.businessTypeOther : form.businessType,
+          businessType: form.businessType,
           struggle: form.struggle === 'Other' ? form.struggleOther : form.struggle,
           revenue: form.revenue,
         }),
@@ -230,9 +227,9 @@ function QuizModal({ open, onClose }) {
 
               {step === 0 && (
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 mb-1">What kind of detailing work do you do?</h3>
+                  <h3 className="text-xl font-bold text-gray-900 mb-1">Are you mobile, have a shop, or both?</h3>
                   <p className="text-sm text-gray-500 mb-5">Pick the closest match.</p>
-                  <div className="grid grid-cols-2 gap-2.5">
+                  <div className="flex flex-col gap-2.5">
                     {BUSINESS_TYPES.map((t) => (
                       <button
                         key={t}
@@ -247,15 +244,6 @@ function QuizModal({ open, onClose }) {
                       </button>
                     ))}
                   </div>
-                  {form.businessType === 'Other' && (
-                    <input
-                      autoFocus
-                      value={form.businessTypeOther}
-                      onChange={(e) => setForm((f) => ({ ...f, businessTypeOther: e.target.value }))}
-                      placeholder="Tell us what you do"
-                      className="mt-3 w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-amber-500 focus:outline-none text-sm"
-                    />
-                  )}
                 </div>
               )}
 
