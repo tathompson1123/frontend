@@ -414,6 +414,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   const [smsLeads, setSmsLeads] = useState([]);
   const [selectedSmsLead, setSelectedSmsLead] = useState(null);
   const [smsLeadMessages, setSmsLeadMessages] = useState([]);
+  const [smsReply, setSmsReply] = useState('');
+  const [sendingSmsReply, setSendingSmsReply] = useState(false);
+  const [smsReplyError, setSmsReplyError] = useState('');
+  const smsThreadEndRef = useRef(null);
   const [loadingSmsLeads, setLoadingSmsLeads] = useState(false);
   const [loadingSmsMessages, setLoadingSmsMessages] = useState(false);
   const [viewingLeadEditMode, setViewingLeadEditMode] = useState(false);
@@ -1487,6 +1491,37 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       setLoadingSmsMessages(false);
     }
   };
+
+  // Reply to a lead from the Conversations tab. The text goes to the customer exactly as
+  // typed, from the business number, and lands in this thread like the app's replies do.
+  const sendSmsLeadReply = async () => {
+    const text = smsReply.trim();
+    if (!text || !selectedSmsLead || sendingSmsReply) return;
+    setSendingSmsReply(true);
+    setSmsReplyError('');
+    try {
+      const response = await authFetch(`${apiUrl}/api/leads/${selectedSmsLead.id}/send-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'Could not send the text');
+      }
+      setSmsReply('');
+      await Promise.all([fetchSmsLeadMessages(selectedSmsLead.id), fetchSmsLeadConversations()]);
+    } catch (error) {
+      setSmsReplyError(error.message || 'Could not send the text');
+    } finally {
+      setSendingSmsReply(false);
+    }
+  };
+
+  // Keep the newest text in view when a thread opens or a reply lands.
+  useEffect(() => {
+    smsThreadEndRef.current?.scrollIntoView({ block: 'end' });
+  }, [smsLeadMessages]);
 
   const fetchRewardsData = async () => {
     try {
@@ -2772,7 +2807,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     .map(lead => (
                     <button
                       key={lead.id}
-                      onClick={() => { setSelectedSmsLead(lead); fetchSmsLeadMessages(lead.id); }}
+                      onClick={() => { setSelectedSmsLead(lead); setSmsReply(''); setSmsReplyError(''); fetchSmsLeadMessages(lead.id); }}
                       className={`w-full text-left p-4 border-b border-gray-100 hover:bg-gray-50 transition ${selectedSmsLead?.id === lead.id ? 'bg-green-50 border-l-2 border-l-green-500' : ''}`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -2941,7 +2976,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                   <div className="w-64 border-r border-gray-200 overflow-y-auto bg-white flex-shrink-0">
                     <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                       <h4 className="text-sm font-bold text-gray-700">Form Submission</h4>
-                      <button onClick={() => { setSelectedSmsLead(null); setSmsLeadMessages([]); }} className="p-1 text-gray-400 hover:text-gray-600 rounded transition"><X className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => { setSelectedSmsLead(null); setSmsLeadMessages([]); setSmsReply(''); setSmsReplyError(''); }} className="p-1 text-gray-400 hover:text-gray-600 rounded transition"><X className="w-3.5 h-3.5" /></button>
                     </div>
                     <div className="p-4 space-y-3 text-sm">
                       <div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Name</p><p className="text-gray-900 font-medium">{selectedSmsLead.name || '—'}</p></div>
@@ -3030,6 +3065,43 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                             </Fragment>
                           );
                         })
+                      )}
+                      <div ref={smsThreadEndRef} />
+                    </div>
+
+                    {/* Reply box — sends a real text to the lead, word for word. */}
+                    <div className="border-t border-gray-200 bg-white p-3">
+                      {smsReplyError && (
+                        <div className="mb-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs text-red-700">{smsReplyError}</div>
+                      )}
+                      {selectedSmsLead.phone ? (
+                        <>
+                          <div className="flex items-end gap-2">
+                            <textarea
+                              rows={2}
+                              value={smsReply}
+                              onChange={(e) => setSmsReply(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSmsLeadReply(); }
+                              }}
+                              placeholder={`Text ${selectedSmsLead.name || 'this lead'}…`}
+                              maxLength={1600}
+                              className="flex-1 px-3 py-2 border-2 border-gray-200 rounded-xl text-base sm:text-sm resize-none focus:border-green-500 focus:outline-none"
+                            />
+                            <button
+                              onClick={sendSmsLeadReply}
+                              disabled={sendingSmsReply || !smsReply.trim()}
+                              className="px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed transition"
+                            >
+                              {sendingSmsReply ? 'Sending…' : 'Send'}
+                            </button>
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-1.5">
+                            Sends as a text to {selectedSmsLead.phone}, exactly as written. Enter to send, Shift+Enter for a new line.
+                          </p>
+                        </>
+                      ) : (
+                        <p className="text-xs text-gray-400">This lead has no phone number, so there's nothing to text.</p>
                       )}
                     </div>
                   </div>
