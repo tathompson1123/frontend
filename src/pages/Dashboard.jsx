@@ -41,7 +41,6 @@ import BusinessInformation from '../components/dashboard/BusinessInformation';
 import MarketResearch from '../components/dashboard/MarketResearch';
 import SEOAudit from '../components/dashboard/SEOAudit';
 import BacklinksPage from '../components/dashboard/BacklinksPage';
-import SorceAssistant from '../components/dashboard/SorceAssistant';
 import Billing from '../components/dashboard/Billing';
 import MarketingHub from '../components/dashboard/MarketingHub';
 import SettingsPage from '../components/dashboard/Settings';
@@ -1004,8 +1003,6 @@ useEffect(() => {
       </main>
 
       {showDomainPolicy && <DomainPolicyModal onClose={() => setShowDomainPolicy(false)} />}
-
-      <SorceAssistant apiUrl={apiUrl} authFetch={authFetch} />
 
       {/* Unsaved Changes Modal */}
       {showUnsavedModal && (

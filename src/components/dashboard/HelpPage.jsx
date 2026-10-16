@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   CheckCircle, Circle, PlayCircle, Mail, Briefcase, Search,
   MapPin, Globe, Bot, HelpCircle, ExternalLink, RefreshCw,
-  MessageCircle, ChevronRight,
+  ChevronRight,
 } from 'lucide-react';
 import { ONBOARDING_STEPS } from './OnboardingScreen';
 
@@ -187,16 +187,6 @@ export default function HelpPage({ setInOnboarding, requestViewChange, setUser }
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <MessageCircle className="w-5 h-5 text-gray-400" />
-              <h3 className="text-base font-bold text-gray-900">SORCE Assistant</h3>
-            </div>
-            <p className="text-sm text-gray-500 mb-3">
-              The SORCE AI assistant in the bottom-right corner of your dashboard can answer questions about any feature and walk you through how to use it.
-            </p>
           </div>
         </div>
       )}
