@@ -79,6 +79,12 @@ export default function PublicBooking({ businessId, apiUrl }) {
         const plansRes = await fetch(`${apiUrl}/api/public/plans?businessId=${businessId}`);
         const plansData = await plansRes.json();
         setPlans(plansData.plans || []);
+        // Services a plan needs may be hidden from one-time booking. Keep them (flagged) so the
+        // plan flow can use them, and filter them out of every list shown to the customer.
+        const extra = plansData.service_details || [];
+        if (extra.length) {
+          setServices(prev => [...prev, ...extra.filter(x => !prev.some(p => p.id === x.id)).map(x => ({ ...x, variants: [], show_online: false }))]);
+        }
       } catch (e) {
         console.warn('Could not load booking options/plans:', e);
       }
@@ -478,7 +484,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
             {!(plans.length > 0 && config.showPlans !== false) && <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Your Service</h2>}
 
             <div className="grid md:grid-cols-2 gap-6">
-              {services.filter(s => !s.is_addon).map(service => (
+              {services.filter(s => !s.is_addon && s.show_online !== false).map(service => (
                 <div
                   key={service.id}
                   onClick={() => handleServiceSelect(service)}
@@ -568,12 +574,12 @@ export default function PublicBooking({ businessId, apiUrl }) {
             </div>
 
             {/* Add-ons */}
-            {!selectedPlan && services.filter(s => s.is_addon && s.id !== selectedService?.id).length > 0 && (
+            {!selectedPlan && services.filter(s => s.is_addon && s.show_online !== false && s.id !== selectedService?.id).length > 0 && (
               <div className="mb-6">
                 <h3 className="font-bold text-gray-900 mb-3">Add-ons (Optional)</h3>
                 <div className="space-y-2">
                   {services
-                    .filter(s => s.is_addon && s.id !== selectedService?.id)
+                    .filter(s => s.is_addon && s.show_online !== false && s.id !== selectedService?.id)
                     .map(service => (
                       <label key={service.id} className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-400 transition">
                         <input

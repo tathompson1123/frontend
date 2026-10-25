@@ -88,6 +88,9 @@ function SortableServiceCard({ service, isAddon, categories, allServices, onEdit
             <button type="button" onClick={() => onEdit(service)} className="p-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Edit">
               <Edit className="w-4 h-4" />
             </button>
+            {service.show_online === false && (
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-200 text-gray-600" title="Not shown in online booking">Hidden online</span>
+            )}
             {isAddon ? (
               <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-violet-100 text-violet-700">Add-on</span>
             ) : (
@@ -1385,7 +1388,8 @@ export default function BusinessInformation({
           bufferMinutes: serviceForm.bufferMinutes ? parseInt(serviceForm.bufferMinutes) : 0,
           isAddon: serviceForm.isAddon,
           locationType: serviceForm.locationType,
-          customAddress: serviceForm.customAddress || null
+          customAddress: serviceForm.customAddress || null,
+          showOnline: serviceForm.showOnline !== false
         })
       });
 
@@ -1426,7 +1430,8 @@ export default function BusinessInformation({
       bufferMinutes: service.buffer_minutes || '',
       isAddon: service.is_addon || false,
       locationType: service.location_type || 'business_address',
-      customAddress: service.custom_address || ''
+      customAddress: service.custom_address || '',
+      showOnline: service.show_online !== false
     });
     setServiceSubTab(service.is_addon ? 'addons' : 'main');
     setServiceEmployeeIds([]);
@@ -2709,6 +2714,21 @@ export default function BusinessInformation({
                       <p className="text-xs text-gray-500 mt-1">Break time after this service before next booking</p>
                     </div>
                   </div>
+
+                  <label className="flex items-start gap-3 p-3 rounded-lg border-2 border-gray-200 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={serviceForm.showOnline !== false}
+                      onChange={(e) => setServiceForm({ ...serviceForm, showOnline: e.target.checked })}
+                      className="mt-0.5 w-5 h-5 rounded border-gray-300 text-blue-600"
+                    />
+                    <span>
+                      <span className="block text-sm font-semibold text-gray-800">Offer in online booking</span>
+                      <span className="block text-xs text-gray-500">
+                        Turn off to keep this {serviceForm.isAddon ? 'add-on' : 'service'} off your online booking page. You can still book it yourself from the dashboard.
+                      </span>
+                    </span>
+                  </label>
 
                   {/* Service Type Indicator */}
                   <div className={`flex items-center gap-3 p-3 rounded-lg border-2 ${
