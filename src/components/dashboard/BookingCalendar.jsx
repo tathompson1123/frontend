@@ -135,6 +135,20 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
     referralSource: '',
   });
   const [creatingBooking, setCreatingBooking] = useState(false);
+  // Repeat schedule for a NEW booking. frequency 'none' = a normal one-off booking.
+  const [repeat, setRepeat] = useState({ frequency: 'none', endDate: '' });
+  // Catalog plans (Services → Recurring Plans). `repeat.frequency` holds the dropdown choice:
+  // 'none' | 'plan:<id>' (billed membership) | a bare frequency (schedule only, no billing).
+  const [servicePlans, setServicePlans] = useState([]);
+  useEffect(() => {
+    let cancelled = false;
+    authFetch(`${apiUrl}/api/service-plans`)
+      .then(r => r.json())
+      .then(d => { if (!cancelled) setServicePlans(d.plans || []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [apiUrl]);
+  const repeatPlan = servicePlans.find(p => repeat.frequency === `plan:${p.id}`) || null;
   const [bookingFormSnapshot, setBookingFormSnapshot] = useState(null);
   // Reusable line-item descriptions, keyed off the service. Loaded once; the picker
   // under each service line offers these and the default one pre-fills the box.
@@ -266,6 +280,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
       referralSource: '',
     });
     setBookingFormSnapshot(null);
+    setRepeat({ frequency: 'none', endDate: '' });
   };
   const [groups, setGroups] = useState([]);
 
@@ -589,7 +604,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
   };
 
   const handleCreateBooking = async () => {
-    if (!newBooking.customerName || newBooking.mainServices.length === 0
+    if (!newBooking.customerName || (!repeatPlan && newBooking.mainServices.length === 0)
         || !newBooking.bookingDate || !newBooking.startTime) {
       showToast('Please fill in all required fields', 'error');
       return;
@@ -647,6 +662,30 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
           fetchAllBookings();
         } else {
           showToast(data.error || 'Failed to update booking', 'error');
+        }
+      } else if (repeat.frequency !== 'none') {
+        const response = await authFetch(`${apiUrl}/api/recurring/create`, {
+          method: 'POST',
+          body: JSON.stringify({
+            ...(repeatPlan
+              ? { servicePlanId: repeatPlan.id }
+              : { frequency: repeat.frequency, mainServices, additionalServices }),
+            startDate: newBooking.bookingDate,
+            endDate: repeat.endDate || null,
+            startTime: newBooking.startTime,
+            employeeId: newBooking.employeeId || null,
+            groupId: newBooking.groupId || null,
+            customerInfo,
+            notes: newBooking.notes,
+          })
+        });
+        const data = await response.json();
+        if (data.success) {
+          showToast(`Recurring booking set up — ${data.bookingsCreated} visit${data.bookingsCreated === 1 ? '' : 's'} added to the schedule.${data.billed ? (data.cardLinkSent ? ' Card link emailed to the customer.' : ` Card link NOT sent: ${data.cardLinkError || 'unknown error'}`) : ''}${data.located ? '' : ' Address not found, so it won\'t show on the map.'}`);
+          closeBookingModal(true);
+          fetchAllBookings();
+        } else {
+          showToast(data.error || 'Failed to create recurring booking', 'error');
         }
       } else {
         const response = await authFetch(`${apiUrl}/api/bookings/create`, {
@@ -811,7 +850,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
               <p className={`font-semibold text-gray-900 truncate ${compact ? 'text-xs' : 'text-sm'}`}>
-                {booking.customer_name}
+                {booking.recurring_plan_id && <span className="text-amber-500 mr-1" title="Recurring customer">★</span>}{booking.customer_name}
               </p>
               {isPastDue && (
                 <span className="text-xs bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full font-semibold flex-shrink-0">
@@ -1459,7 +1498,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                               >
                                 <div className="p-2 h-full flex flex-col pointer-events-none">
                                   <div className="font-semibold truncate">
-                                    {seg.isContinuation ? '↳ ' : ''}{booking.customer_name}
+                                    {seg.isContinuation ? '↳ ' : ''}{booking.recurring_plan_id ? '★ ' : ''}{booking.customer_name}
                                   </div>
                                   <div className="truncate opacity-90 text-[10px]">
                                     {booking.items?.[0]?.service_name}
@@ -1583,7 +1622,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                               }}
                               title={`${booking.customer_name} — ${formatTime(booking.start_time)}`}
                             >
-                              {formatTime(booking.start_time)} {booking.customer_name}
+                              {formatTime(booking.start_time)} {booking.recurring_plan_id ? '★ ' : ''}{booking.customer_name}
                             </button>
                           );
                         })}
@@ -2361,6 +2400,77 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                 </div>
               </div>
 
+              {!isEditingBooking && (
+                <div className="bg-purple-50 rounded-xl p-4">
+                  <h3 className="font-bold text-gray-900 mb-1 flex items-center gap-2">
+                    <span className="text-purple-600">★</span>
+                    Repeat
+                  </h3>
+                  <p className="text-xs text-gray-600 mb-3">Put a customer on a recurring plan — every visit goes on the schedule automatically, on the same weekday.</p>
+                  <div className="grid md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Plan</label>
+                      <select
+                        value={repeat.frequency}
+                        onChange={(e) => setRepeat({ ...repeat, frequency: e.target.value })}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                      >
+                        <option value="none">One-time booking (does not repeat)</option>
+                        {servicePlans.length > 0 && (
+                          <optgroup label="Recurring plans (billed through Square)">
+                            {servicePlans.map(p => (
+                              <option key={p.id} value={`plan:${p.id}`}>
+                                {p.name} — ${p.price.toFixed(2)}/{p.billing_period} · {p.frequency_label}
+                              </option>
+                            ))}
+                          </optgroup>
+                        )}
+                        <optgroup label="Schedule only (no billing)">
+                          <option value="monthly">Monthly</option>
+                          <option value="bimonthly">Bi-monthly (twice a month)</option>
+                          <option value="biweekly">Bi-weekly (every 2 weeks)</option>
+                          <option value="weekly">Weekly</option>
+                          <option value="quarterly">Quarterly</option>
+                          <option value="yearly">Yearly</option>
+                        </optgroup>
+                      </select>
+                    </div>
+                    {repeat.frequency !== 'none' && (
+                      <div>
+                        <label className="block text-xs text-gray-600 mb-1">Stop after (optional)</label>
+                        <input
+                          type="date"
+                          value={repeat.endDate}
+                          min={newBooking.bookingDate || undefined}
+                          onChange={(e) => setRepeat({ ...repeat, endDate: e.target.value })}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500"
+                        />
+                      </div>
+                    )}
+                  </div>
+                  {servicePlans.length === 0 && (
+                    <p className="text-xs text-gray-500 mt-2">To bill a monthly charge, create a plan first under Services → Recurring Plans.</p>
+                  )}
+                  {repeatPlan && (
+                    <div className="mt-3 text-sm bg-white border border-purple-200 rounded-lg p-3 space-y-1">
+                      <p className="font-semibold text-gray-900">{repeatPlan.name}: ${repeatPlan.price.toFixed(2)} per {repeatPlan.billing_period}</p>
+                      <p className="text-gray-600 text-xs">
+                        Each visit: {[...(repeatPlan.services?.mains || []), ...(repeatPlan.services?.addons || [])].map(l => services.find(s => s.id == l.id)?.name).filter(Boolean).join(' + ')}.
+                        Services and price come from the plan.
+                      </p>
+                      <p className="text-gray-600 text-xs">
+                        We'll email {newBooking.customerEmail || 'the customer'} a link to save a card. It's charged ${repeatPlan.price.toFixed(2)} once per {repeatPlan.billing_period} starting on the first visit date — visits never create their own invoices.
+                      </p>
+                      {!newBooking.customerEmail && <p className="text-xs text-red-600">Add the customer's email above so the card link can be sent.</p>}
+                    </div>
+                  )}
+                  {repeat.frequency !== 'none' && !newBooking.customerAddress?.trim() && (
+                    <p className="text-xs text-amber-700 mt-2">Add the customer's address above so this plan shows up on the Recurring map.</p>
+                  )}
+                </div>
+              )}
+
+              {!repeatPlan && (
               <div className="bg-green-50 rounded-xl p-4">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-green-600" />
@@ -2668,6 +2778,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   );
                 })()}
               </div>
+              )}
 
               <div className="bg-green-50 rounded-xl p-4">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
@@ -2817,7 +2928,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
                   disabled={creatingBooking}
                   className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-600 to-amber-600 text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {creatingBooking ? 'Saving...' : isEditingBooking ? 'Save Changes' : 'Create Booking'}
+                  {creatingBooking ? 'Saving...' : isEditingBooking ? 'Save Changes' : repeatPlan ? 'Create Plan & Send Card Link' : repeat.frequency !== 'none' ? 'Create Recurring Booking' : 'Create Booking'}
                 </button>
               </div>
             </div>

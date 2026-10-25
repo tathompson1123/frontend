@@ -9,6 +9,11 @@ export default function PublicBooking({ businessId, apiUrl }) {
   const [businessHours, setBusinessHours] = useState([]);
   const [businessInfo, setBusinessInfo] = useState(null);
   
+  // Online-booking options chosen by the owner, and the membership plans on offer.
+  const [config, setConfig] = useState({});
+  const [plans, setPlans] = useState([]);
+  const [selectedPlan, setSelectedPlan] = useState(null);
+  const [planTerms, setPlanTerms] = useState(null);
   const [selectedService, setSelectedService] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [additionalServices, setAdditionalServices] = useState([]);
@@ -66,6 +71,18 @@ export default function PublicBooking({ businessId, apiUrl }) {
       const infoData = await infoRes.json();
       setBusinessInfo(infoData.business || null);
 
+      // Booking options + plans are optional extras: a failure here must not break booking.
+      try {
+        const cfgRes = await fetch(`${apiUrl}/api/public/booking-widget-config?businessId=${businessId}`);
+        const cfgData = await cfgRes.json();
+        setConfig(cfgData.config || {});
+        const plansRes = await fetch(`${apiUrl}/api/public/plans?businessId=${businessId}`);
+        const plansData = await plansRes.json();
+        setPlans(plansData.plans || []);
+      } catch (e) {
+        console.warn('Could not load booking options/plans:', e);
+      }
+
       setLoading(false);
     } catch (error) {
       console.error('Error fetching business data:', error);
@@ -116,6 +133,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
 
   const calculateTotalPrice = () => {
     if (!selectedService) return 0;
+    if (selectedPlan) return selectedPlan.price;
     const basePrice = selectedVariant
       ? parseFloat(selectedVariant.price)
       : parseFloat(selectedService.price) || 0;
@@ -140,6 +158,19 @@ export default function PublicBooking({ businessId, apiUrl }) {
     }
   };
 
+  // A plan books its first visit through the same date/time flow as a service: the plan's
+  // services drive availability, then sign-up books the visit and emails a card link.
+  const handlePlanSelect = (plan) => {
+    const [first, ...restMains] = plan.service_ids;
+    const svc = services.find(s => s.id === first);
+    if (!svc) { setError('This plan is not available right now.'); return; }
+    setSelectedPlan(plan);
+    setSelectedService(svc);
+    setSelectedVariant(null);
+    setAdditionalServices([...restMains, ...plan.addon_ids]);
+    setStep(3);
+  };
+
   const toggleAdditionalService = (serviceId) => {
     if (additionalServices.includes(serviceId)) {
       setAdditionalServices(additionalServices.filter(id => id !== serviceId));
@@ -157,6 +188,38 @@ export default function PublicBooking({ businessId, apiUrl }) {
 
     setLoading(true);
     setError(null);
+
+    if (selectedPlan) {
+      try {
+        const response = await fetch(`${apiUrl}/api/public/plans/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            businessId,
+            servicePlanId: selectedPlan.id,
+            startDate: selectedDate,
+            startTime: selectedTime,
+            customerInfo: {
+              name: customerInfo.name, email: customerInfo.email, phone: customerInfo.phone, address: customerInfo.address,
+            },
+            customerNotes: customerInfo.notes,
+            employeeId: assignmentType === 'employee' ? selectedEmployee : null,
+            groupId: assignmentType === 'group' ? selectedGroup : null,
+          }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setPlanTerms(data.plan);
+          setSuccess(true);
+        } else {
+          setError(data.error || 'Failed to sign up');
+        }
+      } catch (e) {
+        setError('Failed to sign up. Please try again.');
+      }
+      setLoading(false);
+      return;
+    }
 
     try {
       const bookingData = {
@@ -238,15 +301,26 @@ export default function PublicBooking({ businessId, apiUrl }) {
               <CheckCircle className="w-12 h-12 text-white" />
             </div>
             <h2 className="text-3xl font-bold text-white mb-1">You're All Set!</h2>
-            <p className="text-green-100">Your booking has been confirmed</p>
+            <p className="text-green-100">{selectedPlan ? 'Your first visit is booked' : 'Your booking has been confirmed'}</p>
           </div>
 
           <div className="px-8 py-8">
             {/* Booking Number */}
+            {!selectedPlan && (
             <div className="bg-gray-50 rounded-xl p-5 mb-6 text-center border border-gray-100">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Booking Number</p>
               <p className="text-2xl font-bold text-gray-900 tracking-wide">{bookingNumber}</p>
             </div>
+            )}
+            {selectedPlan && planTerms && (
+              <div className="bg-purple-50 rounded-xl p-5 mb-6 border border-purple-100">
+                <p className="text-xs font-semibold text-purple-700 uppercase tracking-wider mb-1">One last step</p>
+                <p className="text-gray-900 font-semibold">Check {customerInfo.email} for a link to save your card.</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Your {planTerms.planName} plan starts when you do. Your card will be charged {planTerms.priceText} per {planTerms.per}, beginning on your first visit, then once every {planTerms.per} until you cancel.
+                </p>
+              </div>
+            )}
 
             {/* Booking Details */}
             <div className="space-y-4 mb-6">
@@ -268,16 +342,16 @@ export default function PublicBooking({ businessId, apiUrl }) {
                   <Clock className="w-5 h-5 text-amber-600" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-xs text-gray-500">Service</p>
-                  <p className="font-semibold text-gray-900">{selectedService?.name}</p>
+                  <p className="text-xs text-gray-500">{selectedPlan ? 'Plan' : 'Service'}</p>
+                  <p className="font-semibold text-gray-900">{selectedPlan ? selectedPlan.name : selectedService?.name}</p>
                 </div>
-                <p className="text-lg font-bold text-green-600">${calculateTotalPrice().toFixed(2)}</p>
+                <p className="text-lg font-bold text-green-600">${calculateTotalPrice().toFixed(2)}{selectedPlan ? `/${selectedPlan.billing_period}` : ''}</p>
               </div>
             </div>
 
             {/* Confirmation message */}
             <p className="text-sm text-gray-500 text-center mb-6">
-              A confirmation has been sent to <span className="font-semibold text-gray-700">{customerInfo.email}</span>
+              {selectedPlan ? 'Details were sent to' : 'A confirmation has been sent to'} <span className="font-semibold text-gray-700">{customerInfo.email}</span>
             </p>
 
             {/* Action Buttons */}
@@ -335,7 +409,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
 
         {/* Progress Steps */}
         {(() => {
-          const hasVariants = selectedService?.variants?.length > 0;
+          const hasVariants = !selectedPlan && selectedService?.variants?.length > 0;
           const stepLabels = hasVariants
             ? ['Service', 'Type', 'Date & Time', 'Team', 'Contact']
             : ['Service', 'Date & Time', 'Team', 'Contact'];
@@ -369,7 +443,39 @@ export default function PublicBooking({ businessId, apiUrl }) {
         {/* Step 1: Service Selection */}
         {step === 1 && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Your Service</h2>
+            {config.showPlans !== false && plans.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">Recurring Plans</h2>
+                <p className="text-gray-600 mb-4">Keep your vehicle looking its best on a schedule — one simple price, and your visits are booked for you.</p>
+                <div className="grid md:grid-cols-2 gap-6">
+                  {plans.map(plan => (
+                    <div
+                      key={plan.id}
+                      onClick={() => handlePlanSelect(plan)}
+                      className="border-2 border-purple-200 bg-purple-50/40 rounded-xl p-6 cursor-pointer hover:border-purple-600 hover:shadow-lg transition"
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-amber-500 text-lg">★</span>
+                        <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
+                      </div>
+                      <p className="text-sm font-semibold text-purple-700 mb-2">{plan.frequency_label}</p>
+                      {plan.description && <p className="text-gray-600 mb-3">{plan.description}</p>}
+                      <p className="text-xs text-gray-500 mb-4">Each visit: {plan.service_names.join(' + ')}</p>
+                      <div className="flex items-end justify-between">
+                        <span className="text-2xl font-bold text-purple-700">
+                          ${plan.price.toFixed(2)}<span className="text-sm font-medium text-gray-500">/{plan.billing_period}</span>
+                        </span>
+                        <span className="text-gray-500">{plan.duration_hours}h per visit</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {config.showMainServices !== false && (<>
+            {plans.length > 0 && config.showPlans !== false && <h2 className="text-2xl font-bold text-gray-900 mb-6">One-Time Services</h2>}
+            {!(plans.length > 0 && config.showPlans !== false) && <h2 className="text-2xl font-bold text-gray-900 mb-6">Select Your Service</h2>}
 
             <div className="grid md:grid-cols-2 gap-6">
               {services.filter(s => !s.is_addon).map(service => (
@@ -396,6 +502,11 @@ export default function PublicBooking({ businessId, apiUrl }) {
                 </div>
               ))}
             </div>
+            </>)}
+
+            {config.showMainServices === false && !(config.showPlans !== false && plans.length > 0) && (
+              <p className="text-center text-gray-600 py-8">Online booking isn't available right now. Please contact us to schedule.</p>
+            )}
           </div>
         )}
 
@@ -430,11 +541,11 @@ export default function PublicBooking({ businessId, apiUrl }) {
         {step === 3 && (
           <div className="bg-white rounded-2xl shadow-xl p-8">
             <button
-              onClick={() => selectedService?.variants?.length > 0 ? setStep(2) : setStep(1)}
+              onClick={() => !selectedPlan && selectedService?.variants?.length > 0 ? setStep(2) : setStep(1)}
               className="flex items-center text-gray-600 hover:text-gray-900 mb-6"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
-              {selectedService?.variants?.length > 0 ? 'Back to Service Type' : 'Back to Services'}
+              {!selectedPlan && selectedService?.variants?.length > 0 ? 'Back to Service Type' : 'Back to Services'}
             </button>
 
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Choose Date & Time</h2>
@@ -443,19 +554,21 @@ export default function PublicBooking({ businessId, apiUrl }) {
             <div className="bg-blue-50 rounded-lg p-4 mb-6">
               <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="font-bold text-gray-900">{selectedService?.name}{selectedVariant ? ` — ${selectedVariant.name}` : ''}</h3>
+                  <h3 className="font-bold text-gray-900">{selectedPlan ? `★ ${selectedPlan.name}` : selectedService?.name}{selectedVariant ? ` — ${selectedVariant.name}` : ''}</h3>
                   <p className="text-sm text-gray-600">
-                    {calculateTotalDuration().toFixed(1)}h · ${calculateTotalPrice().toFixed(2)}
+                    {selectedPlan
+                      ? `${selectedPlan.frequency_label} · $${selectedPlan.price.toFixed(2)}/${selectedPlan.billing_period} · first visit ${calculateTotalDuration().toFixed(1)}h`
+                      : `${calculateTotalDuration().toFixed(1)}h · $${calculateTotalPrice().toFixed(2)}`}
                   </p>
                 </div>
-                <button onClick={() => { setSelectedService(null); setSelectedVariant(null); setStep(1); }} className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
+                <button onClick={() => { setSelectedService(null); setSelectedVariant(null); setSelectedPlan(null); setAdditionalServices([]); setStep(1); }} className="text-blue-600 hover:text-blue-800 text-sm font-semibold">
                   Change
                 </button>
               </div>
             </div>
 
             {/* Add-ons */}
-            {services.filter(s => s.is_addon && s.id !== selectedService?.id).length > 0 && (
+            {!selectedPlan && services.filter(s => s.is_addon && s.id !== selectedService?.id).length > 0 && (
               <div className="mb-6">
                 <h3 className="font-bold text-gray-900 mb-3">Add-ons (Optional)</h3>
                 <div className="space-y-2">
@@ -713,10 +826,10 @@ export default function PublicBooking({ businessId, apiUrl }) {
               <h3 className="font-bold text-gray-900 mb-4">Booking Summary</h3>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Service:</span>
-                  <span className="font-semibold">{selectedService?.name}{selectedVariant ? ` — ${selectedVariant.name}` : ''}</span>
+                  <span className="text-gray-600">{selectedPlan ? 'Plan:' : 'Service:'}</span>
+                  <span className="font-semibold">{selectedPlan ? `${selectedPlan.name} (${selectedPlan.frequency_label})` : `${selectedService?.name}${selectedVariant ? ` — ${selectedVariant.name}` : ''}`}</span>
                 </div>
-                {additionalServices.length > 0 && (
+                {!selectedPlan && additionalServices.length > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-600">Additional:</span>
                     <span className="font-semibold">{additionalServices.length} service(s)</span>
@@ -744,7 +857,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
                 </div>
                 {(() => {
                   const subtotal = calculateTotalPrice();
-                  const taxRate = parseFloat(businessInfo?.tax_rate || 0);
+                  const taxRate = selectedPlan ? 0 : parseFloat(businessInfo?.tax_rate || 0);
                   const taxAmount = subtotal * taxRate;
                   const total = subtotal + taxAmount;
                   return taxRate > 0 ? (
@@ -764,13 +877,22 @@ export default function PublicBooking({ businessId, apiUrl }) {
                     </>
                   ) : (
                     <div className="flex justify-between pt-2 border-t border-gray-300">
-                      <span className="text-gray-900 font-bold">Total:</span>
+                      <span className="text-gray-900 font-bold">{selectedPlan ? `Per ${selectedPlan.billing_period}:` : 'Total:'}</span>
                       <span className="text-green-600 font-bold text-lg">${subtotal.toFixed(2)}</span>
                     </div>
                   );
                 })()}
               </div>
             </div>
+
+            {selectedPlan && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-6 text-sm text-gray-700">
+                <p className="font-semibold text-gray-900 mb-1">How billing works</p>
+                You won't be charged right now. After you confirm, we'll email you a link to save a card. That card will be charged{' '}
+                <b>${selectedPlan.price.toFixed(2)} per {selectedPlan.billing_period}</b>, starting on your first visit and then once every {selectedPlan.billing_period} until you cancel.
+                That single charge covers all your visits — you're never charged per visit.
+              </div>
+            )}
 
             {/* Contact Form */}
             <div className="space-y-4 mb-6">
@@ -856,7 +978,7 @@ export default function PublicBooking({ businessId, apiUrl }) {
               ) : (
                 <>
                   <CheckCircle className="w-5 h-5 mr-2" />
-                  Confirm Booking
+                  {selectedPlan ? 'Start My Plan' : 'Confirm Booking'}
                 </>
               )}
             </button>

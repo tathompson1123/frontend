@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import Papa from 'papaparse';
+import RecurringCustomers from './RecurringCustomers';
 import {
   Users,
   Mail,
@@ -1964,6 +1965,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <option value="conversations">Conversations</option>
             <option value="leads">Leads ({leadTables.reduce((sum, t) => sum + t.leads.length, 0)})</option>
             <option value="customers">Customers ({customerStats.total})</option>
+            <option value="recurring">★ Recurring</option>
             <option value="bookings">Bookings</option>
             <option value="rewards">Rewards</option>
           </select>
@@ -2010,6 +2012,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 Customers ({customerStats.total})
               </div>
               {activeTab === 'customers' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
+            </button>
+            <button
+              onClick={() => { setActiveTab('recurring'); setSearchTerm(''); setEditingCell(null); }}
+              className={`px-8 py-4 font-semibold transition-all relative ${activeTab === 'recurring' ? 'text-blue-600 bg-white' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4" />
+                Recurring
+              </div>
+              {activeTab === 'recurring' && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></div>}
             </button>
             <button
               onClick={() => { setActiveTab('bookings'); setSearchTerm(''); setEditingCell(null); fetchBookings(); }}
@@ -2627,6 +2639,10 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
       )}
 
       {/* Bookings Tab */}
+      {activeTab === 'recurring' && (
+        <RecurringCustomers apiUrl={apiUrl} authFetch={authFetch} />
+      )}
+
       {activeTab === 'bookings' && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           {/* Toolbar */}
@@ -2681,7 +2697,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                       <span className="text-xs font-semibold text-gray-500">#{b.booking_number}</span>
                       <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getBookingStatusColor(b.status)}`}>{formatLabel(b.status)}</span>
                     </div>
-                    <p className="text-blue-600 font-semibold text-sm mt-1">{b.customer_name || '—'}</p>
+                    <p className="text-blue-600 font-semibold text-sm mt-1">{b.recurring_plan_id && <span className="text-amber-500 mr-1" title="Recurring customer">★</span>}{b.customer_name || '—'}</p>
                     <p className="text-xs text-gray-600 truncate">{bookingServiceLabel(b)}</p>
                     <p className="text-xs text-gray-400 mt-0.5">Job: {fmtBookingDate(b.booking_date)}{b.start_time ? ` · ${fmtBookingTime(b.start_time)}` : ''}</p>
                     {b.created_at && <p className="text-xs text-gray-400">Booked: {fmtInstantDate(b.created_at, businessTz)}</p>}
@@ -5162,7 +5178,7 @@ function BookingsTable({ bookings, loading, onView, tz }) {
             <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{fmtBookingTime(b.start_time)}</td>
             <td className="px-4 py-3 text-sm text-gray-500 whitespace-nowrap">{b.created_at ? fmtInstantDate(b.created_at, tz) : '—'}</td>
             <td className="px-4 py-3 text-sm">
-              <div className="text-blue-600 font-medium">{b.customer_name || <span className="text-gray-400">—</span>}</div>
+              <div className="text-blue-600 font-medium">{b.recurring_plan_id && <span className="text-amber-500 mr-1" title="Recurring customer">★</span>}{b.customer_name || <span className="text-gray-400">—</span>}</div>
               {(b.customer_email || b.customer_phone) && (
                 <div className="text-xs text-gray-400 truncate max-w-[220px]">{b.customer_email || b.customer_phone}</div>
               )}

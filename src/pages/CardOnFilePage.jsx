@@ -3,6 +3,10 @@ import { useParams } from 'react-router-dom';
 
 const apiUrl = import.meta.env.VITE_API_URL || 'https://sorcenew-backend-production.up.railway.app';
 
+const fmtLong = (ymd) => (ymd
+  ? new Date(String(ymd).slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+  : '');
+
 export default function CardOnFilePage() {
   const { token } = useParams();
   const [pageData, setPageData] = useState(null);
@@ -10,6 +14,7 @@ export default function CardOnFilePage() {
   const [card, setCard] = useState(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [savedInfo, setSavedInfo] = useState(null);
   const [sdkReady, setSdkReady] = useState(false);
   const [payments, setPayments] = useState(null);
 
@@ -78,6 +83,7 @@ export default function CardOnFilePage() {
       });
       const data = await resp.json();
       if (data.success) {
+        setSavedInfo(data);
         setSaved(true);
       } else {
         alert(data.error || 'Failed to save card. Please try again.');
@@ -113,7 +119,17 @@ export default function CardOnFilePage() {
           </div>
           <div style={styles.body}>
             <p style={styles.bodyText}>Your card has been securely saved on file.</p>
-            <p style={styles.bodyText}>Your appointment is now fully confirmed. We look forward to seeing you!</p>
+            {pageData?.plan ? (
+              <p style={styles.bodyText}>
+                Your <strong>{pageData.plan.planName}</strong> plan is active.{' '}
+                {fmtLong(savedInfo?.firstChargeDate || pageData.plan.firstChargeDate)
+                  ? <>Your first charge of <strong>{pageData.plan.priceText}</strong> is on {fmtLong(savedInfo?.firstChargeDate || pageData.plan.firstChargeDate)}, then once every {pageData.plan.per} until you cancel. </>
+                  : null}
+                We look forward to seeing you!
+              </p>
+            ) : (
+              <p style={styles.bodyText}>Your appointment is now fully confirmed. We look forward to seeing you!</p>
+            )}
           </div>
         </div>
       </div>
@@ -136,19 +152,35 @@ export default function CardOnFilePage() {
     <div style={styles.page}>
       <div style={styles.card}>
         <div style={styles.header}>
-          <h1 style={styles.headerTitle}>One Last Step</h1>
+          <h1 style={styles.headerTitle}>{pageData.plan ? 'Start Your Plan' : 'One Last Step'}</h1>
           <p style={styles.headerSub}>{pageData.businessName}</p>
         </div>
         <div style={styles.body}>
-          <p style={styles.bodyText}>
-            Hi {pageData.customerName}, your appointment{bookingDateStr ? ` on ${bookingDateStr}` : ''} is almost confirmed!
-          </p>
-          <div style={styles.notice}>
-            <strong>Card on file — cancellation policy</strong>
-            <p style={{ margin: '4px 0 0', fontSize: 14, color: '#374151' }}>
-              We will <strong>not</strong> charge your card. It is kept on file only in the event of a no-show or late cancellation.
-            </p>
-          </div>
+          {pageData.plan ? (
+            <>
+              <p style={styles.bodyText}>Hi {pageData.customerName}, save a card to start your <strong>{pageData.plan.planName}</strong> plan.</p>
+              <div style={styles.notice}>
+                <strong>Recurring charge — please review</strong>
+                <p style={{ margin: '4px 0 0', fontSize: 14, color: '#374151' }}>
+                  Your card <strong>will be charged {pageData.plan.priceText} per {pageData.plan.per}</strong> ({pageData.plan.frequencyLabel}),
+                  starting {fmtLong(pageData.plan.firstChargeDate)} and then once every {pageData.plan.per} until you cancel.
+                  That one charge covers every visit in the plan — you are never charged per visit. To pause or cancel, contact {pageData.businessName}.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <p style={styles.bodyText}>
+                Hi {pageData.customerName}, your appointment{bookingDateStr ? ` on ${bookingDateStr}` : ''} is almost confirmed!
+              </p>
+              <div style={styles.notice}>
+                <strong>Card on file — cancellation policy</strong>
+                <p style={{ margin: '4px 0 0', fontSize: 14, color: '#374151' }}>
+                  We will <strong>not</strong> charge your card. It is kept on file only in the event of a no-show or late cancellation.
+                </p>
+              </div>
+            </>
+          )}
           <div id="card-container" style={styles.cardContainer} />
           {!sdkReady && <p style={{ color: '#9ca3af', fontSize: 14, textAlign: 'center' }}>Loading secure card form...</p>}
           <button
@@ -156,7 +188,7 @@ export default function CardOnFilePage() {
             disabled={!card || saving}
             style={{ ...styles.btn, opacity: (!card || saving) ? 0.6 : 1 }}
           >
-            {saving ? 'Saving...' : 'Save Card Securely'}
+            {saving ? 'Saving...' : pageData.plan ? `Authorize ${pageData.plan.priceText}/${pageData.plan.per} & Start Plan` : 'Save Card Securely'}
           </button>
           <p style={styles.secure}>🔒 Secured by Square. Your card details are never stored on our servers.</p>
         </div>

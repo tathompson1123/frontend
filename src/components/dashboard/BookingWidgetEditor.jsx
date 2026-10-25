@@ -29,6 +29,8 @@ const DEFAULT_CONFIG = {
   ],
   showPrices: true,
   showDurations: true,
+  showMainServices: true,
+  showPlans: true,
   accentColor: null
 };
 
@@ -550,6 +552,30 @@ export default function BookingWidgetEditor({ apiUrl, user, authFetch, onClose }
             type="checkbox"
             checked={config.showDurations}
             onChange={e => setConfig(prev => ({ ...prev, showDurations: e.target.checked }))}
+            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          />
+        </label>
+        <label className="flex items-center justify-between cursor-pointer py-2">
+          <span className="text-sm text-gray-700">
+            Offer one-time services
+            <span className="block text-xs text-gray-400">Turn off for a plans-only booking page</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={config.showMainServices !== false}
+            onChange={e => setConfig(prev => ({ ...prev, showMainServices: e.target.checked }))}
+            className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+          />
+        </label>
+        <label className="flex items-center justify-between cursor-pointer py-2">
+          <span className="text-sm text-gray-700">
+            Offer recurring plans
+            <span className="block text-xs text-gray-400">Plans marked “offered online” in Recurring Plans</span>
+          </span>
+          <input
+            type="checkbox"
+            checked={config.showPlans !== false}
+            onChange={e => setConfig(prev => ({ ...prev, showPlans: e.target.checked }))}
             className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
           />
         </label>
