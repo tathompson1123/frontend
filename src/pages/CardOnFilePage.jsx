@@ -15,6 +15,8 @@ export default function CardOnFilePage() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [savedInfo, setSavedInfo] = useState(null);
+  // Plan links can offer the card already on file; the customer may still pick a different one.
+  const [useNewCard, setUseNewCard] = useState(false);
   const [sdkReady, setSdkReady] = useState(false);
   const [payments, setPayments] = useState(null);
 
@@ -48,6 +50,7 @@ export default function CardOnFilePage() {
   // Initialize Square card form once SDK is ready
   useEffect(() => {
     if (!sdkReady || !pageData || card) return;
+    if (pageData.savedCard && !useNewCard) return;
 
     async function initSquare() {
       try {
@@ -64,22 +67,29 @@ export default function CardOnFilePage() {
       }
     }
     initSquare();
-  }, [sdkReady, pageData]);
+  }, [sdkReady, pageData, useNewCard]);
 
   const handleSubmit = async () => {
-    if (!card || saving) return;
+    const usingSaved = !!pageData?.savedCard && !useNewCard;
+    if ((!card && !usingSaved) || saving) return;
     setSaving(true);
     try {
-      const result = await card.tokenize();
-      if (result.status !== 'OK') {
-        alert('Card error: ' + (result.errors?.[0]?.message || 'Please check your card details.'));
-        setSaving(false);
-        return;
+      let payload;
+      if (usingSaved) {
+        payload = { useSavedCard: true };
+      } else {
+        const result = await card.tokenize();
+        if (result.status !== 'OK') {
+          alert('Card error: ' + (result.errors?.[0]?.message || 'Please check your card details.'));
+          setSaving(false);
+          return;
+        }
+        payload = { sourceId: result.token };
       }
       const resp = await fetch(`${apiUrl}/api/public/card-on-file/${token}/save`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sourceId: result.token }),
+        body: JSON.stringify(payload),
       });
       const data = await resp.json();
       if (data.success) {
@@ -181,12 +191,26 @@ export default function CardOnFilePage() {
               </div>
             </>
           )}
-          <div id="card-container" style={styles.cardContainer} />
-          {!sdkReady && <p style={{ color: '#9ca3af', fontSize: 14, textAlign: 'center' }}>Loading secure card form...</p>}
+          {pageData.savedCard && !useNewCard ? (
+            <div style={{ ...styles.cardContainer, textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 13, color: '#6b7280' }}>Card on file</p>
+              <p style={{ margin: '4px 0 8px', fontSize: 18, fontWeight: 700, color: '#111827' }}>
+                {pageData.savedCard.brand} ending in {pageData.savedCard.last4}
+              </p>
+              <button type="button" onClick={() => setUseNewCard(true)} style={{ background: 'none', border: 'none', color: '#1d4ed8', cursor: 'pointer', fontSize: 14, textDecoration: 'underline' }}>
+                Use a different card
+              </button>
+            </div>
+          ) : (
+            <>
+              <div id="card-container" style={styles.cardContainer} />
+              {!sdkReady && <p style={{ color: '#9ca3af', fontSize: 14, textAlign: 'center' }}>Loading secure card form...</p>}
+            </>
+          )}
           <button
             onClick={handleSubmit}
-            disabled={!card || saving}
-            style={{ ...styles.btn, opacity: (!card || saving) ? 0.6 : 1 }}
+            disabled={(!card && !(pageData.savedCard && !useNewCard)) || saving}
+            style={{ ...styles.btn, opacity: ((!card && !(pageData.savedCard && !useNewCard)) || saving) ? 0.6 : 1 }}
           >
             {saving ? 'Saving...' : pageData.plan ? `Authorize ${pageData.plan.priceText}/${pageData.plan.per} & Start Plan` : 'Save Card Securely'}
           </button>

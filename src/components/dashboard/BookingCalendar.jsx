@@ -681,7 +681,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
         });
         const data = await response.json();
         if (data.success) {
-          showToast(`Recurring booking set up — ${data.bookingsCreated} visit${data.bookingsCreated === 1 ? '' : 's'} added to the schedule.${data.billed ? (data.cardLinkSent ? ' Card link emailed to the customer.' : ` Card link NOT sent: ${data.cardLinkError || 'unknown error'}`) : ''}${data.located ? '' : ' Address not found, so it won\'t show on the map.'}`);
+          showToast(`Recurring booking set up — ${data.bookingsCreated} visit${data.bookingsCreated === 1 ? '' : 's'} added to the schedule.${data.billed ? (data.cardLinkSent ? (data.usesSavedCard ? ' They already have a card on file, so they were emailed a confirm link (no card entry).' : ' Card link emailed to the customer.') : ` Card link NOT sent: ${data.cardLinkError || 'unknown error'}`) : ''}${data.located ? '' : ' Address not found, so it won\'t show on the map.'}`);
           closeBookingModal(true);
           fetchAllBookings();
         } else {

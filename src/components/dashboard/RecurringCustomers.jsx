@@ -286,7 +286,8 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
 
   const byDay = useMemo(() => {
     const groups = DAYS.map(() => []);
-    filtered.forEach((p) => groups[p.weekday].push(p));
+    // A row with an unreadable weekday is shown under Sunday rather than crashing the tab.
+    filtered.forEach((p) => groups[Number.isInteger(p.weekday) && p.weekday >= 0 && p.weekday <= 6 ? p.weekday : 0].push(p));
     groups.forEach((g) => g.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')));
     return groups;
   }, [filtered]);
