@@ -47,6 +47,13 @@ const DEFAULT_FOLLOWUP = {
   closing: 'Need something sooner? Just reply to this email.',
 };
 const MAX_STEPS = 8;
+// Mirrors DEFAULT_FOLLOWUP_SMS in the backend (utils/formFollowupSms.js). Off by default:
+// turning it on adds a required consent checkbox to the form.
+const DEFAULT_FOLLOWUP_SMS = {
+  enabled: false,
+  message: "Hi {{first_name}}, thanks for contacting {{business_name}}! Here's what happens next: 1) We review your request 2) We call or text you to confirm details 3) We get you scheduled. Questions? Just reply here.",
+};
+const SMS_MAX = 600;
 const sampleFill = (t) => String(t || '')
   .replace(/\{\{\s*first_name\s*\}\}/g, 'Alex')
   .replace(/\{\{\s*name\s*\}\}/g, 'Alex Sample')
@@ -64,6 +71,7 @@ const newDraft = () => ({
   field_color: '#d1d5db',
   sms_followup: true,
   followup_email: { ...DEFAULT_FOLLOWUP, steps: DEFAULT_FOLLOWUP.steps.map(x => ({ ...x })) },
+  followup_sms: { ...DEFAULT_FOLLOWUP_SMS },
   fields: [
     { ...STANDARD_PRESETS[0] },
     { ...STANDARD_PRESETS[1] },
@@ -116,6 +124,7 @@ export default function EmbedForms({ apiUrl, authFetch }) {
       sms_followup: f.sms_followup, fields: Array.isArray(f.fields) ? f.fields : [],
       // Forms built before this existed have no email configured: start it OFF with the default copy ready to edit.
       followup_email: f.followup_email || { ...DEFAULT_FOLLOWUP, enabled: false, steps: DEFAULT_FOLLOWUP.steps.map(x => ({ ...x })) },
+      followup_sms: f.followup_sms || { ...DEFAULT_FOLLOWUP_SMS },
     });
     setEditingId(f.id);
     setSourceTouched(true);
@@ -151,6 +160,12 @@ export default function EmbedForms({ apiUrl, authFetch }) {
     [steps[i], steps[j]] = [steps[j], steps[i]];
     setFu({ steps });
   };
+  const fs = draft?.followup_sms;
+  const setFs = (patch) => setDraft({ ...draft, followup_sms: { ...draft.followup_sms, ...patch } });
+  const smsPreview = fs ? (() => {
+    const t = sampleFill(fs.message).trim();
+    return /\bstop\b/i.test(t) ? t : `${t} Reply STOP to opt out.`;
+  })() : '';
   const sendTest = async () => {
     setTestState({ busy: true, msg: '' });
     try {
@@ -516,6 +531,60 @@ export default function EmbedForms({ apiUrl, authFetch }) {
                   {!editingId && <span className="text-xs text-gray-400">Save the form first to send a test.</span>}
                   {testState.msg && <span className="text-xs text-gray-600">{testState.msg}</span>}
                 </div>
+              </>
+            )}
+          </div>
+
+          {/* Next-steps text message to the visitor */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-green-600" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Next-steps text message</p>
+                  <p className="text-xs text-gray-500">Texted to the visitor right after they submit (adds a required consent checkbox to the form).</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={!!fs?.enabled} onChange={(e) => setFs({ enabled: e.target.checked })} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-200 peer-checked:bg-green-600 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+              </label>
+            </div>
+
+            {fs?.enabled && (
+              <>
+                {!draft.fields.some((f) => f.key === 'phone') && (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                    This form has no Phone field, so there is nowhere to text. Add a Phone field above.
+                  </p>
+                )}
+                {draft.sms_followup && (
+                  <p className="text-xs text-blue-700 bg-blue-50 rounded-lg px-3 py-2">
+                    AI SMS follow-up is also on. The next-steps text goes first and the AI text follows about 2 minutes later.
+                  </p>
+                )}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-600">Message</label>
+                    <span className={`text-xs ${fs.message.length > SMS_MAX ? 'text-red-600' : 'text-gray-400'}`}>
+                      {fs.message.length}/{SMS_MAX} · about {Math.max(1, Math.ceil(smsPreview.length / 160))} text{Math.ceil(smsPreview.length / 160) > 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <textarea rows={5} maxLength={SMS_MAX} value={fs.message} onChange={(e) => setFs({ message: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-green-600 focus:outline-none resize-none" />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Variables: <code className="bg-gray-100 px-1 rounded">{'{{first_name}}'}</code>{' '}
+                    <code className="bg-gray-100 px-1 rounded">{'{{name}}'}</code>{' '}
+                    <code className="bg-gray-100 px-1 rounded">{'{{business_name}}'}</code>{' '}
+                    <code className="bg-gray-100 px-1 rounded">{'{{form_name}}'}</code>. "Reply STOP to opt out." is added automatically if you don't include it.
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-1">Preview</p>
+                  <div className="max-w-xs bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2 text-sm text-gray-800 whitespace-pre-wrap">{smsPreview}</div>
+                </div>
+                <p className="text-xs text-gray-400">
+                  Counts toward your monthly text allowance. Only sent to people who tick the consent box, and never to numbers that opted out. One per phone number per day.
+                </p>
               </>
             )}
           </div>
