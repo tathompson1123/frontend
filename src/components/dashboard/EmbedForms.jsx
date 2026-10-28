@@ -152,6 +152,7 @@ export default function EmbedForms({ apiUrl, authFetch }) {
   };
 
   const [testState, setTestState] = useState({ busy: false, msg: '' });
+  const [smsTest, setSmsTest] = useState({ phone: '', busy: false, msg: '' });
   const fu = draft?.followup_email;
   const setFu = (patch) => setDraft({ ...draft, followup_email: { ...draft.followup_email, ...patch } });
   const setStep = (i, patch) => setFu({ steps: fu.steps.map((st, idx) => (idx === i ? { ...st, ...patch } : st)) });
@@ -178,6 +179,20 @@ export default function EmbedForms({ apiUrl, authFetch }) {
       setTestState({ busy: false, msg: res.ok ? `Test sent to ${data.sentTo}` : (data.error || 'Could not send the test') });
     } catch {
       setTestState({ busy: false, msg: 'Could not send the test' });
+    }
+  };
+
+  const sendSmsTest = async () => {
+    setSmsTest((s) => ({ ...s, busy: true, msg: '' }));
+    try {
+      const res = await authFetch(`${apiUrl}/api/embed-forms/${editingId}/followup-sms-test`, {
+        method: 'POST', body: JSON.stringify({ phone: smsTest.phone, followup_sms: draft.followup_sms }),
+      });
+      let data = {};
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      setSmsTest((s) => ({ ...s, busy: false, msg: res.ok ? 'Test text sent — check your phone.' : (data.error || 'Could not send the test text') }));
+    } catch {
+      setSmsTest((s) => ({ ...s, busy: false, msg: 'Could not send the test text' }));
     }
   };
 
@@ -607,6 +622,14 @@ export default function EmbedForms({ apiUrl, authFetch }) {
                 <div>
                   <p className="text-xs font-medium text-gray-600 mb-1">Preview</p>
                   <div className="max-w-xs bg-gray-100 rounded-2xl rounded-bl-sm px-3 py-2 text-sm text-gray-800 whitespace-pre-wrap">{smsPreview}</div>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input type="tel" placeholder="Your cell number" value={smsTest.phone} onChange={(e) => setSmsTest((s) => ({ ...s, phone: e.target.value }))} className="px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-green-600 focus:outline-none w-44" />
+                  <button type="button" onClick={sendSmsTest} disabled={!editingId || smsTest.busy || smsTest.phone.replace(/\D/g, '').length < 10} className="px-3 py-2 text-sm font-semibold border-2 border-green-600 text-green-700 rounded-lg hover:bg-green-50 disabled:opacity-40 flex items-center gap-1.5">
+                    <Send className="w-4 h-4" /> {smsTest.busy ? 'Sending…' : 'Send me a test text'}
+                  </button>
+                  {!editingId && <span className="text-xs text-gray-400">Save the form first to send a test.</span>}
+                  {smsTest.msg && <span className="text-xs text-gray-600">{smsTest.msg}</span>}
                 </div>
                 <p className="text-xs text-gray-400">
                   Counts toward your monthly text allowance. Only sent to people who tick the consent box, and never to numbers that opted out. One per phone number per day.
