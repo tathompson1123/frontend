@@ -87,6 +87,7 @@ export default function EmbedForms({ apiUrl, authFetch }) {
   const [draft, setDraft] = useState(null);
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [sourceTouched, setSourceTouched] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
   const [duplicatingId, setDuplicatingId] = useState(null);
@@ -115,8 +116,9 @@ export default function EmbedForms({ apiUrl, authFetch }) {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  const startCreate = () => { setDraft(newDraft()); setEditingId(null); setSourceTouched(false); setView('edit'); };
+  const startCreate = () => { setSaveError(''); setDraft(newDraft()); setEditingId(null); setSourceTouched(false); setView('edit'); };
   const startEdit = (f) => {
+    setSaveError('');
     setDraft({
       name: f.name, source: f.source, title: f.title, description: f.description || '',
       submit_text: f.submit_text, success_message: f.success_message, theme_color: f.theme_color,
@@ -181,14 +183,34 @@ export default function EmbedForms({ apiUrl, authFetch }) {
 
   const save = async () => {
     setSaving(true);
+    setSaveError('');
     try {
       const payload = { ...draft, source: slugify(draft.source || draft.name) };
       const res = editingId
         ? await authFetch(`${apiUrl}/api/embed-forms/${editingId}`, { method: 'PUT', body: JSON.stringify(payload) })
         : await authFetch(`${apiUrl}/api/embed-forms`, { method: 'POST', body: JSON.stringify(payload) });
-      if (res.ok) { await load(); setView('list'); }
+      let data = {};
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      if (!res.ok) {
+        setSaveError(data.error || `Save failed (error ${res.status}). Nothing was changed.`);
+        return;
+      }
+      // Confirm the server actually kept the next-steps settings. A server still running an older
+      // version saves the form but silently drops them — say so rather than closing as if all was saved.
+      const saved = data.form || {};
+      const keptEmail = !draft.followup_email || (saved.followup_email && saved.followup_email.enabled === draft.followup_email.enabled && saved.followup_email.subject === draft.followup_email.subject);
+      const keptSms = !draft.followup_sms || (saved.followup_sms && saved.followup_sms.enabled === draft.followup_sms.enabled);
+      if (!keptEmail || !keptSms) {
+        await load();
+        setSaveError("The form saved, but the server didn't keep the next-steps email/text settings — it is probably still updating. Wait a minute or two, then press Save Form again.");
+        return;
+      }
+      setSaveError('');
+      await load();
+      setView('list');
     } catch (e) {
       console.error('Save failed', e);
+      setSaveError('Could not reach the server. Check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -303,6 +325,10 @@ export default function EmbedForms({ apiUrl, authFetch }) {
           {saving ? 'Saving…' : 'Save Form'}
         </button>
       </div>
+
+      {saveError && (
+        <div className="mb-4 p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-800">{saveError}</div>
+      )}
 
       <div className="flex gap-6 flex-col lg:flex-row">
         {/* Left: editor */}
