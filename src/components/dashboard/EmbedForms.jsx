@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Plus, X, Copy, CopyPlus, Check, Trash2, ChevronLeft, ChevronUp, ChevronDown,
-  FileText, Eye, Code, Pencil, MessageSquare,
+  FileText, Eye, Code, Pencil, MessageSquare, Mail, Send,
 } from 'lucide-react';
 
 const embedBaseUrl =
@@ -29,6 +29,30 @@ const STANDARD_PRESETS = [
 const slugify = (s) =>
   String(s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40) || 'embed_form';
 
+// The email a visitor gets right after submitting: what happens next, step by step.
+// Mirrors DEFAULT_FOLLOWUP in the backend (utils/formFollowupEmail.js).
+const DEFAULT_FOLLOWUP = {
+  enabled: true,
+  subject: "Thanks {{first_name}} — here's what happens next",
+  heading: 'We got your request, {{first_name}}!',
+  intro: 'Thanks for reaching out to {{business_name}}. Here is exactly what to expect:',
+  steps_title: 'What happens next',
+  steps: [
+    { title: 'We review your request', description: 'Someone from our team looks over what you sent — usually within a few hours during business days.' },
+    { title: 'We reach out to you', description: "We'll call or text you to confirm the details and answer any questions." },
+    { title: 'We get you scheduled', description: 'Once everything looks good, we lock in a time that works for you.' },
+  ],
+  button_label: '',
+  button_url: '',
+  closing: 'Need something sooner? Just reply to this email.',
+};
+const MAX_STEPS = 8;
+const sampleFill = (t) => String(t || '')
+  .replace(/\{\{\s*first_name\s*\}\}/g, 'Alex')
+  .replace(/\{\{\s*name\s*\}\}/g, 'Alex Sample')
+  .replace(/\{\{\s*business_name\s*\}\}/g, 'your business')
+  .replace(/\{\{\s*form_name\s*\}\}/g, 'this form');
+
 const newDraft = () => ({
   name: 'New Form',
   source: 'new_form',
@@ -39,6 +63,7 @@ const newDraft = () => ({
   theme_color: '#d97706',
   field_color: '#d1d5db',
   sms_followup: true,
+  followup_email: { ...DEFAULT_FOLLOWUP, steps: DEFAULT_FOLLOWUP.steps.map(x => ({ ...x })) },
   fields: [
     { ...STANDARD_PRESETS[0] },
     { ...STANDARD_PRESETS[1] },
@@ -89,6 +114,8 @@ export default function EmbedForms({ apiUrl, authFetch }) {
       submit_text: f.submit_text, success_message: f.success_message, theme_color: f.theme_color,
       field_color: f.field_color || '#d1d5db',
       sms_followup: f.sms_followup, fields: Array.isArray(f.fields) ? f.fields : [],
+      // Forms built before this existed have no email configured: start it OFF with the default copy ready to edit.
+      followup_email: f.followup_email || { ...DEFAULT_FOLLOWUP, enabled: false, steps: DEFAULT_FOLLOWUP.steps.map(x => ({ ...x })) },
     });
     setEditingId(f.id);
     setSourceTouched(true);
@@ -110,6 +137,30 @@ export default function EmbedForms({ apiUrl, authFetch }) {
       console.error('Duplicate failed', e);
     } finally {
       setDuplicatingId(null);
+    }
+  };
+
+  const [testState, setTestState] = useState({ busy: false, msg: '' });
+  const fu = draft?.followup_email;
+  const setFu = (patch) => setDraft({ ...draft, followup_email: { ...draft.followup_email, ...patch } });
+  const setStep = (i, patch) => setFu({ steps: fu.steps.map((st, idx) => (idx === i ? { ...st, ...patch } : st)) });
+  const moveStep = (i, dir) => {
+    const j = i + dir;
+    if (j < 0 || j >= fu.steps.length) return;
+    const steps = [...fu.steps];
+    [steps[i], steps[j]] = [steps[j], steps[i]];
+    setFu({ steps });
+  };
+  const sendTest = async () => {
+    setTestState({ busy: true, msg: '' });
+    try {
+      const res = await authFetch(`${apiUrl}/api/embed-forms/${editingId}/followup-test`, {
+        method: 'POST', body: JSON.stringify({ followup_email: draft.followup_email }),
+      });
+      const data = await res.json();
+      setTestState({ busy: false, msg: res.ok ? `Test sent to ${data.sentTo}` : (data.error || 'Could not send the test') });
+    } catch {
+      setTestState({ busy: false, msg: 'Could not send the test' });
     }
   };
 
@@ -353,6 +404,120 @@ export default function EmbedForms({ apiUrl, authFetch }) {
               <label className="block text-xs font-medium text-gray-600 mb-1">Success Message (after submit)</label>
               <input value={draft.success_message} onChange={(e) => setDraft({ ...draft, success_message: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none" placeholder="Thanks! We'll be in touch shortly." />
             </div>
+          </div>
+
+          {/* Next-steps email to the visitor */}
+          <div className="bg-white border border-gray-200 rounded-xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Mail className="w-4 h-4 text-blue-600" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">Next-steps email</p>
+                  <p className="text-xs text-gray-500">Emailed to the visitor right after they submit, telling them what happens next.</p>
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" checked={!!fu?.enabled} onChange={(e) => setFu({ enabled: e.target.checked })} className="sr-only peer" />
+                <div className="w-11 h-6 bg-gray-200 peer-checked:bg-blue-600 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-full" />
+              </label>
+            </div>
+
+            {fu?.enabled && (
+              <>
+                {!draft.fields.some((f) => f.key === 'email') && (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">
+                    This form has no Email field, so there is nowhere to send this. Add an Email field above.
+                  </p>
+                )}
+                <p className="text-xs text-gray-500">
+                  You can use <code className="bg-gray-100 px-1 rounded">{'{{first_name}}'}</code>{' '}
+                  <code className="bg-gray-100 px-1 rounded">{'{{name}}'}</code>{' '}
+                  <code className="bg-gray-100 px-1 rounded">{'{{business_name}}'}</code>{' '}
+                  <code className="bg-gray-100 px-1 rounded">{'{{form_name}}'}</code> anywhere in the email.
+                </p>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Subject</label>
+                  <input value={fu.subject} onChange={(e) => setFu({ subject: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Heading</label>
+                  <input value={fu.heading} onChange={(e) => setFu({ heading: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Intro</label>
+                  <textarea rows={2} value={fu.intro} onChange={(e) => setFu({ intro: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none resize-none" />
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-medium text-gray-600">Steps</label>
+                    <input value={fu.steps_title} onChange={(e) => setFu({ steps_title: e.target.value })} placeholder="Steps heading (e.g. What happens next)" className="w-56 px-2 py-1 border border-gray-200 rounded-lg text-xs focus:border-blue-500 focus:outline-none" />
+                  </div>
+                  <div className="space-y-2">
+                    {fu.steps.map((st, i) => (
+                      <div key={i} className="flex gap-2 items-start bg-gray-50 border border-gray-200 rounded-lg p-2">
+                        <span className="w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center flex-shrink-0 mt-1">{i + 1}</span>
+                        <div className="flex-1 space-y-1">
+                          <input value={st.title} onChange={(e) => setStep(i, { title: e.target.value })} placeholder="Step title" className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm font-medium focus:border-blue-500 focus:outline-none" />
+                          <textarea rows={2} value={st.description} onChange={(e) => setStep(i, { description: e.target.value })} placeholder="What happens in this step" className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm focus:border-blue-500 focus:outline-none resize-none" />
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                          <button type="button" onClick={() => moveStep(i, -1)} disabled={i === 0} className="p-1 text-gray-500 hover:text-gray-800 disabled:opacity-30"><ChevronUp className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => moveStep(i, 1)} disabled={i === fu.steps.length - 1} className="p-1 text-gray-500 hover:text-gray-800 disabled:opacity-30"><ChevronDown className="w-4 h-4" /></button>
+                          <button type="button" onClick={() => setFu({ steps: fu.steps.filter((_, idx) => idx !== i) })} className="p-1 text-red-500 hover:text-red-700"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {fu.steps.length < MAX_STEPS && (
+                    <button type="button" onClick={() => setFu({ steps: [...fu.steps, { title: '', description: '' }] })} className="mt-2 text-sm text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1">
+                      <Plus className="w-4 h-4" /> Add step
+                    </button>
+                  )}
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Button text <span className="text-gray-400">(optional)</span></label>
+                    <input value={fu.button_label} onChange={(e) => setFu({ button_label: e.target.value })} placeholder="Book a time" className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">Button link</label>
+                    <input value={fu.button_url} onChange={(e) => setFu({ button_url: e.target.value })} placeholder="https://" className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Closing line</label>
+                  <textarea rows={2} value={fu.closing} onChange={(e) => setFu({ closing: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-500 focus:outline-none resize-none" />
+                </div>
+
+                {/* Preview as the visitor sees it */}
+                <div>
+                  <p className="text-xs font-medium text-gray-600 mb-1">Preview</p>
+                  <div className="border border-gray-200 rounded-lg p-4 bg-white text-sm text-gray-800 space-y-3">
+                    <p className="text-xs text-gray-400">Subject: {sampleFill(fu.subject)}</p>
+                    {fu.heading && <p className="text-lg font-bold">{sampleFill(fu.heading)}</p>}
+                    {fu.intro && <p className="whitespace-pre-wrap">{sampleFill(fu.intro)}</p>}
+                    {fu.steps.length > 0 && fu.steps_title && <p className="font-bold">{sampleFill(fu.steps_title)}</p>}
+                    {fu.steps.map((st, i) => (
+                      <p key={i}><b>{i + 1}. {sampleFill(st.title)}</b>{st.description && <><br /><span className="whitespace-pre-wrap">{sampleFill(st.description)}</span></>}</p>
+                    ))}
+                    {fu.button_label && fu.button_url && <p><span className="text-blue-700 underline">{fu.button_label}</span></p>}
+                    {fu.closing && <p className="whitespace-pre-wrap">{sampleFill(fu.closing)}</p>}
+                    <p className="text-xs text-gray-400">— your business</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button type="button" onClick={sendTest} disabled={!editingId || testState.busy} className="px-3 py-2 text-sm font-semibold border-2 border-blue-600 text-blue-700 rounded-lg hover:bg-blue-50 disabled:opacity-40 flex items-center gap-1.5">
+                    <Send className="w-4 h-4" /> {testState.busy ? 'Sending…' : 'Send me a test'}
+                  </button>
+                  {!editingId && <span className="text-xs text-gray-400">Save the form first to send a test.</span>}
+                  {testState.msg && <span className="text-xs text-gray-600">{testState.msg}</span>}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
