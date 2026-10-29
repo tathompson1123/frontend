@@ -9,7 +9,7 @@ import { Star, MapPin, List, Map as MapIcon, Pause, Play, X, Clock, Phone, Refre
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAY_COLORS = ['#64748b', '#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#ef4444', '#0891b2'];
-const AREA_COLORS = ['#e11d48', '#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#0891b2', '#ea580c', '#4f46e5', '#65a30d', '#db2777', '#0d9488', '#a16207'];
+export const AREA_COLORS = ['#e11d48', '#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#0891b2', '#ea580c', '#4f46e5', '#65a30d', '#db2777', '#0d9488', '#a16207'];
 // Listed in the order the business sells them: monthly / bi-monthly first.
 // "Bi-monthly" here means twice a month (the business's own term), not every other month.
 const BILLING_BADGE = {
@@ -28,7 +28,7 @@ const FREQ_OPTIONS = [
   ['yearly', 'Yearly'],
 ];
 
-const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const fmtDate = (ymd) => {
   if (!ymd) return '—';
@@ -54,7 +54,7 @@ function miles(a, b) {
 // Greedy proximity clustering: join the nearest existing pocket if its centre is within
 // `radius` miles, otherwise start a new one. Good enough for "where are my customers
 // bunched up" without pulling in a clustering library.
-function clusterPlans(plans, radius) {
+export function clusterPlans(plans, radius) {
   const clusters = [];
   for (const p of plans) {
     let best = null;
@@ -84,7 +84,7 @@ function clusterPlans(plans, radius) {
 }
 
 let leafletPromise = null;
-function loadLeaflet() {
+export function loadLeaflet() {
   if (window.L) return Promise.resolve(window.L);
   if (leafletPromise) return leafletPromise;
   leafletPromise = new Promise((resolve, reject) => {

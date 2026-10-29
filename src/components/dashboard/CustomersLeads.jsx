@@ -2,8 +2,10 @@ import { useState, useEffect, useRef, Fragment } from 'react';
 import { createPortal } from 'react-dom';
 import Papa from 'papaparse';
 import RecurringCustomers from './RecurringCustomers';
+import CustomersMap from './CustomersMap';
 import {
   Users,
+  MapPin,
   Mail,
   Phone,
   Search,
@@ -615,6 +617,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
   // CSV import in-flight flag (used by upload button to show spinner)
   const [csvImporting, setCsvImporting] = useState(false);
+  const [showCustomerMap, setShowCustomerMap] = useState(false);
 
   // Rewards state
   const [rewardsConfig, setRewardsConfig] = useState({
@@ -711,6 +714,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
   // CSV parsing is handled by PapaParse in importFromCSV below.
 
+  // Address column finder: exact (normalised) header match only, plus an optional extra test.
+  const addrCol = (headers, exact, loose) => {
+    const norm = (x) => x.replace(/[\s_\-.]/g, '').toLowerCase();
+    for (const a of exact) {
+      const i = headers.findIndex((h) => norm(h) === a);
+      if (i !== -1) return i;
+    }
+    return loose ? headers.findIndex((h) => loose(norm(h))) : -1;
+  };
+
   // Auto-detect which CSV column index best matches a set of keyword aliases.
   // Three-pass: exact → substring excluding "type"/"label"/"format" columns → any substring.
   const detectCol = (headers, ...aliases) => {
@@ -781,6 +794,11 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             service:     detectCol(headers, 'lastservice', 'servicetype', 'service', 'product'),
             serviceDate: detectCol(headers, 'lastservicedate', 'servicedate', 'lastvisit', 'visitdate', 'appointmentdate', 'date'),
             notes:       detectCol(headers, 'notes', 'note', 'comments', 'comment', 'description', 'memo'),
+            // Address columns are matched strictly: a loose match would grab "Email Address".
+            street:      addrCol(headers, ['streetaddress', 'address1', 'addressline1', 'street', 'serviceaddress', 'jobaddress', 'billingaddress', 'mailingaddress', 'homeaddress', 'address', 'addr'], (n) => n.includes('address') && !/email|web|ip|url/.test(n)),
+            city:        addrCol(headers, ['city', 'town', 'servicecity', 'billingcity', 'mailingcity']),
+            addrState:   addrCol(headers, ['state', 'province', 'stateprovince', 'region', 'servicestate', 'billingstate']),
+            zip:         addrCol(headers, ['zip', 'zipcode', 'postalcode', 'postcode', 'servicezip', 'billingzip']),
             status:      detectCol(headers, 'leadstatus', 'status'),
             source:      detectCol(headers, 'leadsource', 'source', 'channel'),
           };
@@ -802,11 +820,17 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             }
             if (!name && email) name = email.split('@')[0].replace(/[._\-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
             if (!name) name = 'Unknown';
+            // "street, city, state zip" from whichever address columns the file has.
+            const street = getVal(row, m.street);
+            const cityStr = getVal(row, m.city);
+            const stateZip = [getVal(row, m.addrState), getVal(row, m.zip)].filter(Boolean).join(' ');
+            const address = [street, cityStr, stateZip].filter(Boolean).join(', ');
             const base = {
               name,
               email: email || null,
               phone: cleanPhone(getVal(row, m.phone)) || null,
               notes: getVal(row, m.notes) || null,
+              ...(isLead ? {} : { address: address || null }),
             };
             return isLead
               ? { ...base, status: getVal(row, m.status) || 'new', source: getVal(row, m.source) || 'manual' }
@@ -831,6 +855,8 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
           const parts = [`Parsed from CSV: ${totalParsed}`, `Imported: ${data.successCount}`];
           if (data.duplicateCount > 0) parts.push(`Duplicates skipped: ${data.duplicateCount}`);
+          if (data.addressesAdded > 0) parts.push(`Addresses added to existing customers: ${data.addressesAdded}`);
+          if (tab !== 'leads' && m.street < 0) parts.push('No address column found in this file, so no addresses were imported.');
           if (data.errorCount > 0) parts.push(`Errors: ${data.errorCount}`);
           if (droppedNoIdentity > 0) parts.push(`Dropped (no name/email/phone): ${droppedNoIdentity}`);
           alert('Import complete!\n' + parts.join('\n'));
@@ -2214,6 +2240,15 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                 <span className="hidden md:inline">Tags</span>
               </button>
             )}
+            {activeTab === 'customers' && (
+              <button
+                onClick={() => setShowCustomerMap((v) => !v)}
+                className={`px-4 py-2 border rounded-lg text-sm flex items-center gap-2 ${showCustomerMap ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-700 hover:bg-gray-50'}`}
+              >
+                <MapPin className="w-4 h-4" />
+                Map
+              </button>
+            )}
             <button
               onClick={exportToCSV}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm hover:bg-gray-50 flex items-center gap-2"
@@ -2246,6 +2281,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             </button>
           </div>
         </div>
+
+        {activeTab === 'customers' && showCustomerMap && (
+          <div className="border-b border-gray-200">
+            <CustomersMap apiUrl={apiUrl} authFetch={authFetch} />
+          </div>
+        )}
 
         {/* ── Pipeline Board View ── */}
         {!loading && activeTab === 'leads' && leadViewMode === 'board' && (() => {
