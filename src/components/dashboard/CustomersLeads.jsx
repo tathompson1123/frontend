@@ -720,11 +720,12 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   // Address column finder: exact (normalised) header match only, plus an optional extra test.
   const addrCol = (headers, exact, loose) => {
     const norm = (x) => x.replace(/[\s_\-.]/g, '').toLowerCase();
+    const ok = (h) => !/ship|deliver|receiv/.test(norm(h)); // shipping/delivery columns are not where the customer is served
     for (const a of exact) {
-      const i = headers.findIndex((h) => norm(h) === a);
+      const i = headers.findIndex((h) => ok(h) && norm(h) === a);
       if (i !== -1) return i;
     }
-    return loose ? headers.findIndex((h) => loose(norm(h))) : -1;
+    return loose ? headers.findIndex((h) => ok(h) && loose(norm(h))) : -1;
   };
 
   // Auto-detect which CSV column index best matches a set of keyword aliases.
@@ -1954,14 +1955,14 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
   };
 
   const customerColumns = [
-    { key: 'name', label: 'Name', width: '200px', editable: true },
-    { key: 'phone', label: 'Phone', width: '150px', editable: true },
-    { key: 'email', label: 'Email', width: '250px', editable: true },
-    { key: 'address', label: 'Address', width: '280px', editable: true },
-    { key: 'last_service', label: 'Service Booked', width: '200px', editable: true },
-    { key: 'last_service_date', label: 'Service Date', width: '150px', editable: true, type: 'date' },
-    { key: 'left_review', label: 'Left Review', width: '120px', editable: true, type: 'select', options: ['Y', 'N'] },
-    { key: 'notes', label: 'Notes', width: '300px', editable: true },
+    { key: 'name', label: 'Name', width: '160px', editable: true },
+    { key: 'phone', label: 'Phone', width: '125px', editable: true },
+    { key: 'email', label: 'Email', width: '180px', editable: true },
+    { key: 'address', label: 'Address', width: '220px', editable: true },
+    { key: 'last_service', label: 'Service Booked', width: '140px', editable: true },
+    { key: 'last_service_date', label: 'Service Date', width: '105px', editable: true, type: 'date' },
+    { key: 'left_review', label: 'Left Review', width: '80px', editable: true, type: 'select', options: ['Y', 'N'] },
+    { key: 'notes', label: 'Notes', width: '140px', editable: true },
   ];
 
   return (
@@ -5139,7 +5140,7 @@ function CustomersTable({ customers, columns, openViewingCustomer, deleteCustome
                 ) : col.key === 'last_service_date' ? (
                   customer[col.key] ? (() => { const d = customer[col.key].toString().slice(0, 10).split('-'); return new Date(d[0], d[1] - 1, d[2]).toLocaleDateString(); })() : <span className="text-gray-400">—</span>
                 ) : (
-                  <span className="text-gray-700">{customer[col.key] || <span className="text-gray-400">—</span>}</span>
+                  <span className="text-gray-700 block truncate" style={{ maxWidth: col.width }} title={customer[col.key] || undefined}>{customer[col.key] || <span className="text-gray-400">—</span>}</span>
                 )}
               </td>
             ))}
