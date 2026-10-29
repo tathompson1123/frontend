@@ -263,7 +263,7 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
     try {
       const res = await authFetch(`${apiUrl}/api/recurring/${editing.id}`, {
         method: 'PUT',
-        body: JSON.stringify({ name: editing.name, phone: editing.phone, email: editing.email, address: editing.address }),
+        body: JSON.stringify({ name: editing.name, phone: editing.phone, email: editing.email, address: editing.address, regeocode: true }),
       });
       let data = {};
       try { data = await res.json(); } catch { /* non-JSON error body */ }
