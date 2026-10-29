@@ -668,7 +668,9 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
 
     const headers = activeTab === 'leads' 
       ? ['ID', 'Name', 'Status', 'Phone', 'Email', 'Source', 'Notes']
-      : ['ID', 'Name', 'Phone', 'Email', 'Service Booked', 'Service Date', 'Left Review', 'Notes'];
+      : ['ID', 'Name', 'Phone', 'Email', 'Address', 'Service Booked', 'Service Date', 'Left Review', 'Notes'];
+    // Quote every text field and double any quotes inside it, so commas/quotes in names, addresses and notes can't shift columns.
+    const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
 
     const csvRows = [];
     csvRows.push(headers.join(','));
@@ -686,13 +688,14 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
           ]
         : [
             record.id,
-            `"${record.name || ''}"`,
+            q(record.name),
             record.phone || '',
             record.email || '',
-            `"${record.last_service || ''}"`,
+            q(record.address),
+            q(record.last_service),
             record.last_service_date || '',
             record.left_review || '',
-            `"${record.notes || ''}"`
+            q(record.notes)
           ];
       csvRows.push(values.join(','));
     });
