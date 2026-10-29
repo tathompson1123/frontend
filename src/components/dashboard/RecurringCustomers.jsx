@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { Star, MapPin, List, Map as MapIcon, Pause, Play, X, Clock, Phone, RefreshCw, AlertCircle } from 'lucide-react';
+import { Star, MapPin, List, Map as MapIcon, Pause, Play, X, Clock, Phone, RefreshCw, AlertCircle, Pencil } from 'lucide-react';
 
 // Recurring customers: who is on a repeat plan, what schedule they're on, and where they
 // live. The map has two colourings —
@@ -252,6 +252,34 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
     }
   };
 
+  const [editing, setEditing] = useState(null); // { id, name, phone, email, address, error }
+  const [savingEdit, setSavingEdit] = useState(false);
+  const startEdit = (p) => setEditing({
+    id: p.id, name: p.customer_name || '', phone: p.customer_phone || '', email: p.customer_email || '',
+    address: p.customer_address || '', error: '',
+  });
+  const saveEdit = async () => {
+    setSavingEdit(true);
+    try {
+      const res = await authFetch(`${apiUrl}/api/recurring/${editing.id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name: editing.name, phone: editing.phone, email: editing.email, address: editing.address }),
+      });
+      let data = {};
+      try { data = await res.json(); } catch { /* non-JSON error body */ }
+      if (!res.ok || !data.success) throw new Error(data.error || 'Could not save changes');
+      setNotice(data.located === false
+        ? 'Saved, but we could not find that address on the map. Try adding the street, city and state.'
+        : 'Customer details updated.');
+      setEditing(null);
+      await load();
+    } catch (e) {
+      setEditing((cur) => ({ ...cur, error: e.message }));
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   const setStatus = (plan, status, msg) => act(plan, { method: 'PATCH', path: '/status', body: { status } }, msg);
   const changeFrequency = (plan, frequency) => {
     if (frequency === plan.frequency) return;
@@ -434,6 +462,9 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
                           <span className="text-amber-500">★</span>
                           <span className="truncate">{p.customer_name}</span>
                           {p.status === 'paused' && <span className="text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full">Paused</span>}
+                          <button onClick={() => startEdit(p)} className="text-gray-400 hover:text-blue-600 flex-shrink-0" title="Edit name, phone, email, address">
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
                         </p>
                         {p.customer_address && (
                           <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5 truncate">
@@ -543,6 +574,35 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
             </div>
           ))}
           {filtered.length === 0 && <p className="text-center text-sm text-gray-500 py-10">No plans match this filter.</p>}
+        </div>
+      )}
+
+      {editing && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={() => !savingEdit && setEditing(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5 space-y-3" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between">
+              <h3 className="font-semibold text-gray-900">Edit customer details</h3>
+              <button onClick={() => setEditing(null)} className="text-gray-400 hover:text-gray-700"><X className="w-4 h-4" /></button>
+            </div>
+            {[['name', 'Name', 'text'], ['phone', 'Phone', 'tel'], ['email', 'Email', 'email']].map(([k, label, type]) => (
+              <div key={k}>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
+                <input type={type} value={editing[k]} onChange={(e) => setEditing({ ...editing, [k]: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-600 focus:outline-none" />
+              </div>
+            ))}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Address</label>
+              <input type="text" value={editing.address} placeholder="2721 Leaning Oak Pl SE, Olympia" onChange={(e) => setEditing({ ...editing, address: e.target.value })} className="w-full px-3 py-2 border-2 border-gray-200 rounded-lg text-sm focus:border-blue-600 focus:outline-none" />
+              <p className="text-xs text-gray-400 mt-1">A street and city is enough — we'll place it on the map. Changes apply to their upcoming visits too.</p>
+            </div>
+            {editing.error && <p className="text-sm text-red-700 bg-red-50 rounded-lg px-3 py-2">{editing.error}</p>}
+            <div className="flex justify-end gap-2 pt-1">
+              <button onClick={() => setEditing(null)} disabled={savingEdit} className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900">Cancel</button>
+              <button onClick={saveEdit} disabled={savingEdit || !editing.name.trim()} className="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                {savingEdit ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
