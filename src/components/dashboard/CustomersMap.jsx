@@ -97,7 +97,7 @@ export default function CustomersMap({ apiUrl, authFetch }) {
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     return () => { map.remove(); mapRef.current = null; layerRef.current = null; };
-  }, [ready]);
+  }, [ready, loading]); // the container only exists once loading is done
 
   const clusters = useMemo(() => (colorMode === 'area' ? clusterPlans(points, radius) : []), [points, colorMode, radius]);
 
@@ -141,7 +141,7 @@ export default function CustomersMap({ apiUrl, authFetch }) {
       fitKey.current = key;
       map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
     }
-  }, [points, colorMode, clusters, ready]);
+  }, [points, colorMode, clusters, ready, loading]);
 
   const recencyCounts = useMemo(() => {
     const c = {};

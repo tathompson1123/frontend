@@ -1342,7 +1342,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     setViewingCustomer(customer);
     setViewingCustomerEditMode(false);
     setViewingCustomerEdit({
-      name: customer.name, phone: customer.phone, email: customer.email,
+      name: customer.name, phone: customer.phone, email: customer.email, address: customer.address,
       last_service: customer.last_service, last_service_date: customer.last_service_date,
       left_review: customer.left_review, notes: customer.notes,
     });
@@ -1758,6 +1758,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             name: newRecord.name || '',
             email: newRecord.email || '',
             phone: newRecord.phone || '',
+            address: newRecord.address || '',
             last_service: newRecord.last_service || '',
             last_service_date: newRecord.last_service_date || null,
             left_review: newRecord.left_review || 'N',
@@ -1956,6 +1957,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     { key: 'name', label: 'Name', width: '200px', editable: true },
     { key: 'phone', label: 'Phone', width: '150px', editable: true },
     { key: 'email', label: 'Email', width: '250px', editable: true },
+    { key: 'address', label: 'Address', width: '280px', editable: true },
     { key: 'last_service', label: 'Service Booked', width: '200px', editable: true },
     { key: 'last_service_date', label: 'Service Date', width: '150px', editable: true, type: 'date' },
     { key: 'left_review', label: 'Left Review', width: '120px', editable: true, type: 'select', options: ['Y', 'N'] },
@@ -2655,6 +2657,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                         {customer.email && <span className="text-xs text-gray-500 flex items-center gap-1"><Mail className="w-3 h-3" />{customer.email}</span>}
                         {customer.last_service && <span className="text-xs text-gray-600 truncate">{customer.last_service}</span>}
                       </div>
+                      {customer.address && <p className="text-xs text-gray-500 mt-1 truncate">{customer.address}</p>}
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
                       <button onClick={(e) => { e.stopPropagation(); deleteCustomer(customer.id); }} className="p-1.5 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
@@ -3670,6 +3673,16 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+                    <input
+                      type="text"
+                      value={newRecord.address || ''}
+                      onChange={(e) => setNewRecord({ ...newRecord, address: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="123 Main St, Olympia, WA"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Service Booked</label>
                     <input
                       type="text"
@@ -4657,6 +4670,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
             <div className="p-5 border-b border-gray-100">
               <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">Service History</h3>
               <div className="grid grid-cols-2 gap-3 text-sm">
+                {viewingCustomer.address && <div className="col-span-2"><p className="text-xs text-gray-400 mb-1">Address</p><p className="text-gray-900">{viewingCustomer.address}</p></div>}
                 {viewingCustomer.last_service && <div><p className="text-xs text-gray-400 mb-1">Last Service</p><p className="text-gray-900 font-medium">{viewingCustomer.last_service}</p></div>}
                 {viewingCustomer.last_service_date && <div><p className="text-xs text-gray-400 mb-1">Last Visit</p><p className="text-gray-900">{new Date(viewingCustomer.last_service_date.toString().slice(0, 10) + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p></div>}
                 {viewingCustomer.left_review && <div><p className="text-xs text-gray-400 mb-1">Left Review</p><span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${viewingCustomer.left_review === 'Y' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{viewingCustomer.left_review === 'Y' ? 'Yes' : 'No'}</span></div>}
@@ -4745,6 +4759,7 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     <div><label className="text-xs text-gray-500 mb-1 block">Phone</label><input type="text" value={viewingCustomerEdit.phone || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, phone: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
                     <div><label className="text-xs text-gray-500 mb-1 block">Email</label><input type="text" value={viewingCustomerEdit.email || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, email: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
                   </div>
+                  <div><label className="text-xs text-gray-500 mb-1 block">Address</label><input type="text" value={viewingCustomerEdit.address || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, address: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" placeholder="123 Main St, Olympia, WA" /></div>
                   <div><label className="text-xs text-gray-500 mb-1 block">Last Service</label><input type="text" value={viewingCustomerEdit.last_service || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, last_service: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
                   <div className="grid grid-cols-2 gap-3">
                     <div><label className="text-xs text-gray-500 mb-1 block">Last Visit Date</label><input type="date" value={viewingCustomerEdit.last_service_date?.toString().slice(0,10) || ''} onChange={e => setViewingCustomerEdit(v => ({ ...v, last_service_date: e.target.value }))} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm" /></div>
