@@ -217,6 +217,32 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
   const [notice, setNotice] = useState('');
   const [noticeIsError, setNoticeIsError] = useState(false);
 
+  const [noReviewTexts, setNoReviewTexts] = useState(true);
+  useEffect(() => {
+    authFetch(`${apiUrl}/api/recurring/settings`)
+      .then(r => r.json())
+      .then(d => { if (d.success) setNoReviewTexts(!!d.no_review_texts); })
+      .catch(() => {});
+  }, [apiUrl, authFetch]);
+
+  const toggleNoReviewTexts = async () => {
+    const next = !noReviewTexts;
+    setNoReviewTexts(next);
+    try {
+      const res = await authFetch(`${apiUrl}/api/recurring/settings`, {
+        method: 'PUT',
+        body: JSON.stringify({ no_review_texts: next }),
+      });
+      if (!res.ok) throw new Error('Could not save the setting');
+      setNoticeIsError(false);
+      setNotice(next ? 'Recurring customers will not get review texts.' : 'Recurring customers will get review texts again.');
+    } catch (e) {
+      setNoReviewTexts(!next);
+      setNoticeIsError(true);
+      setNotice(e.message);
+    }
+  };
+
   // Auto-dismiss the toast so it doesn't linger.
   useEffect(() => {
     if (!notice) return undefined;
@@ -374,6 +400,25 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
           </button>
         </div>
+      </div>
+
+      {/* Owner-wide default: no review texts for anyone on a recurring plan */}
+      <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-gray-900">No review texts for recurring customers</p>
+          <p className="text-xs text-gray-500">
+            {noReviewTexts ? 'On — customers on an active recurring plan are never sent review requests.' : 'Off — recurring customers get review requests like everyone else.'}
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={noReviewTexts}
+          onClick={toggleNoReviewTexts}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition ${noReviewTexts ? 'bg-blue-600' : 'bg-gray-300'}`}
+        >
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${noReviewTexts ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </button>
       </div>
 
       {notice && (
