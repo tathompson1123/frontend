@@ -235,7 +235,7 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
       });
       if (!res.ok) throw new Error('Could not save the setting');
       setNoticeIsError(false);
-      setNotice(next ? 'Recurring customers will not get review texts.' : 'Recurring customers will get review texts again.');
+      setNotice(next ? 'Review texts are off for recurring customers.' : 'Review texts are on for recurring customers.');
     } catch (e) {
       setNoReviewTexts(!next);
       setNoticeIsError(true);
@@ -405,19 +405,19 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
       {/* Owner-wide default: no review texts for anyone on a recurring plan */}
       <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-sm font-medium text-gray-900">No review texts for recurring customers</p>
+          <p className="text-sm font-medium text-gray-900">Send review texts to recurring customers</p>
           <p className="text-xs text-gray-500">
-            {noReviewTexts ? 'On — customers on an active recurring plan are never sent review requests.' : 'Off — recurring customers get review requests like everyone else.'}
+            {noReviewTexts ? 'Off — customers on an active recurring plan are not sent review requests.' : 'On — recurring customers get review requests like everyone else.'}
           </p>
         </div>
         <button
           type="button"
           role="switch"
-          aria-checked={noReviewTexts}
+          aria-checked={!noReviewTexts}
           onClick={toggleNoReviewTexts}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition ${noReviewTexts ? 'bg-blue-600' : 'bg-gray-300'}`}
+          className={`relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition ${!noReviewTexts ? 'bg-blue-600' : 'bg-gray-300'}`}
         >
-          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${noReviewTexts ? 'translate-x-5' : 'translate-x-0.5'}`} />
+          <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${!noReviewTexts ? 'translate-x-5' : 'translate-x-0.5'}`} />
         </button>
       </div>
 
