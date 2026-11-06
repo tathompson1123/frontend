@@ -1194,6 +1194,27 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
     }
   };
 
+  // Stop/resume review texts for this person (backend applies it to every row they have).
+  const toggleReviewTexts = async (stopped) => {
+    if (!viewingCustomer) return;
+    const prev = !!viewingCustomer.review_requests_stopped;
+    const set = (v) => {
+      setViewingCustomer(c => ({ ...c, review_requests_stopped: v }));
+      setCustomers(cs => cs.map(c => c.id === viewingCustomer.id ? { ...c, review_requests_stopped: v } : c));
+    };
+    set(stopped);
+    try {
+      const response = await authFetch(`${apiUrl}/api/customers/${viewingCustomer.id}/review-texts`, {
+        method: 'POST',
+        body: JSON.stringify({ stopped }),
+      });
+      if (!response.ok) throw new Error('save failed');
+    } catch (err) {
+      console.error('Error updating review texts:', err);
+      set(prev);
+    }
+  };
+
   const saveViewingCustomerEdit = async () => {
     if (!viewingCustomer) return;
     try {
@@ -4746,6 +4767,24 @@ export default function CustomersLeads({ user, setCurrentView, apiUrl, authFetch
                     className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex-shrink-0 ${viewingCustomer.email_unsubscribed ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700'}`}
                   >
                     {viewingCustomer.email_unsubscribed ? 'Resubscribe' : 'Unsubscribe'}
+                  </button>
+                </div>
+                {/* Review texts */}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Star className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800">Review texts</p>
+                      <p className={`text-xs ${viewingCustomer.review_requests_stopped ? 'text-red-500' : 'text-green-600'}`}>
+                        {viewingCustomer.review_requests_stopped ? 'Stopped — no review requests' : 'On'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleReviewTexts(!viewingCustomer.review_requests_stopped)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition flex-shrink-0 ${viewingCustomer.review_requests_stopped ? 'bg-green-100 text-green-700 hover:bg-green-200' : 'bg-gray-100 text-gray-700 hover:bg-red-100 hover:text-red-700'}`}
+                  >
+                    {viewingCustomer.review_requests_stopped ? 'Resume' : 'Stop'}
                   </button>
                 </div>
               </div>

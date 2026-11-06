@@ -215,6 +215,14 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
   const [showPaused, setShowPaused] = useState(true);
   const [busyId, setBusyId] = useState(null);
   const [notice, setNotice] = useState('');
+  const [noticeIsError, setNoticeIsError] = useState(false);
+
+  // Auto-dismiss the toast so it doesn't linger.
+  useEffect(() => {
+    if (!notice) return undefined;
+    const t = setTimeout(() => setNotice(''), 6000);
+    return () => clearTimeout(t);
+  }, [notice]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -243,9 +251,11 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
       });
       const data = await res.json();
       if (!res.ok || !data.success) throw new Error(data.error || 'Something went wrong');
+      setNoticeIsError(false);
       setNotice(doneMessage);
       await load();
     } catch (e) {
+      setNoticeIsError(true);
       setNotice(e.message);
     } finally {
       setBusyId(null);
@@ -268,6 +278,7 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
       let data = {};
       try { data = await res.json(); } catch { /* non-JSON error body */ }
       if (!res.ok || !data.success) throw new Error(data.error || 'Could not save changes');
+      setNoticeIsError(false);
       setNotice(data.located === false
         ? 'Saved, but we could not find that address on the map. Try adding the street, city and state.'
         : 'Customer details updated.');
@@ -366,8 +377,8 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
       </div>
 
       {notice && (
-        <div className="mx-4 mt-3 px-3 py-2 text-sm bg-blue-50 text-blue-800 rounded-lg flex justify-between">
-          <span>{notice}</span>
+        <div role="status" className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 max-w-md w-[calc(100%-2rem)] px-4 py-3 text-sm rounded-lg shadow-lg flex justify-between gap-3 ${noticeIsError ? 'bg-red-600 text-white' : 'bg-green-600 text-white'}`}>
+          <span>{noticeIsError ? '' : '✓ '}{notice}</span>
           <button onClick={() => setNotice('')}><X className="w-4 h-4" /></button>
         </div>
       )}
@@ -555,6 +566,20 @@ export default function RecurringCustomers({ apiUrl, authFetch }) {
                           Retry billing
                         </button>
                       )}
+                      <button
+                        disabled={busyId === p.id}
+                        onClick={() => act(
+                          p,
+                          { method: 'POST', path: '/review-texts', body: { stopped: !p.review_texts_stopped } },
+                          p.review_texts_stopped
+                            ? `Review texts resumed for ${p.customer_name}.`
+                            : `Review texts stopped for ${p.customer_name}.`,
+                        )}
+                        className={`flex items-center gap-1 ${p.review_texts_stopped ? 'text-green-700 hover:text-green-900 font-semibold' : 'text-gray-600 hover:text-gray-900'}`}
+                        title={p.review_texts_stopped ? 'Review texts are off for this customer' : 'Stop sending review texts to this customer'}
+                      >
+                        {p.review_texts_stopped ? 'Resume review texts' : 'Stop review texts'}
+                      </button>
                       {p.status === 'active' ? (
                         <button disabled={busyId === p.id} onClick={() => setStatus(p, 'paused', `${p.customer_name} paused — upcoming visits removed${p.billed ? ' and billing paused in Square' : ''}.`)} className="flex items-center gap-1 text-gray-600 hover:text-gray-900">
                           <Pause className="w-3 h-3" /> Pause
