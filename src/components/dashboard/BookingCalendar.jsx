@@ -698,7 +698,7 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
             employeeId: newBooking.employeeId || null,
             groupId: newBooking.groupId || null,
             customerInfo,
-            customerNotes: newBooking.notes,
+            jobNotes: newBooking.notes,
             referralSource: newBooking.referralSource?.trim() || null,
           })
         });
@@ -2874,12 +2874,13 @@ export default function BookingCalendar({ apiUrl, user, services, employees, aut
               <div className="bg-amber-50 rounded-xl p-4">
                 <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <FileText className="w-5 h-5 text-amber-600" />
-                  Job Notes (optional)
+                  Internal Notes (optional)
                 </h3>
+                <p className="text-xs text-gray-600 mb-2 -mt-2">Only visible to you and your team — never included in customer emails.</p>
                 <textarea
                   value={newBooking.notes}
                   onChange={(e) => setNewBooking({ ...newBooking, notes: e.target.value })}
-                  placeholder="Add any notes about this booking..."
+                  placeholder="Add internal notes about this booking..."
                   rows={4}
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-amber-500 resize-none"
                 />
